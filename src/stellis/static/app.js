@@ -26,7 +26,7 @@ function syncThemeButton() {
   const light = document.documentElement.dataset.theme === 'light';
   themeButton.textContent = light ? 'Dark mode' : 'Light mode';
   themeButton.setAttribute('aria-label', `Switch to ${light ? 'dark' : 'light'} mode`);
-  document.querySelector('meta[name="theme-color"]').content = light ? '#172830' : '#101b24';
+  document.querySelector('meta[name="theme-color"]').content = light ? '#1d203a' : '#191c35';
 }
 syncThemeButton();
 themeButton.addEventListener('click', () => {
