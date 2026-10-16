@@ -2,6 +2,8 @@
 
 Status: accepted for development, 2026-10-16. Ticket: #71 under #16.
 
+The later [ADR 0021](0021-browser-encrypted-text-journal.md) adds a ciphertext-only text journal to this origin. The identity and device-service separation remains in force.
+
 ## Decision
 
 Run a second FastAPI application with `stellis sync-serve` on a separate loopback port and private data directory. Its database holds development usernames, salted password verifiers, hashed random session tokens, and account-owned device names/IDs. The browser account shell can register, sign in, list and revoke its devices, log out, and revoke all sessions. Sessions expire after seven days; mutating requests with a foreign Origin fail. The service's host check and CLI bind restrict it to loopback, where HTTP cookies are usable. No transcript, audio, Nebius, speech, key, or sync-content route is mounted there.

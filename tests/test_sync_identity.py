@@ -1,9 +1,11 @@
 """Separate identity origin isolation and session checks."""
 
 import os
+import base64
 import sqlite3
 import tempfile
 import unittest
+import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -62,6 +64,34 @@ class SyncIdentityTest(unittest.TestCase):
                          ((datetime.now(timezone.utc)-timedelta(seconds=1)).isoformat(),
                           sync_identity._digest(token)))
         self.assertEqual(self.alice.get('/sync/v1/me').status_code, 401)
+
+    def test_ciphertext_journal_is_isolated_bounded_and_idempotent(self):
+        self.alice.post('/sync/v1/auth/register', json=self.a)
+        self.bob.post('/sync/v1/auth/register', json=self.b)
+        encode = lambda value: base64.b64encode(value).decode()
+        setup = {'salt': encode(os.urandom(16)), 'check_iv': encode(os.urandom(12)),
+                 'check_ciphertext': encode(os.urandom(32))}
+        self.assertEqual(self.alice.post('/sync/v1/vault', json=setup).status_code, 200)
+        self.assertEqual(self.alice.post('/sync/v1/vault', json=setup).status_code, 409)
+        self.assertEqual(self.bob.get('/sync/v1/vault').status_code, 404)
+        entry = {'id': str(uuid.uuid4()), 'item_id': str(uuid.uuid4()),
+                 'iv': encode(os.urandom(12)), 'ciphertext': encode(os.urandom(36))}
+        first = self.alice.post('/sync/v1/entries', json=entry)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(self.alice.post('/sync/v1/entries', json=entry).json()['seq'], first.json()['seq'])
+        self.assertEqual(self.alice.post('/sync/v1/entries', json={**entry,
+            'ciphertext': encode(os.urandom(36))}).status_code, 409)
+        self.assertEqual(self.alice.post('/sync/v1/entries', json={**entry,
+            'id': str(uuid.uuid4()), 'ciphertext': encode(os.urandom(65537))}).status_code, 400)
+        self.assertEqual(self.alice.post('/sync/v1/entries', json={**entry,
+            'id': str(uuid.uuid4()), 'iv': encode(os.urandom(8))}).status_code, 422)
+        self.assertEqual(len(self.alice.get('/sync/v1/entries').json()['entries']), 1)
+        self.assertEqual(self.alice.get('/sync/v1/entries', params={'after':first.json()['seq']}).json()['entries'], [])
+        self.assertEqual(self.bob.get('/sync/v1/entries').json()['entries'], [])
+        with sqlite3.connect(sync_identity.root()/'identity.sqlite3') as conn:
+            columns = [row[1] for row in conn.execute('PRAGMA table_info(ciphertext_entries)')]
+        self.assertNotIn('text', columns)
+        self.assertNotIn('audio', columns)
         self.alice.post('/sync/v1/auth/login', json=self.a)
         self.assertEqual(self.alice.post('/sync/v1/sessions/revoke-all').status_code, 200)
         self.assertEqual(self.alice.get('/sync/v1/me').status_code, 401)

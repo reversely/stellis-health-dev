@@ -43,6 +43,16 @@ def connect() -> Iterator[sqlite3.Connection]:
         id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
         name TEXT NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS vaults (
+        user_id TEXT PRIMARY KEY REFERENCES users(id), salt TEXT NOT NULL,
+        check_iv TEXT NOT NULL, check_ciphertext TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS ciphertext_entries (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL REFERENCES users(id),
+        id TEXT NOT NULL, item_id TEXT NOT NULL, iv TEXT NOT NULL,
+        ciphertext TEXT NOT NULL, created_at TEXT NOT NULL,
+        UNIQUE(user_id, id)
+    )""")
     conn.commit()
     path.chmod(0o600)
     try:
@@ -150,3 +160,44 @@ def revoke_device(user_id: str, device_id: str) -> bool:
         result = conn.execute("UPDATE devices SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
                               (_now(), device_id, user_id))
     return result.rowcount == 1
+
+
+def vault(user_id: str) -> dict[str, str] | None:
+    with connect() as conn:
+        row = conn.execute("SELECT salt, check_iv, check_ciphertext FROM vaults WHERE user_id = ?",
+                           (user_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def create_vault(user_id: str, salt: str, check_iv: str, check_ciphertext: str) -> dict[str, str]:
+    with connect() as conn:
+        try:
+            conn.execute("INSERT INTO vaults VALUES (?, ?, ?, ?)",
+                         (user_id, salt, check_iv, check_ciphertext))
+        except sqlite3.IntegrityError as exc:
+            raise RuntimeError("Vault already exists") from exc
+    return {"salt": salt, "check_iv": check_iv, "check_ciphertext": check_ciphertext}
+
+
+def append_entry(user_id: str, record: dict[str, str]) -> dict[str, object]:
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute("""SELECT seq, item_id, iv, ciphertext, created_at FROM ciphertext_entries
+            WHERE user_id = ? AND id = ?""", (user_id, record["id"])).fetchone()
+        if existing:
+            if any(existing[key] != record[key] for key in ("item_id", "iv", "ciphertext")):
+                raise RuntimeError("Entry ID already used")
+            return {"seq": existing["seq"], "id": record["id"], "item_id": existing["item_id"],
+                    "iv": existing["iv"], "ciphertext": existing["ciphertext"], "created_at": existing["created_at"]}
+        stamp = _now()
+        cursor = conn.execute("""INSERT INTO ciphertext_entries
+            (user_id, id, item_id, iv, ciphertext, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, record["id"], record["item_id"], record["iv"], record["ciphertext"], stamp))
+    return {**record, "seq": cursor.lastrowid, "created_at": stamp}
+
+
+def list_entries(user_id: str, after: int, limit: int) -> list[dict[str, object]]:
+    with connect() as conn:
+        rows = conn.execute("""SELECT seq, id, item_id, iv, ciphertext, created_at FROM ciphertext_entries
+            WHERE user_id = ? AND seq > ? ORDER BY seq LIMIT ?""", (user_id, after, limit)).fetchall()
+    return [dict(row) for row in rows]
