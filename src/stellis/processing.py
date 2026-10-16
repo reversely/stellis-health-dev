@@ -224,6 +224,14 @@ def _worker_loop() -> None:
             if completed.returncode:
                 storage.update_job(job_id, state="failed", stage="failed",
                                    error="Speech worker exited unexpectedly", updated_at=now())
+            else:
+                job = storage.get_job(job_id)
+                if job and job["kind"] == "speech" and job["state"] == "succeeded" and job["stage"] == "complete":
+                    from stellis import categorization
+                    try:
+                        categorization.request(str(job["conversation_id"]))
+                    except (RuntimeError, LookupError):
+                        pass  # The transcript remains ready; classification has its own retry path.
         except Exception:
             # Keep the queue alive even if persistence or a native adapter fails unexpectedly.
             try:

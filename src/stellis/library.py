@@ -28,7 +28,10 @@ def categories() -> list[dict[str, object]]:
         rows = conn.execute("""SELECT c.id, c.name, COUNT(v.id) AS conversation_count
             FROM categories c LEFT JOIN conversation_categories cc ON cc.category_id = c.id
             LEFT JOIN conversations v ON v.id = cc.conversation_id AND v.trashed_at IS NULL
-            GROUP BY c.id ORDER BY c.name COLLATE NOCASE""").fetchall()
+            GROUP BY c.id ORDER BY
+                CASE c.normalized WHEN 'meeting' THEN 0 WHEN 'event' THEN 1
+                    WHEN 'interview' THEN 2 WHEN 'conversation' THEN 3 ELSE 4 END,
+                c.name COLLATE NOCASE""").fetchall()
     return [dict(row) for row in rows]
 
 
@@ -90,6 +93,10 @@ def set_category(conversation_id: str, category_id: str, assigned: bool) -> list
         else:
             conn.execute("DELETE FROM conversation_categories WHERE conversation_id = ? AND category_id = ?",
                          (conversation_id, category_id))
+        conn.execute("""INSERT INTO category_decisions (conversation_id, manual_override, state, updated_at)
+            VALUES (?, 1, 'manual', ?) ON CONFLICT(conversation_id) DO UPDATE SET
+            manual_override = 1, auto_category_id = NULL, state = 'manual', updated_at = excluded.updated_at""",
+                     (conversation_id, _now()))
     return assignments(conversation_id).get(conversation_id, [])
 
 
@@ -176,7 +183,7 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
                     conn.execute("DELETE FROM recording_chunks WHERE recording_id = ?", (session_id,))
                     conn.execute("DELETE FROM recording_events WHERE recording_id = ?", (session_id,))
                     conn.execute("DELETE FROM recording_ai_runs WHERE recording_id = ?", (session_id,))
-                for table in ("enhanced_notes_runs", "meeting_notes", "recording_sessions", "clean_runs", "ai_runs", "transcript_comments", "transcript_highlights",
+                for table in ("category_decisions", "enhanced_notes_runs", "meeting_notes", "recording_sessions", "clean_runs", "ai_runs", "transcript_comments", "transcript_highlights",
                               "speaker_label_events", "speaker_labels", "transcript_edit_events",
                               "transcript_edits", "transcript_generations", "transcripts", "processing_jobs",
                               "conversation_categories", "person_links", "transcript_reviews",

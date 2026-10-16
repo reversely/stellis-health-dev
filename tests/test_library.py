@@ -2,6 +2,7 @@
 
 import json
 import os
+import sqlite3
 import tempfile
 import unittest
 import uuid
@@ -11,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import library, storage
+from stellis import categorization, library, storage
 from stellis.server import app
 from test_import import wav_bytes
 
@@ -71,7 +72,7 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertEqual(self.client.get('/api/v1/search', params={'q':'Asteroid',
             'category_id': 'uncategorized'}).json()['total'], 0)
         self.client.patch(f'/api/v1/categories/{categories[0]["id"]}', json={'name':'Science'})
-        self.assertEqual(self.client.get('/api/v1/categories').json()[1]['name'], 'Science')
+        self.assertIn('Science', [item['name'] for item in self.client.get('/api/v1/categories').json()])
         self.client.patch(f'/api/v1/conversations/{self.first}/transcript/segments/s1',
                           json={'text':'Asteroid corrected.', 'expected_revision':1})
         media = storage.data_dir() / 'media' / storage.get_conversation(self.first)['audio_filename']
@@ -96,13 +97,90 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertFalse(media.exists())
         self.assertIsNone(storage.get_conversation(self.first, include_trashed=True))
         self.assertEqual(self.client.get('/api/v1/search', params={'q':'Asteroid'}).json()['total'], 0)
-        self.assertEqual(len(self.client.get('/api/v1/categories').json()), 1)
+        self.assertEqual(len(self.client.get('/api/v1/categories').json()), 5)
         self.assertEqual(len(self.client.get('/api/v1/conversations').json()), 1)
         with storage.connect() as conn:
             for table in ('transcripts', 'transcript_generations', 'transcript_edits',
                           'transcript_edit_events', 'conversation_categories'):
                 self.assertEqual(conn.execute(f'SELECT COUNT(*) FROM {table} WHERE conversation_id = ?',
                                               (self.first,)).fetchone()[0], 0)
+
+    def test_automatic_category_requires_opt_in_and_respects_manual_change(self):
+        self.client.patch(f'/api/v1/conversations/{self.first}/transcript/segments/s1',
+            json={'text': 'The interviewer asked about prior projects and the candidate described their work, '
+                          'then answered questions about collaboration, deadlines, and the role on the team, '
+                          'including several specific examples from their experience.',
+                  'expected_revision': 1})
+        setting = self.client.get('/api/v1/categories/automation').json()
+        self.assertFalse(setting['enabled'])
+        self.assertEqual(self.client.put('/api/v1/categories/automation', json={'enabled': True}).status_code, 200)
+        revision = storage.get_transcript(self.first)['revision']
+        with storage.connect() as conn:
+            conn.execute("""INSERT INTO category_decisions
+                (conversation_id, state, model_id, transcript_revision, updated_at)
+                VALUES (?, 'queued', ?, ?, ?)""", (self.first, categorization.MODEL_ID, revision, datetime.now(timezone.utc).isoformat()))
+        with patch.object(categorization, 'classify', return_value=('Interview', 0.98)):
+            categorization._run(self.first, revision, 'test-key')
+        category = next(item for item in self.client.get('/api/v1/categories').json() if item['name'] == 'Interview')
+        self.assertIn(category['id'], self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'])
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['state'], 'assigned')
+        self.client.delete(f'/api/v1/conversations/{self.first}/categories/{category["id"]}')
+        with patch.object(categorization, 'classify', return_value=('Meeting', 0.99)):
+            categorization._run(self.first, revision, 'test-key')
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+        self.assertTrue(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['manual_override'])
+
+    def test_missing_provider_key_is_retryable_without_changing_transcript(self):
+        self.client.put('/api/v1/categories/automation', json={'enabled': True})
+        with patch('stellis.ai._key', return_value=None):
+            result = self.client.post(f'/api/v1/conversations/{self.first}/categorization').json()
+        self.assertEqual(result['state'], 'failed')
+        self.assertIn('Nebius API key', result['error'])
+        self.assertIsNotNone(storage.get_transcript(self.first))
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+
+    def test_short_transcript_abstains_without_provider_call(self):
+        self.client.put('/api/v1/categories/automation', json={'enabled': True})
+        with storage.connect() as conn:
+            conn.execute("""INSERT INTO category_decisions
+                (conversation_id, state, model_id, prompt_version, transcript_revision, updated_at)
+                VALUES (?, 'queued', ?, ?, 1, ?)""",
+                (self.first, categorization.MODEL_ID, categorization.PROMPT_VERSION,
+                 datetime.now(timezone.utc).isoformat()))
+        with patch.object(categorization, 'classify') as classify:
+            categorization._run(self.first, 1, 'test-key')
+            classify.assert_not_called()
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['state'], 'unclear')
+
+    def test_initial_categories_are_seeded_once_and_remain_editable(self):
+        endpoint = '/api/v1/categories'
+        initial = self.client.get(endpoint).json()
+        self.assertEqual([item['name'] for item in initial], list(storage.INITIAL_CATEGORIES))
+        meeting = initial[0]
+        self.assertEqual(self.client.patch(f"{endpoint}/{meeting['id']}", json={'name':'Workshop'}).status_code, 200)
+        self.assertEqual(self.client.delete(f"{endpoint}/{initial[1]['id']}").status_code, 200)
+        with storage.connect():
+            pass
+        current = self.client.get(endpoint).json()
+        self.assertEqual({item['name'] for item in current}, {'Workshop', 'Interview', 'Conversation'})
+        self.assertEqual(next(item['id'] for item in current if item['name'] == 'Workshop'), meeting['id'])
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+
+    def test_existing_categories_survive_one_time_seed(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'STELLIS_DATA_DIR': directory}):
+            database = Path(directory) / 'stellis.sqlite3'
+            with sqlite3.connect(database) as conn:
+                conn.execute('CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)')
+                conn.execute('INSERT INTO categories VALUES (?, ?, ?, ?)',
+                             ('existing-meeting', 'MEETING', 'meeting', '2026-01-01'))
+                conn.execute('INSERT INTO categories VALUES (?, ?, ?, ?)',
+                             ('custom', 'Research', 'research', '2026-01-01'))
+            seeded = library.categories()
+            self.assertEqual([item['name'] for item in seeded[:4]],
+                             ['MEETING', 'Event', 'Interview', 'Conversation'])
+            self.assertEqual(seeded[0]['id'], 'existing-meeting')
+            self.assertEqual(len(seeded), 5)
+            self.assertEqual(library.categories(), seeded)
 
     def test_pending_job_blocks_permanent_delete_until_settled(self):
         now = datetime.now(timezone.utc).isoformat()
