@@ -1,0 +1,20 @@
+{
+  "name": "stellis-browser-assets",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build:notes": "esbuild src/stellis/static/notes-editor.js --bundle --minify --format=esm --target=es2022 --legal-comments=external --outfile=src/stellis/static/notes-editor.bundle.js"
+  },
+  "dependencies": {
+    "@lexical/history": "0.52.0",
+    "@lexical/link": "0.52.0",
+    "@lexical/list": "0.52.0",
+    "@lexical/markdown": "0.52.0",
+    "@lexical/rich-text": "0.52.0",
+    "@lexical/selection": "0.52.0",
+    "lexical": "0.52.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
