@@ -53,6 +53,11 @@ def connect() -> Iterator[sqlite3.Connection]:
         ciphertext TEXT NOT NULL, created_at TEXT NOT NULL,
         UNIQUE(user_id, id)
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS media_chunks (
+        user_id TEXT NOT NULL REFERENCES users(id), media_id TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL, iv TEXT NOT NULL, ciphertext TEXT NOT NULL,
+        created_at TEXT NOT NULL, PRIMARY KEY (user_id, media_id, chunk_index)
+    )""")
     conn.commit()
     path.chmod(0o600)
     try:
@@ -201,3 +206,28 @@ def list_entries(user_id: str, after: int, limit: int) -> list[dict[str, object]
         rows = conn.execute("""SELECT seq, id, item_id, iv, ciphertext, created_at FROM ciphertext_entries
             WHERE user_id = ? AND seq > ? ORDER BY seq LIMIT ?""", (user_id, after, limit)).fetchall()
     return [dict(row) for row in rows]
+
+
+def append_media_chunk(user_id: str, media_id: str, index: int, iv: str, ciphertext: str) -> None:
+    """Store an opaque encrypted audio chunk with idempotent retries."""
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute("""SELECT iv, ciphertext FROM media_chunks
+            WHERE user_id = ? AND media_id = ? AND chunk_index = ?""", (user_id, media_id, index)).fetchone()
+        if existing:
+            if existing["iv"] != iv or existing["ciphertext"] != ciphertext:
+                raise RuntimeError("Media chunk already used")
+            return
+        used = conn.execute("SELECT COALESCE(SUM(LENGTH(ciphertext)), 0) FROM media_chunks WHERE user_id = ?",
+                            (user_id,)).fetchone()[0]
+        if used + len(ciphertext) > 192 * 1024 * 1024:
+            raise OverflowError("Encrypted media storage is full")
+        conn.execute("""INSERT INTO media_chunks VALUES (?, ?, ?, ?, ?, ?)""",
+                     (user_id, media_id, index, iv, ciphertext, _now()))
+
+
+def media_chunk(user_id: str, media_id: str, index: int) -> dict[str, str] | None:
+    with connect() as conn:
+        row = conn.execute("""SELECT iv, ciphertext FROM media_chunks
+            WHERE user_id = ? AND media_id = ? AND chunk_index = ?""", (user_id, media_id, index)).fetchone()
+    return dict(row) if row else None

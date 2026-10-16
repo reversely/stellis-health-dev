@@ -100,6 +100,30 @@ class SyncIdentityTest(unittest.TestCase):
         self.assertNotIn('text', columns)
         self.assertNotIn('audio', columns)
 
+    def test_encrypted_media_chunks_are_account_scoped_and_idempotent(self):
+        self.alice.post('/sync/v1/auth/register', json=self.a)
+        self.bob.post('/sync/v1/auth/register', json=self.b)
+        media_id = str(uuid.uuid4())
+        route = f'/sync/v1/media/{media_id}/chunks/0'
+        encode = lambda value: base64.b64encode(value).decode()
+        chunk = {'iv': encode(os.urandom(12)), 'ciphertext': encode(os.urandom(64))}
+        self.assertEqual(self.alice.post(route, json=chunk).status_code, 409)
+        self.alice.post('/sync/v1/vault', json={'salt': encode(os.urandom(16)),
+            'check_iv': encode(os.urandom(12)), 'check_ciphertext': encode(os.urandom(32))})
+        self.assertEqual(self.alice.post(route, json=chunk).status_code, 200)
+        self.assertEqual(self.alice.post(route, json=chunk).status_code, 200)
+        self.assertEqual(self.alice.post(route, json={**chunk,
+            'ciphertext': encode(os.urandom(64))}).status_code, 409)
+        self.assertEqual(self.alice.get(route).json(), chunk)
+        self.assertEqual(self.bob.get(route).status_code, 404)
+        self.assertEqual(self.bob.post(route, json=chunk).status_code, 409)
+        self.assertEqual(self.alice.post(f'/sync/v1/media/{media_id}/chunks/512', json=chunk).status_code, 400)
+        self.assertEqual(self.alice.post(f'/sync/v1/media/{media_id}/chunks/1', json={**chunk,
+            'ciphertext': encode(os.urandom(256 * 1024 + 17))}).status_code, 400)
+        with sqlite3.connect(sync_identity.root()/'identity.sqlite3') as conn:
+            rows = conn.execute('SELECT user_id, media_id, chunk_index, iv, ciphertext FROM media_chunks').fetchall()
+        self.assertEqual(len(rows), 1)
+
     def test_configured_device_origin_has_credentialed_cors_without_wildcard(self):
         with patch.dict(os.environ, {'STELLIS_DEVICE_ORIGIN':'http://127.0.0.1:8765'}):
             module = importlib.reload(sync_server)

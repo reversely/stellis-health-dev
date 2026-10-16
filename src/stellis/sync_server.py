@@ -1,4 +1,4 @@
-"""Separate development identity origin; ciphertext sync is not implemented yet."""
+"""Separate development identity origin for encrypted text and media."""
 
 from __future__ import annotations
 
@@ -82,6 +82,11 @@ class CiphertextEntry(BaseModel):
     item_id: str
     iv: str = Field(min_length=16, max_length=24)
     ciphertext: str = Field(min_length=24, max_length=90000)
+
+
+class MediaChunk(BaseModel):
+    iv: str = Field(min_length=16, max_length=24)
+    ciphertext: str = Field(min_length=24, max_length=350000)
 
 
 def _bytes(value: str, length: int | None = None, maximum: int | None = None) -> bytes:
@@ -220,3 +225,35 @@ def entries(request: Request, after: int = Query(default=0, ge=0),
             limit: int = Query(default=100, ge=1, le=100)) -> dict[str, object]:
     values = identity.list_entries(request.state.user["id"], after, limit)
     return {"entries": values, "cursor": values[-1]["seq"] if values else after}
+
+
+@app.post("/sync/v1/media/{media_id}/chunks/{index}")
+def put_media_chunk(request: Request, media_id: str, index: int, chunk: MediaChunk) -> dict[str, bool]:
+    if identity.vault(request.state.user["id"]) is None:
+        raise HTTPException(status_code=409, detail="Create a vault first")
+    _uuid(media_id)
+    if not 0 <= index < 512:
+        raise HTTPException(status_code=400, detail="Invalid media chunk index")
+    _bytes(chunk.iv, length=12)
+    ciphertext = _bytes(chunk.ciphertext, maximum=256 * 1024 + 16)
+    if len(ciphertext) < 17:
+        raise HTTPException(status_code=400, detail="Invalid ciphertext size")
+    try:
+        identity.append_media_chunk(request.state.user["id"], media_id, index,
+                                    chunk.iv, chunk.ciphertext)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OverflowError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    return {"stored": True}
+
+
+@app.get("/sync/v1/media/{media_id}/chunks/{index}")
+def get_media_chunk(request: Request, media_id: str, index: int) -> dict[str, str]:
+    _uuid(media_id)
+    if not 0 <= index < 512:
+        raise HTTPException(status_code=400, detail="Invalid media chunk index")
+    chunk = identity.media_chunk(request.state.user["id"], media_id, index)
+    if chunk is None:
+        raise HTTPException(status_code=404, detail="Media chunk not found")
+    return chunk

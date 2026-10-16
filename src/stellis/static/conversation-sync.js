@@ -27,6 +27,41 @@
     entry.ciphertext=await seal(key,JSON.stringify(payload),cryptoBox.bytes(entry.iv),aad(user.id,entry.item_id,entry.id));
     await remote('/entries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)});
   }
+  async function uploadAudio(user,key,conversationId) {
+    const response=await fetch(`${API}/conversations/${encodeURIComponent(conversationId)}/audio`);
+    if(!response.ok || !response.body)throw Error('Audio is unavailable');
+    const length=Number(response.headers.get('content-length'));
+    if(Number.isFinite(length) && length>512*256*1024)throw Error('Audio is too large to sync');
+    const mediaType=(response.headers.get('content-type')||'').split(';')[0];
+    if(!mediaType.startsWith('audio/') || mediaType.length>80)throw Error('Audio format is unavailable');
+    const mediaId=crypto.randomUUID(),chunkSize=256*1024,reader=response.body.getReader();
+    let buffer=new Uint8Array(chunkSize),used=0,index=0,total=0;
+    async function push(size) {
+      if(index>=512)throw Error('Audio is too large to sync');
+      const iv=cryptoBox.random(12);
+      const ciphertext=await cryptoBox.sealBytes(key,buffer.subarray(0,size),iv,
+        cryptoBox.aad('media-v1',user.id,mediaId,String(index)));
+      status.textContent=`Syncing audio ${index+1}…`;
+      await remote(`/media/${mediaId}/chunks/${index}`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({iv:cryptoBox.b64(iv),ciphertext})});
+      index++;total+=size;buffer=new Uint8Array(chunkSize);used=0;
+    }
+    try {
+      while(true){
+        const {done,value}=await reader.read();if(done)break;
+        let offset=0;
+        while(offset<value.length){
+          const count=Math.min(chunkSize-used,value.length-offset);
+          buffer.set(value.subarray(offset,offset+count),used);used+=count;offset+=count;
+          if(used===chunkSize)await push(chunkSize);
+        }
+      }
+      if(used)await push(used);
+    } catch(error) { await reader.cancel().catch(()=>{}); throw error; }
+    finally { reader.releaseLock(); }
+    if(!total)throw Error('Audio is empty');
+    return {media_id:mediaId,media_chunks:index,media_type:mediaType,media_bytes:total};
+  }
   form.addEventListener('submit',async event => {
     event.preventDefault();if(!origin || !activeConversationId)return;
     submit.disabled=true;link.hidden=true;status.textContent='Connecting…';
@@ -54,11 +89,12 @@
         status.textContent=`Syncing ${index+1} of ${parts.length}…`;
         await send(user,key,partIds[index],parts[index]);
       }
+      const audio=await uploadAudio(user,key,id);
       await send(user,key,crypto.randomUUID(),{kind:'conversation_manifest',snapshot_id:snapshot,
         source_conversation_id:id,source_origin:location.origin,title:conversation.title,duration_ms:conversation.duration_ms,
         source_revision:transcript.revision,generation_version:transcript.generation_version,
-        segment_count:transcript.segments.length,part_ids:partIds,created_at:new Date().toISOString()});
-      status.textContent='Transcript synced. Audio stays on this device.';
+        segment_count:transcript.segments.length,part_ids:partIds,...audio,created_at:new Date().toISOString()});
+      status.textContent='Conversation synced.';
     }catch(error){
       if(error.code===401){status.textContent='Sign in to sync';link.hidden=false;}
       else status.textContent=error.message||'Sync failed';

@@ -1,4 +1,4 @@
-# ADR 0043: Default local login and one-time account recovery
+# ADR 0046: Default local login and one-time account recovery
 
 Status: accepted, 2026-10-16. Ticket: #16.
 
