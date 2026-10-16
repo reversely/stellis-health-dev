@@ -17,4 +17,22 @@ Date: 2026-10-16. Source: the user's private Otter export in `data/`, which is e
 
 The transcript came from the audio through the local whisper.cpp model. Speaker turns came from local sherpa-onnx inference. The browser displayed all 789 segments and 19 groups; selecting a transcript segment sought the original audio to 1:29.92, played it, and highlighted the active segment. Audio and transcript persisted across app restart.
 
-**Decision:** Ticket #12 establishes a working local pipeline and makes uncertainty visible. It does **not** satisfy final autonomous speaker labeling. [#29](https://github.com/reversely/stellis/issues/29) tracks acoustic coverage, cluster fragmentation, and rematch against this baseline. The Otter labels are anonymous and imperfect; no aggregate above proves identity recognition or truth of all spoken words.
+## Speaker rematch validation (#29)
+
+The browser invoked a separate on-device TitaNet embedding job against the saved ASR segments and audio, without Otter data in inference. It completed and survived reload. The untouched machine generation remains available; edits and segment IDs are preserved.
+
+| Measure | Result |
+| --- | ---: |
+| Supported acoustic prototypes shown | 5 |
+| Segments with an acoustic suggestion | 681 of 789 (86.3%) |
+| Unresolved segments | 108 of 789 |
+| Segments whose displayed suggestion changed from the initial pass | 292 of 789 |
+| Previously unassigned segments now suggested | 191 of 228 (83.8%) |
+| Disagreement with timestamp-mapped weak Otter labels | 13 of 681 (1.9%) |
+| Disagreements in one Otter passage containing two voices | 8 of 13 |
+| TitaNet / alternative WeSpeaker extraction time | 17.2 s / 46.1 s |
+| TitaNet / WeSpeaker coverage at cosine 0.55, margin 0.05 | 86.3% / 70.1% |
+
+The Otter passage with a single label contains two successive voice introductions; its segments match two existing acoustic groups. Five other disagreements include brief or boundary passages. The 1.9% figure measures reference disagreement, not a calibrated false-assignment probability. Additional diverse recordings are needed before treating the thresholds as universal.
+
+**Decision:** Ticket #12 established the local pipeline. Ticket #29 raised measured suggestion coverage above 85% while keeping uncertain passages visible. The Otter labels are anonymous and imperfect; no aggregate above proves identity recognition or truth of all spoken words.

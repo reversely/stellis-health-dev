@@ -7,6 +7,7 @@ const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
 const API = '/api/v1';
 const processButton = document.querySelector('#process-button');
+const rematchButton = document.querySelector('#rematch-button');
 const processingStatus = document.querySelector('#processing-status');
 const transcriptView = document.querySelector('#transcript');
 let activeConversationId = null;
@@ -15,6 +16,7 @@ let aiRunTimer = null;
 let transcriptSegments = [];
 let currentTranscript = null;
 let highlightsOnly = false;
+let rematchChangesOnly = false;
 let selectedExcerpt = null;
 const recordingPanel = document.querySelector('#recording-panel');
 const recordingState = document.querySelector('#recording-state');
@@ -67,11 +69,13 @@ async function showDetail(id) {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   activeConversationId = id;
+  rematchChangesOnly = false;
   transcriptSegments = [];
   currentTranscript = null;
   transcriptView.replaceChildren();
   processingStatus.textContent = 'Checking local speech models…';
   processButton.hidden = true;
+  rematchButton.hidden = true;
   const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}`));
   listView.hidden = true;
   detailView.hidden = false;
@@ -191,7 +195,7 @@ async function loadSpeech(id) {
   ]);
   if (id !== activeConversationId) return;
   if (existing?.state === 'succeeded') { await showTranscript(id);
-    if (existing.pipeline_version !== capabilities.pipeline_version) { processButton.hidden = false; processButton.textContent = 'Reprocess with vocabulary'; }
+    if (existing.kind !== 'rematch' && existing.pipeline_version !== capabilities.pipeline_version) { processButton.hidden = false; processButton.textContent = 'Reprocess with vocabulary'; }
     return; }
   if (existing?.state === 'queued' || existing?.state === 'running') { watchJob(existing); return; }
   if (!capabilities.features.transcribe || !capabilities.features.diarize) {
@@ -199,9 +203,9 @@ async function loadSpeech(id) {
     return;
   }
   if (existing?.state === 'failed') {
-    processingStatus.textContent = `Processing stopped: ${existing.error || 'Unknown error'}`;
-    processButton.hidden = false;
-    processButton.textContent = 'Retry processing';
+    if (existing.kind === 'rematch') { await showTranscript(id); rematchButton.hidden = false; rematchButton.textContent = 'Retry speaker rematch'; }
+    else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
+    processingStatus.textContent = `${existing.kind === 'rematch' ? 'Speaker rematch' : 'Processing'} stopped: ${existing.error || 'Unknown error'}`;
     return;
   }
   await beginProcessing(id);
@@ -223,9 +227,9 @@ function watchJob(job) {
   clearTimeout(jobTimer);
   if (job.state === 'succeeded') { showTranscript(job.conversation_id).catch(error => processingStatus.textContent = error.message); return; }
   if (job.state === 'failed') {
-    processingStatus.textContent = `Processing stopped: ${job.error || 'Unknown error'}`;
-    processButton.hidden = false;
-    processButton.textContent = 'Retry processing';
+    processingStatus.textContent = `${job.kind === 'rematch' ? 'Speaker rematch' : 'Processing'} stopped: ${job.error || 'Unknown error'}`;
+    if (job.kind === 'rematch') { rematchButton.hidden = false; rematchButton.disabled = false; rematchButton.textContent = 'Retry speaker rematch'; }
+    else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
     return;
   }
   processingStatus.textContent = `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)} on this device · ${Math.round(job.progress * 100)}%`;
@@ -239,26 +243,37 @@ async function showTranscript(id) {
   if (id !== activeConversationId) return;
   const previousScroll = window.scrollY;
   currentTranscript = data;
+  rematchButton.hidden = false;
+  rematchButton.disabled = data.generation_version.includes('-speaker-embedding-v1');
+  rematchButton.textContent = rematchButton.disabled ? 'Speakers rematched' : 'Rematch speakers';
   transcriptSegments = data.segments;
   transcriptView.replaceChildren();
   hideSelectionToolbar();
   document.querySelector('#highlight-count').textContent = `${data.highlights.length} highlights`;
   document.querySelector('#show-highlights').setAttribute('aria-pressed', String(highlightsOnly));
+  const changed = data.segments.filter(segment => segment.raw_speaker_cluster_id !== undefined && segment.raw_speaker_cluster_id !== segment.speaker_cluster_id).length;
+  const changesButton = document.querySelector('#show-rematch-changes');
+  changesButton.hidden = !data.generation_version.includes('-speaker-embedding-v1');
+  if (changesButton.hidden) rematchChangesOnly = false;
+  changesButton.setAttribute('aria-pressed', String(rematchChangesOnly));
+  document.querySelector('#rematch-change-count').textContent = changesButton.hidden ? '' : `${changed} changed`;
   const counts = new Map();
   for (const segment of data.segments) if (segment.speaker_cluster_id) counts.set(segment.speaker_cluster_id, (counts.get(segment.speaker_cluster_id) || 0) + 1);
+  const clusterRank = new Map([...new Set(data.segments.map(segment => segment.speaker_cluster_id).filter(Boolean))].map((id, index) => [id, index + 1]));
   const summary = document.createElement('div');
   summary.className = 'speaker-summary';
   for (const [cluster, count] of [...counts].sort((a, b) => b[1] - a[1])) {
     const pill = document.createElement('span');
     pill.className = 'speaker-pill';
     const manual = data.speaker_labels.find(label => label.scope === 'cluster' && label.target_id === cluster);
-    pill.textContent = `${manual ? manual.name : cluster.replace('speaker-', 'Speaker ')} · ${count}`;
+    pill.textContent = `${manual ? manual.name : `Speaker ${clusterRank.get(cluster)}`} · ${count}`;
     summary.append(pill);
   }
   transcriptView.append(summary);
   for (const segment of data.segments) {
     const highlights = data.highlights.filter(item => item.segment_id === segment.id);
     if (highlightsOnly && !highlights.length) continue;
+    if (rematchChangesOnly && segment.raw_speaker_cluster_id === segment.speaker_cluster_id) continue;
     const row = document.createElement('div');
     row.className = 'segment';
     row.dataset.segmentId = segment.id;
@@ -274,12 +289,17 @@ async function showTranscript(id) {
     speaker.className = 'segment-speaker';
     speaker.textContent = segment.speaker_display_name;
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
+    if (segment.speaker_match_source === 'embedding_suggestion') speaker.title = 'Suggested from this passage’s voice; click to confirm or edit';
+    if (segment.speaker_match_source === 'unresolved') speaker.title = 'Speaker unresolved; click to assign';
     speaker.addEventListener('click', () => showSpeakerEditor(row, segment));
     const words = document.createElement('div');
     words.className = 'segment-text';
     words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight, or click to play.`);
     renderHighlightedText(words, segment.text, highlights);
-    words.addEventListener('click', () => { if (!window.getSelection()?.toString().trim()) seek(); });
+    row.addEventListener('click', event => {
+      if (event.target.closest('button,input,textarea,select') || window.getSelection()?.toString().trim()) return;
+      seek();
+    });
     const edit = document.createElement('button');
     edit.type = 'button';
     edit.className = 'segment-action';
@@ -289,7 +309,8 @@ async function showTranscript(id) {
     row.append(stamp, speaker, words, edit);
     transcriptView.append(row);
   }
-  processingStatus.textContent = `${data.segments.length} on-device segments · ${counts.size} acoustic speaker groups. Click text to play; drag across words to highlight.`;
+  const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
+  processingStatus.textContent = `${data.segments.length} on-device segments · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click text to play; drag across words to highlight.`;
   window.scrollTo(0, previousScroll);
 }
 function renderHighlightedText(container, value, highlights) {
@@ -667,10 +688,26 @@ player.addEventListener('timeupdate', () => {
   if (active) transcriptView.querySelector(`[data-segment-id="${active.id}"]`)?.classList.add('active');
 });
 processButton.addEventListener('click', () => beginProcessing(activeConversationId));
+rematchButton.addEventListener('click', async () => {
+  if (!activeConversationId) return;
+  rematchButton.disabled = true;
+  processingStatus.textContent = 'Starting on-device speaker rematch…';
+  try {
+    const job = await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/speaker-rematch`, {method:'POST'}));
+    watchJob(job);
+  } catch (error) {
+    processingStatus.textContent = error.message;
+    rematchButton.disabled = false;
+  }
+});
 transcriptView.addEventListener('mouseup', () => setTimeout(inspectSelection, 0));
 transcriptView.addEventListener('keyup', event => { if (event.key === 'Shift' || event.key.startsWith('Arrow')) inspectSelection(); });
 document.querySelector('#show-highlights').addEventListener('click', () => {
   highlightsOnly = !highlightsOnly;
+  if (activeConversationId && currentTranscript) showTranscript(activeConversationId).catch(error => processingStatus.textContent = error.message);
+});
+document.querySelector('#show-rematch-changes').addEventListener('click', () => {
+  rematchChangesOnly = !rematchChangesOnly;
   if (activeConversationId && currentTranscript) showTranscript(activeConversationId).catch(error => processingStatus.textContent = error.message);
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));

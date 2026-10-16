@@ -53,6 +53,8 @@ def connect() -> Iterator[sqlite3.Connection]:
             error TEXT,
             metrics_json TEXT,
             vocabulary_json TEXT NOT NULL DEFAULT '[]',
+            kind TEXT NOT NULL DEFAULT 'speech',
+            source_generation_version TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             UNIQUE(conversation_id, pipeline_version)
@@ -61,6 +63,10 @@ def connect() -> Iterator[sqlite3.Connection]:
     job_columns = {row["name"] for row in conn.execute("PRAGMA table_info(processing_jobs)")}
     if "vocabulary_json" not in job_columns:
         conn.execute("ALTER TABLE processing_jobs ADD COLUMN vocabulary_json TEXT NOT NULL DEFAULT '[]'")
+    if "kind" not in job_columns:
+        conn.execute("ALTER TABLE processing_jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'speech'")
+    if "source_generation_version" not in job_columns:
+        conn.execute("ALTER TABLE processing_jobs ADD COLUMN source_generation_version TEXT")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS transcripts (
             conversation_id TEXT PRIMARY KEY REFERENCES conversations(id),
@@ -297,13 +303,16 @@ def list_pending_jobs() -> list[dict[str, object]]:
 
 def add_job(record: dict[str, object]) -> None:
     """Persist a newly queued job."""
+    record = {**record, "kind": record.get("kind", "speech"),
+              "source_generation_version": record.get("source_generation_version")}
     with connect() as conn:
         conn.execute(
             """INSERT INTO processing_jobs
                (id, conversation_id, pipeline_version, state, stage, progress, error,
-                metrics_json, vocabulary_json, created_at, updated_at)
+                metrics_json, vocabulary_json, kind, source_generation_version, created_at, updated_at)
                VALUES (:id, :conversation_id, :pipeline_version, :state, :stage, :progress,
-                       :error, :metrics_json, :vocabulary_json, :created_at, :updated_at)""",
+                       :error, :metrics_json, :vocabulary_json, :kind, :source_generation_version,
+                       :created_at, :updated_at)""",
             record,
         )
 
@@ -657,6 +666,9 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
     cluster_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "cluster"}
     segment_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "segment"}
     segments = json.loads(str(record["segments_json"]))
+    cluster_order = list(dict.fromkeys(segment["speaker_cluster_id"] for segment in segments
+                                       if segment["speaker_cluster_id"]))
+    display_names = {cluster: f"Speaker {index + 1}" for index, cluster in enumerate(cluster_order)}
     for segment in segments:
         override = edits.get(segment["id"])
         if override is not None:
@@ -673,7 +685,7 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
             segment["speaker_display_name"] = cluster_labels[cluster]
             segment["speaker_label_source"] = "manual_cluster"
         else:
-            segment["speaker_display_name"] = cluster.replace("speaker-", "Speaker ") if cluster else "Unknown speaker"
+            segment["speaker_display_name"] = display_names[cluster] if cluster else "Unknown speaker"
             segment["speaker_label_source"] = "automatic"
     return {
         "conversation_id": conversation_id, "revision": record["revision"],

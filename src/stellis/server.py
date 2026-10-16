@@ -253,6 +253,18 @@ def process_conversation(conversation_id: str) -> dict[str, object]:
     return processing.public_job(processing.request_processing(conversation_id))
 
 
+@api.post("/conversations/{conversation_id}/speaker-rematch")
+def rematch_speakers(conversation_id: str) -> dict[str, object]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if not processing.model_paths()[2].is_file():
+        raise HTTPException(status_code=409, detail="Install the local speaker embedding model")
+    try:
+        return processing.public_job(processing.request_rematch(conversation_id))
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @api.get("/jobs/{job_id}")
 def job(job_id: str) -> dict[str, object]:
     record = storage.get_job(job_id)
