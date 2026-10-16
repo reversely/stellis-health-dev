@@ -975,6 +975,7 @@ function renderAIItems(title, items, container, sourceStarts) {
 function renderAIRuns(runs) {
   const summaries = runs.filter(run => run.kind === 'summary');
   const latest = summaries[0];
+  const displayed = latest?.state === 'succeeded' ? latest : summaries.find(run => run.state === 'succeeded');
   const summaryResults = document.querySelector('#summary-results'); summaryResults.replaceChildren();
   const button = document.querySelector('#generate-summary');
   const regenerate = document.querySelector('#regenerate-summary');
@@ -982,10 +983,10 @@ function renderAIRuns(runs) {
   button.hidden = latest?.state === 'succeeded' && !latest.stale;
   button.textContent = latest?.state === 'failed' ? 'Retry summary' : 'Generate summary';
   regenerate.hidden = latest?.state !== 'succeeded' || latest.stale;
-  if (latest?.state === 'succeeded') {
-    if (latest.stale) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = 'Summary is outdated.'; summaryResults.append(stale);}
+  if (displayed) {
+    if (displayed.stale || displayed !== latest) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = displayed !== latest ? 'Previous summary.' : 'Summary is outdated.'; summaryResults.append(stale);}
     for (const [field, title] of [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']])
-      renderAIItems(title, latest.result[field], summaryResults, latest.source_starts);
+      renderAIItems(title, displayed.result[field], summaryResults, displayed.source_starts);
   }
   const status = document.querySelector('#ai-status');
   status.textContent = latest?.state === 'failed' ? `Summary stopped: ${latest.error_message}` :
@@ -1033,7 +1034,8 @@ document.querySelector('#summary-tab').addEventListener('click', () => {
 });
 document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
 document.querySelector('#edited-tab').addEventListener('click', () => showConversationTab('edited'));
-document.querySelector('#generate-summary').addEventListener('click', () => startAIRun('summary'));
+document.querySelector('#generate-summary').addEventListener('click', () =>
+  startAIRun('summary', null, document.querySelector('#generate-summary').textContent === 'Retry summary'));
 document.querySelector('#regenerate-summary').addEventListener('click', () => startAIRun('summary', null, true));
 document.querySelector('#clean-button').addEventListener('click', async () => {
   const id = activeConversationId;

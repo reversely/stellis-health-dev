@@ -17,12 +17,12 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v7"
+PROMPT_VERSION = "cited-conversation-v14"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
 _ITEM_SCHEMA = {"type": "object", "properties": {
-    "text": {"type": "string", "maxLength": 280},
+    "text": {"type": "string", "maxLength": 1000},
     "source_segment_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 4}},
     "required": ["text", "source_segment_ids"], "additionalProperties": False}
 SUMMARY_SCHEMA = {"type": "object", "properties": {
@@ -153,6 +153,16 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
                            and item["state"] in {"queued", "running"}), None)
             if active:
                 return active
+            failed = next((item for item in storage.list_ai_runs(conversation_id)
+                           if item["kind"] == "summary" and item["source_revision"] == display["revision"]
+                           and item["source_identity_hash"] == source_identity_hash
+                           and item["model_id"] == MODEL_ID and item["prompt_version"] == PROMPT_VERSION
+                           and item["state"] == "failed"), None)
+            if failed:
+                storage.update_ai_run(str(failed["id"]), state="queued", stage="queued",
+                                      error_code=None, error_message=None, updated_at=_now())
+                _launch(str(failed["id"]))
+                return storage.get_ai_run(str(failed["id"])) or failed
             digest = hashlib.sha256((identity + str(uuid.uuid4())).encode()).hexdigest()
         existing = storage.find_ai_run(conversation_id, kind, digest)
         if existing:
@@ -228,7 +238,63 @@ def _chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
     return result
 
 
-def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool) -> dict[str, object]:
+def _summary_chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
+    chunks = _chunks(segments)
+    if len(chunks) < 2:
+        return chunks
+    tail = chunks[-1]
+    prior_ids = {str(segment["id"]) for segment in chunks[-2]}
+    fresh = [segment for segment in tail if str(segment["id"]) not in prior_ids]
+    fresh_terms = sum(len(_anchor_terms(str(segment["text"]))) for segment in fresh)
+    tail_duration = int(tail[-1]["end_ms"]) - int(tail[0]["start_ms"])
+    # A short overlap after the last full part adds no useful chronological
+    # point; forcing one made the closing pleasantries fail citation checks.
+    if len(fresh) < len(tail) and tail_duration <= 30_000 and fresh_terms <= 15:
+        return chunks[:-1]
+    return chunks
+
+
+def _focus_window(chunk: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Prefer three informative adjacent passages over one long isolated fragment."""
+    if len(chunk) <= 3:
+        return chunk
+    def score(start: int) -> int:
+        counts = [len(_anchor_terms(str(item["text"]))) for item in chunk[start:start + 3]]
+        return sum(counts) + 2 * min(counts)
+    start = max(range(len(chunk) - 2), key=lambda index: (score(index), index))
+    return chunk[start:start + 3]
+
+
+_ANCHOR_STOPWORDS = set("""about after again also because been before being between both could
+    described describes discussing discusses during every from having including into itself
+    project projects speaker participant their there these those through under using where which while with
+    would interview team group people began says said""".split())
+
+
+def _anchor_terms(value: str) -> list[str]:
+    """Keep concrete claim words; this is a conservative citation cue, not fact checking."""
+    return [word.lower() for word in re.findall(r"[A-Za-z0-9]+", value)
+            if (len(word) >= 4 or word.isdigit()) and word.lower() not in _ANCHOR_STOPWORDS]
+
+
+def _supported_terms(text: str, sources: str) -> tuple[float, list[str]]:
+    terms = _anchor_terms(text)
+    if not terms:
+        return 1.0, []
+    source_words = set(_anchor_terms(sources))
+    missing = [term for term in terms if not any(
+        term == source or (len(term) >= 5 and len(source) >= 5 and
+                           (term.startswith(source[:5]) or source.startswith(term[:5]))) or
+        (len(term) == 4 and term.isdigit() and source == term[-2:])
+        for source in source_words)]
+    return 1 - len(missing) / len(terms), missing
+
+
+def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool,
+                    source_texts: dict[str, str] | None = None,
+                    min_coverage: float = 0.75,
+                    min_source_terms: int = 0,
+                    allow_period_repair: bool = False) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise AIError("invalid_json", "The model returned an invalid result shape")
     result: dict[str, object] = {}
@@ -243,9 +309,30 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
             source_ids = _canonical_sources(item.get("source_segment_ids"), allowed_ids)
             if not source_ids:
                 raise AIError("invalid_source", "The model did not cite its evidence")
+            if field == "overview" and source_texts is not None and len(source_ids) > 4:
+                raise AIError("weak_citation", "The overview cites too many passages to inspect directly")
             text = item["text"].strip()
+            if field == "overview":
+                # A passage can contain two voices even when it has one acoustic
+                # label; do not present a provisional number as a person claim.
+                text = re.sub(r"\bSpeaker\s+\d+\b",
+                              lambda match: "A participant" if match.start() == 0 else "a participant",
+                              text, flags=re.I)
+                if (allow_period_repair and len(text) <= 200 and not re.search(r"[.!?][\"'’”)]*$", text)
+                        and re.search(r"[A-Za-z0-9][\"'’”)]*$", text)
+                        and not re.search(r"\b(?:and|or|to|of|with|for|the|a|an|from|on|in|at|by|about|as|but|because|that|which|who)$", text, re.I)):
+                    text += "."
             if not text or len(text) > 1000:
                 raise AIError("invalid_json", f"The model returned invalid {field} text")
+            if field == "overview" and (len(text) > 400 or not re.search(r"[.!?][\"'’”)]*$", text)):
+                raise AIError("incomplete_sentence", "The model returned an unfinished overview point")
+            if field == "overview" and source_texts is not None:
+                cited = " ".join(source_texts.get(source_id, "") for source_id in source_ids)
+                if len(set(_anchor_terms(cited))) < min_source_terms:
+                    raise AIError("weak_citation", "The overview cites too little concrete source text")
+                coverage, missing = _supported_terms(text, cited)
+                if coverage < min_coverage:
+                    raise AIError("weak_citation", f"The overview cites passages missing these claim terms: {', '.join(dict.fromkeys(missing[:8]))}")
             validated.append({"text": text, "source_segment_ids": _display_sources(source_ids)})
         result[field] = validated
     if require_overview and not result["overview"]:
@@ -335,17 +422,51 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
 
 
 def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int,
-              metadata: dict[str, object], *, kind: str, require_overview: bool = False) -> dict[str, object]:
+              metadata: dict[str, object], *, kind: str, require_overview: bool = False,
+              source_texts: dict[str, str] | None = None,
+              min_coverage: float = 0.75,
+              min_source_terms: int = 0,
+              source_ids_override: list[str] | None = None,
+              allow_period_repair: bool = False) -> dict[str, object]:
     for attempt in range(2):
         try:
             payload = _request(messages, max_tokens, metadata, kind)
+            if source_ids_override and kind == "summary" and isinstance(payload, dict):
+                payload = {**payload, "overview": [
+                    {**item, "source_segment_ids": source_ids_override}
+                    if isinstance(item, dict) else item
+                    for item in payload.get("overview", [])]}
             return (_validate_answer(payload, allowed) if kind == "answer"
-                    else _validate_items(payload, allowed, require_overview=require_overview))
+                    else _validate_items(payload, allowed, require_overview=require_overview,
+                                         source_texts=source_texts, min_coverage=min_coverage,
+                                         min_source_terms=min_source_terms,
+                                         allow_period_repair=allow_period_repair))
         except AIError as exc:
-            if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit"}:
+            if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence", "weak_citation"}:
                 raise
-            messages = [*messages, {"role": "user", "content":
-                "Your previous response failed local validation. Return only a compact JSON object with the required fields and source IDs from the supplied evidence."}]
+            cited_lines = ""
+            if exc.code == "weak_citation" and source_texts and isinstance(payload, dict):
+                for item in payload.get("overview", [])[:3]:
+                    if isinstance(item, dict):
+                        for source_id in item.get("source_segment_ids", [])[:4]:
+                            label = str(source_id).strip().strip("[]")
+                            if label in source_texts:
+                                cited_lines += f"\n[{label}] {source_texts[label][:350]}"
+            correction = ("Each overview point must describe only details present in its own cited passages. "
+                          "Choose one concrete claim and cite the one to three passages that directly say it. "
+                          "Remove unsupported details, especially names, dates, and technical claims. "
+                          f"The prior claim had terms absent from its citations: {exc}. "
+                          f"These were its cited passages:{cited_lines}\n"
+                          "You may choose different passage labels from the supplied transcript if they better support the claim. "
+                          "Do not mention generic speaker numbers; a passage may mix voices. "
+                          "Return the required JSON object."
+                          if exc.code == "weak_citation" else
+                          "Rewrite every overview point as one complete sentence under 400 characters, "
+                          "ending in punctuation. Cite only passages that directly support every claim. "
+                          "Return the required JSON object."
+                          if exc.code == "incomplete_sentence" else
+                          "Your previous response failed local validation. Return only a compact JSON object with the required fields and source IDs from the supplied evidence.")
+            messages = [*messages, {"role": "user", "content": correction}]
     raise AIError("invalid_json", "Nebius did not return a valid result")
 
 
@@ -354,21 +475,48 @@ _SUMMARY_SYSTEM = ("You summarize an interview using only the supplied transcrip
                    "Return JSON with arrays overview, topics, decisions, action_items. "
                    "Every array item is {text, source_segment_ids}; use at most three short s-number source labels per item. "
                    "For nonempty evidence, include at least one overview item about spoken content. "
+                   "Make each overview point one complete sentence under 400 characters and end it with punctuation; "
+                   "never cut off a phrase to meet a length limit. Each claim must be supported by its cited passages; "
+                   "choose a concrete claim from at most three nearby passages instead of summarizing an entire part; "
+                   "do not mention generic speaker numbers, which may misattribute mixed voices; "
+                   "split claims with different evidence into separate items. "
                    "Omit unsupported decisions or actions by returning an empty array. Keep each item concise.")
 
 
 def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run_id: str) -> dict[str, object]:
-    chunks = _chunks(segments)
+    chunks = _summary_chunks(segments)
     prior = storage.get_ai_run(run_id)
     extracted = json.loads(str(prior["checkpoint_json"])) if prior else []
     for index in range(len(extracted), len(chunks)):
         chunk = chunks[index]
         storage.update_ai_run(run_id, stage=f"analyzing {index + 1}/{len(chunks)}", updated_at=_now())
         evidence, aliases = _evidence(chunk)
+        source_texts = {f"s{offset + 1}": f"{segment['speaker_display_name']} {segment['text']}"
+                        for offset, segment in enumerate(chunk)}
         messages = [{"role": "system", "content": _SUMMARY_SYSTEM},
                     {"role": "user", "content": f"Analyze this transcript part. JSON only.\n{evidence}"}]
-        candidate = _complete(messages, set(aliases), 1200, metadata,
-                              kind="summary", require_overview=True)
+        try:
+            candidate = _complete(messages, set(aliases), 1200, metadata,
+                                  kind="summary", require_overview=True, source_texts=source_texts,
+                                  min_source_terms=10 if len(chunk) > 10 else 0)
+        except AIError as exc:
+            if exc.code != "weak_citation":
+                raise
+            # If a broad claim keeps citing unrelated fragments, constrain the
+            # provider to a small contiguous passage window in this chunk.
+            focused = _focus_window(chunk)
+            focus_evidence, aliases = _evidence(focused)
+            focus_texts = {f"s{offset + 1}": f"{segment['speaker_display_name']} {segment['text']}"
+                           for offset, segment in enumerate(focused)}
+            focused_messages = [{"role": "system", "content": _SUMMARY_SYSTEM +
+                                 " Use only these nearby passages. Return one overview point and empty other arrays. "
+                                 "Avoid speaker attribution because one passage can contain multiple voices."},
+                                {"role": "user", "content": f"Summarize only these cited lines. JSON only.\n{focus_evidence}"}]
+            candidate = _complete(focused_messages, set(aliases), 1200, metadata,
+                                  kind="summary", require_overview=True, source_texts=focus_texts,
+                                  min_coverage=0.60, min_source_terms=10 if len(chunk) > 10 else 0,
+                                  source_ids_override=list(aliases),
+                                  allow_period_repair=True)
         extracted.append(_expand_sources(candidate, aliases, "summary"))
         storage.update_ai_run(run_id, checkpoint_json=json.dumps(extracted), updated_at=_now())
         _persist_metadata(run_id, metadata)
