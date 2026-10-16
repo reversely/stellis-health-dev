@@ -682,7 +682,10 @@ async def finalize_recording(recording_id: str) -> dict[str, object]:
         if storage.get_transcript(conversation_id) is None:
             ready = processing.capabilities()["features"]
             if ready["transcribe"] and ready["diarize"]:
-                processing.request_processing(conversation_id)
+                try:
+                    processing.request_processing(conversation_id)
+                except RuntimeError:
+                    pass  # Finalization succeeded; a pending review can block another speech job.
         else:
             try:
                 enhanced_notes.request(conversation_id)
