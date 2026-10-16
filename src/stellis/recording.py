@@ -106,12 +106,17 @@ def discard_session(recording_id: str) -> bool:
             return False
         if row["state"] != "recording":
             raise RuntimeError("A saved conversation cannot be discarded here")
+        image_ids = [str(item["id"]) for item in conn.execute(
+            "SELECT id FROM conversation_images WHERE recording_id = ?", (recording_id,))]
+        conn.execute("DELETE FROM conversation_images WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM recording_ai_runs WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM meeting_notes WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM recording_chunks WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM recording_events WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM recording_sessions WHERE id = ?", (recording_id,))
     shutil.rmtree(_directory(recording_id), ignore_errors=True)
+    from stellis import images
+    images.remove_files(image_ids)
     return True
 
 
@@ -226,6 +231,8 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
             conversation, duplicate = await import_upload(upload)
         from stellis import notes
         notes.attach_to_conversation(recording_id, str(conversation["id"]))
+        from stellis import images
+        images.attach_to_conversation(recording_id, str(conversation["id"]), int(conversation["duration_ms"]))
         with storage.connect() as conn:
             conn.execute("UPDATE recording_sessions SET state = 'finalized', conversation_id = ?, updated_at = ? WHERE id = ?",
                          (conversation["id"], _stamp(), recording_id))

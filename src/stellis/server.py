@@ -12,12 +12,12 @@ import subprocess
 import threading
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, clean, enhanced_notes, generation_review, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, clean, enhanced_notes, generation_review, images, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -218,6 +218,10 @@ class NotesWrite(BaseModel):
     expected_revision: int = Field(ge=0)
 
 
+class ImageCaption(BaseModel):
+    caption: str = Field(max_length=280)
+
+
 class EnhancedNotesRequest(BaseModel):
     force: bool = False
 
@@ -262,6 +266,7 @@ app.mount("/shared", StaticFiles(directory=Path(__file__).parent / "shared"), na
 def start_speech_worker() -> None:
     global _retention_thread
     library.recover_staged_media()
+    images.recover_orphans()
     storage.fail_interrupted_ai_runs()
     storage.fail_interrupted_clean_runs()
     enhanced_notes.fail_interrupted()
@@ -676,6 +681,111 @@ def conversation_notes(conversation_id: str) -> dict[str, object]:
 @api.put("/conversations/{conversation_id}/notes")
 def save_conversation_notes(conversation_id: str, request: NotesWrite) -> dict[str, object]:
     return _write_notes("conversation", conversation_id, request)
+
+
+def _list_images(scope: str, item_id: str) -> list[dict[str, object]]:
+    try:
+        return images.list_images(scope, item_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+async def _add_image(scope: str, item_id: str, file: UploadFile,
+                     media_position_ms: int, segment_id: str | None, caption: str) -> dict[str, object]:
+    try:
+        data = await file.read(images.MAX_UPLOAD_BYTES + 1)
+        if len(data) > images.MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Image must be smaller than 12 MB")
+        return images._public(images.add(scope, item_id, data, media_position_ms, segment_id, caption))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=507, detail="Could not save image locally") from exc
+
+
+def _image_file(scope: str, item_id: str, image_id: str, download: bool) -> FileResponse:
+    try:
+        record = images.get(scope, item_id, image_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    path = images.path_for(record)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Image file is missing")
+    return FileResponse(path, media_type="image/webp", filename=f"meeting-image-{image_id}.webp",
+                        content_disposition_type="attachment" if download else "inline",
+                        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+
+
+def _update_image_caption(scope: str, item_id: str, image_id: str, caption: str) -> dict[str, object]:
+    try:
+        return images.update_caption(scope, item_id, image_id, caption)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _delete_image(scope: str, item_id: str, image_id: str) -> dict[str, bool]:
+    try:
+        images.delete(scope, item_id, image_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"deleted": True}
+
+
+@api.get("/recordings/{recording_id}/images")
+def recording_images(recording_id: str) -> list[dict[str, object]]:
+    return _list_images("recording", recording_id)
+
+
+@api.post("/recordings/{recording_id}/images")
+async def add_recording_image(recording_id: str, file: UploadFile = File(...),
+                              media_position_ms: int = Form(...), caption: str = Form("")) -> dict[str, object]:
+    return await _add_image("recording", recording_id, file, media_position_ms, None, caption)
+
+
+@api.get("/conversations/{conversation_id}/images")
+def conversation_images(conversation_id: str) -> list[dict[str, object]]:
+    return _list_images("conversation", conversation_id)
+
+
+@api.post("/conversations/{conversation_id}/images")
+async def add_conversation_image(conversation_id: str, file: UploadFile = File(...),
+                                 media_position_ms: int = Form(...), segment_id: str | None = Form(None),
+                                 caption: str = Form("")) -> dict[str, object]:
+    return await _add_image("conversation", conversation_id, file, media_position_ms, segment_id, caption)
+
+
+@api.get("/recordings/{recording_id}/images/{image_id}/file")
+def recording_image_file(recording_id: str, image_id: str, download: bool = False) -> FileResponse:
+    return _image_file("recording", recording_id, image_id, download)
+
+
+@api.get("/conversations/{conversation_id}/images/{image_id}/file")
+def conversation_image_file(conversation_id: str, image_id: str, download: bool = False) -> FileResponse:
+    return _image_file("conversation", conversation_id, image_id, download)
+
+
+@api.patch("/recordings/{recording_id}/images/{image_id}")
+def edit_recording_image(recording_id: str, image_id: str, request: ImageCaption) -> dict[str, object]:
+    return _update_image_caption("recording", recording_id, image_id, request.caption)
+
+
+@api.patch("/conversations/{conversation_id}/images/{image_id}")
+def edit_conversation_image(conversation_id: str, image_id: str, request: ImageCaption) -> dict[str, object]:
+    return _update_image_caption("conversation", conversation_id, image_id, request.caption)
+
+
+@api.delete("/recordings/{recording_id}/images/{image_id}")
+def remove_recording_image(recording_id: str, image_id: str) -> dict[str, bool]:
+    return _delete_image("recording", recording_id, image_id)
+
+
+@api.delete("/conversations/{conversation_id}/images/{image_id}")
+def remove_conversation_image(conversation_id: str, image_id: str) -> dict[str, bool]:
+    return _delete_image("conversation", conversation_id, image_id)
 
 
 @api.get("/recordings/{recording_id}/chat")
