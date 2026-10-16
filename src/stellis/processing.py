@@ -23,7 +23,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v1"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v2"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 _QUEUE: queue.Queue[str] = queue.Queue()
@@ -273,6 +273,28 @@ def _transcribe(audio_path: Path, model: Path, output_base: Path,
     if not segments:
         raise RuntimeError("The on-device model returned no speech segments")
     return segments
+
+
+def _speech_turn_coverage(segments: list[dict[str, object]],
+                          turns: list[dict[str, object]]) -> float:
+    """Measure how much diarized speech has lexical ASR text."""
+    if not turns:
+        return 0.0
+    intervals = sorted((int(item["start_ms"]), int(item["end_ms"])) for item in segments
+                       if re.search(r"[A-Za-z]", str(item["text"]))
+                       and not str(item["text"]).strip().startswith("["))
+    merged: list[list[int]] = []
+    for start, end in intervals:
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(end, merged[-1][1])
+        else:
+            merged.append([start, end])
+    speech_ms = sum(max(0, int(turn["end_ms"]) - int(turn["start_ms"])) for turn in turns)
+    if not speech_ms:
+        return 0.0
+    covered_ms = sum(max(0, min(int(turn["end_ms"]), end) - max(int(turn["start_ms"]), start))
+                     for turn in turns for start, end in merged)
+    return min(1.0, covered_ms / speech_ms)
 
 
 def _measured_words(item: dict[str, object]) -> list[dict[str, object]]:
@@ -540,10 +562,29 @@ def run_job(job_id: str) -> None:
             _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(source),
                       "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
             _stage(job_id, "transcribing", 0.12)
-            segments = _transcribe(wav, whisper, workspace / "transcript",
-                                   json.loads(str(job["vocabulary_json"])))
+            vocabulary = json.loads(str(job["vocabulary_json"]))
+            short_prompted_clip = bool(vocabulary) and sf.info(wav).duration <= 60
+            prompted_failed = False
+            try:
+                segments = _transcribe(wav, whisper, workspace / "transcript", vocabulary)
+            except RuntimeError:
+                if not short_prompted_clip:
+                    raise
+                prompted_failed = True
+                segments = _transcribe(wav, whisper, workspace / "transcript-plain", [])
             _stage(job_id, "diarizing", 0.55)
             turns = _diarize(wav, segmentation, embedding, job_id)
+            prompted_coverage = _speech_turn_coverage(segments, turns)
+            vocabulary_fallback = prompted_failed
+            if short_prompted_clip and not prompted_failed and turns:
+                try:
+                    plain = _transcribe(wav, whisper, workspace / "transcript-plain", [])
+                except RuntimeError:
+                    plain = []
+                plain_coverage = _speech_turn_coverage(plain, turns)
+                if plain_coverage >= 0.65 and plain_coverage >= prompted_coverage + 0.2:
+                    segments = plain
+                    vocabulary_fallback = True
             _stage(job_id, "aligning", 0.96)
             aligned, coverage = align_segments(str(conversation["id"]), segments, turns)
             metrics = {
@@ -551,6 +592,8 @@ def run_job(job_id: str) -> None:
                 "segment_count": len(aligned), "turn_count": len(turns),
                 "cluster_count": len({turn["speaker_cluster_id"] for turn in turns}),
                 "confident_segment_fraction": round(coverage, 3),
+                "vocabulary_fallback": vocabulary_fallback,
+                "speech_turn_coverage": round(_speech_turn_coverage(segments, turns), 3),
             }
             record = {
                 "conversation_id": conversation["id"], "revision": 1,

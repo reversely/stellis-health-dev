@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -65,6 +66,46 @@ class ProcessingWorkflowTest(unittest.TestCase):
         result, fraction = processing.align_segments(self.conversation_id, segments, turns)
         self.assertTrue(result[0]["speaker_uncertain"])
         self.assertEqual(fraction, 0)
+
+    def test_short_vocabulary_prompt_cannot_drop_spoken_opening(self) -> None:
+        storage.add_vocabulary("Shereen")
+        job = processing.request_processing(self.conversation_id)
+        model = Path(self.temp.name, "model.bin")
+        model.write_bytes(b"model")
+        prompted = [{"start_ms": 0, "end_ms": 250, "text": "-"},
+                    {"start_ms": 500, "end_ms": 950, "text": "Later words"}]
+        plain = [{"start_ms": 0, "end_ms": 450, "text": "Opening words are here"},
+                 {"start_ms": 500, "end_ms": 950, "text": "Later words"}]
+        turns = [{"start_ms": 0, "end_ms": 450, "speaker_cluster_id": "speaker-1"},
+                 {"start_ms": 500, "end_ms": 950, "speaker_cluster_id": "speaker-1"}]
+
+        def decode(command: list[str], timeout: int) -> None:
+            Path(command[-1]).write_bytes(wav_bytes())
+
+        def transcribe(audio: Path, whisper: Path, output: Path,
+                       vocabulary: list[str]) -> list[dict[str, object]]:
+            return prompted if vocabulary else plain
+
+        with patch.object(processing, "model_paths", return_value=(model, model, model)), \
+             patch.object(processing, "_command", side_effect=decode), \
+             patch.object(processing, "_transcribe", side_effect=transcribe), \
+             patch.object(processing, "_diarize", return_value=turns):
+            processing.run_job(str(job["id"]))
+        saved = self.client.get(f"/api/v1/conversations/{self.conversation_id}/transcript").json()
+        status = self.client.get(f"/api/v1/jobs/{job['id']}").json()
+        self.assertEqual(status["state"], "succeeded")
+        self.assertTrue(status["metrics"]["vocabulary_fallback"])
+        self.assertEqual(saved["segments"][0]["text"], "Opening words are here")
+
+    def test_public_real_speech_fixture_with_installed_whisper(self) -> None:
+        model = processing.model_paths()[0]
+        if not model.is_file() or not shutil.which("whisper-cli"):
+            self.skipTest("Local whisper.cpp model is not installed")
+        audio = Path(__file__).parent / "fixtures" / "jfk.wav"
+        segments = processing._transcribe(audio, model, Path(self.temp.name, "jfk"), [])
+        self.assertIn("fellow Americans", " ".join(str(item["text"]) for item in segments))
+        self.assertEqual(segments[0]["start_ms"], 0)
+        self.assertLessEqual(max(int(item["end_ms"]) for item in segments), 11000)
 
     def test_vocabulary_reaches_whisper_initial_prompt(self) -> None:
         output = Path(self.temp.name, "transcript")
