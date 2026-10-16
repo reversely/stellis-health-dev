@@ -17,6 +17,7 @@ let transcriptSegments = [];
 let currentTranscript = null;
 let highlightsOnly = false;
 let rematchChangesOnly = false;
+const editingTurns = new Set();
 let selectedExcerpt = null;
 const recordingPanel = document.querySelector('#recording-panel');
 const recordingState = document.querySelector('#recording-state');
@@ -70,6 +71,7 @@ async function showDetail(id) {
   clearTimeout(aiRunTimer);
   activeConversationId = id;
   rematchChangesOnly = false;
+  editingTurns.clear();
   transcriptSegments = [];
   currentTranscript = null;
   transcriptView.replaceChildren();
@@ -238,6 +240,20 @@ function watchJob(job) {
     catch (error) { processingStatus.textContent = error.message; }
   }, 1500);
 }
+function groupTranscriptSegments(segments) {
+  const turns = [];
+  for (const segment of segments) {
+    const current = turns.at(-1);
+    const previous = current?.at(-1);
+    const resolved = item => item.speaker_label_source?.startsWith('manual') || (item.speaker_cluster_id && !item.speaker_uncertain);
+    const sameTurn = previous && resolved(previous) && resolved(segment) &&
+      previous.speaker_display_name === segment.speaker_display_name &&
+      segment.start_ms - previous.end_ms <= 1500;
+    if (sameTurn) current.push(segment);
+    else turns.push([segment]);
+  }
+  return turns;
+}
 async function showTranscript(id) {
   const data = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/transcript`));
   if (id !== activeConversationId) return;
@@ -270,10 +286,39 @@ async function showTranscript(id) {
     summary.append(pill);
   }
   transcriptView.append(summary);
-  for (const segment of data.segments) {
+  const turns = groupTranscriptSegments(data.segments);
+  for (const group of turns) {
+    const visible = group.filter(segment =>
+      (!highlightsOnly || data.highlights.some(item => item.segment_id === segment.id)) &&
+      (!rematchChangesOnly || segment.raw_speaker_cluster_id !== segment.speaker_cluster_id));
+    if (!visible.length) continue;
+    const turn = document.createElement('article');
+    turn.className = 'speaker-turn';
+    const turnKey = group[0].id;
+    turn.classList.toggle('editing', editingTurns.has(turnKey));
+    const heading = document.createElement('div'); heading.className = 'turn-heading';
+    const turnSpeaker = document.createElement('button'); turnSpeaker.type = 'button';
+    turnSpeaker.textContent = visible[0].speaker_display_name;
+    turnSpeaker.setAttribute('aria-label', `Edit speaker label for turn at ${time(visible[0].start_ms / 1000)}`);
+    const firstSegment = visible[0];
+    turnSpeaker.addEventListener('click', () => {
+      turn.classList.add('editing'); editingTurns.add(turnKey);
+      editTurn.textContent = 'Done editing';
+      showSpeakerEditor(turn.querySelector('.segment'), firstSegment);
+    });
+    const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? `–${time(visible.at(-1).end_ms / 1000)}` : ''}`;
+    const editTurn = document.createElement('button'); editTurn.type = 'button'; editTurn.className = 'turn-edit';
+    editTurn.textContent = turn.classList.contains('editing') ? 'Done editing' : 'Edit turn';
+    editTurn.addEventListener('click', () => {
+      const editing = turn.classList.toggle('editing');
+      if (editing) editingTurns.add(turnKey); else editingTurns.delete(turnKey);
+      editTurn.textContent = editing ? 'Done editing' : 'Edit turn';
+    });
+    heading.append(turnSpeaker, range, editTurn);
+    turn.append(heading);
+    const body = document.createElement('div'); body.className = 'turn-body';
+    for (const segment of visible) {
     const highlights = data.highlights.filter(item => item.segment_id === segment.id);
-    if (highlightsOnly && !highlights.length) continue;
-    if (rematchChangesOnly && segment.raw_speaker_cluster_id === segment.speaker_cluster_id) continue;
     const row = document.createElement('div');
     row.className = 'segment';
     row.dataset.segmentId = segment.id;
@@ -287,7 +332,7 @@ async function showTranscript(id) {
     const speaker = document.createElement('button');
     speaker.type = 'button';
     speaker.className = 'segment-speaker';
-    speaker.textContent = segment.speaker_display_name;
+    speaker.textContent = '⋯';
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
     if (segment.speaker_match_source === 'embedding_suggestion') speaker.title = 'Suggested from this passage’s voice; click to confirm or edit';
     if (segment.speaker_match_source === 'unresolved') speaker.title = 'Speaker unresolved; click to assign';
@@ -307,10 +352,13 @@ async function showTranscript(id) {
     edit.setAttribute('aria-label', `Edit words at ${time(segment.start_ms / 1000)}`);
     edit.addEventListener('click', () => showWordEditor(row, segment));
     row.append(stamp, speaker, words, edit);
-    transcriptView.append(row);
+    body.append(row);
+    }
+    turn.append(body);
+    transcriptView.append(turn);
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
-  processingStatus.textContent = `${data.segments.length} on-device segments · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click text to play; drag across words to highlight.`;
+  processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a passage to play; drag across words to highlight.`;
   window.scrollTo(0, previousScroll);
 }
 function renderHighlightedText(container, value, highlights) {
