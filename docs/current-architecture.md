@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, ticket #13. This page describes the running development code on the #13 branch. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, ticket #14. This page describes the running development code on the #14 branch. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -8,6 +8,7 @@ The browser client shown here is the running development product and primary acc
 flowchart LR
   U[User] --> C[Chromium browser]
   Z[Otter ZIP or audio] -->|select or drop| C
+  Mic[Microphone] -->|MediaRecorder| C
   C -->|HTML, CSS, JS| F[FastAPI static routes]
   C -->|/api/v1 JSON + multipart| A[FastAPI device API]
   C -->|HTTP byte ranges| A
@@ -29,15 +30,21 @@ flowchart LR
   A -->|vocabulary CRUD| V[(SQLite: vocabulary)]
   V -->|job snapshot and Whisper prompt| J
   O -->|display text and labels| A
+  C -->|one-second chunks, pause events, finalize| A
+  A --> R[(Private recording chunks)]
+  A --> Q[(SQLite: recording sessions, chunks, events)]
+  R -->|verified join and stream-copy remux| E
+  E -->|validated audio import| I
 ```
 
 ## Runtime and ownership
 
 | Component | Current implementation | Owns |
 | --- | --- | --- |
-| Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/` | File selection/drop, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript, segment tracking, highlight filter, text and speaker editors, vocabulary panel. |
+| Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/` | File selection/drop, microphone permission and MediaRecorder capture, chunk upload/recovery, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript, segment tracking, highlight filter, text and speaker editors, vocabulary panel. |
 | Device service | FastAPI in `src/stellis/server.py`, started by `uv run stellis serve` | Loopback HTTP (`127.0.0.1:8765`), API routes, static UI, audio range responses, worker startup. |
 | Importer | `src/stellis/importer.py` | Bounded multipart/ZIP extraction, SHA-256 deduplication, `ffprobe` duration/stream validation. |
+| Recorder | `src/stellis/recording.py` | Private bounded chunk files with fsync/digest, interrupted-session listing, pause/device events, verified join, ffmpeg stream-copy remux, import handoff, explicit discard. |
 | Storage | `src/stellis/storage.py` | SQLite conversations, jobs, current transcript, immutable model generations, optimistic text/speaker corrections and events, anchored highlights, vocabulary; private original media under `~/Library/Application Support/Stellis` or `STELLIS_DATA_DIR`. |
 | Speech worker | `src/stellis/processing.py` and `src/stellis/worker.py` | One queue, isolated child process with per-job file lock, restart requeue, ffmpeg decode, whisper.cpp segment ASR with a vocabulary snapshot prompt, sherpa-onnx acoustic turns, overlap alignment, aggregate metrics. |
 | Model distribution | `scripts/setup_models.sh` | Downloads pinned model files to private local storage and verifies SHA-256; models do not enter Git. |
@@ -50,13 +57,14 @@ flowchart LR
 - `/api/v1/capabilities` reports actual local English ASR and diarization readiness. `POST /api/v1/conversations/{id}/processing-jobs` starts or returns an idempotent job. `GET /api/v1/conversations/{id}/processing-job` and `/api/v1/jobs/{id}` support browser reload and polling.
 - `GET /api/v1/conversations/{id}/transcript` overlays reversible word edits, segment/cluster speaker labels, and selected highlights on the current model generation. `PATCH /transcript/segments/{segment_id}` and `PUT /speakers/label` require the current revision. `GET /transcript/generations` and `GET /transcript/generations/{version}` expose retained machine output.
 - `GET/POST /api/v1/vocabulary` and `PATCH/DELETE /api/v1/vocabulary/{term_id}` manage local terms. A job snapshots them and uses a bounded Whisper initial prompt. `POST /api/v1/conversations/{id}/highlights` anchors selected character offsets and quote; `DELETE /highlights/{highlight_id}` removes one.
+- `GET/POST /api/v1/recordings` expose unfinished sessions and create one after microphone permission. `PUT /recordings/{id}/chunks/{sequence}` persists raw MediaRecorder chunks. `POST /recordings/{id}/events` stores pause/resume/device-ended events. `POST /recordings/{id}/finalize` remuxes and imports. `DELETE /recordings/{id}` discards an unfinished session.
 - Browser text is selectable. Clicking without a selection seeks the segment; dragging within a segment opens Highlight/Copy. Native player scrubbing marks the active segment and the player remains visible while scrolling. Word timestamps are absent.
 - Imported Otter ZIPs contribute only the audio member. Their transcript and summary are private reference files and are not ingested as model output.
 
 ## Current boundaries and gaps
 
-The service is loopback-only and has no login, per-user authorization, hosted sync, encryption, native recording, confirmed speaker identity, or Nebius feature yet. Manual display labels do not improve the acoustic model. Selection is within one segment; precise word seeking awaits measured alignment (#39), and readable same-speaker turns await #38. The original audio and database use owner-only file permissions. `.env`, `data/`, `.private/`, and generated local state are excluded from Git. The current model is English-only and requires native binaries/models on the device. Versioned cross-client contracts for planned resources are in [`contracts/v1.md`](../contracts/v1.md); planned endpoints must not be treated as implemented.
+The service is loopback-only and has no login, per-user authorization, hosted sync, encryption, confirmed speaker identity, or Nebius feature yet. Browser microphone capture is implemented; native/mobile capture is not. Manual display labels do not improve the acoustic model. Selection is within one segment; precise word seeking awaits measured alignment (#39), and readable same-speaker turns await #38. The original audio, recording chunks, and database use owner-only file permissions. `.env`, `data/`, `.private/`, and generated local state are excluded from Git. The current model is English-only and requires native binaries/models on the device. Versioned cross-client contracts for planned resources are in [`contracts/v1.md`](../contracts/v1.md); planned endpoints must not be treated as implemented.
 
 ## Verification snapshot
 
-The supplied 57:49 Otter ZIP imported through Chromium; its audio loaded, sought 10 seconds, and reopened after reload. Twelve API/integration tests cover import, processing, text edits and restore, speaker overrides, vocabulary snapshots, generation retention, and highlight persistence. Browser checks on the real 789-segment interview covered text edit/restore, cluster label/clear, vocabulary add/edit/remove, selecting and saving a highlight, highlights-only filter, removal, scrub-to-active segment, and persistent player on desktop/mobile. The full on-device pipeline completed in 515 seconds. Its 19 initial acoustic groups and 53.7% confident segment assignment require the speaker-quality follow-up in #29; see the [aggregate validation record](validation/real-interview-speech.md).
+The supplied 57:49 Otter ZIP imported through Chromium; its audio loaded, sought 10 seconds, and reopened after reload. Fourteen API/integration tests cover import, processing, corrections, highlights, and recoverable recording. Browser checks on the real 789-segment interview covered text edit/restore, cluster label/clear, vocabulary CRUD, highlight/filter/removal, scrub-to-active segment, and persistent player. Chromium used the available microphone for start/pause/resume/stop/save; a browser-recorded spoken sample produced five on-device segments and one acoustic group in 2.43 seconds. A tab closed before Stop left saved chunks listed on reopening; the user-facing recovery imported them. Permission denial and simulated storage failure produced visible states. The real interview pipeline completed in 515 seconds; its 19 initial acoustic groups and 53.7% confident assignment require #29; see the [aggregate validation record](validation/real-interview-speech.md).

@@ -7,12 +7,12 @@ from pathlib import Path
 import json
 import sqlite3
 
-from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile
+from fastapi import APIRouter, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import processing, storage
+from stellis import processing, recording, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -40,6 +40,16 @@ class HighlightSelection(BaseModel):
     start_offset: int = Field(ge=0)
     end_offset: int = Field(gt=0)
     expected_revision: int = Field(ge=1)
+
+
+class RecordingStart(BaseModel):
+    title: str = Field(min_length=1, max_length=180)
+    media_type: str
+
+
+class RecordingEvent(BaseModel):
+    kind: str
+    media_position_ms: int = Field(ge=0)
 
 
 def _check_vocabulary_budget(terms: list[str]) -> None:
@@ -93,6 +103,77 @@ async def import_conversation(file: UploadFile = File(...)) -> dict[str, object]
     except ImportFailure as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"conversation": _public(record), "duplicate": duplicate}
+
+
+@api.get("/recordings")
+def recordings() -> list[dict[str, object]]:
+    return recording.list_sessions()
+
+
+@api.delete("/recordings/{recording_id}")
+def discard_recording(recording_id: str) -> dict[str, bool]:
+    try:
+        if not recording.discard_session(recording_id):
+            raise HTTPException(status_code=404, detail="Recording session not found")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"deleted": True}
+
+
+@api.post("/recordings")
+def start_recording(request: RecordingStart) -> dict[str, object]:
+    try:
+        return recording.create_session(request.title, request.media_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=507, detail="Could not reserve local recording storage") from exc
+
+
+@api.put("/recordings/{recording_id}/chunks/{sequence}")
+async def store_recording_chunk(recording_id: str, sequence: int, request: Request) -> dict[str, object]:
+    data = bytearray()
+    async for part in request.stream():
+        data.extend(part)
+        if len(data) > recording.MAX_CHUNK_BYTES:
+            raise HTTPException(status_code=413, detail="Recording chunk exceeds 8 MB")
+    try:
+        return recording.save_chunk(recording_id, sequence, bytes(data))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=507, detail="Could not store the recording chunk") from exc
+
+
+@api.post("/recordings/{recording_id}/events")
+def recording_event(recording_id: str, event: RecordingEvent) -> dict[str, object]:
+    try:
+        return recording.record_event(recording_id, event.kind, event.media_position_ms)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.post("/recordings/{recording_id}/finalize")
+async def finalize_recording(recording_id: str) -> dict[str, object]:
+    try:
+        result = await recording.finalize_session(recording_id)
+        return {"conversation": _public(result["conversation"]), "duplicate": result["duplicate"]}
+    except (ValueError, ImportFailure) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=507, detail="Could not finalize the local recording") from exc
 
 
 @api.get("/conversations/{conversation_id}")
