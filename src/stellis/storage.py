@@ -906,6 +906,7 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
             segment["original_text"] = segment["text"]
             segment["text"] = override
             segment["text_provenance"] = "user_edit"
+            segment["words"] = []  # ASR offsets cannot be projected onto changed wording.
         else:
             segment["text_provenance"] = "on_device_asr"
         cluster = segment["speaker_cluster_id"]

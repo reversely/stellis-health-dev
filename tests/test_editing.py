@@ -28,7 +28,9 @@ class EditingWorkflowTest(unittest.TestCase):
         stamp = datetime.now(timezone.utc).isoformat()
         segments = [
             {"id": "segment-1", "start_ms": 0, "end_ms": 500, "text": "Asteriod launch.",
-             "speaker_cluster_id": "speaker-1", "speaker_uncertain": False, "provenance": "on_device_asr", "words": []},
+             "speaker_cluster_id": "speaker-1", "speaker_uncertain": False, "provenance": "on_device_asr",
+             "words": [{"text":"Asteriod", "start_offset":0, "end_offset":8, "start_ms":0, "end_ms":300,
+                        "confidence":.8, "provenance":"whisper_cpp_token_v1"}]},
             {"id": "segment-2", "start_ms": 500, "end_ms": 1000, "text": "It was ready.",
              "speaker_cluster_id": "speaker-1", "speaker_uncertain": False, "provenance": "on_device_asr", "words": []},
         ]
@@ -50,11 +52,13 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(result["segments"][0]["text"], "Asteroid launch.")
         self.assertEqual(result["segments"][0]["original_text"], "Asteriod launch.")
         self.assertEqual(result["segments"][0]["text_provenance"], "user_edit")
+        self.assertEqual(result["segments"][0]["words"], [])
         conflict = self.client.patch(endpoint, json={"text": "wrong", "expected_revision": 1})
         self.assertEqual(conflict.status_code, 409)
         restored = self.client.patch(endpoint, json={"text": "Asteriod launch.", "expected_revision": 2})
         self.assertEqual(restored.json()["revision"], 3)
         self.assertNotIn("original_text", self.client.get(f"{self.base}/transcript").json()["segments"][0])
+        self.assertEqual(len(self.client.get(f"{self.base}/transcript").json()["segments"][0]["words"]), 1)
         with storage.connect() as conn:
             events = conn.execute("SELECT old_text, new_text FROM transcript_edit_events ORDER BY revision").fetchall()
         self.assertEqual(len(events), 2)

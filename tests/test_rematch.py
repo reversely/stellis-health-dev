@@ -26,7 +26,10 @@ class RematchTest(unittest.TestCase):
             for index in range(12):
                 segments.append({"id": f"{cluster}-{index}", "start_ms": index * 3000,
                                  "end_ms": index * 3000 + 2500, "text": "unchanged",
-                                 "speaker_cluster_id": cluster, "speaker_coverage": .9, "words": []})
+                                 "speaker_cluster_id": cluster, "speaker_coverage": .9,
+                                 "words": [{"text":"unchanged", "start_ms":index * 3000 + 100,
+                                            "end_ms":index * 3000 + 900, "confidence":.8,
+                                            "provenance":"whisper_cpp_token_v1"}]})
                 vectors.append(vector)
         segments.append({"id": "unclear", "start_ms": 90000, "end_ms": 93000, "text": "also unchanged",
                          "speaker_cluster_id": None, "speaker_coverage": 0, "words": []})
@@ -39,7 +42,7 @@ class RematchTest(unittest.TestCase):
         self.assertIsNone(result[-1]["speaker_cluster_id"])
         self.assertEqual(result[-1]["id"], "unclear")
         self.assertEqual(result[-1]["text"], "also unchanged")
-        self.assertEqual(result[0]["words"], [])
+        self.assertEqual(result[0]["words"], segments[0]["words"])
 
     def test_browser_rematch_request_is_persisted_and_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):

@@ -82,6 +82,60 @@ class ProcessingWorkflowTest(unittest.TestCase):
         self.assertIn("--prompt", observed)
         self.assertIn("Vocabulary: CIFAR", observed)
 
+    def test_native_token_times_form_words_without_invented_offsets(self) -> None:
+        item = {"offsets": {"from": 1000, "to": 2000}, "text": " Space flight, now.", "tokens": [
+            {"text": " Space", "offsets": {"from": 1050, "to": 1300}, "p": .9},
+            {"text": " flight", "offsets": {"from": 1310, "to": 1620}, "p": .8},
+            {"text": ",", "offsets": {"from": 1620, "to": 1660}, "p": .7},
+            {"text": " now", "offsets": {"from": 1700, "to": 1900}, "p": .95},
+            {"text": ".", "offsets": {"from": 1900, "to": 1950}, "p": .9},
+        ]}
+        words = processing._measured_words(item)
+        self.assertEqual([(word["text"], word["start_ms"], word["end_ms"]) for word in words],
+                         [("Space", 1050, 1300), ("flight,", 1310, 1660), ("now.", 1700, 1950)])
+        self.assertEqual([(word["start_offset"], word["end_offset"]) for word in words],
+                         [(0, 5), (6, 13), (14, 18)])
+        self.assertEqual(words[1]["confidence"], .7)
+        item["text"] = "Different words."
+        self.assertEqual(processing._measured_words(item), [])
+
+    def test_word_alignment_reuses_timing_without_rewriting_edited_source(self) -> None:
+        stamp = processing.now()
+        source = [
+            {"id":"old-1", "start_ms":0, "end_ms":1000, "text":"Hello there",
+             "speaker_cluster_id":"speaker-1", "speaker_uncertain":False, "words":[]},
+            {"id":"old-2", "start_ms":1000, "end_ms":2000, "text":"Again now",
+             "speaker_cluster_id":"speaker-2", "speaker_uncertain":False, "words":[]},
+        ]
+        storage.save_transcript({"conversation_id":self.conversation_id, "revision":1,
+                                 "pipeline_version":"source-v1", "language":"en",
+                                 "segments_json":json.dumps(source), "turns_json":"[]", "updated_at":stamp})
+        revision = storage.edit_transcript_segment(self.conversation_id, "old-1", "Hello Avery", 1)
+        storage.set_speaker_label(self.conversation_id, "segment", "old-1", "Avery", revision)
+        measured = [{**source[0], "id":"new-1", "words":[
+            {"text":"Hello", "start_ms":100, "end_ms":350, "confidence":.9},
+            {"text":"there", "start_ms":400, "end_ms":850, "confidence":.8}]},
+                    {**source[1], "id":"new-2", "words":[
+            {"text":"Again", "start_ms":1100, "end_ms":1400, "confidence":.85},
+            {"text":"now", "start_ms":1500, "end_ms":1850, "confidence":.9}]}]
+        storage.save_transcript({"conversation_id":self.conversation_id, "revision":1,
+                                 "pipeline_version":"timed-v1", "language":"en",
+                                 "segments_json":json.dumps(measured), "turns_json":"[]", "updated_at":stamp})
+        with patch.object(processing._QUEUE, "put"):
+            response = self.client.post(f"/api/v1/conversations/{self.conversation_id}/word-alignment",
+                                        json={"source_generation_version":"source-v1"})
+            self.assertEqual(response.status_code, 200)
+            job = response.json()
+            self.assertEqual(processing.request_word_alignment(self.conversation_id, "source-v1")["id"], job["id"])
+        processing.run_job(str(job["id"]))
+        result = self.client.get(f"/api/v1/conversations/{self.conversation_id}/transcript").json()
+        self.assertEqual(self.client.get(f"/api/v1/jobs/{job['id']}").json()["state"], "succeeded")
+        self.assertEqual([item["id"] for item in result["segments"]], ["old-1", "old-2"])
+        self.assertEqual(result["segments"][0]["text"], "Hello Avery")
+        self.assertEqual(result["segments"][0]["speaker_display_name"], "Avery")
+        self.assertEqual(result["segments"][0]["words"], [])
+        self.assertEqual([word["text"] for word in result["segments"][1]["words"]], ["Again", "now"])
+
     def test_failed_job_can_be_requeued_without_losing_audio(self) -> None:
         job = processing.request_processing(self.conversation_id)
         environment = {**os.environ,
