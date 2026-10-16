@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, through ticket #126. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, through ticket #132. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -30,6 +30,7 @@ flowchart LR
   C -->|transcript-wide edit batch, vocabulary, selected highlights| A
   C -->|library search query| A
   A -->|current effective transcript and labels| D
+  A -->|persisted effective speaker names and passage spans| C
   C -->|categories, Recently Deleted, Restore, permanent deletion| A
   A --> B[(SQLite: categories, assignments, trashed_at)]
   F -->|startup and hourly 30-day retention sweep| A
@@ -161,6 +162,7 @@ flowchart LR
 - A full speech job that changes passage IDs carrying edits, labels, highlights, or Person links saves a candidate generation and leaves the old displayed transcript active. `GET /conversations/{id}/transcript/review` returns source evidence and candidate passages; `PUT /review/decisions` stores explicit target passage or unresolved choices; `POST /review/activate` atomically moves only approved overlays and activates the candidate, while `POST /review/keep-source` leaves the current generation active. `GET /review/history` exposes source/target versions and durable decisions for other clients. The browser provides source and target playback and keeps unresolved old-generation evidence visible after acceptance. [ADR 0017](decisions/0017-asr-generation-review.md) records why no boundary mapping applies automatically.
 - `POST /api/v1/conversations/{id}/speaker-rematch` starts or returns an idempotent device job against the saved machine generation. It reuses transcript segments and acoustic turns, adds TitaNet speaker suggestions or unresolved state, and saves a new generation without changing segment IDs or user overlays. The browser shows dense speaker names, unresolved count, and a filter for changed suggestions.
 - The browser groups consecutive resolved fragments from the same displayed speaker when the gap is at most 1.5 seconds. The group is a flowing paragraph with a transcript-wide Edit/Done state; original fragment IDs, timestamps, edits, speaker controls, highlights, and source links stay attached to each part. No grouped record is stored by the service.
+- The browser speaker index uses each active passage's effective name from the device API, the same value used for turn headings. It sums saved passage spans by name for rounded time shares and excludes `Unknown speaker`; passage labels and confirmed Person links therefore appear after reload without changing acoustic clusters. [ADR 0038](decisions/0038-speaker-index-effective-labels.md) records the source and approximation.
 - Browser text is selectable. Clicking without a selection seeks a measured word when available or the segment start otherwise; dragging within a segment opens Highlight/Copy. The fixed custom controls use the same HTML audio element and HTTP byte-range route: a range slider scrubs, keyboard arrows move ten seconds, adjacent buttons move five seconds, and a speed menu sets `playbackRate`. Current transcript intervals draw display-only track segments; audio time events mark the active passage and word. The player remains visible while scrolling. Manual word edits hide the source word offsets for that passage until re-aligned. [ADR 0026](decisions/0026-browser-player-controls.md) records the control split and limits.
 - Imported Otter ZIPs contribute only the audio member. Their transcript and summary are private reference files and are not ingested as model output.
 
