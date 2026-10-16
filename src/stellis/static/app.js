@@ -841,7 +841,8 @@ document.querySelector('#summary-tab').addEventListener('click', () => {
 });
 document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
 document.querySelector('#edited-tab').addEventListener('click', () => showConversationTab('edited'));
-document.querySelector('#generate-summary').addEventListener('click', () => startAIRun('summary'));
+document.querySelector('#generate-summary').addEventListener('click', () =>
+  startAIRun('summary', null, document.querySelector('#generate-summary').textContent === 'Retry summary'));
 document.querySelector('#regenerate-summary').addEventListener('click', () => startAIRun('summary', null, true));
 document.querySelector('#clean-button').addEventListener('click', async () => {
   const id = activeConversationId;

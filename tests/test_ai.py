@@ -71,6 +71,18 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(repeated['id'], second['id'])
         self.assertEqual(second['source_revision'], first['source_revision'])
 
+    def test_retry_after_failed_regeneration_resumes_its_checkpoint(self) -> None:
+        original = self._create('summary')
+        storage.update_ai_run(original['id'], state='succeeded', stage='complete')
+        with patch.object(ai, '_key', return_value='test-key'), patch.object(ai, '_launch'):
+            failed = self.client.post(f'{self.base}/ai-runs', json={'kind':'summary','force':True}).json()
+            storage.update_ai_run(failed['id'], state='failed', stage='failed',
+                                  error_code='weak_citation', checkpoint_json='[{"overview":[]}]')
+            resumed = self.client.post(f'{self.base}/ai-runs', json={'kind':'summary','force':True}).json()
+        self.assertEqual(resumed['id'], failed['id'])
+        self.assertEqual(resumed['state'], 'queued')
+        self.assertEqual(storage.get_ai_run(failed['id'])['checkpoint_json'], '[{"overview":[]}]')
+
     def test_shared_person_changes_stale_only_affected_conversation_runs(self) -> None:
         other_audio = bytearray(wav_bytes())
         other_audio[-1] = 1

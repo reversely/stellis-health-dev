@@ -17,3 +17,5 @@ Citation IDs, audio seeks, and word overlap are structural cues, not a semantic 
 ## Tradeoffs
 
 The schema no longer pressures the model to truncate at 280 characters. The completeness or citation cue can cause one additional billed request per failed chunk; a weak citation can trigger one or two more focused requests. A failed run leaves the previous successful summary available. Focused extraction may choose a minor local detail instead of the chunk's central theme. The cue is applied to chunk overviews, not synthesis topics or AI answers. Sentence-final punctuation is a cheap completeness guard, not proof of grammatical completion or factual support. Manual source review remains necessary for acceptance.
+
+If a forced regeneration fails after an earlier success, the browser's **Retry summary** resumes the failed run and its saved chunk checkpoints. A new **Regenerate summary** from a successful latest run still creates a distinct run. This avoids returning the older success when the user explicitly retries the failed replacement.

@@ -153,6 +153,16 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
                            and item["state"] in {"queued", "running"}), None)
             if active:
                 return active
+            failed = next((item for item in storage.list_ai_runs(conversation_id)
+                           if item["kind"] == "summary" and item["source_revision"] == display["revision"]
+                           and item["source_identity_hash"] == source_identity_hash
+                           and item["model_id"] == MODEL_ID and item["prompt_version"] == PROMPT_VERSION
+                           and item["state"] == "failed"), None)
+            if failed:
+                storage.update_ai_run(str(failed["id"]), state="queued", stage="queued",
+                                      error_code=None, error_message=None, updated_at=_now())
+                _launch(str(failed["id"]))
+                return storage.get_ai_run(str(failed["id"])) or failed
             digest = hashlib.sha256((identity + str(uuid.uuid4())).encode()).hexdigest()
         existing = storage.find_ai_run(conversation_id, kind, digest)
         if existing:
