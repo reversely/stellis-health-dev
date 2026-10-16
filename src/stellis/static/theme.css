@@ -358,6 +358,12 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
   box-shadow: var(--shadow);
 }
 #selection-toolbar button { color: var(--ink); background: var(--selected); }
+#selection-share-menu { position: absolute; top: calc(100% + 5px); right: 0; display: grid; gap: 4px;
+  min-width: 170px; padding: 6px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--raised); box-shadow: var(--shadow); }
+#selection-share-menu.share-above { top: auto; bottom: calc(100% + 5px); }
+#selection-share-menu button { text-align: left; white-space: nowrap; }
+#selection-share-menu p { margin: 2px 5px; max-width: 220px; font-size: 12px; color: var(--failure); }
 .comment-range { text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; }
 .transcript-comments { margin: 12px 0; }
 #comments-toggle { border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; color: var(--ink); background: var(--raised); cursor: pointer; }
