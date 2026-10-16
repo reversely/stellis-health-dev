@@ -1441,12 +1441,17 @@ function watchJob(job) {
     catch (error) { setTranscriptLoading(false); processingStatus.textContent = error.message; }
   }, 1500);
 }
+const PROVISIONAL_SPEAKER_SOURCES = new Set(['embedding_fallback', 'nearest_turn', 'nearest_passage', 'single_speaker']);
 function groupTranscriptSegments(segments) {
   const turns = [];
   for (const segment of segments) {
     const current = turns.at(-1);
     const previous = current?.at(-1);
-    const resolved = item => item.person_id || item.speaker_label_source?.startsWith('manual') || (item.speaker_cluster_id && !item.speaker_uncertain);
+    // A passage given a provisional speaker stays its own turn even under a
+    // named group, so the guess remains visible until someone confirms it.
+    const resolved = item => item.person_id || item.speaker_label_source === 'manual_segment' ||
+      (item.speaker_label_source === 'manual_cluster' && !PROVISIONAL_SPEAKER_SOURCES.has(item.speaker_match_source)) ||
+      (item.speaker_cluster_id && !item.speaker_uncertain);
     const sameTurn = previous && resolved(previous) && resolved(segment) &&
       previous.speaker_display_name === segment.speaker_display_name &&
       (previous.person_id || segment.person_id ? previous.person_id === segment.person_id : true) &&
@@ -1562,7 +1567,7 @@ async function showTranscript(id) {
   const speakerDurations = new Map();
   for (const segment of data.segments) {
     const name = segment.speaker_display_name;
-    if (!name || name === 'Unknown speaker') continue;
+    if (!name) continue;
     const duration = Math.max(0, segment.end_ms - segment.start_ms);
     speakerDurations.set(name, (speakerDurations.get(name) || 0) + duration);
   }
@@ -1620,6 +1625,8 @@ async function showTranscript(id) {
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
     if (segment.speaker_match_source === 'embedding_suggestion') speaker.title = 'Suggested from this passage’s voice; click to confirm or edit';
     if (segment.speaker_match_source === 'unresolved') speaker.title = 'Speaker unresolved; click to assign';
+    if (PROVISIONAL_SPEAKER_SOURCES.has(segment.speaker_match_source) && !segment.person_id &&
+      segment.speaker_label_source !== 'manual_segment') speaker.title = 'Suggested speaker; click to confirm or edit';
     speaker.addEventListener('click', () => showSpeakerPicker(speaker, row, segment));
     const words = document.createElement('div');
     words.className = 'segment-text';
