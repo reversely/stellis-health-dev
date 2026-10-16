@@ -914,18 +914,11 @@ async function showTranscript(id) {
     turn.classList.toggle('editing', transcriptEditMode);
     const heading = document.createElement('div'); heading.className = 'turn-heading';
     const firstSegment = visible[0];
-    const turnSpeaker = document.createElement(firstSegment.person_id ? 'a' : 'button');
-    if (firstSegment.person_id) turnSpeaker.href = `/person/${encodeURIComponent(firstSegment.person_id)}`;
-    else turnSpeaker.type = 'button';
+    const turnSpeaker = document.createElement('button');
+    turnSpeaker.type = 'button';
     turnSpeaker.textContent = visible[0].speaker_display_name;
-    if (!firstSegment.person_id) {
-      turnSpeaker.setAttribute('aria-label', `Edit speaker label for turn at ${time(visible[0].start_ms / 1000)}`);
-      turnSpeaker.addEventListener('click', () => {
-        if (pendingTranscriptEdits.size) { editStatus.textContent = 'Press Done to save word changes before changing a speaker.'; return; }
-        if (!transcriptEditMode) setTranscriptEditMode(true);
-        showSpeakerEditor(turn.querySelector('.segment'), firstSegment);
-      });
-    }
+    turnSpeaker.setAttribute('aria-label', `Tag speaker for turn at ${time(visible[0].start_ms / 1000)}`);
+    turnSpeaker.addEventListener('click', () => showSpeakerPicker(turnSpeaker, turn.querySelector('.segment'), firstSegment));
     const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? `–${time(visible.at(-1).end_ms / 1000)}` : ''}`;
     heading.append(turnSpeaker, range);
     turn.append(heading);
@@ -949,7 +942,7 @@ async function showTranscript(id) {
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
     if (segment.speaker_match_source === 'embedding_suggestion') speaker.title = 'Suggested from this passage’s voice; click to confirm or edit';
     if (segment.speaker_match_source === 'unresolved') speaker.title = 'Speaker unresolved; click to assign';
-    speaker.addEventListener('click', () => showSpeakerEditor(row, segment));
+    speaker.addEventListener('click', () => showSpeakerPicker(speaker, row, segment));
     const words = document.createElement('div');
     words.className = 'segment-text';
     words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight or click to play.`);
@@ -1181,6 +1174,68 @@ function showWordEditor(row, segment) {
     } catch (error) { message.textContent = error.message; save.disabled = false; }
   });
   row.append(form); form.scrollIntoView({block:'start'}); input.focus(); input.select();
+}
+function showSpeakerPicker(anchor, row, segment) {
+  document.querySelectorAll('.speaker-picker').forEach(picker => picker.remove());
+  const picker = document.createElement('div');
+  picker.className = 'speaker-picker';
+  picker.setAttribute('role', 'dialog');
+  picker.setAttribute('aria-label', 'Tag speaker');
+  const search = document.createElement('input');
+  search.type = 'search'; search.placeholder = 'Search speakers'; search.maxLength = 100;
+  search.setAttribute('aria-label', 'Search speakers');
+  const tag = document.createElement('button'); tag.type = 'button'; tag.textContent = 'Tag'; tag.disabled = true;
+  const top = document.createElement('div'); top.className = 'speaker-picker-search'; top.append(search, tag);
+  const list = document.createElement('div'); list.className = 'speaker-picker-list';
+  const manage = document.createElement('button'); manage.type = 'button'; manage.className = 'speaker-picker-manage'; manage.textContent = 'Manage Speakers';
+  const message = document.createElement('p'); message.setAttribute('role', 'status');
+  picker.append(top, list, message, manage);
+  const host = anchor.closest('.turn-heading') || anchor.parentElement;
+  host.append(picker);
+  const close = event => { if (!picker.contains(event.target) && event.target !== anchor) { picker.remove(); document.removeEventListener('pointerdown', close); } };
+  document.addEventListener('pointerdown', close);
+  picker.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); picker.remove(); anchor.focus(); } });
+  const manualNames = (currentTranscript?.speaker_labels || []).map(label => label.name).filter(Boolean);
+  let people = [];
+  async function apply(name, personId) {
+    tag.disabled = true;
+    message.textContent = '';
+    try {
+      const person = people.find(item => item.id === personId || item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+      const result = await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links`, {
+        method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({person_id:person?.id || null,name:person ? null : name,segment_id:segment.id,scope:segment.speaker_cluster_id ? 'cluster' : 'segment',expected_revision:currentTranscript.revision}),
+      }));
+      picker.remove(); document.removeEventListener('pointerdown', close);
+      await showTranscript(activeConversationId);
+      processingStatus.textContent = result.preserved_other_people ?
+        `Speaker tagged. ${result.preserved_other_people} previously tagged passage${result.preserved_other_people === 1 ? '' : 's'} kept.` : 'Speaker tagged.';
+    } catch (error) { message.textContent = error.message; tag.disabled = false; }
+  }
+  function render() {
+    const query = search.value.trim().toLocaleLowerCase();
+    tag.disabled = !query;
+    list.replaceChildren();
+    const title = document.createElement('strong'); title.textContent = 'Select speaker'; list.append(title);
+    const names = [...people.map(person => ({name:person.name,id:person.id})),
+      ...manualNames.filter(name => !people.some(person => person.name.toLocaleLowerCase() === name.toLocaleLowerCase())).map(name => ({name,id:null}))];
+    for (const item of names.filter(item => !query || item.name.toLocaleLowerCase().includes(query))) {
+      const option = document.createElement('button'); option.type = 'button'; option.textContent = item.name;
+      option.addEventListener('click', () => apply(item.name, item.id)); list.append(option);
+    }
+  }
+  search.addEventListener('input', render);
+  search.addEventListener('keydown', event => { if (event.key === 'Enter' && !tag.disabled) { event.preventDefault(); tag.click(); } });
+  tag.addEventListener('click', () => { const name = search.value.trim(); if (name) apply(name, null); });
+  manage.addEventListener('click', () => {
+    picker.remove(); document.removeEventListener('pointerdown', close);
+    if (pendingTranscriptEdits.size) { editStatus.textContent = 'Press Done to save word changes first.'; return; }
+    if (!transcriptEditMode) setTranscriptEditMode(true);
+    showSpeakerEditor(row, segment);
+  });
+  fetch(`${API}/persons`).then(json).then(items => { if (picker.isConnected) { people = items; render(); } })
+    .catch(error => { message.textContent = error.message; });
+  render(); search.focus();
 }
 function showSpeakerEditor(row, segment) {
   closeRowEditor(row);

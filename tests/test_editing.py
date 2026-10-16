@@ -89,6 +89,34 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(invalid.status_code, 404)
         self.assertEqual(self.client.get(f"{self.base}/transcript").json()["revision"], 2)
 
+    def test_group_tag_preserves_a_different_confirmed_person(self) -> None:
+        first = self.client.post('/api/v1/persons', json={'name': 'Shereen'}).json()
+        second = self.client.post('/api/v1/persons', json={'name': 'Jay'}).json()
+        endpoint = f'{self.base}/person-links'
+        self.assertEqual(self.client.put(endpoint, json={
+            'person_id': first['id'], 'segment_id': 'segment-2',
+            'scope': 'segment', 'expected_revision': 1}).status_code, 200)
+        tagged = self.client.put(endpoint, json={
+            'person_id': second['id'], 'segment_id': 'segment-1',
+            'scope': 'cluster', 'expected_revision': 1})
+        self.assertEqual(tagged.status_code, 200)
+        self.assertEqual(tagged.json()['preserved_other_people'], 1)
+        segments = self.client.get(f'{self.base}/transcript').json()['segments']
+        self.assertEqual([item['speaker_display_name'] for item in segments], ['Jay', 'Shereen'])
+
+    def test_new_speaker_tag_is_atomic_on_revision_conflict(self) -> None:
+        endpoint = f'{self.base}/person-links'
+        failed = self.client.put(endpoint, json={
+            'name': 'Jay', 'segment_id': 'segment-1', 'scope': 'cluster', 'expected_revision': 2})
+        self.assertEqual(failed.status_code, 409)
+        self.assertEqual(self.client.get('/api/v1/persons').json(), [])
+        tagged = self.client.put(endpoint, json={
+            'name': 'Jay', 'segment_id': 'segment-1', 'scope': 'cluster', 'expected_revision': 1})
+        self.assertEqual(tagged.status_code, 200)
+        self.assertEqual(tagged.json()['confirmed_passages'], 2)
+        self.assertEqual([item['speaker_display_name'] for item in
+                          self.client.get(f'{self.base}/transcript').json()['segments']], ['Jay', 'Jay'])
+
     def test_cluster_label_and_segment_override_are_reversible(self) -> None:
         endpoint = f"{self.base}/speakers/label"
         cluster = self.client.put(endpoint, json={"scope":"cluster","target_id":"speaker-1","name":"Ari","expected_revision":1})

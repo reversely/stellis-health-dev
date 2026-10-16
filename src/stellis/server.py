@@ -147,7 +147,8 @@ class PersonName(BaseModel):
 
 
 class PersonLink(BaseModel):
-    person_id: str
+    person_id: str | None = None
+    name: str | None = Field(default=None, max_length=100)
     segment_id: str
     scope: str
     expected_revision: int = Field(ge=1)
@@ -371,7 +372,7 @@ def remove_person_conversation(person_id: str, conversation_id: str) -> dict[str
 def confirm_person(conversation_id: str, request: PersonLink) -> dict[str, object]:
     try:
         return people.confirm_person(conversation_id, request.segment_id, request.person_id,
-                                     request.scope, request.expected_revision)
+                                     request.scope, request.expected_revision, name=request.name)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

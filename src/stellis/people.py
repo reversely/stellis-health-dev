@@ -90,10 +90,13 @@ def get_person(person_id: str) -> dict[str, object] | None:
     return dict(person) | {"conversations": list(by_conversation.values()), "total_link_count": total_links}
 
 
-def confirm_person(conversation_id: str, segment_id: str, person_id: str, scope: str,
-                   expected_revision: int) -> dict[str, object]:
+def confirm_person(conversation_id: str, segment_id: str, person_id: str | None, scope: str,
+                   expected_revision: int, *, name: str | None = None) -> dict[str, object]:
     if scope not in {"segment", "cluster"}:
         raise ValueError("Choose this passage or its acoustic speaker group")
+    if bool(person_id) == bool(name):
+        raise ValueError("Choose an existing speaker or enter a new name")
+    cleaned_name = _name(name) if name is not None else None
     transcript = storage.get_transcript(conversation_id)
     if transcript is None:
         raise LookupError("Transcript not found")
@@ -114,14 +117,32 @@ def confirm_person(conversation_id: str, segment_id: str, person_id: str, scope:
             raise RuntimeError("Transcript changed; reload before confirming a person")
         if not conn.execute("SELECT 1 FROM conversations WHERE id = ? AND trashed_at IS NULL", (conversation_id,)).fetchone():
             raise LookupError("Conversation not found")
-        if not conn.execute("SELECT 1 FROM persons WHERE id = ?", (person_id,)).fetchone():
+        if cleaned_name is not None:
+            found = conn.execute("SELECT id FROM persons WHERE name = ? COLLATE NOCASE LIMIT 1",
+                                 (cleaned_name,)).fetchone()
+            if found:
+                person_id = str(found["id"])
+            else:
+                person_id = str(uuid.uuid4())
+                conn.execute("INSERT INTO persons (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                             (person_id, cleaned_name, stamp, stamp))
+        elif not conn.execute("SELECT 1 FROM persons WHERE id = ?", (person_id,)).fetchone():
             raise LookupError("Person not found")
+        existing = {row["segment_id"]: row["person_id"] for row in conn.execute(
+            "SELECT segment_id, person_id FROM person_links WHERE conversation_id = ?",
+            (conversation_id,)).fetchall()}
+        selected_person = existing.get(segment_id)
+        skipped = 0
         for item in matches:
+            if scope == "cluster" and existing.get(item["id"]) not in (None, person_id, selected_person):
+                skipped += 1
+                continue
             conn.execute("""INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at)
                 VALUES (?, ?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
                 person_id = excluded.person_id, start_ms = excluded.start_ms, confirmed_at = excluded.confirmed_at""",
                 (conversation_id, item["id"], person_id, item["start_ms"], stamp))
-    return {"person_id": person_id, "confirmed_passages": len(matches)}
+    return {"person_id": person_id, "confirmed_passages": len(matches) - skipped,
+            "preserved_other_people": skipped}
 
 
 def remove_person(conversation_id: str, segment_id: str, scope: str, expected_revision: int) -> dict[str, object]:
