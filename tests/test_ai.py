@@ -172,6 +172,23 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(finished["error_code"], "incomplete_sentence")
         self.assertIsNone(finished["result"])
 
+    def test_overview_repairs_citation_unrelated_to_its_claim(self) -> None:
+        run = self._create("summary")
+        unrelated = {"overview":[{"text":"The team launched a CubeSat into orbit in 2022.",
+                                  "source_segment_ids":["s1"]}],
+                     "topics":[],"decisions":[],"action_items":[]}
+        repaired = {"overview":[{"text":"Avery discussed satellites.",
+                                 "source_segment_ids":["s1"]}],
+                    "topics":[],"decisions":[],"action_items":[]}
+        with patch.object(ai, "_request", side_effect=[unrelated, repaired]) as provider:
+            ai._run(run["id"])
+        self.assertEqual(provider.call_count, 2)
+        self.assertIn("details present in its own cited passages",
+                      provider.call_args.args[0][-1]["content"])
+        finished = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
+        self.assertEqual(finished["state"], "succeeded")
+        self.assertEqual(finished["result"]["overview"][0]["text"], "Avery discussed satellites.")
+
     def test_answer_uses_evidence_or_marks_insufficient(self) -> None:
         run = self._create("answer", "What did Avery discuss?")
         payload = {"answer":"Satellites.","source_segment_ids":["s1"],"insufficient_evidence":False}
@@ -217,7 +234,8 @@ class AIWorkflowTest(unittest.TestCase):
             self.assertEqual(len(chunks), 2)
             run = self._create("summary")
             calls = 0
-            def respond(messages, allowed, max_tokens, metadata, *, kind, require_overview=False):
+            def respond(messages, allowed, max_tokens, metadata, *, kind, require_overview=False,
+                        source_texts=None):
                 nonlocal calls
                 calls += 1
                 label = "s1"

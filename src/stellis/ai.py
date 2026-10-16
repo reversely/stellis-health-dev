@@ -17,7 +17,7 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v8"
+PROMPT_VERSION = "cited-conversation-v9"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
@@ -228,7 +228,33 @@ def _chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
     return result
 
 
-def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool) -> dict[str, object]:
+_ANCHOR_STOPWORDS = set("""about after again also because been before being between both could
+    described describes discussing discusses during every from having including into itself
+    project projects speaker their there these those through under using where which while with
+    would interview team group people began says said""".split())
+
+
+def _anchor_terms(value: str) -> list[str]:
+    """Keep concrete claim words; this is a conservative citation cue, not fact checking."""
+    return [word.lower() for word in re.findall(r"[A-Za-z0-9]+", value)
+            if (len(word) >= 4 or word.isdigit()) and word.lower() not in _ANCHOR_STOPWORDS]
+
+
+def _supported_terms(text: str, sources: str) -> tuple[float, list[str]]:
+    terms = _anchor_terms(text)
+    if not terms:
+        return 1.0, []
+    source_words = set(_anchor_terms(sources))
+    missing = [term for term in terms if not any(
+        term == source or (len(term) >= 5 and len(source) >= 5 and
+                           (term.startswith(source[:5]) or source.startswith(term[:5]))) or
+        (len(term) == 4 and term.isdigit() and source == term[-2:])
+        for source in source_words)]
+    return 1 - len(missing) / len(terms), missing
+
+
+def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool,
+                    source_texts: dict[str, str] | None = None) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise AIError("invalid_json", "The model returned an invalid result shape")
     result: dict[str, object] = {}
@@ -248,6 +274,11 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
                 raise AIError("invalid_json", f"The model returned invalid {field} text")
             if field == "overview" and (len(text) > 400 or not re.search(r"[.!?][\"'’”)]*$", text)):
                 raise AIError("incomplete_sentence", "The model returned an unfinished overview point")
+            if field == "overview" and source_texts is not None:
+                cited = " ".join(source_texts.get(source_id, "") for source_id in source_ids)
+                coverage, missing = _supported_terms(text, cited)
+                if coverage < 0.45:
+                    raise AIError("weak_citation", f"The overview cites passages missing these claim terms: {', '.join(dict.fromkeys(missing[:8]))}")
             validated.append({"text": text, "source_segment_ids": _display_sources(source_ids)})
         result[field] = validated
     if require_overview and not result["overview"]:
@@ -337,16 +368,23 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
 
 
 def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int,
-              metadata: dict[str, object], *, kind: str, require_overview: bool = False) -> dict[str, object]:
+              metadata: dict[str, object], *, kind: str, require_overview: bool = False,
+              source_texts: dict[str, str] | None = None) -> dict[str, object]:
     for attempt in range(2):
         try:
             payload = _request(messages, max_tokens, metadata, kind)
             return (_validate_answer(payload, allowed) if kind == "answer"
-                    else _validate_items(payload, allowed, require_overview=require_overview))
+                    else _validate_items(payload, allowed, require_overview=require_overview,
+                                         source_texts=source_texts))
         except AIError as exc:
-            if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence"}:
+            if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence", "weak_citation"}:
                 raise
-            correction = ("Rewrite every overview point as one complete sentence under 400 characters, "
+            correction = ("Each overview point must describe only details present in its own cited passages. "
+                          "Choose one concrete claim and cite the one to three passages that directly say it. "
+                          "Remove unsupported details, especially names, dates, and technical claims. "
+                          "Return the required JSON object."
+                          if exc.code == "weak_citation" else
+                          "Rewrite every overview point as one complete sentence under 400 characters, "
                           "ending in punctuation. Cite only passages that directly support every claim. "
                           "Return the required JSON object."
                           if exc.code == "incomplete_sentence" else
@@ -362,6 +400,7 @@ _SUMMARY_SYSTEM = ("You summarize an interview using only the supplied transcrip
                    "For nonempty evidence, include at least one overview item about spoken content. "
                    "Make each overview point one complete sentence under 400 characters and end it with punctuation; "
                    "never cut off a phrase to meet a length limit. Each claim must be supported by its cited passages; "
+                   "choose a concrete claim from at most three nearby passages instead of summarizing an entire part; "
                    "split claims with different evidence into separate items. "
                    "Omit unsupported decisions or actions by returning an empty array. Keep each item concise.")
 
@@ -374,10 +413,12 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
         chunk = chunks[index]
         storage.update_ai_run(run_id, stage=f"analyzing {index + 1}/{len(chunks)}", updated_at=_now())
         evidence, aliases = _evidence(chunk)
+        source_texts = {f"s{offset + 1}": f"{segment['speaker_display_name']} {segment['text']}"
+                        for offset, segment in enumerate(chunk)}
         messages = [{"role": "system", "content": _SUMMARY_SYSTEM},
                     {"role": "user", "content": f"Analyze this transcript part. JSON only.\n{evidence}"}]
         candidate = _complete(messages, set(aliases), 1200, metadata,
-                              kind="summary", require_overview=True)
+                              kind="summary", require_overview=True, source_texts=source_texts)
         extracted.append(_expand_sources(candidate, aliases, "summary"))
         storage.update_ai_run(run_id, checkpoint_json=json.dumps(extracted), updated_at=_now())
         _persist_metadata(run_id, metadata)
