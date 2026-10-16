@@ -5,6 +5,8 @@ const dropZone = document.querySelector('#drop-zone');
 const listView = document.querySelector('#list-view');
 const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
+const seekSlider = document.querySelector('#seek-slider');
+const playPauseButton = document.querySelector('#play-pause');
 const API = '/api/v1';
 const conversationMore = document.querySelector('#conversation-more');
 conversationMore.addEventListener('click', event => { if (event.target.closest('button')) conversationMore.open = false; });
@@ -409,8 +411,12 @@ async function showDetail(id) {
   document.querySelector('#person-view').hidden = true;
   document.querySelector('#page-title').textContent = item.title;
   document.querySelector('#audio-duration').textContent = time(item.duration_ms / 1000);
+  seekSlider.max = String(item.duration_ms / 1000);
+  seekSlider.value = '0';
+  document.querySelector('#seek-segments').replaceChildren();
   player.src = `${API}/conversations/${encodeURIComponent(id)}/audio`;
   player.load();
+  syncPlayerControls();
   await loadSpeech(id);
   showConversationTab('transcript');
   await loadAIRuns(id);
@@ -870,6 +876,7 @@ async function showTranscript(id) {
   if (id !== activeConversationId) return;
   const previousScroll = window.scrollY;
   currentTranscript = data;
+  renderSeekSegments(data.segments);
   document.querySelector('#copy-transcript').hidden = !data.segments.length;
   await loadGenerationReview(id);
   syncTranscriptEditControls();
@@ -1690,9 +1697,64 @@ for (const name of ['dragleave', 'drop']) dropZone.addEventListener(name, event 
   event.preventDefault(); dropZone.classList.remove('drag-over');
 });
 dropZone.addEventListener('drop', event => importFile(event.dataTransfer.files[0]));
-document.querySelector('#back-ten').addEventListener('click', () => { player.currentTime = Math.max(0, player.currentTime - 10); });
-document.querySelector('#forward-ten').addEventListener('click', () => { player.currentTime = Math.min(player.duration || Infinity, player.currentTime + 10); });
-player.addEventListener('timeupdate', () => { document.querySelector('#current-time').textContent = time(player.currentTime); });
+function syncPlayerControls() {
+  const duration = Number.isFinite(player.duration) ? player.duration : Number(seekSlider.max) || 0;
+  const position = Number.isFinite(player.currentTime) ? player.currentTime : 0;
+  seekSlider.max = String(Math.max(duration, 1));
+  seekSlider.value = String(Math.min(position, duration));
+  seekSlider.setAttribute('aria-valuetext', `${time(position)} of ${time(duration)}`);
+  document.querySelector('.seek-timeline').style.setProperty('--seek-progress', `${duration ? Math.min(100, position / duration * 100) : 0}%`);
+  document.querySelector('#current-time').textContent = time(position);
+  document.querySelector('#audio-duration').textContent = time(duration);
+  playPauseButton.textContent = player.paused ? '▶' : '❚❚';
+  playPauseButton.setAttribute('aria-label', player.paused ? 'Play' : 'Pause');
+}
+function renderSeekSegments(segments) {
+  const track = document.querySelector('#seek-segments'); track.replaceChildren();
+  const duration = Number(seekSlider.max) * 1000;
+  if (!duration) return;
+  const intervals = [];
+  for (const item of segments) {
+    if (!Number.isFinite(item.start_ms) || !Number.isFinite(item.end_ms)) continue;
+    const last = intervals.at(-1);
+    if (last && item.start_ms - last[1] <= 1500) last[1] = Math.max(last[1], item.end_ms);
+    else intervals.push([item.start_ms, item.end_ms]);
+  }
+  const fragment = document.createDocumentFragment();
+  for (const [start, end] of intervals) {
+    const mark = document.createElement('span');
+    mark.style.left = `${Math.max(0, Math.min(100, start / duration * 100))}%`;
+    mark.style.width = `${Math.max(.06, Math.min(100, end / duration * 100) - Math.max(0, start / duration * 100))}%`;
+    fragment.append(mark);
+  }
+  track.append(fragment);
+}
+document.querySelector('#back-five').addEventListener('click', () => { player.currentTime = Math.max(0, player.currentTime - 5); syncPlayerControls(); });
+document.querySelector('#forward-five').addEventListener('click', () => { player.currentTime = Math.min(player.duration || Number(seekSlider.max), player.currentTime + 5); syncPlayerControls(); });
+playPauseButton.addEventListener('click', () => {
+  if (player.paused) player.play().catch(() => { processingStatus.textContent = 'Audio could not play.'; });
+  else player.pause();
+});
+seekSlider.addEventListener('input', () => { player.currentTime = Number(seekSlider.value); syncPlayerControls(); });
+seekSlider.addEventListener('keydown', event => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+  event.preventDefault();
+  player.currentTime = Math.max(0, Math.min(player.duration || Number(seekSlider.max), player.currentTime + (event.key === 'ArrowRight' ? 10 : -10)));
+  syncPlayerControls();
+});
+const speedMenu = document.querySelector('#playback-speed-menu');
+for (const button of speedMenu.querySelectorAll('[data-speed]')) button.addEventListener('click', () => {
+  player.playbackRate = Number(button.dataset.speed);
+  speedMenu.open = false;
+  document.querySelector('#speed-button').focus();
+});
+function syncSpeed() {
+  document.querySelector('#speed-button').textContent = `${player.playbackRate}x`;
+  for (const button of speedMenu.querySelectorAll('[data-speed]')) button.setAttribute('aria-pressed', String(Number(button.dataset.speed) === player.playbackRate));
+}
+player.addEventListener('ratechange', syncSpeed);
+for (const name of ['loadedmetadata', 'timeupdate', 'durationchange', 'play', 'pause', 'ended']) player.addEventListener(name, syncPlayerControls);
+syncSpeed();
 player.addEventListener('timeupdate', () => {
   const ms = player.currentTime * 1000;
   const active = transcriptSegments.find(segment => segment.start_ms <= ms && ms < segment.end_ms);
