@@ -16,6 +16,8 @@ def main() -> None:
     command = parser.add_subparsers(dest="command", required=True)
     serve = command.add_parser("serve", help="Start the local browser app")
     serve.add_argument("--port", type=int, default=8765)
+    sync_serve = command.add_parser("sync-serve", help="Start the separate development account service")
+    sync_serve.add_argument("--port", type=int, default=8769)
     command.add_parser("doctor", help="Check local audio tools")
     args = parser.parse_args()
 
@@ -28,4 +30,5 @@ def main() -> None:
 
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
-    uvicorn.run("stellis.server:app", host="127.0.0.1", port=args.port)
+    uvicorn.run("stellis.sync_server:app" if args.command == "sync-serve" else "stellis.server:app",
+                host="127.0.0.1", port=args.port)
