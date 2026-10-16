@@ -61,6 +61,8 @@ let capture = null;
 let librarySearchResults = [];
 let librarySearchTotal = 0;
 let librarySearchLimited = false;
+let libraryCategories = [];
+let libraryConversations = [];
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
 
@@ -113,7 +115,8 @@ async function submitLibrarySearch(event) {
   status.textContent = 'Searching local transcripts…';
   document.querySelector('#library-search-results').replaceChildren();
   try {
-    const data = await json(await fetch(`${API}/search?q=${encodeURIComponent(query)}`));
+    const category = document.querySelector('#category-filter').value;
+    const data = await json(await fetch(`${API}/search?q=${encodeURIComponent(query)}${category ? `&category_id=${encodeURIComponent(category)}` : ''}`));
     if (document.querySelector('#library-search-input').value.trim() !== query) return;
     librarySearchResults = data.results;
     librarySearchTotal = data.total;
@@ -165,10 +168,28 @@ async function showList() {
   activeConversationId = null;
   listView.hidden = false;
   detailView.hidden = true;
+  document.querySelector('#trash-view').hidden = true;
   document.querySelector('#page-title').textContent = 'Your conversations';
   document.querySelector('#page-subtitle').textContent = 'Listen, review, and return to what matters.';
-  const conversations = await json(await fetch(`${API}/conversations`));
+  const [conversations, categories] = await Promise.all([
+    json(await fetch(`${API}/conversations`)), json(await fetch(`${API}/categories`)),
+  ]);
+  libraryConversations = conversations;
+  libraryCategories = categories;
+  document.querySelector('#category-status').textContent = '';
+  renderCategoryControls();
+  renderConversationList();
+  if (document.querySelector('#library-search-input').value.trim().length >= 2)
+    await submitLibrarySearch(new Event('submit'));
+}
+function renderConversationList() {
+  const category = document.querySelector('#category-filter').value;
+  const conversations = libraryConversations.filter(item => !category ||
+    (category === 'uncategorized' ? !item.category_ids.length : item.category_ids.includes(category)));
   list.replaceChildren();
+  if (!conversations.length) {
+    const empty = document.createElement('p'); empty.textContent = 'No conversations in this view.'; list.append(empty);
+  }
   for (const item of conversations) {
     const row = document.createElement('a');
     row.className = 'conversation-row';
@@ -179,12 +200,84 @@ async function showList() {
     const meta = document.createElement('small');
     meta.textContent = `${time(item.duration_ms / 1000)} · ${new Date(item.created_at).toLocaleDateString()}`;
     summary.append(title, meta);
+    for (const categoryId of item.category_ids) {
+      const category = libraryCategories.find(value => value.id === categoryId);
+      if (category) { const tag = document.createElement('span'); tag.className = 'category-tag'; tag.textContent = category.name; summary.append(tag); }
+    }
     const arrow = document.createElement('span');
     arrow.className = 'arrow';
     arrow.setAttribute('aria-hidden', 'true');
     arrow.textContent = '→';
     row.append(summary, arrow);
     list.append(row);
+  }
+}
+function renderCategoryControls() {
+  const picker = document.querySelector('#category-filter');
+  const selected = picker.value;
+  picker.replaceChildren(new Option('All conversations', ''),
+    new Option(`Uncategorized · ${libraryConversations.filter(item => !item.category_ids.length).length}`, 'uncategorized'),
+    ...libraryCategories.map(item => new Option(`${item.name} · ${item.conversation_count}`, item.id)));
+  picker.value = selected === 'uncategorized' || libraryCategories.some(item => item.id === selected) ? selected : '';
+  const container = document.querySelector('#category-list'); container.replaceChildren();
+  for (const category of libraryCategories) {
+    const row = document.createElement('div'); row.className = 'category-row';
+    const name = document.createElement('span'); name.textContent = `${category.name} · ${category.conversation_count}`;
+    const rename = document.createElement('button'); rename.type = 'button'; rename.textContent = 'Rename';
+    rename.addEventListener('click', async () => {
+      const next = window.prompt('Category name', category.name);
+      if (next === null || !next.trim()) return;
+      try { await json(await fetch(`${API}/categories/${encodeURIComponent(category.id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:next})})); await showList(); }
+      catch (error) { document.querySelector('#category-status').textContent = error.message; }
+    });
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete category';
+    remove.addEventListener('click', async () => {
+      if (!window.confirm(`Delete the category “${category.name}”? Its conversations will stay in the library.`)) return;
+      try { await json(await fetch(`${API}/categories/${encodeURIComponent(category.id)}`, {method:'DELETE'})); await showList(); }
+      catch (error) { document.querySelector('#category-status').textContent = error.message; }
+    });
+    row.append(name, rename, remove); container.append(row);
+  }
+}
+async function renderConversationCategories(ids) {
+  const categories = await json(await fetch(`${API}/categories`));
+  const container = document.querySelector('#conversation-category-list'); container.replaceChildren();
+  if (!categories.length) { const empty = document.createElement('p'); empty.textContent = 'Create categories from All conversations.'; container.append(empty); }
+  for (const category of categories) {
+    const label = document.createElement('label'); label.className = 'category-checkbox';
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = ids.includes(category.id);
+    checkbox.addEventListener('change', async () => {
+      checkbox.disabled = true;
+      try {
+        const result = await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/categories/${encodeURIComponent(category.id)}`, {method:checkbox.checked ? 'PUT' : 'DELETE'}));
+        ids = result.category_ids;
+      } catch (error) { checkbox.checked = !checkbox.checked; setStatus(error.message); }
+      checkbox.disabled = false;
+    });
+    label.append(checkbox, document.createTextNode(category.name)); container.append(label);
+  }
+}
+async function showTrash() {
+  const items = await json(await fetch(`${API}/trash`));
+  document.querySelector('#trash-status').textContent = '';
+  listView.hidden = true; detailView.hidden = true; document.querySelector('#trash-view').hidden = false;
+  const container = document.querySelector('#trash-list'); container.replaceChildren();
+  if (!items.length) { const empty = document.createElement('p'); empty.textContent = 'Trash is empty.'; container.append(empty); }
+  for (const item of items) {
+    const row = document.createElement('div'); row.className = 'trash-row';
+    const title = document.createElement('strong'); title.textContent = item.title;
+    const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = 'Restore';
+    restore.addEventListener('click', async () => {
+      try { await json(await fetch(`${API}/trash/${encodeURIComponent(item.id)}/restore`, {method:'POST'})); await showTrash(); }
+      catch (error) { document.querySelector('#trash-status').textContent = error.message; }
+    });
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete permanently';
+    remove.addEventListener('click', async () => {
+      if (window.prompt(`Permanently delete “${item.title}” and its audio and transcript? Type DELETE to confirm.`) !== 'DELETE') return;
+      try { await json(await fetch(`${API}/trash/${encodeURIComponent(item.id)}`, {method:'DELETE'})); await showTrash(); }
+      catch (error) { document.querySelector('#trash-status').textContent = error.message; }
+    });
+    row.append(title, restore, remove); container.append(row);
   }
 }
 async function showDetail(id) {
@@ -217,6 +310,7 @@ async function showDetail(id) {
   processButton.hidden = true;
   rematchButton.hidden = true;
   const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}`));
+  await renderConversationCategories(item.category_ids);
   listView.hidden = true;
   detailView.hidden = false;
   document.querySelector('#page-title').textContent = item.title;
@@ -1232,6 +1326,29 @@ document.querySelector('#library-search-input').addEventListener('input', () => 
   document.querySelector('#library-search-status').textContent = '';
 });
 document.querySelector('#library-search-kind').addEventListener('change', renderLibrarySearch);
+document.querySelector('#category-filter').addEventListener('change', () => {
+  renderConversationList();
+  if (document.querySelector('#library-search-input').value.trim().length >= 2)
+    submitLibrarySearch(new Event('submit'));
+});
+document.querySelector('#create-category-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = document.querySelector('#new-category-name');
+  try { await json(await fetch(`${API}/categories`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:input.value})}));
+    input.value = ''; await showList(); }
+  catch (error) { document.querySelector('#category-status').textContent = error.message; }
+});
+document.querySelector('#show-trash').addEventListener('click', () => showTrash().catch(error => document.querySelector('#trash-status').textContent = error.message));
+document.querySelector('#back-from-trash').addEventListener('click', () => showList().catch(error => setStatus(error.message)));
+document.querySelector('#trash-conversation').addEventListener('click', async () => {
+  if (!activeConversationId || !window.confirm('Move this conversation to Trash? You can restore it later.')) return;
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/trash`, {method:'POST'}));
+    player.pause(); player.removeAttribute('src'); player.load();
+    history.pushState({}, '', '/');
+    await showList();
+  } catch (error) { setStatus(error.message); }
+});
 document.querySelector('#transcript-search-input').addEventListener('input', () => {
   updateTranscriptSearch();
 });

@@ -276,6 +276,29 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .transcript-search .search-row select { max-width: 180px; }
 .segment.search-match { box-shadow: inset 3px 0 var(--accent); }
 .segment.search-current { background: var(--selected); outline: 2px solid var(--accent); outline-offset: -2px; }
+.library-tools { margin: 0 0 18px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.library-toolbar, .conversation-organize, .category-row, .trash-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.library-toolbar select { flex: 1; max-width: 330px; }
+.library-tools select, .library-tools button, .conversation-organize button, #trash-view button,
+.category-row button { color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; cursor: pointer; }
+.library-tools button:hover, .conversation-organize button:hover, #trash-view button:hover { border-color: var(--accent); }
+#manage-categories { margin-top: 14px; }
+#manage-categories summary, #conversation-categories summary { color: var(--accent); cursor: pointer; font-weight: 650; }
+#create-category-form { margin: 14px 0; }
+#create-category-form label { display: block; margin-bottom: 7px; }
+.category-row { padding: 8px 0; border-top: 1px solid var(--line-soft); }
+.category-row span { flex: 1; }
+.category-tag { display: inline-block; margin: 6px 5px 0 0; padding: 3px 8px; border-radius: 20px; color: var(--accent-strong); background: var(--raised); font-size: 12px; }
+.conversation-organize { justify-content: space-between; margin-top: 14px; }
+#conversation-categories { flex: 1; }
+#conversation-category-list { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.category-checkbox { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.category-checkbox input { accent-color: var(--accent); }
+#trash-conversation { color: var(--failure); }
+#trash-view h2 { margin: 22px 0 4px; font: 400 30px Piazzolla, Georgia, serif; }
+.trash-row { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.trash-row strong { flex: 1; min-width: 160px; }
+.trash-row button:last-child { color: var(--failure); }
 
 html[data-theme='light'] body { background: var(--field); }
 html[data-theme='light'] .upload-button:hover,
@@ -295,6 +318,9 @@ html[data-theme='light'] .timed-word mark { background: #f4dd84; }
   .transcript-search .search-row { flex-wrap: wrap; }
   .transcript-search .search-row input { flex-basis: 100%; }
   .transcript-search .search-row select { max-width: none; flex: 1; }
+  .library-toolbar select { min-width: 0; }
+  .conversation-organize { align-items: flex-start; }
+  .conversation-organize > * { flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }

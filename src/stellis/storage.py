@@ -42,6 +42,17 @@ def connect() -> Iterator[sqlite3.Connection]:
         )
         """
     )
+    conversation_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)")}
+    if "trashed_at" not in conversation_columns:
+        conn.execute("ALTER TABLE conversations ADD COLUMN trashed_at TEXT")
+    conn.execute("""CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS conversation_categories (
+        conversation_id TEXT NOT NULL REFERENCES conversations(id),
+        category_id TEXT NOT NULL REFERENCES categories(id),
+        PRIMARY KEY(conversation_id, category_id)
+    )""")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS processing_jobs (
             id TEXT PRIMARY KEY,
@@ -268,19 +279,21 @@ def connect() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
-def list_conversations() -> list[dict[str, object]]:
+def list_conversations(*, trashed: bool = False) -> list[dict[str, object]]:
     """List local conversations with stable ordering."""
     with connect() as conn:
         rows = conn.execute(
-            "SELECT id, title, duration_ms, created_at FROM conversations ORDER BY created_at DESC"
+            "SELECT id, title, duration_ms, created_at, trashed_at FROM conversations "
+            "WHERE (trashed_at IS NOT NULL) = ? ORDER BY created_at DESC", (int(trashed),)
         ).fetchall()
     return [dict(row) for row in rows]
 
 
-def get_conversation(conversation_id: str) -> dict[str, object] | None:
+def get_conversation(conversation_id: str, *, include_trashed: bool = False) -> dict[str, object] | None:
     """Return one conversation or None when it is absent."""
     with connect() as conn:
-        row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+        row = conn.execute("SELECT * FROM conversations WHERE id = ?" +
+                           ("" if include_trashed else " AND trashed_at IS NULL"), (conversation_id,)).fetchone()
     return dict(row) if row else None
 
 
