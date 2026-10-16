@@ -20,6 +20,7 @@ from stellis import sync_identity as identity
 app = FastAPI(title="Stellis Sync Identity Dev", docs_url=None, redoc_url=None)
 _STATIC = Path(__file__).parent / "sync_static"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+app.mount("/shared", StaticFiles(directory=Path(__file__).parent / "shared"), name="shared")
 
 
 def _device_origin() -> str | None:
@@ -47,7 +48,7 @@ async def identity_gate(request: Request, call_next):
         if origin and origin not in {f"{request.url.scheme}://{request.headers.get('host')}", DEVICE_ORIGIN}:
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
     path = request.url.path
-    if path == "/" or path.startswith("/static/") or path in {"/sync/v1/health", "/sync/v1/auth/register", "/sync/v1/auth/login", "/sync/v1/auth/logout"}:
+    if path == "/" or path.startswith(("/static/", "/shared/")) or path in {"/sync/v1/health", "/sync/v1/auth/register", "/sync/v1/auth/login", "/sync/v1/auth/logout"}:
         return await call_next(request)
     user = identity.current_user(request.cookies.get(identity.COOKIE))
     if user is None:

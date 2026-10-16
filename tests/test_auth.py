@@ -32,6 +32,7 @@ class LocalAuthTest(unittest.TestCase):
         self.assertEqual(self.client.get('/').status_code, 303)
         self.assertEqual(self.client.get('/auth').status_code, 200)
         self.assertEqual(self.client.get('/api/v1/conversations').status_code, 401)
+        self.assertEqual(self.client.get('/api/v1/sync-config').status_code, 401)
         self.assertEqual(self.client.get('/api/v1/ai-runs/test').status_code, 401)
         self.assertEqual(self.client.post('/api/v1/conversations/import', files={
             'file': ('talk.wav', wav_bytes(), 'audio/wav')}).status_code, 401)
@@ -52,6 +53,16 @@ class LocalAuthTest(unittest.TestCase):
             'password': 'wrong password'}).status_code, 401)
         self.assertEqual(self.client.post('/api/v1/auth/login', json=self.credentials).status_code, 200)
         self.assertEqual(len(self.client.get('/api/v1/conversations').json()), 1)
+
+    def test_sync_origin_is_explicit_loopback_only(self):
+        self.client.post('/api/v1/auth/register', json=self.credentials)
+        with patch.dict(os.environ, {'STELLIS_SYNC_ORIGIN': ''}):
+            self.assertIsNone(self.client.get('/api/v1/sync-config').json()['origin'])
+        with patch.dict(os.environ, {'STELLIS_SYNC_ORIGIN': 'http://127.0.0.1:8769'}):
+            self.assertEqual(self.client.get('/api/v1/sync-config').json()['origin'],
+                             'http://127.0.0.1:8769')
+        with patch.dict(os.environ, {'STELLIS_SYNC_ORIGIN': 'https://example.com'}):
+            self.assertEqual(self.client.get('/api/v1/sync-config').status_code, 500)
 
     def test_expiry_forgery_and_origin_rejection(self):
         self.client.post('/api/v1/auth/register', json=self.credentials)

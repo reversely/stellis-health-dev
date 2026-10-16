@@ -6,8 +6,10 @@ from importlib.metadata import version
 from pathlib import Path
 import json
 import logging
+import os
 import sqlite3
 import threading
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -217,6 +219,7 @@ def _check_vocabulary_budget(terms: list[str]) -> None:
         raise HTTPException(status_code=400, detail="Vocabulary is too long for the local model prompt")
 _STATIC = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+app.mount("/shared", StaticFiles(directory=Path(__file__).parent / "shared"), name="shared")
 
 
 @app.on_event("startup")
@@ -251,6 +254,19 @@ def health() -> dict[str, str]:
 @api.get("/health")
 def versioned_health() -> dict[str, str]:
     return {**health(), "api_version": "v1"}
+
+
+@api.get("/sync-config")
+def sync_config() -> dict[str, str | None]:
+    value = os.environ.get("STELLIS_SYNC_ORIGIN", "").strip()
+    if not value:
+        return {"origin": None}
+    parsed = urlsplit(value)
+    if (parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost"}
+            or parsed.port is None or parsed.path or parsed.query or parsed.fragment
+            or parsed.username is not None or parsed.password is not None):
+        raise HTTPException(status_code=500, detail="Invalid sync origin configuration")
+    return {"origin": value}
 
 
 @app.get("/", include_in_schema=False)

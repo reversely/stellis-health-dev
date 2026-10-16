@@ -35,6 +35,8 @@ class SyncIdentityTest(unittest.TestCase):
 
     def test_two_accounts_and_device_isolation(self):
         self.assertEqual(self.alice.get('/sync/v1/me').status_code, 401)
+        self.assertEqual(self.alice.get('/shared/sync-crypto.js').status_code, 200)
+        self.assertEqual(self.alice.get('/shared/snapshot-format.js').status_code, 200)
         self.assertEqual(self.alice.post('/sync/v1/auth/register', json=self.a).status_code, 200)
         self.assertEqual(self.bob.post('/sync/v1/auth/register', json=self.b).status_code, 200)
         self.assertEqual(self.bob.post('/sync/v1/auth/register', json=self.a).status_code, 409)
