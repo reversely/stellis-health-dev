@@ -6,7 +6,7 @@ The cross-app/browser direction is recorded in [ADR 0003](docs/decisions/0003-cr
 
 ## Current state
 
-The local browser app imports audio or an Otter ZIP, records from the microphone, lists conversations, replays recordings, and runs on-device English transcription and acoustic speaker grouping. The transcript supports segment seeking, selected highlights, word corrections, vocabulary hints, and reversible speaker labels. The Summary & AI tab requests source-linked summaries and answers from Nemotron through Nebius. The acceptance test runs through the browser on a real interview. The [current architecture](docs/current-architecture.md) describes only running components.
+The local browser app imports audio or an Otter ZIP, records from the microphone, lists conversations, replays recordings, and runs on-device English transcription and acoustic speaker grouping. The transcript supports segment seeking, selected highlights, transcript-wide Edit/Done corrections, vocabulary hints, and reversible speaker labels. The Summary & AI tab requests source-linked summaries and answers from Nemotron through Nebius. The acceptance test runs through the browser on a real interview. The [current architecture](docs/current-architecture.md) describes only running components.
 
 ## Setup and run
 

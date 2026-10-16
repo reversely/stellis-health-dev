@@ -24,6 +24,16 @@ class SegmentEdit(BaseModel):
     expected_revision: int = Field(ge=1)
 
 
+class SegmentChange(BaseModel):
+    segment_id: str
+    text: str = Field(min_length=1, max_length=4000)
+
+
+class TranscriptBatchEdit(BaseModel):
+    edits: list[SegmentChange] = Field(min_length=1, max_length=500)
+    expected_revision: int = Field(ge=1)
+
+
 class SpeakerLabelEdit(BaseModel):
     scope: str
     target_id: str
@@ -323,6 +333,22 @@ def transcript_generation(conversation_id: str, version: str) -> dict[str, objec
         "turns": json.loads(str(record["turns_json"])),
         "created_at": record["created_at"],
     }
+
+
+@api.patch("/conversations/{conversation_id}/transcript/segments")
+def edit_segments(conversation_id: str, request: TranscriptBatchEdit) -> dict[str, int]:
+    edits = [{"segment_id": item.segment_id, "text": item.text.strip()} for item in request.edits]
+    if any(not item["text"] for item in edits):
+        raise HTTPException(status_code=400, detail="Transcript text cannot be empty")
+    try:
+        revision = storage.edit_transcript_segments(conversation_id, edits, request.expected_revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"revision": revision}
 
 
 @api.patch("/conversations/{conversation_id}/transcript/segments/{segment_id}")

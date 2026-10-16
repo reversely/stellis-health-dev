@@ -54,7 +54,8 @@
           <div class="ai-question"><h3>Ask about this conversation</h3><form id="ai-question-form"><label for="ai-question-input">Question</label><div><input id="ai-question-input" maxlength="500" required placeholder="Ask something about the interview" /><button type="submit">Ask Nemotron</button></div></form><div id="ai-answers"></div></div>
         </section>
         <div id="transcript-card" class="transcript-card" role="tabpanel">
-          <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="process-button" type="button" hidden>Process recording</button></div></div>
+          <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="restore-passage-button" type="button" hidden>Restore passage</button><button id="discard-edits-button" type="button" hidden>Discard edits</button><button id="edit-transcript-button" type="button" hidden>Edit transcript</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="process-button" type="button" hidden>Process recording</button></div></div>
+          <p id="edit-status" role="status" aria-live="polite" hidden></p>
           <p id="processing-status" role="status" aria-live="polite">Checking local speech models…</p>
           <div class="highlight-controls"><div class="filter-option"><button id="show-highlights" type="button" aria-pressed="false">Show only highlights</button><span id="highlight-count"></span></div><div class="filter-option"><button id="show-rematch-changes" type="button" aria-pressed="false" hidden>Show speaker changes</button><span id="rematch-change-count"></span></div></div>
           <div id="transcript" class="transcript" aria-label="Transcript"></div>
