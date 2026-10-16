@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sqlite3
+import subprocess
 import threading
 from urllib.parse import urlsplit
 
@@ -16,7 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, clean, generation_review, library, people, processing, recording, search, storage
+from stellis import ai, auth, clean, generation_review, library, people, processing, recording, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -589,6 +590,26 @@ async def finalize_recording(recording_id: str) -> dict[str, object]:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=507, detail="Could not finalize the local recording") from exc
+
+
+@api.get("/recordings/{recording_id}/preview")
+def recording_preview_latest(recording_id: str) -> dict[str, object]:
+    try:
+        return recording_preview.latest(recording_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.post("/recordings/{recording_id}/preview")
+def recording_preview_generate(recording_id: str) -> dict[str, object]:
+    try:
+        return recording_preview.generate(recording_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="Local preview transcription failed") from exc
 
 
 @api.get("/conversations/{conversation_id}")
