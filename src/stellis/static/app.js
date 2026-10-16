@@ -107,6 +107,197 @@ let notesModulePromise = null;
 function notesEndpoint(scope, id) {
   return `${API}/${scope === 'recording' ? 'recordings' : 'conversations'}/${encodeURIComponent(id)}/notes`;
 }
+let conversationImages = [];
+let recordingImages = [];
+let imageDialogOwner = null;
+let pendingImageFile = null;
+let imagePreviewUrl = null;
+let selectedImageSegmentId = null;
+const imageDialog = document.querySelector('#image-dialog');
+const imageStatus = document.querySelector('#image-status');
+
+function imageEndpoint(scope, id) {
+  return `${API}/${scope === 'recording' ? 'recordings' : 'conversations'}/${encodeURIComponent(id)}/images`;
+}
+function imageFileUrl(scope, id, imageId, download = false) {
+  return `${imageEndpoint(scope, id)}/${encodeURIComponent(imageId)}/file${download ? '?download=true' : ''}`;
+}
+function imageSegmentFromSelection() {
+  const selection = window.getSelection();
+  if (!selection?.toString().trim()) return null;
+  const node = selection.anchorNode;
+  const row = (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)?.closest?.('.segment');
+  return row && transcriptView.contains(row) ? row.dataset.segmentId : null;
+}
+function makeImageCard(item, scope, ownerId) {
+  const card = document.createElement('figure'); card.className = 'image-card'; card.dataset.imageId = item.id;
+  const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'image-thumb';
+  thumb.setAttribute('aria-label', `Expand image at ${time(item.media_position_ms / 1000)}`);
+  const img = document.createElement('img'); img.src = imageFileUrl(scope, ownerId, item.id);
+  img.alt = item.caption || `Meeting image at ${time(item.media_position_ms / 1000)}`; img.loading = 'lazy';
+  thumb.append(img);
+  thumb.addEventListener('click', () => {
+    const viewer = document.querySelector('#image-viewer');
+    const expanded = document.querySelector('#expanded-image');
+    expanded.src = img.src; expanded.alt = img.alt; viewer.showModal();
+  });
+  const info = document.createElement('figcaption'); info.className = 'image-card-info';
+  const position = document.createElement('button'); position.type = 'button';
+  position.textContent = time(item.media_position_ms / 1000);
+  position.setAttribute('aria-label', `Go to image time ${time(item.media_position_ms / 1000)}`);
+  position.addEventListener('click', () => {
+    if (scope === 'conversation') { player.pause(); player.currentTime = item.media_position_ms / 1000; showConversationTab('transcript'); }
+  });
+  const caption = document.createElement('p'); caption.textContent = item.caption || 'Meeting image';
+  const actions = document.createElement('div'); actions.className = 'image-card-actions';
+  const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit caption';
+  edit.addEventListener('click', async () => {
+    const next = window.prompt('Image caption', item.caption || '');
+    if (next === null || next.trim() === item.caption) return;
+    try {
+      await json(await fetch(`${imageEndpoint(scope, ownerId)}/${encodeURIComponent(item.id)}`, {
+        method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({caption:next.trim()})}));
+      await loadImages(scope, ownerId);
+    } catch (error) {setStatus(error.message);}
+  });
+  const download = document.createElement('a'); download.href = imageFileUrl(scope, ownerId, item.id, true);
+  download.textContent = 'Download'; download.setAttribute('download', `meeting-image-${item.id}.webp`);
+  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete';
+  remove.addEventListener('click', async () => {
+    if (!window.confirm('Delete this image permanently?')) return;
+    try {
+      await json(await fetch(`${imageEndpoint(scope, ownerId)}/${encodeURIComponent(item.id)}`, {method:'DELETE'}));
+      await loadImages(scope, ownerId);
+    } catch (error) {setStatus(error.message);}
+  });
+  actions.append(edit, download, remove);
+  info.append(position, caption, actions); card.append(thumb, info);
+  return card;
+}
+function renderConversationImages() {
+  transcriptView.querySelectorAll('.image-card').forEach(card => card.remove());
+  const unplaced = document.querySelector('#conversation-image-list'); unplaced.replaceChildren();
+  if (!activeConversationId) return;
+  const lastByRow = new Map();
+  for (const item of conversationImages) {
+    let segment = transcriptSegments.find(value => value.id === item.segment_id);
+    if (!segment && transcriptSegments.length) {
+      segment = transcriptSegments[0];
+      for (const candidate of transcriptSegments) {
+        if (candidate.start_ms > item.media_position_ms) break;
+        segment = candidate;
+      }
+    }
+    const row = segment && transcriptView.querySelector(`[data-segment-id="${CSS.escape(segment.id)}"]`);
+    const card = makeImageCard(item, 'conversation', activeConversationId);
+    if (!row) {unplaced.append(card); continue;}
+    const predecessor = lastByRow.get(row) || row;
+    predecessor.after(card); lastByRow.set(row, card);
+  }
+}
+function renderRecordingImages() {
+  const list = document.querySelector('#recording-image-list'); list.replaceChildren();
+  const recordingId = capture?.session.id || notesStates.recording?.id;
+  if (recordingId) for (const item of recordingImages) list.append(makeImageCard(item, 'recording', recordingId));
+}
+async function loadImages(scope, id) {
+  const items = await json(await fetch(imageEndpoint(scope, id)));
+  if (scope === 'recording') {
+    if (capture?.session.id !== id && notesStates.recording?.id !== id) return;
+    recordingImages = items; renderRecordingImages();
+  } else if (activeConversationId === id) {
+    conversationImages = items; renderConversationImages();
+  }
+}
+function chooseImageFile(file) {
+  if (!file) return;
+  pendingImageFile = null;
+  document.querySelector('#save-image').disabled = true;
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    imageStatus.textContent = 'Use a PNG, JPEG, or WebP image.'; return;
+  }
+  if (file.size > 12_000_000) {imageStatus.textContent = 'Image must be smaller than 12 MB.'; return;}
+  if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  pendingImageFile = file; imagePreviewUrl = URL.createObjectURL(file);
+  const preview = document.querySelector('#image-preview'); preview.src = imagePreviewUrl; preview.hidden = false;
+  imageStatus.textContent = ''; document.querySelector('#save-image').disabled = false;
+}
+function openImageDialog(scope, id, file = null, segmentId = null) {
+  if (!id) return;
+  const segment = scope === 'conversation' ? transcriptSegments.find(item => item.id === segmentId) : null;
+  const position = segment ? segment.start_ms : scope === 'recording' ? Math.round(captureElapsedMs()) : Math.round(player.currentTime * 1000);
+  imageDialogOwner = {scope, id, position, segmentId:segment?.id || null};
+  pendingImageFile = null; imageStatus.textContent = '';
+  document.querySelector('#image-caption').value = '';
+  document.querySelector('#image-anchor-label').textContent = `At ${time(position / 1000)}`;
+  document.querySelector('#image-preview').hidden = true;
+  document.querySelector('#save-image').disabled = true;
+  document.querySelector('#image-file').value = '';
+  imageDialog.showModal();
+  if (file) chooseImageFile(file);
+  document.querySelector('#image-paste-target').focus();
+}
+function clipboardImage(event) {
+  return [...(event.clipboardData?.items || [])].find(item => item.type.startsWith('image/'))?.getAsFile() || null;
+}
+function pasteImage(event, scope) {
+  const file = clipboardImage(event);
+  if (!file) return;
+  event.preventDefault(); event.stopPropagation();
+  if (!imageDialog.open) {
+    const id = scope === 'recording' ? capture?.session.id : activeConversationId;
+    openImageDialog(scope, id, file, scope === 'conversation' ? imageSegmentFromSelection() : null);
+  } else chooseImageFile(file);
+}
+document.querySelector('#recording-notes-editor').addEventListener('paste', event => {
+  if (capture?.session.id) pasteImage(event, 'recording');
+}, true);
+document.querySelector('#conversation-notes-editor').addEventListener('paste', event => {
+  if (activeConversationId) pasteImage(event, 'conversation');
+}, true);
+transcriptView.addEventListener('paste', event => {
+  if (activeConversationId) pasteImage(event, 'conversation');
+}, true);
+document.querySelector('#image-paste-target').addEventListener('paste', event => pasteImage(event, imageDialogOwner?.scope));
+document.querySelector('#image-paste-target').addEventListener('click', () => document.querySelector('#image-file').click());
+document.querySelector('#image-paste-target').addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); document.querySelector('#image-file').click();}
+});
+document.querySelector('#image-paste-target').addEventListener('dragover', event => event.preventDefault());
+document.querySelector('#image-paste-target').addEventListener('drop', event => {
+  event.preventDefault(); chooseImageFile(event.dataTransfer?.files?.[0]);
+});
+document.querySelector('#choose-image').addEventListener('click', () => document.querySelector('#image-file').click());
+document.querySelector('#image-file').addEventListener('change', event => chooseImageFile(event.target.files?.[0]));
+document.querySelector('#add-recording-image').addEventListener('click', () => openImageDialog('recording', capture?.session.id));
+document.querySelector('#add-conversation-image').addEventListener('pointerdown', () => {
+  selectedImageSegmentId = imageSegmentFromSelection();
+});
+document.querySelector('#add-conversation-image').addEventListener('click', () => {
+  openImageDialog('conversation', activeConversationId, null, selectedImageSegmentId || imageSegmentFromSelection());
+  selectedImageSegmentId = null;
+});
+document.querySelector('#cancel-image').addEventListener('click', () => imageDialog.close());
+imageDialog.addEventListener('close', () => {
+  if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  imagePreviewUrl = null; pendingImageFile = null; imageDialogOwner = null;
+});
+document.querySelector('#image-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!pendingImageFile || !imageDialogOwner) return;
+  const {scope, id, position, segmentId} = imageDialogOwner;
+  const form = new FormData();
+  form.append('file', pendingImageFile, pendingImageFile.name || 'screenshot.png');
+  form.append('media_position_ms', String(position));
+  form.append('caption', document.querySelector('#image-caption').value.trim());
+  if (segmentId) form.append('segment_id', segmentId);
+  const save = document.querySelector('#save-image'); save.disabled = true; imageStatus.textContent = 'Saving image…';
+  try {
+    await json(await fetch(imageEndpoint(scope, id), {method:'POST', body:form}));
+    imageDialog.close(); await loadImages(scope, id); setStatus('Image saved.', true);
+  } catch (error) {imageStatus.textContent = error.message; save.disabled = false;}
+});
+document.querySelector('#close-image-viewer').addEventListener('click', () => document.querySelector('#image-viewer').close());
 function notesDraftKey(scope, id) { return `stellis-notes-${scope}-${id}`; }
 function notesElements(scope) {
   return {root:document.querySelector(`#${scope}-notes-editor`),
@@ -683,6 +874,7 @@ async function showDetail(id) {
   focusedEditSegmentId = null;
   transcriptEditError = null;
   transcriptSegments = [];
+  conversationImages = [];
   currentTranscript = null;
   document.querySelector('#copy-transcript').hidden = true;
   document.querySelector('#transcript-search-input').value = '';
@@ -708,6 +900,7 @@ async function showDetail(id) {
   player.load();
   syncPlayerControls();
   if (skipSilenceCheckbox.checked) startSilenceScan(id).catch(error => { skipSilenceStatus.textContent = error.message; });
+  await loadImages('conversation', id);
   await loadSpeech(id);
   await loadNotes('conversation', id);
   showConversationTab('summary');
@@ -1294,6 +1487,7 @@ async function showTranscript(id) {
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
   refreshTranscriptSearch();
+  renderConversationImages();
   window.scrollTo(0, previousScroll);
 }
 
@@ -1961,6 +2155,7 @@ function captureControls() {
   document.querySelector('#pause-recording').textContent = capture?.recorder?.state === 'paused' ? 'Resume' : 'Pause';
   document.querySelector('#back-from-recording').disabled = active || captureRequesting || captureFinalizing;
   recordingTimer.textContent = time(captureElapsedMs() / 1000);
+  document.querySelector('#add-recording-image').disabled = !active;
 }
 function showRecordingView(view) {
   if (view !== 'chat') recordingPrimaryView = view;
@@ -2045,6 +2240,7 @@ async function loadRecoveries() {
         history.pushState({}, '', '/recording'); showRecordingWorkspace();
         document.querySelector('#recording-title').value = session.title;
         await loadNotes('recording', session.id);
+        await loadImages('recording', session.id);
         await loadRecordingChat(session.id);
         notesEditors.recording.focus();
       } catch (error) {message.textContent = error.message;}
@@ -2113,6 +2309,7 @@ async function startCapture() {
     capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
       startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false,
       previewPending:false, previewDisabled:false, lastPreviewSequence:-1};
+    recordingImages = []; document.querySelector('#recording-image-list').replaceChildren();
     recorder.addEventListener('dataavailable', event => {
       if (!event.data.size) return;
       const current = capture;
@@ -2147,6 +2344,7 @@ async function startCapture() {
     capture.timer = setInterval(captureControls, 250);
     recordingState.textContent = 'Recording'; recordingDetail.textContent = 'Saving locally';
     loadNotes('recording', session.id).catch(error => {notesElements('recording').status.textContent = error.message;});
+    loadImages('recording', session.id).catch(error => {recordingDetail.textContent = error.message;});
     loadRecordingChat(session.id).catch(error => {document.querySelector('#recording-chat-status').textContent = error.message;});
     captureControls(); await loadRecoveries();
   } catch (error) {

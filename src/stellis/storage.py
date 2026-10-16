@@ -220,6 +220,25 @@ def connect() -> Iterator[sqlite3.Connection]:
             updated_at TEXT NOT NULL
         )"""
     )
+    conn.execute("""CREATE TABLE IF NOT EXISTS conversation_images (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT REFERENCES conversations(id),
+        recording_id TEXT REFERENCES recording_sessions(id),
+        media_position_ms INTEGER NOT NULL CHECK (media_position_ms >= 0),
+        segment_id TEXT,
+        caption TEXT NOT NULL DEFAULT '',
+        filename TEXT NOT NULL UNIQUE,
+        media_type TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        sha256 TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        CHECK ((conversation_id IS NOT NULL) != (recording_id IS NOT NULL))
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS conversation_images_by_conversation ON conversation_images(conversation_id, media_position_ms)")
+    conn.execute("CREATE INDEX IF NOT EXISTS conversation_images_by_recording ON conversation_images(recording_id, media_position_ms)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS recording_chunks (
             recording_id TEXT NOT NULL REFERENCES recording_sessions(id),

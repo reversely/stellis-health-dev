@@ -1,0 +1,150 @@
+"""Private image attachment API, finalization, and deletion checks."""
+
+from __future__ import annotations
+
+import io
+import json
+import os
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from datetime import datetime, timezone
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+from PIL import Image, PngImagePlugin
+
+from stellis import storage
+from stellis.server import app
+from test_import import wav_bytes
+
+
+def png_bytes() -> bytes:
+    output = io.BytesIO()
+    metadata = PngImagePlugin.PngInfo()
+    metadata.add_text("Comment", "private metadata")
+    Image.new("RGB", (120, 80), "#3456a0").save(output, format="PNG", pnginfo=metadata)
+    return output.getvalue()
+
+
+class ImageWorkflowTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
+        self.env.start()
+        self.client = TestClient(app)
+        response = self.client.post("/api/v1/conversations/import",
+                                    files={"file": ("meeting.wav", wav_bytes(), "audio/wav")})
+        self.conversation_id = response.json()["conversation"]["id"]
+
+    def tearDown(self) -> None:
+        self.client.close()
+        self.env.stop()
+        self.temp.cleanup()
+
+    def _upload(self, owner: str, time_ms: int = 500):
+        return self.client.post(f"/api/v1/{owner}/images",
+                                files={"file": ("screenshot.png", png_bytes(), "image/png")},
+                                data={"media_position_ms": str(time_ms), "caption": "Shared slide"})
+
+    def test_upload_read_caption_and_trash_lifecycle(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        uploaded = self._upload(owner)
+        self.assertEqual(uploaded.status_code, 200)
+        item = uploaded.json()
+        self.assertEqual((item["width"], item["height"], item["media_position_ms"]), (120, 80, 500))
+        self.assertEqual(len(self.client.get(f"/api/v1/{owner}/images").json()), 1)
+        file_url = f"/api/v1/{owner}/images/{item['id']}/file"
+        response = self.client.get(file_url)
+        self.assertEqual(response.headers["content-type"], "image/webp")
+        self.assertEqual(response.headers["cache-control"], "private, no-store")
+        with Image.open(io.BytesIO(response.content)) as normalized:
+            self.assertEqual(normalized.size, (120, 80))
+            self.assertNotIn("private metadata", str(normalized.info))
+        self.assertIn("attachment", self.client.get(file_url + "?download=true").headers["content-disposition"])
+        changed = self.client.patch(f"/api/v1/{owner}/images/{item['id']}", json={"caption": "Orbit diagram"})
+        self.assertEqual(changed.json()["caption"], "Orbit diagram")
+        self.client.post(f"/api/v1/conversations/{self.conversation_id}/trash")
+        self.assertEqual(self.client.get(file_url).status_code, 404)
+        self.client.post(f"/api/v1/trash/{self.conversation_id}/restore")
+        self.assertEqual(self.client.get(file_url).status_code, 200)
+        self.client.post(f"/api/v1/conversations/{self.conversation_id}/trash")
+        self.assertEqual(self.client.delete(f"/api/v1/trash/{self.conversation_id}").status_code, 200)
+        self.assertEqual(list((Path(self.temp.name) / "images").glob("*.webp")), [])
+
+    def test_rejects_bad_content_and_time_without_files(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        wrong = self.client.post(f"/api/v1/{owner}/images",
+                                 files={"file": ("fake.png", b"not an image", "image/png")},
+                                 data={"media_position_ms": "500"})
+        self.assertEqual(wrong.status_code, 400)
+        self.assertEqual(self._upload(owner, 2000).status_code, 400)
+        oversized = self.client.post(f"/api/v1/{owner}/images",
+                                     files={"file": ("big.png", b"a" * 12_000_001, "image/png")},
+                                     data={"media_position_ms": "500"})
+        self.assertEqual(oversized.status_code, 413)
+        self.assertEqual(list((Path(self.temp.name) / "images").glob("*.webp")), [])
+
+    def test_jpeg_and_webp_uploads_are_decoded(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        for fmt, mime in (("JPEG", "image/jpeg"), ("WEBP", "image/webp")):
+            with self.subTest(fmt=fmt):
+                output = io.BytesIO()
+                Image.new("RGB", (16, 12), "#28647a").save(output, format=fmt)
+                response = self.client.post(f"/api/v1/{owner}/images",
+                                            files={"file": (f"sample.{fmt.lower()}", output.getvalue(), mime)},
+                                            data={"media_position_ms": "0"})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual((response.json()["width"], response.json()["height"]), (16, 12))
+
+    def test_selected_passage_keeps_audio_time_after_new_generation(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        stamp = datetime.now(timezone.utc).isoformat()
+        def generation(version: str, segment_id: str) -> None:
+            storage.save_transcript({"conversation_id": self.conversation_id, "pipeline_version": version,
+                                     "revision": 0, "language": "en", "updated_at": stamp,
+                                     "segments_json": json.dumps([{"id": segment_id, "start_ms": 350,
+                                                                        "end_ms": 850, "text": "A visual moment."}]),
+                                     "turns_json": "[]"})
+        generation("image-fixture-1", "before")
+        uploaded = self.client.post(f"/api/v1/{owner}/images",
+                                    files={"file": ("slide.png", png_bytes(), "image/png")},
+                                    data={"media_position_ms": "500", "segment_id": "before"})
+        self.assertEqual(uploaded.status_code, 200)
+        self.assertEqual(uploaded.json()["media_position_ms"], 350)
+        self.assertEqual(uploaded.json()["segment_id"], "before")
+        generation("image-fixture-2", "after")
+        retained = self.client.get(f"/api/v1/{owner}/images").json()[0]
+        self.assertEqual((retained["media_position_ms"], retained["segment_id"]), (350, "before"))
+        stale = self.client.post(f"/api/v1/{owner}/images",
+                                 files={"file": ("slide.png", png_bytes(), "image/png")},
+                                 data={"media_position_ms": "500", "segment_id": "before"})
+        self.assertEqual(stale.status_code, 400)
+        self.assertEqual(len(self.client.get(f"/api/v1/{owner}/images").json()), 1)
+
+    def test_recording_image_survives_finalization_and_discard_removes_images(self) -> None:
+        session = self.client.post("/api/v1/recordings", json={"title": "Visual meeting", "media_type": "audio/webm"}).json()
+        owner = f"recordings/{session['id']}"
+        image = self._upload(owner, 700).json()
+        self.assertEqual(len(self.client.get(f"/api/v1/{owner}/images").json()), 1)
+        path = Path(self.temp.name) / "sample.webm"
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+                        "-i", "sine=frequency=440:duration=2", "-c:a", "libopus", str(path)],
+                       check=True, timeout=20)
+        self.client.put(f"/api/v1/{owner}/chunks/0", content=path.read_bytes())
+        finalized = self.client.post(f"/api/v1/{owner}/finalize")
+        self.assertEqual(finalized.status_code, 200)
+        conversation_id = finalized.json()["conversation"]["id"]
+        transferred = self.client.get(f"/api/v1/conversations/{conversation_id}/images").json()
+        self.assertEqual([item["id"] for item in transferred], [image["id"]])
+        self.assertEqual(self.client.get(f"/api/v1/conversations/{conversation_id}/images/{image['id']}/file").status_code, 200)
+        discarded = self.client.post("/api/v1/recordings", json={"title": "Discard", "media_type": "audio/webm"}).json()
+        self._upload(f"recordings/{discarded['id']}")
+        self.assertEqual(self.client.delete(f"/api/v1/recordings/{discarded['id']}").status_code, 200)
+        with storage.connect() as conn:
+            self.assertFalse(conn.execute("SELECT 1 FROM conversation_images WHERE recording_id = ?", (discarded["id"],)).fetchone())
+
+
+if __name__ == "__main__":
+    unittest.main()

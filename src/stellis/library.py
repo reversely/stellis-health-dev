@@ -167,6 +167,9 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
                     "SELECT id FROM recording_sessions WHERE conversation_id = ?", (conversation_id,))]
                 job_ids = [str(item["id"]) for item in conn.execute(
                     "SELECT id FROM processing_jobs WHERE conversation_id = ?", (conversation_id,))]
+                image_ids = [str(item["id"]) for item in conn.execute(
+                    "SELECT id FROM conversation_images WHERE conversation_id = ?", (conversation_id,))]
+                conn.execute("DELETE FROM conversation_images WHERE conversation_id = ?", (conversation_id,))
                 conn.execute("DELETE FROM clean_transcript_edits WHERE run_id IN (SELECT id FROM clean_runs WHERE conversation_id = ?)", (conversation_id,))
                 conn.execute("DELETE FROM clean_run_reviews WHERE run_id IN (SELECT id FROM clean_runs WHERE conversation_id = ?)", (conversation_id,))
                 for session_id in sessions:
@@ -192,6 +195,8 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
             shutil.rmtree(storage.data_dir() / "recordings" / session_id, ignore_errors=True)
         for job_id in job_ids:
             (storage.data_dir() / "job-locks" / f"{job_id}.lock").unlink(missing_ok=True)
+        from stellis import images
+        images.remove_files(image_ids)
     return {"id": conversation_id, "deleted": True}
 
 
