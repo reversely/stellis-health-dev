@@ -65,6 +65,7 @@ let savingTranscriptEdits = false;
 let transcriptEditError = null;
 const pendingTranscriptEdits = new Map();
 let selectedExcerpt = null;
+let commentsOpen = false;
 let activeWordElement = null;
 let lastIntentionalScroll = 0;
 let lastAutoFollow = 0;
@@ -1376,6 +1377,7 @@ function syncTranscriptEditControls() {
     editStatus.textContent = transcriptEditError || (pendingTranscriptEdits.size ? `${pendingTranscriptEdits.size} passage${pendingTranscriptEdits.size === 1 ? '' : 's'} pending · Press Done to save` : 'Edit words in place. Press Done to finish.');
 }
 function setTranscriptEditMode(enabled) {
+  document.querySelector('#comment-composer')?.remove();
   transcriptEditMode = enabled;
   transcriptEditError = null;
   focusedEditSegmentId = null;
@@ -1455,6 +1457,7 @@ async function showTranscript(id) {
   hideSelectionToolbar();
   document.querySelector('#highlight-count').textContent = `${data.highlights.length} highlights`;
   document.querySelector('#show-highlights').setAttribute('aria-pressed', String(highlightsOnly));
+  renderTranscriptComments(data);
   const changed = data.segments.filter(segment => segment.raw_speaker_cluster_id !== undefined && segment.raw_speaker_cluster_id !== segment.speaker_cluster_id).length;
   const changesButton = document.querySelector('#show-rematch-changes');
   changesButton.hidden = !data.generation_version.includes('-speaker-embedding-v1');
@@ -1506,6 +1509,7 @@ async function showTranscript(id) {
     const body = document.createElement('div'); body.className = 'turn-body';
     for (const segment of visible) {
     const highlights = data.highlights.filter(item => item.segment_id === segment.id);
+    const comments = data.comments.filter(item => item.segment_id === segment.id);
     const row = document.createElement('div');
     row.className = 'segment';
     row.dataset.segmentId = segment.id;
@@ -1526,8 +1530,8 @@ async function showTranscript(id) {
     speaker.addEventListener('click', () => showSpeakerPicker(speaker, row, segment));
     const words = document.createElement('div');
     words.className = 'segment-text';
-    words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight or click to play.`);
-    renderHighlightedText(words, segment.text, highlights, segment.words || []);
+    words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight, comment, or click to play.`);
+    renderHighlightedText(words, segment.text, highlights, segment.words || [], comments);
     words.addEventListener('input', () => {
       if (!transcriptEditMode) return;
       const value = words.innerText.replace(/\u00a0/g, ' ');
@@ -1630,10 +1634,12 @@ document.querySelector('#generation-activate').addEventListener('click', async (
     await showTranscript(activeConversationId); }
   catch (error) { document.querySelector('#generation-review-status').textContent = error.message; }
 });
-function renderHighlightedText(container, value, highlights, timedWords = []) {
+function renderHighlightedText(container, value, highlights, timedWords = [], comments = []) {
   const valid = highlights.filter(item => value.slice(item.start_offset, item.end_offset) === item.quote);
+  const anchoredComments = comments.filter(item => value.slice(item.start_offset, item.end_offset) === item.quote);
   const measured = timedWords.map((word, index) => ({...word, index})).filter(word => value.slice(word.start_offset, word.end_offset) === word.text && word.end_ms > word.start_ms);
   const edges = [...new Set([0, value.length, ...valid.flatMap(item => [item.start_offset, item.end_offset]),
+    ...anchoredComments.flatMap(item => [item.start_offset, item.end_offset]),
     ...measured.flatMap(word => [word.start_offset, word.end_offset])])].sort((a, b) => a - b);
   let currentWord = null;
   let currentWordIndex = -1;
@@ -1641,6 +1647,7 @@ function renderHighlightedText(container, value, highlights, timedWords = []) {
     const start = edges[i], end = edges[i + 1];
     const content = value.slice(start, end);
     const marked = valid.some(item => item.start_offset <= start && item.end_offset >= end);
+    const commented = anchoredComments.some(item => item.start_offset <= start && item.end_offset >= end);
     const wordIndex = measured.findIndex(word => word.start_offset <= start && word.end_offset >= end);
     if (wordIndex !== currentWordIndex) {
       currentWordIndex = wordIndex; currentWord = null;
@@ -1652,8 +1659,17 @@ function renderHighlightedText(container, value, highlights, timedWords = []) {
         container.append(currentWord);
       }
     }
-    const node = marked ? document.createElement('mark') : document.createTextNode(content);
+    let node = marked ? document.createElement('mark') : document.createTextNode(content);
     if (marked) { node.textContent = content; node.title = 'Highlighted excerpt'; }
+    if (commented) {
+      const anchor = document.createElement('span'); anchor.className = 'comment-range'; anchor.title = 'Open comments';
+      anchor.addEventListener('click', event => {
+        if (window.getSelection()?.toString().trim()) return;
+        event.stopPropagation(); commentsOpen = true; renderTranscriptComments(currentTranscript);
+        document.querySelector('#transcript-comments').scrollIntoView({block:'nearest'});
+      });
+      anchor.append(node); node = anchor;
+    }
     (currentWord || container).append(node);
   }
   if (highlights.length) {
@@ -1666,6 +1682,90 @@ function renderHighlightedText(container, value, highlights, timedWords = []) {
     }
     container.append(list);
   }
+}
+document.querySelector('#comments-toggle').addEventListener('click', () => {
+  commentsOpen = !commentsOpen;
+  renderTranscriptComments(currentTranscript);
+});
+function renderTranscriptComments(data) {
+  const list = document.querySelector('#comments-list');
+  const comments = data?.comments || [];
+  document.querySelector('#comment-count').textContent = String(comments.length);
+  document.querySelector('#comments-toggle').setAttribute('aria-expanded', String(commentsOpen));
+  list.hidden = !commentsOpen;
+  list.replaceChildren();
+  if (!commentsOpen) return;
+  for (const comment of comments) {
+    const segment = data.segments.find(item => item.id === comment.segment_id);
+    const exact = segment && segment.text.slice(comment.start_offset, comment.end_offset) === comment.quote;
+    const item = document.createElement('article'); item.className = 'transcript-comment'; item.dataset.commentId = comment.id;
+    const source = document.createElement('button'); source.type = 'button'; source.textContent = time(comment.start_ms / 1000);
+    source.setAttribute('aria-label', `Play comment source at ${time(comment.start_ms / 1000)}`);
+    source.addEventListener('click', () => {
+      player.currentTime = comment.start_ms / 1000; player.play().catch(() => {});
+      if (segment) transcriptView.querySelectorAll('.segment').forEach(row => {
+        if (row.dataset.segmentId === comment.segment_id) row.scrollIntoView({block:'center'});
+      });
+    });
+    const quote = document.createElement('blockquote'); quote.textContent = comment.quote;
+    const body = document.createElement('p'); body.textContent = comment.body;
+    const actions = document.createElement('div'); actions.className = 'comment-actions';
+    const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit';
+    edit.addEventListener('click', () => {
+      const form = document.createElement('form'); form.className = 'comment-edit';
+      const input = document.createElement('textarea'); input.value = comment.body; input.maxLength = 2000;
+      input.setAttribute('aria-label', 'Edit comment');
+      const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save';
+      const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => renderTranscriptComments(currentTranscript));
+      const message = document.createElement('p'); message.setAttribute('role', 'status');
+      form.append(input, save, cancel, message); body.replaceWith(form); input.focus();
+      form.addEventListener('submit', async event => {
+        event.preventDefault(); save.disabled = true;
+        try {
+          await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/comments/${encodeURIComponent(comment.id)}`, {
+            method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:input.value})}));
+          await showTranscript(activeConversationId);
+        } catch (error) { message.textContent = error.message; save.disabled = false; }
+      });
+    });
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete';
+    remove.addEventListener('click', async () => {
+      if (!window.confirm('Delete comment?')) return;
+      remove.disabled = true;
+      try { await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/comments/${encodeURIComponent(comment.id)}`, {method:'DELETE'}));
+        await showTranscript(activeConversationId);
+      } catch (error) { processingStatus.textContent = error.message; remove.disabled = false; }
+    });
+    actions.append(edit, remove); item.append(source, quote, body);
+    if (!exact) { const status = document.createElement('small'); status.textContent = segment ? 'Source changed' : 'Earlier transcript'; item.append(status); }
+    item.append(actions); list.append(item);
+  }
+}
+function openCommentComposer(excerpt) {
+  commentsOpen = true; renderTranscriptComments(currentTranscript);
+  const list = document.querySelector('#comments-list');
+  const form = document.createElement('form'); form.id = 'comment-composer'; form.className = 'comment-composer';
+  const quote = document.createElement('blockquote');
+  const segment = currentTranscript.segments.find(item => item.id === excerpt.segment_id);
+  quote.textContent = segment?.text.slice(excerpt.start_offset, excerpt.end_offset) || '';
+  const input = document.createElement('textarea'); input.rows = 3; input.maxLength = 2000;
+  input.placeholder = 'Add a comment'; input.setAttribute('aria-label', 'Add a comment');
+  const actions = document.createElement('div'); actions.className = 'comment-actions';
+  const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save'; save.disabled = true;
+  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => form.remove());
+  input.addEventListener('input', () => { save.disabled = !input.value.trim(); });
+  const message = document.createElement('p'); message.setAttribute('role', 'status');
+  actions.append(save, cancel); form.append(quote, input, actions, message); list.prepend(form);
+  form.addEventListener('submit', async event => {
+    event.preventDefault(); save.disabled = true;
+    try { await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/comments`, {
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...excerpt,body:input.value})}));
+      await showTranscript(activeConversationId); processingStatus.textContent = 'Comment saved.';
+    } catch (error) { message.textContent = error.message; save.disabled = false; }
+  });
+  document.querySelector('#transcript-comments').scrollIntoView({block:'nearest'}); input.focus();
 }
 function hideSelectionToolbar() {
   document.querySelector('#selection-toolbar')?.remove();
@@ -1706,7 +1806,11 @@ function inspectSelection() {
   const copy = document.createElement('button'); copy.type = 'button'; copy.textContent = 'Copy';
   copy.addEventListener('mousedown', event => event.preventDefault());
   copy.addEventListener('click', async () => { await navigator.clipboard.writeText(selection.toString()); hideSelectionToolbar(); });
-  toolbar.append(highlight, copy); document.body.append(toolbar);
+  const comment = document.createElement('button'); comment.type = 'button'; comment.textContent = 'Comment';
+  comment.addEventListener('mousedown', event => event.preventDefault());
+  comment.addEventListener('click', () => { const excerpt = selectedExcerpt; hideSelectionToolbar();
+    selection.removeAllRanges(); if (excerpt) openCommentComposer(excerpt); });
+  toolbar.append(highlight, comment, copy); document.body.append(toolbar);
   const rect = range.getBoundingClientRect();
   toolbar.style.left = `${Math.max(8, Math.min(window.innerWidth - toolbar.offsetWidth - 8, rect.left + rect.width / 2 - toolbar.offsetWidth / 2))}px`;
   toolbar.style.top = `${Math.max(8, rect.top - toolbar.offsetHeight - 8)}px`;

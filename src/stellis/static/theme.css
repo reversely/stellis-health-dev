@@ -347,6 +347,22 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
   box-shadow: var(--shadow);
 }
 #selection-toolbar button { color: var(--ink); background: var(--selected); }
+.comment-range { text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; }
+.transcript-comments { margin: 12px 0; }
+#comments-toggle { border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; color: var(--ink); background: var(--raised); cursor: pointer; }
+#comment-count { color: var(--muted); margin-left: 3px; }
+#comments-list { display: grid; gap: 10px; max-width: 650px; margin-top: 10px; }
+#comments-list[hidden] { display: none; }
+.transcript-comment, .comment-composer { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.transcript-comment blockquote, .comment-composer blockquote { margin: 8px 0; padding-left: 10px; border-left: 2px solid var(--accent); color: var(--muted); overflow-wrap: anywhere; }
+.transcript-comment p { margin: 7px 0; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.transcript-comment small { color: var(--warning); }
+.comment-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.transcript-comment button, .comment-composer button, .comment-edit button { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; color: var(--ink); background: var(--raised); cursor: pointer; }
+.comment-composer button[type='submit'], .comment-edit button[type='submit'] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.transcript-comments button:disabled { opacity: .5; cursor: default; }
+.comment-composer textarea, .comment-edit textarea { width: 100%; min-height: 72px; border: 1px solid var(--line); border-radius: 8px; padding: 9px; color: var(--ink); background: var(--input); font: inherit; resize: vertical; }
+.comment-composer [role='status'], .comment-edit [role='status'] { color: var(--failure); font-size: 13px; }
 .player-card { background: var(--raised); box-shadow: var(--shadow); }
 .player-card audio { color-scheme: inherit; }
 

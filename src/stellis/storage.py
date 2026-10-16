@@ -209,6 +209,18 @@ def connect() -> Iterator[sqlite3.Connection]:
             created_at TEXT NOT NULL
         )"""
     )
+    conn.execute("""CREATE TABLE IF NOT EXISTS transcript_comments (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id),
+        segment_id TEXT NOT NULL,
+        start_offset INTEGER NOT NULL,
+        end_offset INTEGER NOT NULL,
+        quote TEXT NOT NULL,
+        start_ms INTEGER NOT NULL,
+        body TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS recording_sessions (
             id TEXT PRIMARY KEY,
@@ -594,6 +606,75 @@ def list_highlights(conversation_id: str) -> list[dict[str, object]]:
             (conversation_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def list_comments(conversation_id: str) -> list[dict[str, object]]:
+    """Return private transcript comments in creation order."""
+    with connect() as conn:
+        rows = conn.execute("""SELECT id, segment_id, start_offset, end_offset, quote,
+            start_ms, body, created_at, updated_at FROM transcript_comments
+            WHERE conversation_id = ? ORDER BY created_at, id""", (conversation_id,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def add_comment(conversation_id: str, segment_id: str, start_offset: int,
+                end_offset: int, body: str, expected_revision: int) -> dict[str, object]:
+    """Save a comment and its exact source excerpt in one transaction."""
+    value = body.strip()
+    if not value or len(value) > 2000:
+        raise ValueError("Enter a comment of at most 2000 characters")
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if not conn.execute("SELECT 1 FROM conversations WHERE id = ? AND trashed_at IS NULL", (conversation_id,)).fetchone():
+            raise LookupError("Conversation not found")
+        row = conn.execute("SELECT revision, segments_json FROM transcripts WHERE conversation_id = ?",
+                           (conversation_id,)).fetchone()
+        if row is None:
+            raise LookupError("Transcript not found")
+        if int(row["revision"]) != expected_revision:
+            raise RuntimeError("Transcript changed. Reload and try again")
+        segment = next((item for item in json.loads(str(row["segments_json"]))
+                        if item["id"] == segment_id), None)
+        if segment is None:
+            raise LookupError("Passage not found")
+        edit = conn.execute("SELECT text FROM transcript_edits WHERE conversation_id = ? AND segment_id = ?",
+                            (conversation_id, segment_id)).fetchone()
+        displayed = str(edit["text"]) if edit else str(segment["text"])
+        if start_offset < 0 or end_offset > len(displayed) or start_offset >= end_offset:
+            raise ValueError("Select text within one passage")
+        record = {"id": str(uuid.uuid4()), "segment_id": segment_id,
+                  "start_offset": start_offset, "end_offset": end_offset,
+                  "quote": displayed[start_offset:end_offset], "start_ms": int(segment["start_ms"]),
+                  "body": value, "created_at": stamp, "updated_at": stamp}
+        conn.execute("""INSERT INTO transcript_comments (id, conversation_id, segment_id,
+            start_offset, end_offset, quote, start_ms, body, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (record["id"], conversation_id, segment_id, start_offset, end_offset,
+             record["quote"], record["start_ms"], value, stamp, stamp))
+    return record
+
+
+def update_comment(conversation_id: str, comment_id: str, body: str) -> dict[str, object]:
+    value = body.strip()
+    if not value or len(value) > 2000:
+        raise ValueError("Enter a comment of at most 2000 characters")
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as conn:
+        row = conn.execute("""UPDATE transcript_comments SET body = ?, updated_at = ?
+            WHERE conversation_id = ? AND id = ? RETURNING id, segment_id, start_offset,
+            end_offset, quote, start_ms, body, created_at, updated_at""",
+            (value, stamp, conversation_id, comment_id)).fetchone()
+    if row is None:
+        raise LookupError("Comment not found")
+    return dict(row)
+
+
+def delete_comment(conversation_id: str, comment_id: str) -> bool:
+    with connect() as conn:
+        removed = conn.execute("DELETE FROM transcript_comments WHERE conversation_id = ? AND id = ?",
+                               (conversation_id, comment_id)).rowcount
+    return bool(removed)
 
 
 def add_highlight(conversation_id: str, segment_id: str, start_offset: int,
@@ -1065,4 +1146,5 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
         "generation_version": record["generation_version"], "language": record["language"],
         "segments": segments, "turns": json.loads(str(record["turns_json"])),
         "speaker_labels": labels, "highlights": list_highlights(conversation_id),
+        "comments": list_comments(conversation_id),
     }

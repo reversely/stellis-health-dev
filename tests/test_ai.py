@@ -290,6 +290,17 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertRaises(ai.AIError, ai._validate_answer,
                           {"answer":"A claim","source_segment_ids":[],"insufficient_evidence":False}, {"seg-1"})
 
+    def test_private_comment_is_not_sent_to_nebius(self) -> None:
+        storage.add_comment(self.conversation_id, 'seg-1', 0, 5,
+                            'PRIVATE_COMMENT_SENTINEL_143', 1)
+        run = self._create('answer', 'What did Avery discuss?')
+        payload = {'answer':'Satellites.','source_segment_ids':['s1'],
+                   'insufficient_evidence':False}
+        with patch.object(ai, '_request', return_value=payload) as provider:
+            ai._run(run['id'])
+        self.assertEqual(self.client.get(f"/api/v1/ai-runs/{run['id']}").json()['state'], 'succeeded')
+        self.assertNotIn('PRIVATE_COMMENT_SENTINEL_143', json.dumps(provider.call_args.args[0]))
+
     def test_small_transcript_uses_one_summary_chunk(self) -> None:
         segments = storage.get_display_transcript(self.conversation_id)["segments"]
         self.assertEqual([len(chunk) for chunk in ai._chunks(segments)], [2])

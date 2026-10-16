@@ -65,6 +65,32 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(events[0]["old_text"], "Asteriod launch.")
         self.assertEqual(events[1]["new_text"], "Asteriod launch.")
 
+    def test_selected_comment_persists_and_marks_changed_source(self) -> None:
+        endpoint = f'{self.base}/comments'
+        invalid = self.client.post(endpoint, json={'segment_id':'segment-1','start_offset':0,
+            'end_offset':8,'body':'Check this', 'expected_revision':2})
+        self.assertEqual(invalid.status_code,409)
+        self.assertEqual(storage.list_comments(self.conversation_id), [])
+        saved = self.client.post(endpoint, json={'segment_id':'segment-1','start_offset':0,
+            'end_offset':8,'body':' Check this ', 'expected_revision':1})
+        self.assertEqual(saved.status_code,200,saved.text)
+        comment = saved.json()
+        self.assertEqual((comment['quote'],comment['body'],comment['start_ms']),('Asteriod','Check this',0))
+        with TestClient(app) as reloaded:
+            self.assertEqual(reloaded.get(f'{self.base}/transcript').json()['comments'][0]['id'],comment['id'])
+        self.client.patch(f'{self.base}/transcript/segments/segment-1',json={
+            'text':'Asteroid launch.','expected_revision':1})
+        projected = self.client.get(f'{self.base}/transcript').json()
+        self.assertEqual(projected['comments'][0]['quote'],'Asteriod')
+        self.assertNotEqual(projected['segments'][0]['text'][:8], projected['comments'][0]['quote'])
+        changed = self.client.patch(f"{endpoint}/{comment['id']}",json={'body':'Reviewed against audio'})
+        self.assertEqual(changed.json()['body'],'Reviewed against audio')
+        with storage.connect() as conn:
+            row = conn.execute('SELECT quote,body FROM transcript_comments WHERE id=?',(comment['id'],)).fetchone()
+        self.assertEqual(tuple(row),('Asteriod','Reviewed against audio'))
+        self.assertEqual(self.client.delete(f"{endpoint}/{comment['id']}").status_code,200)
+        self.assertEqual(self.client.get(f'{self.base}/transcript').json()['comments'],[])
+
     def test_batch_word_edits_are_atomic_and_keep_source_text(self) -> None:
         endpoint = f"{self.base}/transcript/segments"
         changed = self.client.patch(endpoint, json={"expected_revision": 1, "edits": [
