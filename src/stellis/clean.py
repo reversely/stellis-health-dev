@@ -11,7 +11,7 @@ from difflib import SequenceMatcher
 
 from stellis import ai, storage
 
-PROMPT_VERSION = "conservative-clean-v2"
+PROMPT_VERSION = "conservative-clean-v3"
 MAX_CHUNK_SEGMENTS = 20
 MAX_CHUNK_CHARS = 3200
 MAX_CHUNKS = 64
@@ -25,6 +25,14 @@ def public_run(record: dict[str, object]) -> dict[str, object]:
         edits = storage.clean_run_edits(str(record["id"]))
         reviews = storage.clean_run_reviews(str(record["id"]))
         for segment in result["segments"]:
+            if record["prompt_version"] != PROMPT_VERSION and segment["text"] != segment["source_text"]:
+                source = {**segment, "text": segment["source_text"]}
+                checked = _validate_chunk({"segments": [{"source_segment_id": "s1", "text": segment["text"],
+                                                        "needs_review": segment["needs_review"]}]}, [source])[0]
+                if checked["text"] != segment["text"]:
+                    segment["text"] = checked["text"]
+                    segment["needs_review"] = True
+                    segment["review_reason"] = "Older cleanup needs a fresh audio check"
             segment["reviewed"] = segment["id"] in reviews
             if segment["id"] in edits:
                 segment["model_text"] = segment["text"]
@@ -133,6 +141,7 @@ def _validate_chunk(payload: object, chunk: list[dict[str, object]]) -> list[dic
         lost_name = not source_names <= set(clean_words)
         additions = False
         replacements = False
+        unsafe_deletion = False
         for operation, left_start, left_end, right_start, right_end in SequenceMatcher(None, source_words, clean_words).get_opcodes():
             if operation == "insert" and any(word not in {"um", "uh", "er", "ah"} for word in clean_words[right_start:right_end]):
                 additions = True
@@ -140,8 +149,16 @@ def _validate_chunk(payload: object, chunk: list[dict[str, object]]) -> list[dic
                 replacements = True
                 if right_end - right_start > 2 or left_end - left_start > 2:
                     additions = True
+            if operation == "delete":
+                missing = source_words[left_start:left_end]
+                repeated = bool(missing and len(set(missing)) == 1 and
+                                ((left_start > 0 and source_words[left_start - 1] == missing[0]) or
+                                 (left_end < len(source_words) and source_words[left_end] == missing[0])))
+                safe = all(word in {"um", "uh", "erm", "er"} for word in missing) or repeated or missing == ["you", "know"]
+                if not safe:
+                    unsafe_deletion = True
         changed_numbers = source_numbers != clean_numbers
-        too_much_change = overlap < 0.55 or additions or lost_name
+        too_much_change = overlap < 0.55 or additions or lost_name or unsafe_deletion
         if changed_numbers or too_much_change or cleaned == source_text:
             cleaned = _safe_filler_cleanup(source_text)
         result.append({"id": source["id"], "source_text": source_text, "text": cleaned,
