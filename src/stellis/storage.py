@@ -383,7 +383,7 @@ def get_latest_job_for_conversation(conversation_id: str) -> dict[str, object] |
     """Find the newest job, including one with an older vocabulary snapshot."""
     with connect() as conn:
         row = conn.execute(
-            "SELECT * FROM processing_jobs WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1",
+            "SELECT * FROM processing_jobs WHERE conversation_id = ? AND kind != 'silence' ORDER BY created_at DESC LIMIT 1",
             (conversation_id,),
         ).fetchone()
     return dict(row) if row else None

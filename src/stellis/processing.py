@@ -21,7 +21,7 @@ from pathlib import Path
 
 import soundfile as sf
 
-from stellis import storage
+from stellis import silence, storage
 
 PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v1"
 REMATCH_VERSION = "speaker-embedding-v1"
@@ -182,6 +182,31 @@ def request_word_alignment(conversation_id: str, source_version: str | None = No
             "kind": "word_alignment", "state": "queued", "stage": "queued", "progress": 0,
             "error": None, "metrics_json": None, "vocabulary_json": "[]",
             "created_at": stamp, "updated_at": stamp,
+        }
+        storage.add_job(record)
+        _QUEUE.put(str(record["id"]))
+        return record
+
+
+def request_silence_scan(conversation_id: str) -> dict[str, object]:
+    """Queue one measured playback-only silence scan per source recording."""
+    if storage.get_transcript(conversation_id) is None:
+        raise LookupError("Transcribe before using Skip Silence")
+    with _REQUEST_LOCK:
+        existing = storage.get_job_for_conversation(conversation_id, silence.VERSION)
+        if existing:
+            if existing["state"] == "failed":
+                storage.update_job(str(existing["id"]), state="queued", stage="queued", progress=0,
+                                   error=None, updated_at=now())
+                _QUEUE.put(str(existing["id"]))
+                return storage.get_job(str(existing["id"])) or existing
+            return existing
+        stamp = now()
+        record: dict[str, object] = {
+            "id": str(uuid.uuid4()), "conversation_id": conversation_id,
+            "pipeline_version": silence.VERSION, "kind": "silence",
+            "state": "queued", "stage": "queued", "progress": 0, "error": None,
+            "metrics_json": None, "vocabulary_json": "[]", "created_at": stamp, "updated_at": stamp,
         }
         storage.add_job(record)
         _QUEUE.put(str(record["id"]))
@@ -447,6 +472,33 @@ def run_word_alignment_job(job_id: str) -> None:
         storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())
 
 
+def run_silence_job(job_id: str) -> None:
+    """Measure original-media gaps without changing transcript timing."""
+    job = storage.get_job(job_id)
+    if not job or job["state"] == "succeeded":
+        return
+    conversation = storage.get_conversation(str(job["conversation_id"]))
+    if not conversation:
+        storage.update_job(job_id, state="failed", stage="failed", error="Recording missing", updated_at=now())
+        return
+    try:
+        _stage(job_id, "measuring silence", 0.1)
+        source = storage.data_dir() / "media" / str(conversation["audio_filename"])
+        if not source.is_file():
+            raise RuntimeError("Source audio is missing")
+        transcript = storage.get_transcript(str(job["conversation_id"]))
+        if transcript is None:
+            raise RuntimeError("Transcript is not ready")
+        measured = silence.measured_spans(source, int(conversation["duration_ms"]))
+        spans = silence.exclude_speech(measured, json.loads(str(transcript["segments_json"])))
+        storage.update_job(job_id, state="succeeded", stage="complete", progress=1,
+                           metrics_json=json.dumps({"spans": spans, "count": len(spans),
+                                                    "threshold_db": silence.THRESHOLD_DB}),
+                           error=None, updated_at=now())
+    except Exception as exc:
+        storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())
+
+
 def run_job(job_id: str) -> None:
     """Process source audio and save transcript; failures remain retryable."""
     job = storage.get_job(job_id)
@@ -457,6 +509,9 @@ def run_job(job_id: str) -> None:
         return
     if job["kind"] == "word_alignment":
         run_word_alignment_job(job_id)
+        return
+    if job["kind"] == "silence":
+        run_silence_job(job_id)
         return
     conversation = storage.get_conversation(str(job["conversation_id"]))
     if not conversation:
