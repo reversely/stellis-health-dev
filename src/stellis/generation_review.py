@@ -70,8 +70,13 @@ def stage(record: dict[str, object]) -> bool:
         overlays.append({"kind": "comment", "source_segment_id": comment["segment_id"],
                          "value": comment["quote"], "source_comment_id": comment["id"]})
     with storage.connect() as conn:
+        anchored_images = conn.execute("""SELECT id, segment_id, quote FROM conversation_images
+            WHERE conversation_id = ? AND quote IS NOT NULL""", (conversation_id,)).fetchall()
         people = conn.execute("SELECT segment_id, person_id FROM person_links WHERE conversation_id = ?",
                               (conversation_id,)).fetchall()
+    for image in anchored_images:
+        overlays.append({"kind": "image", "source_segment_id": image["segment_id"],
+                         "value": image["quote"], "source_image_id": image["id"]})
     for link in people:
         overlays.append({"kind": "person", "source_segment_id": link["segment_id"], "value": link["person_id"]})
     items = []
@@ -187,12 +192,12 @@ def activate(conversation_id: str) -> dict[str, object]:
         seen: set[tuple[str, str]] = set()
         for item, target_id in mappings:
             key = (item["kind"], target_id)
-            if target_id not in target_segments or (item["kind"] != "comment" and key in seen):
+            if target_id not in target_segments or (item["kind"] not in {"comment", "image"} and key in seen):
                 raise RuntimeError("Two source changes cannot map to the same target passage and kind")
             seen.add(key)
-            if item["kind"] in {"highlight", "comment"} and str(item["value"]) not in str(target_segments[target_id]["text"]):
+            if item["kind"] in {"highlight", "comment", "image"} and str(item["value"]) not in str(target_segments[target_id]["text"]):
                 raise RuntimeError("The selected quote is absent from the chosen target passage")
-            if item["kind"] == "comment" and str(target_segments[target_id]["text"]).count(str(item["value"])) != 1:
+            if item["kind"] in {"comment", "image"} and str(target_segments[target_id]["text"]).count(str(item["value"])) != 1:
                 raise RuntimeError("The selected quote appears more than once in the chosen passage")
         stamp = _now()
         # Cluster IDs are provisional across a fresh ASR/diarization pass.
@@ -226,6 +231,13 @@ def activate(conversation_id: str) -> dict[str, object]:
                     end_offset = ?, start_ms = ?, updated_at = ? WHERE id = ? AND conversation_id = ?""",
                     (target_id, start, start + len(quote), target_segments[target_id]["start_ms"],
                      stamp, item["source_comment_id"], conversation_id))
+            elif item["kind"] == "image":
+                quote = str(item["value"])
+                start = str(target_segments[target_id]["text"]).index(quote)
+                conn.execute("""UPDATE conversation_images SET segment_id = ?, start_offset = ?,
+                    end_offset = ?, media_position_ms = ?, updated_at = ? WHERE id = ? AND conversation_id = ?""",
+                    (target_id, start, start + len(quote), target_segments[target_id]["start_ms"],
+                     stamp, item["source_image_id"], conversation_id))
         conn.execute("""UPDATE transcripts SET revision = ?, generation_version = ?, language = ?,
             segments_json = ?, turns_json = ?, updated_at = ? WHERE conversation_id = ?""",
             (int(current["revision"]) + 1, target["pipeline_version"], target["language"],

@@ -123,6 +123,40 @@ class ImageWorkflowTest(unittest.TestCase):
         self.assertEqual(stale.status_code, 400)
         self.assertEqual(len(self.client.get(f"/api/v1/{owner}/images").json()), 1)
 
+    def test_selected_excerpt_is_atomic_and_uses_displayed_words(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        stamp = datetime.now(timezone.utc).isoformat()
+        storage.save_transcript({"conversation_id": self.conversation_id, "pipeline_version": "image-range-1",
+                                 "revision": 0, "language": "en", "updated_at": stamp,
+                                 "segments_json": json.dumps([{"id": "turn-1", "start_ms": 350,
+                                                                "end_ms": 850, "text": "An image moment."}]),
+                                 "turns_json": "[]"})
+        transcript = storage.get_transcript(self.conversation_id)
+        revision = int(transcript["revision"])
+        with storage.connect() as conn:
+            conn.execute("INSERT INTO transcript_edits (conversation_id, segment_id, text, updated_at) VALUES (?, ?, ?, ?)",
+                         (self.conversation_id, "turn-1", "A visual moment.", stamp))
+        data = {"media_position_ms": "500", "segment_id": "turn-1", "start_offset": "2",
+                "end_offset": "8", "expected_revision": str(revision)}
+        endpoint = f"/api/v1/{owner}/images"
+        def upload(fields):
+            return self.client.post(endpoint, files={"file": ("slide.png", png_bytes(), "image/png")}, data=fields)
+        stale = upload({**data, "expected_revision": str(revision + 1)})
+        self.assertEqual(stale.status_code, 400)
+        self.assertEqual(self.client.get(endpoint).json(), [])
+        self.assertEqual(list((Path(self.temp.name) / "images").glob("*.webp")), [])
+        invalid = upload({**data, "end_offset": "999"})
+        self.assertEqual(invalid.status_code, 400)
+        created = upload(data)
+        self.assertEqual(created.status_code, 200, created.text)
+        image = created.json()
+        self.assertEqual((image["quote"], image["start_offset"], image["end_offset"], image["media_position_ms"]),
+                         ("visual", 2, 8, 350))
+        self.assertEqual(self.client.get(endpoint).json()[0]["id"], image["id"])
+        with storage.connect() as conn:
+            row = conn.execute("SELECT quote, segment_id FROM conversation_images WHERE id = ?", (image["id"],)).fetchone()
+        self.assertEqual((row["quote"], row["segment_id"]), ("visual", "turn-1"))
+
     def test_recording_image_survives_finalization_and_discard_removes_images(self) -> None:
         session = self.client.post("/api/v1/recordings", json={"title": "Visual meeting", "media_type": "audio/webm"}).json()
         owner = f"recordings/{session['id']}"

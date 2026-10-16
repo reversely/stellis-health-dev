@@ -120,7 +120,7 @@ function notesEndpoint(scope, id) {
 let conversationImages = [];
 let recordingImages = [];
 let imageDialogOwner = null;
-let pendingImageFile = null;
+let pendingImageFiles = [];
 let imagePreviewUrl = null;
 let selectedImageSegmentId = null;
 const imageDialog = document.querySelector('#image-dialog');
@@ -171,6 +171,12 @@ function makeImageCard(item, scope, ownerId) {
     if (scope === 'conversation') { player.pause(); player.currentTime = item.media_position_ms / 1000; showConversationTab('transcript'); }
   });
   const caption = document.createElement('p'); caption.textContent = item.caption || 'Meeting image';
+  if (item.quote) {
+    const anchor = document.createElement('p');
+    const source = transcriptSegments.find(segment => segment.id === item.segment_id);
+    anchor.textContent = `${source ? source.text.slice(item.start_offset, item.end_offset) === item.quote ? '' : 'Source changed · ' : 'Earlier transcript · '}“${item.quote}”`;
+    info.append(anchor);
+  }
   const actions = document.createElement('div'); actions.className = 'image-card-actions';
   const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit caption';
   edit.addEventListener('click', async () => {
@@ -236,28 +242,34 @@ async function loadImages(scope, id) {
   }
 }
 function chooseImageFile(file) {
-  if (!file) return;
-  pendingImageFile = null;
+  const files = Array.isArray(file) ? file : file ? [file] : [];
+  if (!files.length) return;
+  pendingImageFiles = [];
   document.querySelector('#save-image').disabled = true;
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+  if (files.length > 10) { imageStatus.textContent = 'Choose up to 10 images.'; return; }
+  if (files.some(item => !['image/png', 'image/jpeg', 'image/webp'].includes(item.type))) {
     imageStatus.textContent = 'Use a PNG, JPEG, or WebP image.'; return;
   }
-  if (file.size > 12_000_000) {imageStatus.textContent = 'Image must be smaller than 12 MB.'; return;}
+  if (files.some(item => item.size > 12_000_000)) {imageStatus.textContent = 'Image must be smaller than 12 MB.'; return;}
   if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-  pendingImageFile = file; imagePreviewUrl = URL.createObjectURL(file);
+  file = files[0]; pendingImageFiles = files; imagePreviewUrl = URL.createObjectURL(file);
   const preview = document.querySelector('#image-preview'); preview.src = imagePreviewUrl; preview.hidden = false;
-  imageStatus.textContent = ''; document.querySelector('#save-image').disabled = false;
+  imageStatus.textContent = files.length > 1 ? `${files.length} images selected` : '';
+  const save = document.querySelector('#save-image'); save.textContent = files.length > 1 ? `Save ${files.length} images` : 'Save image';
+  save.disabled = false;
 }
-function openImageDialog(scope, id, file = null, segmentId = null) {
+function openImageDialog(scope, id, file = null, segmentId = null, excerpt = null) {
   if (!id) return;
   const segment = scope === 'conversation' ? transcriptSegments.find(item => item.id === segmentId) : null;
   const position = segment ? segment.start_ms : scope === 'recording' ? Math.round(captureElapsedMs()) : Math.round(player.currentTime * 1000);
-  imageDialogOwner = {scope, id, position, segmentId:segment?.id || null};
-  pendingImageFile = null; imageStatus.textContent = '';
+  imageDialogOwner = {scope, id, position, segmentId:segment?.id || null, excerpt};
+  pendingImageFiles = []; imageStatus.textContent = '';
   document.querySelector('#image-caption').value = '';
-  document.querySelector('#image-anchor-label').textContent = `At ${time(position / 1000)}`;
+  document.querySelector('#image-anchor-label').textContent = excerpt ?
+    `At ${time(position / 1000)} · “${segment.text.slice(excerpt.start_offset, excerpt.end_offset)}”` : `At ${time(position / 1000)}`;
   document.querySelector('#image-preview').hidden = true;
   document.querySelector('#save-image').disabled = true;
+  document.querySelector('#save-image').textContent = 'Save image';
   document.querySelector('#image-file').value = '';
   imageDialog.showModal();
   if (file) chooseImageFile(file);
@@ -344,22 +356,36 @@ document.querySelector('#add-conversation-image').addEventListener('click', () =
 document.querySelector('#cancel-image').addEventListener('click', () => imageDialog.close());
 imageDialog.addEventListener('close', () => {
   if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-  imagePreviewUrl = null; pendingImageFile = null; imageDialogOwner = null;
+  imagePreviewUrl = null; pendingImageFiles = []; imageDialogOwner = null;
 });
 document.querySelector('#image-form').addEventListener('submit', async event => {
   event.preventDefault();
-  if (!pendingImageFile || !imageDialogOwner) return;
-  const {scope, id, position, segmentId} = imageDialogOwner;
-  const form = new FormData();
-  form.append('file', pendingImageFile, pendingImageFile.name || 'screenshot.png');
-  form.append('media_position_ms', String(position));
-  form.append('caption', document.querySelector('#image-caption').value.trim());
-  if (segmentId) form.append('segment_id', segmentId);
+  if (!pendingImageFiles.length || !imageDialogOwner) return;
+  const {scope, id, position, segmentId, excerpt} = imageDialogOwner;
   const save = document.querySelector('#save-image'); save.disabled = true; imageStatus.textContent = 'Saving image…';
+  const cancel = document.querySelector('#cancel-image');
+  const choose = document.querySelector('#choose-image');
+  cancel.disabled = true; choose.disabled = true;
+  let saved = 0;
   try {
-    await json(await fetch(imageEndpoint(scope, id), {method:'POST', body:form}));
-    imageDialog.close(); await loadImages(scope, id); setStatus('Image saved.', true);
-  } catch (error) {imageStatus.textContent = error.message; save.disabled = false;}
+    for (const file of [...pendingImageFiles]) {
+      const form = new FormData();
+      form.append('file', file, file.name || 'screenshot.png');
+      form.append('media_position_ms', String(position));
+      form.append('caption', document.querySelector('#image-caption').value.trim());
+      if (segmentId) form.append('segment_id', segmentId);
+      if (excerpt) for (const field of ['start_offset', 'end_offset', 'expected_revision']) form.append(field, String(excerpt[field]));
+      await json(await fetch(imageEndpoint(scope, id), {method:'POST', body:form}));
+      pendingImageFiles.shift(); saved += 1;
+    }
+    imageDialog.close(); await loadImages(scope, id); setStatus(saved === 1 ? 'Image saved.' : `${saved} images saved.`, true);
+  } catch (error) {
+    if (saved) await loadImages(scope, id);
+    imageStatus.textContent = `${saved ? `${saved} saved. ` : ''}${error.message}`;
+    save.disabled = false;
+  } finally {
+    cancel.disabled = false; choose.disabled = false;
+  }
 });
 document.querySelector('#close-image-viewer').addEventListener('click', () => document.querySelector('#image-viewer').close());
 function notesDraftKey(scope, id) { return `stellis-notes-${scope}-${id}`; }
@@ -1823,7 +1849,23 @@ function inspectSelection() {
   comment.addEventListener('mousedown', event => event.preventDefault());
   comment.addEventListener('click', () => { const excerpt = selectedExcerpt; hideSelectionToolbar();
     selection.removeAllRanges(); if (excerpt) openCommentComposer(excerpt); });
-  toolbar.append(highlight, comment, copy); document.body.append(toolbar);
+  const photo = document.createElement('button'); photo.type = 'button'; photo.textContent = 'Add Image';
+  photo.addEventListener('mousedown', event => event.preventDefault());
+  photo.addEventListener('click', () => {
+    const excerpt = selectedExcerpt;
+    if (!excerpt) return;
+    hideSelectionToolbar(); selection.removeAllRanges();
+    const input = document.createElement('input'); input.id = 'selected-image-file';
+    input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp'; input.multiple = true;
+    input.hidden = true; document.body.append(input);
+    input.addEventListener('change', () => {
+      const files = [...(input.files || [])]; input.remove();
+      if (files.length) openImageDialog('conversation', activeConversationId, files, excerpt.segment_id, excerpt);
+    }, {once:true});
+    window.addEventListener('focus', () => setTimeout(() => input.remove(), 1000), {once:true});
+    input.click();
+  });
+  toolbar.append(highlight, comment, photo, copy); document.body.append(toolbar);
   const rect = range.getBoundingClientRect();
   toolbar.style.left = `${Math.max(8, Math.min(window.innerWidth - toolbar.offsetWidth - 8, rect.left + rect.width / 2 - toolbar.offsetWidth / 2))}px`;
   toolbar.style.top = `${Math.max(8, rect.top - toolbar.offsetHeight - 8)}px`;

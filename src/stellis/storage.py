@@ -251,6 +251,10 @@ def connect() -> Iterator[sqlite3.Connection]:
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS conversation_images_by_conversation ON conversation_images(conversation_id, media_position_ms)")
     conn.execute("CREATE INDEX IF NOT EXISTS conversation_images_by_recording ON conversation_images(recording_id, media_position_ms)")
+    image_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversation_images)")}
+    for column, definition in (("start_offset", "INTEGER"), ("end_offset", "INTEGER"), ("quote", "TEXT")):
+        if column not in image_columns:
+            conn.execute(f"ALTER TABLE conversation_images ADD COLUMN {column} {definition}")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS recording_chunks (
             recording_id TEXT NOT NULL REFERENCES recording_sessions(id),

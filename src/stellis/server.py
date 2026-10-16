@@ -703,12 +703,15 @@ def _list_images(scope: str, item_id: str) -> list[dict[str, object]]:
 
 
 async def _add_image(scope: str, item_id: str, file: UploadFile,
-                     media_position_ms: int, segment_id: str | None, caption: str) -> dict[str, object]:
+                     media_position_ms: int, segment_id: str | None, caption: str,
+                     start_offset: int | None = None, end_offset: int | None = None,
+                     expected_revision: int | None = None) -> dict[str, object]:
     try:
         data = await file.read(images.MAX_UPLOAD_BYTES + 1)
         if len(data) > images.MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail="Image must be smaller than 12 MB")
-        return images._public(images.add(scope, item_id, data, media_position_ms, segment_id, caption))
+        return images._public(images.add(scope, item_id, data, media_position_ms, segment_id, caption,
+                                         start_offset, end_offset, expected_revision))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -766,8 +769,10 @@ def conversation_images(conversation_id: str) -> list[dict[str, object]]:
 @api.post("/conversations/{conversation_id}/images")
 async def add_conversation_image(conversation_id: str, file: UploadFile = File(...),
                                  media_position_ms: int = Form(...), segment_id: str | None = Form(None),
-                                 caption: str = Form("")) -> dict[str, object]:
-    return await _add_image("conversation", conversation_id, file, media_position_ms, segment_id, caption)
+                                 caption: str = Form(""), start_offset: int | None = Form(None),
+                                 end_offset: int | None = Form(None), expected_revision: int | None = Form(None)) -> dict[str, object]:
+    return await _add_image("conversation", conversation_id, file, media_position_ms, segment_id, caption,
+                            start_offset, end_offset, expected_revision)
 
 
 @api.get("/recordings/{recording_id}/images/{image_id}/file")
