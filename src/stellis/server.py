@@ -45,6 +45,19 @@ async def session_gate(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def development_cache_policy(request: Request, call_next):
+    """Revalidate mutable assets so a normal reload uses the current local build."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith(("/static/", "/shared/")):
+        response.headers["Cache-Control"] = "private, no-cache"
+    elif (path in {"/", "/auth", "/recording"} or
+          path.startswith(("/conversation/", "/person/"))):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 class Credentials(BaseModel):
     username: str = Field(min_length=3, max_length=80)
     password: str = Field(min_length=12, max_length=1024)
