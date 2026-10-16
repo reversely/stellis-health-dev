@@ -7,6 +7,8 @@ import hashlib
 import os
 import queue
 import re
+from bisect import bisect_left, bisect_right
+from difflib import SequenceMatcher
 import shutil
 import subprocess
 import sys
@@ -23,6 +25,7 @@ from stellis import storage
 
 PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v1"
 REMATCH_VERSION = "speaker-embedding-v1"
+WORD_ALIGNMENT_VERSION = "word-align-v1"
 _QUEUE: queue.Queue[str] = queue.Queue()
 _WORKER_LOCK = threading.Lock()
 _REQUEST_LOCK = threading.Lock()
@@ -143,6 +146,38 @@ def request_rematch(conversation_id: str) -> dict[str, object]:
             "pipeline_version": version, "source_generation_version": base_version, "kind": "rematch",
             "state": "queued", "stage": "queued", "progress": 0, "error": None,
             "metrics_json": None, "vocabulary_json": "[]", "created_at": stamp, "updated_at": stamp,
+        }
+        storage.add_job(record)
+        _QUEUE.put(str(record["id"]))
+        return record
+
+
+def request_word_alignment(conversation_id: str, source_version: str | None = None) -> dict[str, object]:
+    """Queue a source-preserving word timing job for a retained transcript generation."""
+    with _REQUEST_LOCK:
+        current = storage.get_transcript(conversation_id)
+        if current is None:
+            raise LookupError("Transcript is not ready")
+        source_version = source_version or str(current["generation_version"])
+        source = storage.get_transcript_generation(conversation_id, source_version)
+        if source is None:
+            raise LookupError("Source transcript generation is unavailable")
+        version = f"{source_version}-{WORD_ALIGNMENT_VERSION}"
+        existing = storage.get_job_for_conversation(conversation_id, version)
+        if existing:
+            if existing["state"] == "failed":
+                storage.update_job(str(existing["id"]), state="queued", stage="retrying", progress=0,
+                                   error=None, updated_at=now())
+                _QUEUE.put(str(existing["id"]))
+                return storage.get_job(str(existing["id"])) or existing
+            return existing
+        stamp = now()
+        record: dict[str, object] = {
+            "id": str(uuid.uuid4()), "conversation_id": conversation_id,
+            "pipeline_version": version, "source_generation_version": source_version,
+            "kind": "word_alignment", "state": "queued", "stage": "queued", "progress": 0,
+            "error": None, "metrics_json": None, "vocabulary_json": "[]",
+            "created_at": stamp, "updated_at": stamp,
         }
         storage.add_job(record)
         _QUEUE.put(str(record["id"]))
@@ -309,6 +344,105 @@ def align_segments(conversation_id: str, segments: list[dict[str, object]],
     return aligned, confident / len(aligned) if aligned else 0
 
 
+def align_existing_words(source: list[dict[str, object]],
+                         measured: list[dict[str, object]]) -> tuple[list[dict[str, object]], float]:
+    """Attach only text-matched audio timing to old passages without changing their IDs."""
+    available = sorted([(word["start_ms"], segment_index, word_index, word)
+                        for segment_index, segment in enumerate(measured)
+                        for word_index, word in enumerate(segment.get("words", []))], key=lambda item: item[0])
+    times = [item[0] for item in available]
+    used: set[tuple[int, int]] = set()
+    aligned: list[dict[str, object]] = []
+    matched = total = 0
+
+    def normalize(value: str) -> str:
+        return "".join(character for character in value.casefold() if character.isalnum())
+
+    for segment in source:
+        text = str(segment["text"])
+        source_words = [part for part in re.finditer(r"\S+", text) if normalize(part.group())]
+        total += len(source_words)
+        start, end = int(segment["start_ms"]), int(segment["end_ms"])
+        left = bisect_left(times, start - 400)
+        right = bisect_right(times, end + 400)
+        candidates = [item for item in available[left:right] if (item[1], item[2]) not in used]
+        source_tokens = [normalize(part.group()) for part in source_words]
+        timing_tokens = [normalize(str(item[3]["text"])) for item in candidates]
+        words = []
+        for block in SequenceMatcher(None, source_tokens, timing_tokens, autojunk=False).get_matching_blocks():
+            for offset in range(block.size):
+                part = source_words[block.a + offset]
+                _, segment_index, word_index, timed = candidates[block.b + offset]
+                if not source_tokens[block.a + offset] or not timing_tokens[block.b + offset]:
+                    continue
+                word_start = max(start, int(timed["start_ms"]))
+                word_end = min(end, int(timed["end_ms"]))
+                if word_end <= word_start:
+                    continue
+                words.append({"text": part.group(), "start_offset": part.start(), "end_offset": part.end(),
+                              "start_ms": word_start, "end_ms": word_end,
+                              "confidence": timed["confidence"],
+                              "provenance": "whisper_cpp_reconciled_v1"})
+                used.add((segment_index, word_index))
+                matched += 1
+        aligned.append({**segment, "words": sorted(words, key=lambda item: item["start_offset"])})
+    return aligned, matched / total if total else 0.0
+
+
+def run_word_alignment_job(job_id: str) -> None:
+    """Measure words for a retained source transcript without retranscribing its text."""
+    job = storage.get_job(job_id)
+    if job is None or job["state"] == "succeeded":
+        return
+    conversation_id = str(job["conversation_id"])
+    try:
+        source = storage.get_transcript_generation(conversation_id, str(job["source_generation_version"]))
+        if source is None:
+            raise RuntimeError("Source transcript generation is unavailable")
+        measured = None
+        for item in reversed(storage.list_transcript_generations(conversation_id)):
+            if item["pipeline_version"] == job["source_generation_version"]:
+                continue
+            candidate = storage.get_transcript_generation(conversation_id, str(item["pipeline_version"]))
+            if candidate is None:
+                continue
+            segments = json.loads(str(candidate["segments_json"]))
+            if sum(len(segment.get("words", [])) for segment in segments) > 0:
+                measured = segments
+                break
+        if measured is None:
+            conversation = storage.get_conversation(conversation_id)
+            if conversation is None:
+                raise RuntimeError("Recording is missing")
+            model = model_paths()[0]
+            if not model.is_file():
+                raise RuntimeError("Local speech model is unavailable")
+            source_audio = storage.data_dir() / "media" / str(conversation["audio_filename"])
+            with tempfile.TemporaryDirectory(prefix="stellis-words-", dir=storage.data_dir()) as temporary:
+                workspace = Path(temporary)
+                wav = workspace / "audio.wav"
+                _stage(job_id, "decoding", 0.05)
+                _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(source_audio),
+                          "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
+                _stage(job_id, "measuring words", 0.2)
+                measured = _transcribe(wav, model, workspace / "transcript", vocabulary_snapshot())
+        _stage(job_id, "matching source words", 0.9)
+        source_segments = json.loads(str(source["segments_json"]))
+        aligned, coverage = align_existing_words(source_segments, measured)
+        storage.save_transcript({"conversation_id": conversation_id,
+                                 "pipeline_version": job["pipeline_version"],
+                                 "language": source["language"],
+                                 "segments_json": json.dumps(aligned), "turns_json": source["turns_json"],
+                                 "updated_at": now()})
+        storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
+                           metrics_json=json.dumps({"segment_count": len(aligned),
+                                                    "word_count": sum(len(item["words"]) for item in aligned),
+                                                    "word_coverage": round(coverage, 3)}),
+                           error=None, updated_at=now())
+    except Exception as exc:
+        storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())
+
+
 def run_job(job_id: str) -> None:
     """Process source audio and save transcript; failures remain retryable."""
     job = storage.get_job(job_id)
@@ -316,6 +450,9 @@ def run_job(job_id: str) -> None:
         return
     if job["kind"] == "rematch":
         run_rematch_job(job_id)
+        return
+    if job["kind"] == "word_alignment":
+        run_word_alignment_job(job_id)
         return
     conversation = storage.get_conversation(str(job["conversation_id"]))
     if not conversation:

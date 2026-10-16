@@ -8,6 +8,7 @@ const player = document.querySelector('#audio-player');
 const API = '/api/v1';
 const processButton = document.querySelector('#process-button');
 const rematchButton = document.querySelector('#rematch-button');
+const alignWordsButton = document.querySelector('#align-words-button');
 const editTranscriptButton = document.querySelector('#edit-transcript-button');
 const discardEditsButton = document.querySelector('#discard-edits-button');
 const restorePassageButton = document.querySelector('#restore-passage-button');
@@ -420,15 +421,19 @@ async function loadSpeech(id) {
   if (existing?.state === 'succeeded') { await showTranscript(id);
     if (existing.kind !== 'rematch' && existing.pipeline_version !== capabilities.pipeline_version) { processButton.hidden = false; processButton.textContent = 'Reprocess with vocabulary'; }
     return; }
-  if (existing?.state === 'queued' || existing?.state === 'running') { watchJob(existing); return; }
+  if (existing?.state === 'queued' || existing?.state === 'running') {
+    if (existing.kind === 'word_alignment') await showTranscript(id);
+    watchJob(existing); return;
+  }
   if (!capabilities.features.transcribe || !capabilities.features.diarize) {
     processingStatus.textContent = 'Local speech models are unavailable. Install them to transcribe this recording on this device.';
     return;
   }
   if (existing?.state === 'failed') {
     if (existing.kind === 'rematch') { await showTranscript(id); rematchButton.hidden = false; rematchButton.textContent = 'Retry speaker rematch'; }
+    else if (existing.kind === 'word_alignment') { await showTranscript(id); alignWordsButton.hidden = false; alignWordsButton.textContent = 'Retry word timing'; }
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
-    processingStatus.textContent = `${existing.kind === 'rematch' ? 'Speaker rematch' : 'Processing'} stopped: ${existing.error || 'Unknown error'}`;
+    processingStatus.textContent = `${existing.kind === 'rematch' ? 'Speaker rematch' : existing.kind === 'word_alignment' ? 'Word timing' : 'Processing'} stopped: ${existing.error || 'Unknown error'}`;
     return;
   }
   await beginProcessing(id);
@@ -450,8 +455,9 @@ function watchJob(job) {
   clearTimeout(jobTimer);
   if (job.state === 'succeeded') { showTranscript(job.conversation_id).catch(error => processingStatus.textContent = error.message); return; }
   if (job.state === 'failed') {
-    processingStatus.textContent = `${job.kind === 'rematch' ? 'Speaker rematch' : 'Processing'} stopped: ${job.error || 'Unknown error'}`;
+    processingStatus.textContent = `${job.kind === 'rematch' ? 'Speaker rematch' : job.kind === 'word_alignment' ? 'Word timing' : 'Processing'} stopped: ${job.error || 'Unknown error'}`;
     if (job.kind === 'rematch') { rematchButton.hidden = false; rematchButton.disabled = false; rematchButton.textContent = 'Retry speaker rematch'; }
+    else if (job.kind === 'word_alignment') { alignWordsButton.hidden = false; alignWordsButton.disabled = false; alignWordsButton.textContent = 'Retry word timing'; }
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
     return;
   }
@@ -554,6 +560,8 @@ async function showTranscript(id) {
   syncTranscriptEditControls();
   document.querySelector('#clean-button').disabled = cleanRuns[0]?.state === 'queued' || cleanRuns[0]?.state === 'running';
   rematchButton.hidden = false;
+  alignWordsButton.hidden = data.segments.some(segment => segment.words?.length);
+  alignWordsButton.disabled = false;
   rematchButton.disabled = data.generation_version.includes('-speaker-embedding-v1');
   rematchButton.textContent = rematchButton.disabled ? 'Speakers rematched' : 'Rematch speakers';
   transcriptSegments = data.segments;
@@ -1070,6 +1078,15 @@ player.addEventListener('timeupdate', () => {
   if (active) edited.querySelector(`[data-segment-id="${active.id}"]`)?.classList.add('active');
 });
 processButton.addEventListener('click', () => beginProcessing(activeConversationId));
+alignWordsButton.addEventListener('click', async () => {
+  if (!activeConversationId) return;
+  alignWordsButton.disabled = true;
+  processingStatus.textContent = 'Starting on-device word timing…';
+  try {
+    const job = await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/word-alignment`, {method:'POST'}));
+    watchJob(job);
+  } catch (error) { processingStatus.textContent = error.message; alignWordsButton.disabled = false; }
+});
 rematchButton.addEventListener('click', async () => {
   if (!activeConversationId) return;
   rematchButton.disabled = true;

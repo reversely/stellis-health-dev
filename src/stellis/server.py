@@ -81,6 +81,10 @@ class CleanReview(BaseModel):
     expected_revision: int = Field(ge=0)
 
 
+class WordAlignmentRequest(BaseModel):
+    source_generation_version: str | None = None
+
+
 def _check_vocabulary_budget(terms: list[str]) -> None:
     if len("Vocabulary: " + ", ".join(terms)) > 400:
         raise HTTPException(status_code=400, detail="Vocabulary is too long for the local model prompt")
@@ -286,6 +290,17 @@ def rematch_speakers(conversation_id: str) -> dict[str, object]:
         raise HTTPException(status_code=409, detail="Install the local speaker embedding model")
     try:
         return processing.public_job(processing.request_rematch(conversation_id))
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.post("/conversations/{conversation_id}/word-alignment")
+def align_conversation_words(conversation_id: str, request: WordAlignmentRequest | None = None) -> dict[str, object]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    try:
+        return processing.public_job(processing.request_word_alignment(
+            conversation_id, request.source_generation_version if request else None))
     except LookupError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
