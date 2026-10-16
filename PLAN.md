@@ -273,3 +273,9 @@ Each slice must include:
 1. Required data models and backend functionality
 2. Application state and business logic
 3. UI components and interactions
+
+Notes from the user
+
+Please preserve API call routing; for AI calls please route to Nemotron-3.5-Lightning using Nebius Token Factory. Nebius keys are the .env. Minimize token-intensive calls.
+
+Start with machine transcription of audio on whisper.cpp.

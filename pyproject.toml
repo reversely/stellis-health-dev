@@ -1,0 +1,24 @@
+[project]
+name = "stellis"
+version = "0.1.0"
+description = "Local interview memory workspace with on-device speech processing"
+authors = [
+    { name = "Shereen L.", email = "105625351+reversely@users.noreply.github.com" }
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.143.2",
+    "httpx>=0.28.1",
+    "numpy>=2.5.4",
+    "sherpa-onnx==1.13.8",
+    "sherpa-onnx-core==1.13.8",
+    "soundfile>=0.14.0",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+stellis = "stellis:main"
+
+[build-system]
+requires = ["uv_build>=0.11.17,<0.12.0"]
+build-backend = "uv_build"
