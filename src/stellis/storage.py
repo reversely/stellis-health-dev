@@ -156,6 +156,36 @@ def connect() -> Iterator[sqlite3.Connection]:
             created_at TEXT NOT NULL
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS recording_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            state TEXT NOT NULL CHECK (state IN ('recording', 'finalized')),
+            conversation_id TEXT REFERENCES conversations(id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS recording_chunks (
+            recording_id TEXT NOT NULL REFERENCES recording_sessions(id),
+            sequence INTEGER NOT NULL,
+            size_bytes INTEGER NOT NULL,
+            sha256 TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY(recording_id, sequence)
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS recording_events (
+            id TEXT PRIMARY KEY,
+            recording_id TEXT NOT NULL REFERENCES recording_sessions(id),
+            kind TEXT NOT NULL CHECK (kind IN ('pause', 'resume', 'device_ended')),
+            media_position_ms INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )"""
+    )
     conn.commit()
     database.chmod(0o600)
     try:

@@ -13,10 +13,16 @@
     <main>
       <section class="heading">
         <div><h1 id="page-title">Your conversations</h1><p id="page-subtitle">Listen, review, and return to what matters.</p></div>
-        <label class="upload-button" for="audio-file">Import recording</label>
+        <div class="heading-actions"><button id="record-button" type="button">Record</button><label class="upload-button" for="audio-file">Import recording</label></div>
         <input id="audio-file" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.zip,audio/*,application/zip" />
       </section>
       <div id="status" role="status" aria-live="polite"></div>
+      <section id="recording-panel" class="recording-panel" hidden aria-label="Microphone recording">
+        <div class="recording-top"><div><strong id="recording-state">Ready to record</strong><p id="recording-detail">Your microphone audio is saved locally as it arrives.</p></div><span id="recording-timer">0:00</span></div>
+        <label for="recording-title">Recording title</label><input id="recording-title" value="New recording" maxlength="180" />
+        <div class="recording-actions"><button id="start-recording" type="button">Start recording</button><button id="pause-recording" type="button" hidden>Pause</button><button id="stop-recording" type="button" hidden>Stop and save</button></div>
+      </section>
+      <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
       <details class="vocabulary-card" id="vocabulary-panel">
         <summary>Vocabulary <span>Names and terms for local transcription</span></summary>
         <p>Names and technical terms help future on-device transcripts. Existing words stay as you edited them.</p>

@@ -15,6 +15,11 @@ let transcriptSegments = [];
 let currentTranscript = null;
 let highlightsOnly = false;
 let selectedExcerpt = null;
+const recordingPanel = document.querySelector('#recording-panel');
+const recordingState = document.querySelector('#recording-state');
+const recordingDetail = document.querySelector('#recording-detail');
+const recordingTimer = document.querySelector('#recording-timer');
+let capture = null;
 
 function time(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -382,6 +387,158 @@ async function importFile(file) {
     fileInput.value = '';
   }
 }
+function captureElapsedMs() {
+  if (!capture) return 0;
+  const paused = capture.pausedAt ? Date.now() - capture.pausedAt : 0;
+  return Math.max(0, Date.now() - capture.startedAt - capture.totalPausedMs - paused);
+}
+function captureControls() {
+  const active = Boolean(capture?.recorder && capture.recorder.state !== 'inactive');
+  document.querySelector('#start-recording').hidden = active;
+  document.querySelector('#stop-recording').hidden = !active;
+  document.querySelector('#pause-recording').hidden = !active || !capture.recorder.pause;
+  document.querySelector('#pause-recording').textContent = capture?.recorder?.state === 'paused' ? 'Resume' : 'Pause';
+  document.querySelector('#recording-title').disabled = active;
+  recordingTimer.textContent = time(captureElapsedMs() / 1000);
+}
+async function loadRecoveries() {
+  const sessions = await json(await fetch(`${API}/recordings`));
+  const container = document.querySelector('#recover-recordings'); container.replaceChildren();
+  for (const session of sessions) {
+    if (capture?.session.id === session.id) continue;
+    const row = document.createElement('div'); row.className = 'recovery-row';
+    const message = document.createElement('span');
+    message.textContent = `${session.title} · ${session.chunk_count} saved chunks · interrupted recording`;
+    const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Recover and save';
+    button.disabled = session.chunk_count === 0;
+    button.addEventListener('click', async () => {
+      button.disabled = true; message.textContent = 'Checking and importing saved audio…';
+      try {
+        const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}/finalize`, {method:'POST'}));
+        await loadRecoveries(); history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
+        await showDetail(result.conversation.id); setStatus('Recovered recording saved.', true);
+      } catch (error) {message.textContent = `Recovery failed: ${error.message}`; button.disabled = false;}
+    });
+    const discard = document.createElement('button'); discard.type = 'button'; discard.textContent = 'Discard';
+    discard.setAttribute('aria-label', `Discard unfinished recording ${session.title}`);
+    discard.addEventListener('click', async () => {
+      if (!window.confirm(`Discard unfinished recording “${session.title}”? Saved audio chunks will be deleted.`)) return;
+      try {await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}`, {method:'DELETE'})); await loadRecoveries();}
+      catch (error) {message.textContent = `Could not discard recording: ${error.message}`;}
+    });
+    const actions = document.createElement('div'); actions.className = 'recovery-actions'; actions.append(button, discard);
+    row.append(message, actions); container.append(row);
+  }
+}
+function captureErrorMessage(error) {
+  if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') return 'Microphone access was denied. Allow this site to use the microphone, then try again.';
+  if (error?.name === 'NotFoundError') return 'No microphone was found. Connect one and try again.';
+  if (error?.name === 'NotReadableError') return 'The microphone is busy or disconnected. Check the device and try again.';
+  return error?.message || 'Recording could not start.';
+}
+async function startCapture() {
+  if (capture) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    recordingState.textContent = 'Recording unavailable';
+    recordingDetail.textContent = 'This browser does not provide microphone recording.';
+    return;
+  }
+  const mediaType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+    .find(candidate => MediaRecorder.isTypeSupported(candidate));
+  if (!mediaType) { recordingDetail.textContent = 'This browser has no supported recording format.'; return; }
+  recordingState.textContent = 'Requesting microphone access…';
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    const recorder = new MediaRecorder(stream, {mimeType:mediaType});
+    const session = await json(await fetch(`${API}/recordings`, {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0]})}));
+    capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
+      startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false};
+    recorder.addEventListener('dataavailable', event => {
+      if (!event.data.size) return;
+      const current = capture;
+      const sequence = current.sequence++;
+      current.pending = current.pending.then(async () => {
+        if (current.uploadError) return;
+        const response = await fetch(`${API}/recordings/${encodeURIComponent(session.id)}/chunks/${sequence}`,
+          {method:'PUT',headers:{'Content-Type':session.media_type},body:event.data});
+        await json(response);
+        recordingDetail.textContent = `${sequence + 1} audio chunks saved on this device.`;
+      }).catch(error => {
+        current.uploadError = error;
+        recordingState.textContent = 'Saving stopped';
+        recordingDetail.textContent = `Local storage failed: ${error.message}. Stop recording, then recover saved chunks.`;
+        if (recorder.state !== 'inactive') recorder.stop();
+      });
+    });
+    recorder.addEventListener('stop', () => finishCapture());
+    stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => {
+      if (capture?.recorder === recorder && recorder.state !== 'inactive') {
+        recordingState.textContent = 'Microphone disconnected';
+        recordingDetail.textContent = 'Saving audio captured before the device stopped.';
+        fetch(`${API}/recordings/${encodeURIComponent(session.id)}/events`, {method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({kind:'device_ended',media_position_ms:Math.round(captureElapsedMs())})}).catch(()=>{});
+        recorder.stop();
+      }
+    }));
+    recorder.start(1000);
+    capture.timer = setInterval(captureControls, 250);
+    recordingState.textContent = 'Recording'; recordingDetail.textContent = 'Microphone audio is saved locally every second.';
+    captureControls(); await loadRecoveries();
+  } catch (error) {
+    stream?.getTracks().forEach(track => track.stop());
+    if (capture?.recorder?.state === 'inactive') capture = null;
+    captureControls();
+    recordingState.textContent = 'Could not start recording';
+    recordingDetail.textContent = captureErrorMessage(error);
+    loadRecoveries().catch(() => {});
+  }
+}
+async function finishCapture() {
+  const current = capture;
+  if (!current || current.stopping) return;
+  current.stopping = true;
+  clearInterval(current.timer);
+  current.stream.getTracks().forEach(track => track.stop());
+  recordingState.textContent = 'Saving recording…';
+  await current.pending;
+  capture = null; captureControls();
+  if (current.uploadError) {
+    recordingState.textContent = 'Recording interrupted';
+    recordingDetail.textContent = 'Some audio could not be stored. Recover the chunks that were saved below.';
+    await loadRecoveries(); return;
+  }
+  try {
+    const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/finalize`, {method:'POST'}));
+    recordingState.textContent = 'Recording saved'; recordingDetail.textContent = 'Ready for on-device transcription.';
+    await loadRecoveries();
+    history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
+    await showDetail(result.conversation.id); setStatus('Recording saved.', true);
+  } catch (error) {
+    recordingState.textContent = 'Recording needs recovery'; recordingDetail.textContent = error.message;
+    await loadRecoveries();
+  }
+}
+document.querySelector('#record-button').addEventListener('click', () => {
+  recordingPanel.hidden = !recordingPanel.hidden;
+  if (!recordingPanel.hidden) recordingPanel.scrollIntoView({block:'start'});
+});
+document.querySelector('#start-recording').addEventListener('click', startCapture);
+document.querySelector('#stop-recording').addEventListener('click', () => {
+  if (capture?.recorder.state !== 'inactive') capture.recorder.stop();
+});
+document.querySelector('#pause-recording').addEventListener('click', async () => {
+  if (!capture) return;
+  const current = capture;
+  const kind = current.recorder.state === 'paused' ? 'resume' : 'pause';
+  const position = Math.round(captureElapsedMs());
+  if (kind === 'pause') {current.recorder.pause(); current.pausedAt = Date.now(); recordingState.textContent = 'Paused';}
+  else {current.totalPausedMs += Date.now() - current.pausedAt; current.pausedAt = null; current.recorder.resume(); recordingState.textContent = 'Recording';}
+  captureControls();
+  try {await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/events`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,media_position_ms:position})}));}
+  catch (error) {recordingDetail.textContent = `Pause status could not be saved: ${error.message}`;}
+});
 fileInput.addEventListener('change', () => importFile(fileInput.files[0]));
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('keydown', event => {
@@ -423,4 +580,5 @@ document.querySelector('#vocabulary-panel').addEventListener('toggle', event => 
   if (event.target.open) event.target.scrollIntoView({block:'start'});
 });
 loadVocabulary().catch(error => document.querySelector('#vocabulary-status').textContent = error.message);
+loadRecoveries().catch(error => setStatus(error.message));
 route().catch(error => setStatus(error.message));
