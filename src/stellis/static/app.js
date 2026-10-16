@@ -1019,7 +1019,10 @@ async function showDetail(id) {
     showConversationTab('transcript');
     const target = transcriptSegments.find(segment => segment.id === targetSegmentId);
     if (target) {
-      const seek = () => { player.pause(); player.currentTime = target.start_ms / 1000; };
+      const requestedTime = Number(query.get('t'));
+      const seekMs = query.has('t') && Number.isFinite(requestedTime) &&
+        requestedTime >= target.start_ms && requestedTime <= target.end_ms ? requestedTime : target.start_ms;
+      const seek = () => { player.pause(); player.currentTime = seekMs / 1000; };
       if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
       transcriptView.querySelector(`[data-segment-id="${CSS.escape(target.id)}"]`)?.scrollIntoView({block: 'center'});
     }
@@ -1417,6 +1420,7 @@ function syncTranscriptEditControls() {
 }
 function setTranscriptEditMode(enabled) {
   document.querySelector('#comment-composer')?.remove();
+  if (enabled) { hideSelectionToolbar(); window.getSelection()?.removeAllRanges(); }
   transcriptEditMode = enabled;
   transcriptEditError = null;
   focusedEditSegmentId = null;
@@ -1810,6 +1814,57 @@ function hideSelectionToolbar() {
   document.querySelector('#selection-toolbar')?.remove();
   selectedExcerpt = null;
 }
+function selectedSnippet(excerpt) {
+  const segment = transcriptSegments.find(item => item.id === excerpt.segment_id);
+  if (!segment || !activeConversationId || currentTranscript?.revision !== excerpt.expected_revision) return null;
+  const quote = segment.text.slice(excerpt.start_offset, excerpt.end_offset);
+  if (!quote) return null;
+  const firstWord = segment.words?.find(word => word.end_offset > excerpt.start_offset &&
+    word.start_offset < excerpt.end_offset && segment.text.slice(word.start_offset, word.end_offset) === word.text);
+  const sourceTime = firstWord?.start_ms ?? segment.start_ms;
+  const source = new URL(`/conversation/${encodeURIComponent(activeConversationId)}`, location.origin);
+  source.searchParams.set('at', segment.id);
+  source.searchParams.set('t', String(sourceTime));
+  return {text:`“${quote}”\n— ${segment.speaker_display_name} · ${time(sourceTime / 1000)}\nSource on this device: ${source.href}`,
+    sourceTime};
+}
+function openSelectionShare(toolbar, excerpt) {
+  toolbar.querySelector('#selection-share-menu')?.remove();
+  const menu = document.createElement('div'); menu.id = 'selection-share-menu'; menu.setAttribute('role', 'menu');
+  const copy = document.createElement('button'); copy.type = 'button'; copy.setAttribute('role', 'menuitem');
+  copy.textContent = 'Copy snippet';
+  const download = document.createElement('button'); download.type = 'button'; download.setAttribute('role', 'menuitem');
+  download.textContent = 'Download text';
+  const message = document.createElement('p'); message.setAttribute('role', 'status');
+  copy.addEventListener('click', async () => {
+    const snippet = selectedSnippet(excerpt);
+    if (!snippet) { message.textContent = 'Transcript changed. Select the words again.'; return; }
+    try { await navigator.clipboard.writeText(snippet.text);
+      window.getSelection()?.removeAllRanges(); hideSelectionToolbar(); processingStatus.textContent = 'Snippet copied.';
+    } catch { message.textContent = 'Could not copy. Use Download text.'; }
+  });
+  download.addEventListener('click', () => {
+    const snippet = selectedSnippet(excerpt);
+    if (!snippet) { message.textContent = 'Transcript changed. Select the words again.'; return; }
+    const url = URL.createObjectURL(new Blob([snippet.text + '\n'], {type:'text/plain;charset=utf-8'}));
+    const link = document.createElement('a'); link.href = url;
+    link.download = `stellis-snippet-${Math.floor(snippet.sourceTime / 1000)}.txt`;
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    window.getSelection()?.removeAllRanges(); hideSelectionToolbar(); processingStatus.textContent = 'Snippet downloaded.';
+  });
+  menu.append(copy, download, message); toolbar.append(menu);
+  if (toolbar.getBoundingClientRect().bottom + menu.offsetHeight + 8 > innerHeight) menu.classList.add('share-above');
+  menu.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); menu.remove();
+      toolbar.querySelector('[aria-haspopup="menu"]')?.setAttribute('aria-expanded', 'false');
+      toolbar.querySelector('[aria-haspopup="menu"]')?.focus(); }
+  });
+  copy.focus();
+}
+document.addEventListener('pointerdown', event => {
+  if (document.querySelector('#selection-share-menu') && !event.target.closest('#selection-toolbar')) hideSelectionToolbar();
+});
 function inspectSelection() {
   hideSelectionToolbar();
   if (transcriptEditMode) return;
@@ -1844,7 +1899,10 @@ function inspectSelection() {
   });
   const copy = document.createElement('button'); copy.type = 'button'; copy.textContent = 'Copy';
   copy.addEventListener('mousedown', event => event.preventDefault());
-  copy.addEventListener('click', async () => { await navigator.clipboard.writeText(selection.toString()); hideSelectionToolbar(); });
+  copy.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(selection.toString()); hideSelectionToolbar(); }
+    catch { processingStatus.textContent = 'Could not copy.'; }
+  });
   const comment = document.createElement('button'); comment.type = 'button'; comment.textContent = 'Comment';
   comment.addEventListener('mousedown', event => event.preventDefault());
   comment.addEventListener('click', () => { const excerpt = selectedExcerpt; hideSelectionToolbar();
@@ -1865,7 +1923,15 @@ function inspectSelection() {
     window.addEventListener('focus', () => setTimeout(() => input.remove(), 1000), {once:true});
     input.click();
   });
-  toolbar.append(highlight, comment, photo, copy); document.body.append(toolbar);
+  const share = document.createElement('button'); share.type = 'button'; share.textContent = 'Share';
+  share.setAttribute('aria-haspopup', 'menu'); share.setAttribute('aria-expanded', 'false');
+  share.addEventListener('mousedown', event => event.preventDefault());
+  share.addEventListener('click', () => {
+    const menu = toolbar.querySelector('#selection-share-menu');
+    if (menu) { menu.remove(); share.setAttribute('aria-expanded', 'false'); }
+    else if (selectedExcerpt) { openSelectionShare(toolbar, selectedExcerpt); share.setAttribute('aria-expanded', 'true'); }
+  });
+  toolbar.append(highlight, comment, photo, copy, share); document.body.append(toolbar);
   const rect = range.getBoundingClientRect();
   toolbar.style.left = `${Math.max(8, Math.min(window.innerWidth - toolbar.offsetWidth - 8, rect.left + rect.width / 2 - toolbar.offsetWidth / 2))}px`;
   toolbar.style.top = `${Math.max(8, rect.top - toolbar.offsetHeight - 8)}px`;
