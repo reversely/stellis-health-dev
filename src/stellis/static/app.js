@@ -77,6 +77,15 @@ const recordingTimer = document.querySelector('#recording-timer');
 let capture = null;
 let captureRequesting = false;
 let captureFinalizing = false;
+let captureHeartbeatId = null;
+let captureHeartbeatAt = 0;
+// A fresh local heartbeat keeps another tab from offering recovery during capture.
+const recordingHeartbeatKey = id => `stellis-recording-live-${id}`;
+function clearCaptureHeartbeat(id) {
+  if (captureHeartbeatId !== id) return;
+  try { localStorage.removeItem(recordingHeartbeatKey(id)); } catch {}
+  captureHeartbeatId = null;
+}
 let recordingChatTimer = null;
 let recordingPrimaryView = 'notes';
 let librarySearchResults = [];
@@ -744,6 +753,7 @@ async function showList() {
   document.querySelector('#category-status').textContent = '';
   renderCategoryControls();
   renderConversationList();
+  captureControls();
   await loadPeoplePanel();
   if (document.querySelector('#library-search-input').value.trim().length >= 2)
     await submitLibrarySearch(new Event('submit'));
@@ -755,7 +765,7 @@ function renderConversationList() {
   list.replaceChildren();
   if (!conversations.length) {
     const empty = document.createElement('p');
-    empty.textContent = category ? 'No conversations in this category.' : 'No conversations yet. Record or import one to get started.';
+    empty.textContent = category ? 'No conversations in this category.' : 'No saved conversations yet.';
     list.append(empty);
   }
   for (const item of conversations) {
@@ -2184,11 +2194,6 @@ async function route() {
       return;
     }
   }
-  if ((capture || captureRequesting || captureFinalizing) && location.pathname !== '/recording') {
-    history.pushState({}, '', '/recording');
-    recordingDetail.textContent = 'Stop the recording before leaving.';
-    return;
-  }
   if (match) await showDetail(decodeURIComponent(match[1]));
   else if (location.pathname === '/recording') showRecordingWorkspace();
   else if (location.pathname.match(/^\/person\/([^/]+)$/))
@@ -2316,13 +2321,34 @@ async function loadSavedRecordingChat(conversationId) {
 }
 function captureControls() {
   const active = Boolean(capture?.recorder && capture.recorder.state !== 'inactive');
+  if (active && (captureHeartbeatId !== capture.session.id || Date.now() - captureHeartbeatAt >= 1000)) {
+    try { localStorage.setItem(recordingHeartbeatKey(capture.session.id), JSON.stringify({at:Date.now(), state:capture.recorder.state})); } catch {}
+    captureHeartbeatId = capture.session.id;
+    captureHeartbeatAt = Date.now();
+  }
   document.querySelector('#start-recording').hidden = active;
   document.querySelector('#start-recording').disabled = captureRequesting || captureFinalizing;
   document.querySelector('#stop-recording').hidden = !active;
   document.querySelector('#pause-recording').hidden = !active || !capture.recorder.pause;
   document.querySelector('#pause-recording').textContent = capture?.recorder?.state === 'paused' ? 'Resume' : 'Pause';
-  document.querySelector('#back-from-recording').disabled = active || captureRequesting || captureFinalizing;
-  recordingTimer.textContent = time(captureElapsedMs() / 1000);
+  document.querySelector('#back-from-recording').disabled = captureRequesting || captureFinalizing;
+  document.querySelector('#record-button').textContent = active ? 'Open recording' : 'Record';
+  const elapsed = time(captureElapsedMs() / 1000);
+  recordingTimer.textContent = elapsed;
+  document.querySelector('#capture-header-controls').hidden = !active || location.pathname === '/recording';
+  document.querySelector('#capture-header-timer').textContent = elapsed;
+  const headerPause = document.querySelector('#capture-header-pause');
+  const paused = capture?.recorder?.state === 'paused';
+  headerPause.textContent = paused ? '▶' : 'Ⅱ';
+  headerPause.setAttribute('aria-label', paused ? 'Resume recording' : 'Pause recording');
+  headerPause.title = paused ? 'Resume recording' : 'Pause recording';
+  const liveCard = document.querySelector('#live-recording-card');
+  liveCard.hidden = !active;
+  if (active) {
+    document.querySelector('#live-recording-state').textContent = capture.recorder.state === 'paused' ? 'Paused' : 'Live';
+    document.querySelector('#live-recording-title').textContent = document.querySelector('#recording-title').value.trim() || capture.session.title;
+    document.querySelector('#live-recording-time').textContent = elapsed;
+  }
   document.querySelector('#add-recording-image').disabled = !(capture?.session.id || notesStates.recording?.id);
 }
 function showRecordingView(view) {
@@ -2400,8 +2426,13 @@ async function loadRecoveries() {
   for (const session of sessions) {
     if (capture?.session.id === session.id) continue;
     const row = document.createElement('div'); row.className = 'recovery-row';
+    const title = document.createElement('strong'); title.textContent = session.title;
     const message = document.createElement('span');
-    message.textContent = `${session.title}: interrupted recording (${session.chunk_count} saved chunks)`;
+    let heartbeat;
+    try { heartbeat = JSON.parse(localStorage.getItem(recordingHeartbeatKey(session.id))); } catch {}
+    const liveElsewhere = heartbeat && Date.now() - heartbeat.at < 5000;
+    message.textContent = liveElsewhere ? (heartbeat.state === 'paused' ? 'Paused in another tab' : 'Live in another tab') : 'Unfinished recording';
+    if (liveElsewhere) row.classList.add('remote-live-recording');
     const review = document.createElement('button'); review.type = 'button'; review.textContent = 'Review notes';
     review.addEventListener('click', async () => {
       try {
@@ -2413,7 +2444,7 @@ async function loadRecoveries() {
         notesEditors.recording.focus();
       } catch (error) {message.textContent = error.message;}
     });
-    const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Recover and save';
+    const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Save recording';
     button.disabled = session.chunk_count === 0;
     button.addEventListener('click', async () => {
       button.disabled = true; message.textContent = 'Checking and importing saved audio…';
@@ -2437,7 +2468,10 @@ async function loadRecoveries() {
       catch (error) {message.textContent = `Could not discard recording: ${error.message}`;}
     });
     const actions = document.createElement('div'); actions.className = 'recovery-actions'; actions.append(review, button, discard);
-    row.append(message, actions); container.append(row);
+    const summary = document.createElement('div'); summary.className = 'recovery-summary'; summary.append(title, message);
+    row.append(summary);
+    if (!liveElsewhere) row.append(actions);
+    container.append(row);
   }
 }
 function captureErrorMessage(error) {
@@ -2540,12 +2574,14 @@ async function finishCapture() {
   capture = null; captureControls();
   if (notesStates.recording?.id === current.session.id && !(await flushNotes(notesStates.recording))) {
     recordingState.textContent = 'Recording needs recovery';
-    recordingDetail.textContent = 'Save your notes, then recover the recording below.';
+    recordingDetail.textContent = 'Save your notes, then open All conversations to save the recording.';
+    clearCaptureHeartbeat(current.session.id);
     await loadRecoveries(); captureFinalizing = false; captureControls(); return;
   }
   if (current.uploadError) {
     recordingState.textContent = 'Recording interrupted';
-    recordingDetail.textContent = 'Some audio could not be stored. Recover the chunks that were saved below.';
+    recordingDetail.textContent = 'Some audio could not be stored. Open All conversations to save the audio that was captured.';
+    clearCaptureHeartbeat(current.session.id);
     await loadRecoveries(); captureFinalizing = false; captureControls(); return;
   }
   try {
@@ -2558,24 +2594,28 @@ async function finishCapture() {
     await showDetail(result.conversation.id); setStatus('Recording saved.', true);
   } catch (error) {
     recordingState.textContent = 'Recording needs recovery'; recordingDetail.textContent = error.message;
+    clearCaptureHeartbeat(current.session.id);
     await loadRecoveries();
   } finally {
-    captureFinalizing = false; captureControls();
+    captureFinalizing = false;
+    clearCaptureHeartbeat(current.session.id);
+    captureControls();
   }
 }
 document.querySelector('#record-button').addEventListener('click', () => {
+  if (capture) {
+    history.pushState({}, '', '/recording');
+    route().catch(error => setStatus(error.message));
+    return;
+  }
   if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && !window.confirm('Discard unsaved transcript changes and start recording?')) return;
   pendingTranscriptEdits.clear(); pendingCleanEdits.clear();
   history.pushState({}, '', '/recording');
   showRecordingWorkspace();
   startCapture();
 });
-document.querySelector('.brand').addEventListener('click', event => {
-  if (!capture && !captureRequesting && !captureFinalizing) return;
-  event.preventDefault(); recordingDetail.textContent = 'Stop the recording before leaving.';
-});
 document.querySelector('#back-from-recording').addEventListener('click', () => {
-  if (capture || captureRequesting || captureFinalizing) return;
+  if (captureRequesting || captureFinalizing) return;
   history.pushState({}, '', '/'); showList().catch(error => setStatus(error.message));
 });
 document.querySelector('#recording-title').addEventListener('change', () => {
@@ -2583,8 +2623,11 @@ document.querySelector('#recording-title').addEventListener('change', () => {
   const current = capture;
   current.titleUpdate = (current.titleUpdate || Promise.resolve()).then(() => saveRecordingTitle(current))
     .catch(error => { recordingDetail.textContent = `Title could not be saved: ${error.message}`; });
+  captureControls();
 });
 document.querySelector('#start-recording').addEventListener('click', startCapture);
+document.querySelector('#capture-header-pause').addEventListener('click', () => document.querySelector('#pause-recording').click());
+document.querySelector('#capture-header-stop').addEventListener('click', () => document.querySelector('#stop-recording').click());
 document.querySelector('#stop-recording').addEventListener('click', () => {
   if (capture?.recorder.state !== 'inactive') capture.recorder.stop();
 });
@@ -2786,8 +2829,9 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href^="/person/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
   route().catch(error => setStatus(error.message));
 });
@@ -2908,4 +2952,14 @@ document.querySelector('#vocabulary-panel').addEventListener('toggle', event => 
 });
 loadVocabulary().catch(error => document.querySelector('#vocabulary-status').textContent = error.message);
 loadRecoveries().catch(error => setStatus(error.message));
+window.addEventListener('storage', event => {
+  if (!event.key?.startsWith('stellis-recording-live-')) return;
+  let before; let after;
+  try { before = JSON.parse(event.oldValue); after = JSON.parse(event.newValue); } catch {}
+  if (before?.state !== after?.state || !before || !after)
+    loadRecoveries().catch(error => setStatus(error.message));
+});
+setInterval(() => {
+  if (document.querySelector('.remote-live-recording')) loadRecoveries().catch(error => setStatus(error.message));
+}, 5000);
 route().catch(error => setStatus(error.message));

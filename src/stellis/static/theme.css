@@ -103,6 +103,12 @@ header {
   letter-spacing: -.045em;
 }
 .header-side { display: flex; align-items: center; gap: 16px; }
+.capture-header-controls { display: flex; align-items: center; gap: 7px; }
+.capture-header-controls[hidden] { display: none; }
+#capture-header-timer { min-width: 42px; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.capture-header-controls button { width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 11px; background: var(--raised); color: var(--ink); cursor: pointer; }
+.capture-header-controls button:hover { border-color: var(--accent); }
+#capture-header-stop { color: #fff; background: #c73632; border-color: #c73632; }
 .header-note, p, .conversation-row small, .player-heading, .segment-time,
 .turn-heading span, .seek-controls span, .highlight-controls span,
 .vocabulary-card summary span, .ai-privacy { color: var(--muted); }
@@ -567,6 +573,22 @@ body:has(#list-view:not([hidden])) #status:not(:empty) { min-height: 0; margin: 
 #list-view .conversation-row strong { font-size: 16px; }
 #list-view .conversation-row small { color: var(--muted); }
 #list-view .conversation-row .arrow { font-size: 21px; }
+.live-recording-card { position: relative; display: grid; gap: 8px; margin: 0 0 10px; padding: 19px 54px 20px 20px; border: 1px solid #e25752; border-radius: 13px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.live-recording-card[hidden] { display: none; }
+.live-recording-card:hover, .live-recording-card:focus-visible { background: var(--raised); border-color: #f16c66; }
+.live-recording-state { color: #ef7770; font-size: 12px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+.live-recording-state::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: currentColor; }
+.live-recording-card strong { font-size: 20px; overflow-wrap: anywhere; }
+.live-recording-card small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.live-recording-arrow { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 21px; }
+#list-view .recover-recordings:empty { display: none; }
+#list-view .recover-recordings { display: grid; gap: 10px; margin: 0 0 10px; }
+#list-view .recovery-row { margin: 0; background: var(--surface); color: var(--ink); border-color: var(--line); }
+#list-view .remote-live-recording { border-color: #e25752; }
+#list-view .remote-live-recording .recovery-summary span { color: #ef7770; }
+.recovery-summary { display: grid; gap: 4px; }
+.recovery-summary strong { font-size: 16px; overflow-wrap: anywhere; }
+.recovery-summary span { color: var(--muted); }
 #list-view .library-management { margin-top: 18px; border-top: 1px solid var(--line-soft); }
 #list-view .library-management > summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); cursor: pointer; font-size: 13px; list-style: none; }
 #list-view .library-management > summary::-webkit-details-marker { display: none; }
@@ -586,6 +608,9 @@ body:has(#list-view:not([hidden])) #vocabulary-panel[open] summary { margin: 0; 
 @media (max-width: 600px) {
   header { padding: 0 20px; }
   .header-side { gap: 0; }
+  .capture-header-controls { gap: 4px; margin-right: 6px; }
+  .capture-header-controls button { width: 36px; height: 36px; }
+  #capture-header-timer { min-width: 37px; font-size: 12px; }
   #theme-toggle { padding: 7px 10px; }
   h1 { font-size: clamp(35px, 9vw, 44px); }
   .transcript-heading h2, .ai-heading h2 { font-size: 25px; }

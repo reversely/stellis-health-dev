@@ -30,7 +30,7 @@ The Stellis comparison uses a running local browser at `127.0.0.1:8765` with two
 
 This is a scoped home change. Granola's upcoming calendar cannot be copied into Stellis without a calendar source and consent flow. The video also hides the transcript during note-taking, but Stellis has an explicit transcript replay and correction workflow from the Otter reference. Keep that workflow accessible; decide its default placement with a live comparison of Stellis's recording and conversation screens.
 
-An interrupted recording is a meaningful exception to the normal home order. The local data also contains one recoverable session. After that state loads, [the 390px home](refs/granola-tutorial/stellis-home-recovery-mobile.png) places its recovery actions above search; the first conversation begins near 533px. The recovery copy now uses a sentence and count in parentheses instead of middle-dot separators. This state deserves priority because the user may need to save captured work.
+The original audit treated every unfinished recording as an interruption. The local data contained one recoverable session, and [the former 390px home](refs/granola-tutorial/stellis-home-recovery-mobile.png) placed a yellow recovery bar above search. That placement and label conflated a live recording with one left after a tab closed. The later correction below supersedes this part of the home assessment.
 
 ### Other Stellis screens inspected
 
@@ -57,3 +57,11 @@ The applied home change is deliberately smaller than the whole tutorial workflow
 ## Follow-up: rename a saved conversation
 
 **Feedback, implemented and verified 2026-10-16:** A saved conversation needs a rename action. The tutorial shows an editable note title at 6:31, but does not show the save or reload result. Stellis now places **Rename** in the conversation's More options menu. The dialog validates a nonblank title of at most 180 characters; the local API updates only an active conversation. In an isolated browser data directory, the renamed title survived reload and appeared on home and in search at 390px. The API test also checks blank input, missing conversations, and deleted conversations.
+
+## Follow-up: recording visible on home
+
+**Feedback, implemented and browser verified 2026-10-16:** The user supplied [a home screenshot during recording](refs/recordinginprogress_home.png) and rejected Stellis's yellow “interrupted recording” bar for that state. The screenshot visibly places a red-bordered **LIVE** note first in the home feed, with its title and time; Pause and Stop remain in the top bar. It does not establish the behavior of those controls or whether the note can be opened from home. The existing signed-in reference observation covers Pause, Resume, and Stop in the recording workspace, not this home path.
+
+Stellis now keeps capture active when the user returns home, shows a Live or Paused card above saved conversations, and keeps Pause or Resume and Stop in the header outside the recording workspace. The card reopens the recording. A session left after capture ends appears as an **Unfinished recording** card with review, save, and discard actions on home. A fresh heartbeat from another Stellis tab instead marks that session live or paused there and withholds those recovery actions. The heartbeat expires after five seconds if the tab stops updating it; this is a browser-local signal, not proof that audio reached storage.
+
+Chrome checks at 1440px and 390px covered live home, pause and resume, reopening the workspace, stopping from home, and no horizontal overflow. A two-tab check showed the second tab's live and paused labels with no recovery buttons, then removed that live state after the first tab saved its recording. The saved conversation appeared in the API. These checks used a fake microphone and isolated data, so the earlier real-microphone capture evidence remains the source for audio quality and device behavior.
