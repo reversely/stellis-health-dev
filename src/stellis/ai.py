@@ -266,7 +266,8 @@ def _supported_terms(text: str, sources: str) -> tuple[float, list[str]]:
 
 def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool,
                     source_texts: dict[str, str] | None = None,
-                    min_coverage: float = 0.75) -> dict[str, object]:
+                    min_coverage: float = 0.75,
+                    allow_period_repair: bool = False) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise AIError("invalid_json", "The model returned an invalid result shape")
     result: dict[str, object] = {}
@@ -290,6 +291,10 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
                 text = re.sub(r"\bSpeaker\s+\d+\b",
                               lambda match: "A participant" if match.start() == 0 else "a participant",
                               text, flags=re.I)
+                if (allow_period_repair and len(text) <= 200 and not re.search(r"[.!?][\"'’”)]*$", text)
+                        and re.search(r"[A-Za-z0-9][\"'’”)]*$", text)
+                        and not re.search(r"\b(?:and|or|to|of|with|for|the|a|an|from|on|in|at|by|about|as|but|because|that|which|who)$", text, re.I)):
+                    text += "."
             if not text or len(text) > 1000:
                 raise AIError("invalid_json", f"The model returned invalid {field} text")
             if field == "overview" and (len(text) > 400 or not re.search(r"[.!?][\"'’”)]*$", text)):
@@ -390,13 +395,15 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
 def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int,
               metadata: dict[str, object], *, kind: str, require_overview: bool = False,
               source_texts: dict[str, str] | None = None,
-              min_coverage: float = 0.75) -> dict[str, object]:
+              min_coverage: float = 0.75,
+              allow_period_repair: bool = False) -> dict[str, object]:
     for attempt in range(2):
         try:
             payload = _request(messages, max_tokens, metadata, kind)
             return (_validate_answer(payload, allowed) if kind == "answer"
                     else _validate_items(payload, allowed, require_overview=require_overview,
-                                         source_texts=source_texts, min_coverage=min_coverage))
+                                         source_texts=source_texts, min_coverage=min_coverage,
+                                         allow_period_repair=allow_period_repair))
         except AIError as exc:
             if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence", "weak_citation"}:
                 raise
@@ -469,7 +476,11 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
                                 {"role": "user", "content": f"Summarize only these cited lines. JSON only.\n{focus_evidence}"}]
             candidate = _complete(focused_messages, set(aliases), 1200, metadata,
                                   kind="summary", require_overview=True, source_texts=focus_texts,
-                                  min_coverage=0.60)
+                                  min_coverage=0.60, allow_period_repair=True)
+            # The focused claim can draw on the neighboring context even when
+            # the provider names just one line. Show all three audio links.
+            for item in candidate["overview"]:
+                item["source_segment_ids"] = list(aliases)
         extracted.append(_expand_sources(candidate, aliases, "summary"))
         storage.update_ai_run(run_id, checkpoint_json=json.dumps(extracted), updated_at=_now())
         _persist_metadata(run_id, metadata)

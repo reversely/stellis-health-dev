@@ -205,7 +205,7 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertIn("Summarize only these cited lines", provider.call_args.args[0][-1]["content"])
         finished = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
         self.assertEqual(finished["state"], "succeeded")
-        self.assertEqual(finished["result"]["overview"][0]["source_segment_ids"], ["seg-1"])
+        self.assertEqual(finished["result"]["overview"][0]["source_segment_ids"], ["seg-1", "seg-2"])
 
     def test_focused_window_avoids_lone_long_fragment(self) -> None:
         passages = [
@@ -227,6 +227,19 @@ class AIWorkflowTest(unittest.TestCase):
         result = ai._validate_items({**base,"overview":[{"text":"Speaker 2 founded the organization.",
             "source_segment_ids":["s1"]}]}, {"s1"}, require_overview=True)
         self.assertEqual(result["overview"][0]["text"], "A participant founded the organization.")
+
+    def test_focused_point_adds_only_safe_final_period(self) -> None:
+        base = {"topics":[],"decisions":[],"action_items":[]}
+        source = {"s1":"Avery discussed satellites"}
+        complete = ai._validate_items({**base,"overview":[{"text":"Avery discussed satellites",
+            "source_segment_ids":["s1"]}]}, {"s1"}, require_overview=True,
+            source_texts=source, min_coverage=.6, allow_period_repair=True)
+        self.assertEqual(complete["overview"][0]["text"], "Avery discussed satellites.")
+        with self.assertRaises(ai.AIError) as partial:
+            ai._validate_items({**base,"overview":[{"text":"Avery discussed satellites and",
+                "source_segment_ids":["s1"]}]}, {"s1"}, require_overview=True,
+                source_texts=source, min_coverage=.6, allow_period_repair=True)
+        self.assertEqual(partial.exception.code, "incomplete_sentence")
 
     def test_answer_uses_evidence_or_marks_insufficient(self) -> None:
         run = self._create("answer", "What did Avery discuss?")
