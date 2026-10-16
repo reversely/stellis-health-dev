@@ -1,6 +1,6 @@
 # ADR 0046: Default local login and one-time account recovery
 
-Status: accepted, 2026-10-16. Ticket: #16.
+Status: superseded by ADR 0048, 2026-10-16. Ticket: #16.
 
 ## Decision
 

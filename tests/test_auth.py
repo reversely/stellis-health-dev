@@ -19,7 +19,8 @@ class LocalAuthTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name,
-                                        "STELLIS_AUTH_MODE": "required"})
+                                        "STELLIS_AUTH_MODE": "required",
+                                        "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": ""})
         self.env.start()
         self.client = TestClient(app, follow_redirects=False)
         self.credentials = {"username": "Shereen", "password": "correct horse battery staple"}
@@ -78,37 +79,23 @@ class LocalAuthTest(unittest.TestCase):
                           auth._token_hash(token)))
         self.assertEqual(self.client.get('/api/v1/conversations').status_code, 401)
 
-    def test_single_use_recovery_revokes_sessions(self):
-        registered = self.client.post('/api/v1/auth/register', json=self.credentials)
-        code = registered.json()['recovery_code']
-        self.assertGreaterEqual(len(code), 40)
-        second = TestClient(app, follow_redirects=False)
-        try:
-            self.assertEqual(second.post('/api/v1/auth/login', json=self.credentials).status_code, 200)
-            reset = {'username': self.credentials['username'], 'recovery_code': code,
-                     'new_password': 'a different correct password'}
-            self.assertEqual(self.client.post('/api/v1/auth/recover', json={**reset,
-                'recovery_code': 'A' * len(code)}).status_code, 401)
+    def test_dev_account_requires_explicit_setting_and_can_skip_registration(self):
+        dev = {'username': 'dev', 'password': 'short'}
+        self.assertEqual(self.client.post('/api/v1/auth/login', json=dev).status_code, 401)
+        with patch.dict(os.environ, {'STELLIS_DEV_ACCOUNT': '1', 'STELLIS_DEV_PASSWORD': 'short'}):
+            self.assertEqual(self.client.post('/api/v1/auth/login', json={**dev, 'password': 'wrong'}).status_code, 401)
+            self.assertEqual(self.client.post('/api/v1/auth/login', json=dev).status_code, 200)
             self.assertEqual(self.client.get('/api/v1/conversations').status_code, 200)
-            self.assertEqual(self.client.post('/api/v1/auth/recover', json=reset).status_code, 200)
+            self.assertEqual(self.client.get('/api/v1/auth/status').json()['username'], 'dev')
+            self.assertEqual(self.client.post('/api/v1/auth/logout').status_code, 200)
             self.assertEqual(self.client.get('/api/v1/conversations').status_code, 401)
-            self.assertEqual(second.get('/api/v1/conversations').status_code, 401)
-            self.assertEqual(self.client.post('/api/v1/auth/recover', json=reset).status_code, 401)
-            self.assertEqual(self.client.post('/api/v1/auth/login', json=self.credentials).status_code, 401)
-            self.assertEqual(self.client.post('/api/v1/auth/login', json={**self.credentials,
-                'password': reset['new_password']}).status_code, 200)
-        finally:
-            second.close()
+        self.assertEqual(self.client.post('/api/v1/auth/login', json=dev).status_code, 401)
 
-    def test_existing_account_receives_recovery_code_on_login(self):
-        self.client.post('/api/v1/auth/register', json=self.credentials)
-        with sqlite3.connect(storage.data_dir() / 'auth.sqlite3') as conn:
-            conn.execute('DELETE FROM recovery_codes')
-        self.client.post('/api/v1/auth/logout')
-        first = self.client.post('/api/v1/auth/login', json=self.credentials)
-        self.assertIn('recovery_code', first.json())
-        second = self.client.post('/api/v1/auth/login', json=self.credentials)
-        self.assertNotIn('recovery_code', second.json())
+    def test_registration_has_no_recovery_step(self):
+        registered = self.client.post('/api/v1/auth/register', json=self.credentials)
+        self.assertEqual(registered.status_code, 200)
+        self.assertEqual(registered.json(), {'username': self.credentials['username']})
+        self.assertEqual(self.client.post('/api/v1/auth/recover', json={}).status_code, 404)
 
     def test_cli_serve_requires_login_by_default(self):
         with patch.dict(os.environ):
