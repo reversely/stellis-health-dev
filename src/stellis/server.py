@@ -63,8 +63,17 @@ class Credentials(BaseModel):
     password: str = Field(min_length=12, max_length=1024)
 
 
-def _session_response(token: str, username: str) -> JSONResponse:
-    response = JSONResponse({"username": username})
+class RecoveryRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=80)
+    recovery_code: str = Field(min_length=32, max_length=128)
+    new_password: str = Field(min_length=12, max_length=1024)
+
+
+def _session_response(token: str, username: str, recovery_code: str | None = None) -> JSONResponse:
+    body = {"username": username}
+    if recovery_code is not None:
+        body["recovery_code"] = recovery_code
+    response = JSONResponse(body)
     response.set_cookie(auth.COOKIE_NAME, token, max_age=auth.SESSION_DAYS * 86400,
                         httponly=True, samesite="strict", secure=False, path="/")
     response.headers["Cache-Control"] = "no-store"
@@ -92,7 +101,16 @@ def auth_register(credentials: Credentials) -> JSONResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _session_response(auth.create_session(), username)
+    return _session_response(auth.create_session(), username, auth.issue_recovery_code())
+
+
+@app.post("/api/v1/auth/recover")
+def auth_recover(request: RecoveryRequest) -> JSONResponse:
+    if not auth.enabled():
+        raise HTTPException(status_code=404, detail="Login is disabled")
+    if not auth.reset_password(request.username.strip(), request.recovery_code, request.new_password):
+        raise HTTPException(status_code=401, detail="Invalid username or recovery code")
+    return JSONResponse({"reset": True}, headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/v1/auth/login")
@@ -102,7 +120,8 @@ def auth_login(credentials: Credentials) -> JSONResponse:
     token = auth.login(credentials.username, credentials.password)
     if token is None:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    return _session_response(token, credentials.username)
+    code = None if auth.has_recovery_code() else auth.issue_recovery_code()
+    return _session_response(token, credentials.username, code)
 
 
 @app.post("/api/v1/auth/logout")

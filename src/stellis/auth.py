@@ -15,6 +15,7 @@ from stellis import storage
 
 SESSION_DAYS = 7
 COOKIE_NAME = "stellis_session"
+RECOVERY_BYTES = 32
 
 
 def enabled() -> bool:
@@ -33,6 +34,9 @@ def _connect() -> Iterator[sqlite3.Connection]:
     conn.execute("""CREATE TABLE IF NOT EXISTS sessions (
         token_hash BLOB PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES account(id),
         expires_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS recovery_codes (
+        account_id INTEGER PRIMARY KEY REFERENCES account(id), code_hash BLOB NOT NULL
     )""")
     conn.commit()
     path.chmod(0o600)
@@ -69,6 +73,42 @@ def register(username: str, password: str) -> str:
         except sqlite3.IntegrityError as exc:
             raise RuntimeError("Account already exists") from exc
     return username
+
+
+def issue_recovery_code() -> str:
+    """Replace the local account's saved recovery code and return it once."""
+    code = secrets.token_urlsafe(RECOVERY_BYTES)
+    with _connect() as conn:
+        conn.execute("""INSERT INTO recovery_codes (account_id, code_hash) VALUES (1, ?)
+            ON CONFLICT(account_id) DO UPDATE SET code_hash = excluded.code_hash""", (_token_hash(code),))
+    return code
+
+
+def has_recovery_code() -> bool:
+    with _connect() as conn:
+        return conn.execute("SELECT 1 FROM recovery_codes WHERE account_id = 1").fetchone() is not None
+
+
+def reset_password(username: str, code: str, new_password: str) -> bool:
+    """Consume one recovery code and invalidate every existing session."""
+    if not 12 <= len(new_password) <= 1024:
+        raise ValueError("Use a password of at least 12 characters")
+    try:
+        candidate = _token_hash(code)
+    except UnicodeEncodeError:
+        return False
+    with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("""SELECT account.username, recovery_codes.code_hash FROM account
+            JOIN recovery_codes ON recovery_codes.account_id = account.id WHERE account.id = 1""").fetchone()
+        if row is None or row["username"] != username or not hmac.compare_digest(row["code_hash"], candidate):
+            return False
+        salt = secrets.token_bytes(32)
+        conn.execute("UPDATE account SET salt = ?, verifier = ? WHERE id = 1",
+                     (salt, _verifier(new_password, salt)))
+        conn.execute("DELETE FROM recovery_codes WHERE account_id = 1")
+        conn.execute("DELETE FROM sessions WHERE account_id = 1")
+    return True
 
 
 def login(username: str, password: str) -> str | None:
