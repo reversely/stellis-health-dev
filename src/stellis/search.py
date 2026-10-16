@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from stellis import storage
+from stellis import library, storage
 
 
 def _excerpt(value: str, query: str, width: int = 120) -> str:
@@ -15,7 +15,7 @@ def _excerpt(value: str, query: str, width: int = 120) -> str:
     return ("…" if start else "") + value[start:end] + ("…" if end < len(value) else "")
 
 
-def search_library(query: str, limit: int = 150) -> dict[str, object]:
+def search_library(query: str, limit: int = 150, category_id: str | None = None) -> dict[str, object]:
     """Search effective text and labels afresh, so overlays never need a stale index."""
     needle = query.strip().casefold()
     if len(needle) < 2 or len(needle) > 120:
@@ -23,6 +23,13 @@ def search_library(query: str, limit: int = 150) -> dict[str, object]:
     results: list[dict[str, object]] = []
     total = 0
     conversations = storage.list_conversations()
+    if category_id is not None:
+        assigned = library.assignments()
+        if category_id == "uncategorized":
+            conversations = [item for item in conversations if not assigned.get(str(item["id"]))]
+        else:
+            conversations = [item for item in conversations
+                             if category_id in assigned.get(str(item["id"]), [])]
     for conversation in conversations:
         conversation_id = str(conversation["id"])
         title = str(conversation["title"])

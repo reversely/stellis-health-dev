@@ -145,6 +145,8 @@ async def import_upload(upload: UploadFile) -> tuple[dict[str, object], bool]:
 
         existing = storage.find_by_hash(digest)
         if existing:
+            if existing.get("trashed_at"):
+                raise ImportFailure("This recording is in Trash. Restore it before importing again.")
             return existing, True
         duration_ms = _duration_ms(audio_path)
         conversation_id = str(uuid.uuid4())
@@ -174,6 +176,8 @@ async def import_upload(upload: UploadFile) -> tuple[dict[str, object], bool]:
             destination.unlink(missing_ok=True)
             existing = storage.find_by_hash(digest)
             if existing:
+                if existing.get("trashed_at"):
+                    raise ImportFailure("This recording is in Trash. Restore it before importing again.")
                 return existing, True
             raise
         return record, False

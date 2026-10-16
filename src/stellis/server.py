@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, clean, processing, recording, search, storage
+from stellis import ai, clean, library, processing, recording, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -43,6 +43,10 @@ class SpeakerLabelEdit(BaseModel):
 
 class VocabularyTerm(BaseModel):
     term: str = Field(min_length=1, max_length=100)
+
+
+class CategoryName(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
 
 
 class HighlightSelection(BaseModel):
@@ -94,13 +98,15 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 @app.on_event("startup")
 def start_speech_worker() -> None:
+    library.recover_staged_media()
     storage.fail_interrupted_ai_runs()
     storage.fail_interrupted_clean_runs()
     processing.start_worker()
 
 
 def _public(record: dict[str, object]) -> dict[str, object]:
-    return {key: record[key] for key in ("id", "title", "duration_ms", "created_at")}
+    return {key: record[key] for key in ("id", "title", "duration_ms", "created_at")} | {
+        "category_ids": library.assignments(str(record["id"])).get(str(record["id"]), [])}
 
 
 @app.get("/api/health")
@@ -128,13 +134,94 @@ def conversation_page(conversation_id: str) -> FileResponse:
 
 @api.get("/conversations")
 def conversations() -> list[dict[str, object]]:
-    return storage.list_conversations()
+    assigned = library.assignments()
+    return [{**item, "category_ids": assigned.get(str(item["id"]), [])}
+            for item in storage.list_conversations()]
+
+
+@api.get("/categories")
+def categories() -> list[dict[str, object]]:
+    return library.categories()
+
+
+@api.post("/categories")
+def create_category(request: CategoryName) -> dict[str, object]:
+    try:
+        return library.create_category(request.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.patch("/categories/{category_id}")
+def rename_category(category_id: str, request: CategoryName) -> dict[str, object]:
+    try:
+        return library.rename_category(category_id, request.name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.delete("/categories/{category_id}")
+def delete_category(category_id: str) -> dict[str, bool]:
+    if not library.delete_category(category_id):
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"deleted": True}
+
+
+@api.put("/conversations/{conversation_id}/categories/{category_id}")
+def assign_category(conversation_id: str, category_id: str) -> dict[str, object]:
+    try:
+        return {"category_ids": library.set_category(conversation_id, category_id, True)}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.delete("/conversations/{conversation_id}/categories/{category_id}")
+def remove_category(conversation_id: str, category_id: str) -> dict[str, object]:
+    try:
+        return {"category_ids": library.set_category(conversation_id, category_id, False)}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.get("/trash")
+def trash() -> list[dict[str, object]]:
+    assigned = library.assignments()
+    return [{**item, "category_ids": assigned.get(str(item["id"]), [])}
+            for item in storage.list_conversations(trashed=True)]
+
+
+@api.post("/conversations/{conversation_id}/trash")
+def move_to_trash(conversation_id: str) -> dict[str, object]:
+    try:
+        return library.move_to_trash(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.post("/trash/{conversation_id}/restore")
+def restore_from_trash(conversation_id: str) -> dict[str, object]:
+    try:
+        return library.restore(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.delete("/trash/{conversation_id}")
+def delete_from_trash(conversation_id: str) -> dict[str, object]:
+    try:
+        return library.delete_permanently(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api.get("/search")
-def library_search(q: str = Query(min_length=2, max_length=120)) -> dict[str, object]:
+def library_search(q: str = Query(min_length=2, max_length=120), category_id: str | None = None) -> dict[str, object]:
     try:
-        return search.search_library(q)
+        return search.search_library(q, category_id=category_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
