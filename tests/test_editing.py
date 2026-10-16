@@ -103,6 +103,14 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(tagged.json()['preserved_other_people'], 1)
         segments = self.client.get(f'{self.base}/transcript').json()['segments']
         self.assertEqual([item['speaker_display_name'] for item in segments], ['Jay', 'Shereen'])
+        with storage.connect() as conn:
+            links = conn.execute('SELECT segment_id, person_id FROM person_links WHERE conversation_id = ? ORDER BY segment_id',
+                                 (self.conversation_id,)).fetchall()
+        self.assertEqual([tuple(row) for row in links], [('segment-1', second['id']), ('segment-2', first['id'])])
+        with TestClient(app) as reloaded:
+            names = [item['speaker_display_name'] for item in
+                     reloaded.get(f'{self.base}/transcript').json()['segments']]
+        self.assertEqual(names, ['Jay', 'Shereen'])
 
     def test_new_speaker_tag_is_atomic_on_revision_conflict(self) -> None:
         endpoint = f'{self.base}/person-links'
@@ -143,10 +151,22 @@ class EditingWorkflowTest(unittest.TestCase):
         result = self.client.get(f"{self.base}/transcript").json()
         self.assertEqual([item["speaker_display_name"] for item in result["segments"]], ["Ari", "Sam"])
         self.assertEqual(result["segments"][1]["speaker_cluster_id"], "speaker-1")
+        with storage.connect() as conn:
+            persisted = conn.execute("SELECT scope, target_id, name FROM speaker_labels WHERE conversation_id = ? ORDER BY scope, target_id",
+                                     (self.conversation_id,)).fetchall()
+        self.assertEqual({tuple(row) for row in persisted}, {
+            ("cluster", "speaker-1", "Ari"), ("segment", "segment-2", "Sam")})
+        with TestClient(app) as reloaded:
+            names = [item["speaker_display_name"] for item in
+                     reloaded.get(f"{self.base}/transcript").json()["segments"]]
+        self.assertEqual(names, ["Ari", "Sam"])
         cleared = self.client.put(endpoint, json={"scope":"segment","target_id":"segment-2","name":None,"expected_revision":3})
         self.assertEqual(cleared.json()["revision"], 4)
         labels = [item["speaker_display_name"] for item in self.client.get(f"{self.base}/transcript").json()["segments"]]
         self.assertEqual(labels, ["Ari", "Ari"])
+        with storage.connect() as conn:
+            self.assertIsNone(conn.execute("SELECT name FROM speaker_labels WHERE conversation_id = ? AND scope = 'segment' AND target_id = 'segment-2'",
+                                           (self.conversation_id,)).fetchone())
 
     def test_vocabulary_changes_only_future_job_snapshot(self) -> None:
         existing = processing.request_processing(self.conversation_id)
