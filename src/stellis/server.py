@@ -5,16 +5,46 @@ from __future__ import annotations
 from importlib.metadata import version
 from pathlib import Path
 import json
+import sqlite3
 
 from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from stellis import processing, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
 api = APIRouter()
+
+
+class SegmentEdit(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    expected_revision: int = Field(ge=1)
+
+
+class SpeakerLabelEdit(BaseModel):
+    scope: str
+    target_id: str
+    name: str | None = Field(default=None, max_length=100)
+    expected_revision: int = Field(ge=1)
+
+
+class VocabularyTerm(BaseModel):
+    term: str = Field(min_length=1, max_length=100)
+
+
+class HighlightSelection(BaseModel):
+    segment_id: str
+    start_offset: int = Field(ge=0)
+    end_offset: int = Field(gt=0)
+    expected_revision: int = Field(ge=1)
+
+
+def _check_vocabulary_budget(terms: list[str]) -> None:
+    if len("Vocabulary: " + ", ".join(terms)) > 400:
+        raise HTTPException(status_code=400, detail="Vocabulary is too long for the local model prompt")
 _STATIC = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
@@ -93,7 +123,7 @@ def capabilities() -> dict[str, object]:
 def conversation_job(conversation_id: str) -> dict[str, object] | None:
     if storage.get_conversation(conversation_id) is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    job = storage.get_job_for_conversation(conversation_id, processing.PIPELINE_VERSION)
+    job = storage.get_latest_job_for_conversation(conversation_id)
     return processing.public_job(job) if job else None
 
 
@@ -122,11 +152,152 @@ def transcript(conversation_id: str) -> dict[str, object]:
     record = storage.get_transcript(conversation_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Transcript is not ready")
+    edits = storage.get_transcript_edits(conversation_id)
+    labels = storage.get_speaker_labels(conversation_id)
+    cluster_labels = {str(label["target_id"]): str(label["name"]) for label in labels if label["scope"] == "cluster"}
+    segment_labels = {str(label["target_id"]): str(label["name"]) for label in labels if label["scope"] == "segment"}
+    segments = json.loads(str(record["segments_json"]))
+    for segment in segments:
+        override = edits.get(segment["id"])
+        if override is not None:
+            segment["original_text"] = segment["text"]
+            segment["text"] = override
+            segment["text_provenance"] = "user_edit"
+        else:
+            segment["text_provenance"] = "on_device_asr"
+        cluster = segment["speaker_cluster_id"]
+        if segment["id"] in segment_labels:
+            segment["speaker_display_name"] = segment_labels[segment["id"]]
+            segment["speaker_label_source"] = "manual_segment"
+        elif cluster in cluster_labels:
+            segment["speaker_display_name"] = cluster_labels[cluster]
+            segment["speaker_label_source"] = "manual_cluster"
+        else:
+            segment["speaker_display_name"] = cluster.replace("speaker-", "Speaker ") if cluster else "Unknown speaker"
+            segment["speaker_label_source"] = "automatic"
     return {
         "conversation_id": conversation_id, "revision": record["revision"],
-        "language": record["language"], "segments": json.loads(str(record["segments_json"])),
+        "generation_version": record["generation_version"],
+        "language": record["language"], "segments": segments,
         "turns": json.loads(str(record["turns_json"])),
+        "speaker_labels": labels,
+        "highlights": storage.list_highlights(conversation_id),
     }
+
+
+@api.post("/conversations/{conversation_id}/highlights")
+def add_highlight(conversation_id: str, selection: HighlightSelection) -> dict[str, object]:
+    try:
+        return storage.add_highlight(conversation_id, selection.segment_id,
+                                     selection.start_offset, selection.end_offset,
+                                     selection.expected_revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.delete("/conversations/{conversation_id}/highlights/{highlight_id}")
+def delete_highlight(conversation_id: str, highlight_id: str) -> dict[str, bool]:
+    if not storage.delete_highlight(conversation_id, highlight_id):
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    return {"deleted": True}
+
+
+@api.get("/conversations/{conversation_id}/transcript/generations")
+def transcript_generations(conversation_id: str) -> list[dict[str, object]]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return storage.list_transcript_generations(conversation_id)
+
+
+@api.get("/conversations/{conversation_id}/transcript/generations/{version}")
+def transcript_generation(conversation_id: str, version: str) -> dict[str, object]:
+    record = storage.get_transcript_generation(conversation_id, version)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Transcript generation not found")
+    return {
+        "conversation_id": conversation_id, "pipeline_version": version,
+        "revision": record["revision"], "language": record["language"],
+        "segments": json.loads(str(record["segments_json"])),
+        "turns": json.loads(str(record["turns_json"])),
+        "created_at": record["created_at"],
+    }
+
+
+@api.patch("/conversations/{conversation_id}/transcript/segments/{segment_id}")
+def edit_segment(conversation_id: str, segment_id: str, edit: SegmentEdit) -> dict[str, int]:
+    cleaned = edit.text.strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Transcript text cannot be empty")
+    try:
+        revision = storage.edit_transcript_segment(conversation_id, segment_id, cleaned, edit.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"revision": revision}
+
+
+@api.put("/conversations/{conversation_id}/speakers/label")
+def label_speaker(conversation_id: str, edit: SpeakerLabelEdit) -> dict[str, int]:
+    cleaned = edit.name.strip() if edit.name is not None else None
+    if cleaned == "":
+        cleaned = None
+    try:
+        revision = storage.set_speaker_label(conversation_id, edit.scope, edit.target_id,
+                                             cleaned, edit.expected_revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"revision": revision}
+
+
+@api.get("/vocabulary")
+def vocabulary() -> list[dict[str, object]]:
+    return storage.list_vocabulary()
+
+
+@api.post("/vocabulary")
+def add_vocabulary(term: VocabularyTerm) -> dict[str, object]:
+    cleaned = term.term.strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Vocabulary term cannot be empty")
+    _check_vocabulary_budget([*[str(item["term"]) for item in storage.list_vocabulary()], cleaned])
+    try:
+        return storage.add_vocabulary(cleaned)
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="Vocabulary term already exists") from exc
+
+
+@api.patch("/vocabulary/{term_id}")
+def update_vocabulary(term_id: str, term: VocabularyTerm) -> dict[str, object]:
+    cleaned = term.term.strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Vocabulary term cannot be empty")
+    current = storage.list_vocabulary()
+    if not any(item["id"] == term_id for item in current):
+        raise HTTPException(status_code=404, detail="Vocabulary term not found")
+    _check_vocabulary_budget([cleaned if item["id"] == term_id else str(item["term"]) for item in current])
+    try:
+        result = storage.update_vocabulary(term_id, cleaned)
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="Vocabulary term already exists") from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Vocabulary term not found")
+    return result
+
+
+@api.delete("/vocabulary/{term_id}")
+def delete_vocabulary(term_id: str) -> dict[str, bool]:
+    if not storage.delete_vocabulary(term_id):
+        raise HTTPException(status_code=404, detail="Vocabulary term not found")
+    return {"deleted": True}
 
 
 app.include_router(api, prefix="/api/v1")

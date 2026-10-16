@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import queue
 import shutil
@@ -46,12 +47,27 @@ def capabilities() -> dict[str, object]:
     asr_ready = bool(shutil.which("whisper-cli") and whisper.is_file() and shutil.which("ffmpeg"))
     diar_ready = segmentation.is_file() and embedding.is_file()
     return {
+        "pipeline_version": pipeline_version(),
         "engines": [
             {"id": "whisper.cpp", "kind": "asr", "model": whisper.name, "languages": ["en"], "ready": asr_ready},
             {"id": "sherpa-onnx", "kind": "diarization", "model": f"{segmentation.name} + {embedding.name}", "languages": [], "ready": diar_ready},
         ],
         "features": {"transcribe": asr_ready, "diarize": diar_ready},
     }
+
+
+def vocabulary_snapshot() -> list[str]:
+    """Return the saved terms that a new ASR job will use."""
+    return [str(item["term"]) for item in storage.list_vocabulary()]
+
+
+def pipeline_version(terms: list[str] | None = None) -> str:
+    """Include vocabulary in job identity without changing old transcripts."""
+    terms = vocabulary_snapshot() if terms is None else terms
+    if not terms:
+        return PIPELINE_VERSION
+    digest = hashlib.sha256(json.dumps(terms, ensure_ascii=False).encode()).hexdigest()[:12]
+    return f"{PIPELINE_VERSION}-vocab-{digest}"
 
 
 def public_job(record: dict[str, object]) -> dict[str, object]:
@@ -78,7 +94,9 @@ def start_worker() -> None:
 def request_processing(conversation_id: str) -> dict[str, object]:
     """Queue one job per conversation and pipeline version."""
     with _REQUEST_LOCK:
-        existing = storage.get_job_for_conversation(conversation_id, PIPELINE_VERSION)
+        terms = vocabulary_snapshot()
+        version = pipeline_version(terms)
+        existing = storage.get_job_for_conversation(conversation_id, version)
         if existing:
             if existing["state"] == "failed":
                 storage.update_job(str(existing["id"]), state="queued", stage="retrying", progress=0,
@@ -89,8 +107,9 @@ def request_processing(conversation_id: str) -> dict[str, object]:
         stamp = now()
         record: dict[str, object] = {
             "id": str(uuid.uuid4()), "conversation_id": conversation_id,
-            "pipeline_version": PIPELINE_VERSION, "state": "queued", "stage": "queued",
+            "pipeline_version": version, "state": "queued", "stage": "queued",
             "progress": 0, "error": None, "metrics_json": None,
+            "vocabulary_json": json.dumps(terms, ensure_ascii=False),
             "created_at": stamp, "updated_at": stamp,
         }
         storage.add_job(record)
@@ -132,9 +151,13 @@ def _command(command: list[str], timeout: int) -> None:
         raise RuntimeError(f"{Path(command[0]).name} failed (exit {completed.returncode})")
 
 
-def _transcribe(audio_path: Path, model: Path, output_base: Path) -> list[dict[str, object]]:
-    _command(["whisper-cli", "-m", str(model), "-f", str(audio_path), "-l", "en",
-              "-t", "4", "-ojf", "-of", str(output_base), "-np"], timeout=7200)
+def _transcribe(audio_path: Path, model: Path, output_base: Path,
+                vocabulary: list[str]) -> list[dict[str, object]]:
+    command = ["whisper-cli", "-m", str(model), "-f", str(audio_path), "-l", "en",
+               "-t", "4", "-ojf", "-of", str(output_base), "-np"]
+    if vocabulary:
+        command.extend(["--prompt", "Vocabulary: " + ", ".join(vocabulary)])
+    _command(command, timeout=7200)
     result = json.loads(output_base.with_suffix(".json").read_text())
     segments: list[dict[str, object]] = []
     for item in result["transcription"]:
@@ -240,7 +263,8 @@ def run_job(job_id: str) -> None:
             _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(source),
                       "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
             _stage(job_id, "transcribing", 0.12)
-            segments = _transcribe(wav, whisper, workspace / "transcript")
+            segments = _transcribe(wav, whisper, workspace / "transcript",
+                                   json.loads(str(job["vocabulary_json"])))
             _stage(job_id, "diarizing", 0.55)
             turns = _diarize(wav, segmentation, embedding, job_id)
             _stage(job_id, "aligning", 0.96)
@@ -252,7 +276,8 @@ def run_job(job_id: str) -> None:
                 "confident_segment_fraction": round(coverage, 3),
             }
             storage.save_transcript({
-                "conversation_id": conversation["id"], "revision": 1, "language": "en",
+                "conversation_id": conversation["id"], "revision": 1,
+                "pipeline_version": job["pipeline_version"], "language": "en",
                 "segments_json": json.dumps(aligned), "turns_json": json.dumps(turns),
                 "updated_at": now(),
             })
