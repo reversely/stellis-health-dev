@@ -8,6 +8,7 @@ const VaultUI = (() => {
   let key = null;
   let cursor = 0;
   let records = new Map();
+  let mediaUrls = new Set();
 
   async function call(path, options={}) {
     const response = await fetch(`/sync/v1${path}`, options);
@@ -16,6 +17,8 @@ const VaultUI = (() => {
     return data;
   }
   function render() {
+    for (const url of mediaUrls) URL.revokeObjectURL(url);
+    mediaUrls.clear();
     notes.replaceChildren();
     const parts = new Map();
     const manifests = [];
@@ -31,8 +34,36 @@ const VaultUI = (() => {
       const segments=window.StellisSnapshot.assemble(manifest,parts);
       if (!segments) { incomplete++;continue; }
       const row=document.createElement('li');const details=document.createElement('details');
-      const heading=document.createElement('summary');heading.textContent=`${manifest.title} (${segments.length} passages, text only)`;
+      const hasAudio=typeof manifest.media_id==='string' && Number.isInteger(manifest.media_chunks) &&
+        manifest.media_chunks>0 && manifest.media_chunks<=512 && Number.isInteger(manifest.media_bytes) &&
+        manifest.media_bytes>0 && manifest.media_bytes<=512*256*1024 &&
+        typeof manifest.media_type==='string' && /^audio\/[a-z0-9.+-]+$/i.test(manifest.media_type);
+      const heading=document.createElement('summary');
+      heading.textContent=`${manifest.title} (${segments.length} passages${hasAudio?', audio available':', text only'})`;
       details.append(heading);
+      if(hasAudio){
+        const load=document.createElement('button');load.type='button';load.textContent='Load audio';
+        load.addEventListener('click',async()=>{
+          load.disabled=true;
+          try{
+            const chunks=[];let total=0;
+            for(let index=0;index<manifest.media_chunks;index++){
+              status.textContent=`Loading audio ${index+1} of ${manifest.media_chunks}…`;
+              const entry=await call(`/media/${encodeURIComponent(manifest.media_id)}/chunks/${index}`);
+              const chunk=await window.StellisCrypto.openBytes(key,entry.ciphertext,bytes(entry.iv),
+                aad('media-v1',user.id,manifest.media_id,String(index)));
+              total+=chunk.length;if(total>manifest.media_bytes)throw Error('Encrypted audio length changed');
+              chunks.push(chunk);
+            }
+            if(total!==manifest.media_bytes)throw Error('Encrypted audio is incomplete');
+            const url=URL.createObjectURL(new Blob(chunks,{type:manifest.media_type}));mediaUrls.add(url);
+            const audio=document.createElement('audio');audio.controls=true;audio.preload='none';
+            audio.setAttribute('aria-label',`Audio for ${manifest.title}`);audio.src=url;
+            load.replaceWith(audio);status.textContent='Audio ready';
+          }catch{status.textContent='Audio unavailable or failed authentication';load.disabled=false;}
+        });
+        details.append(load);
+      }
       for (const segment of segments) {
         const passage=document.createElement('p');
         const source=window.StellisSnapshot.sourceUrl(manifest,segment);

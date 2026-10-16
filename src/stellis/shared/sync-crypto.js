@@ -2,7 +2,12 @@
 window.StellisCrypto = (() => {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
-  const b64 = value => btoa(String.fromCharCode(...value));
+  const b64 = value => {
+    let text = '';
+    for (let offset = 0; offset < value.length; offset += 8192)
+      text += String.fromCharCode(...value.subarray(offset, offset + 8192));
+    return btoa(text);
+  };
   const bytes = value => Uint8Array.from(atob(value), char => char.charCodeAt(0));
   const random = count => crypto.getRandomValues(new Uint8Array(count));
   const aad = (...parts) => encoder.encode(parts.join('|'));
@@ -19,5 +24,13 @@ window.StellisCrypto = (() => {
     return decoder.decode(await crypto.subtle.decrypt(
       {name:'AES-GCM',iv,additionalData:binding,tagLength:128}, key, bytes(value)));
   }
-  return {b64,bytes,random,aad,derive,seal,open};
+  async function sealBytes(key, value, iv, binding) {
+    return b64(new Uint8Array(await crypto.subtle.encrypt(
+      {name:'AES-GCM',iv,additionalData:binding,tagLength:128}, key, value)));
+  }
+  async function openBytes(key, value, iv, binding) {
+    return new Uint8Array(await crypto.subtle.decrypt(
+      {name:'AES-GCM',iv,additionalData:binding,tagLength:128}, key, bytes(value)));
+  }
+  return {b64,bytes,random,aad,derive,seal,open,sealBytes,openBytes};
 })();
