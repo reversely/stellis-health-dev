@@ -36,3 +36,9 @@ The browser invoked a separate on-device TitaNet embedding job against the saved
 The Otter passage with a single label contains two successive voice introductions; its segments match two existing acoustic groups. Five other disagreements include brief or boundary passages. The 1.9% figure measures reference disagreement, not a calibrated false-assignment probability. Additional diverse recordings are needed before treating the thresholds as universal.
 
 **Decision:** Ticket #12 established the local pipeline. Ticket #29 raised measured suggestion coverage above 85% while keeping uncertain passages visible. The Otter labels are anonymous and imperfect; no aggregate above proves identity recognition or truth of all spoken words.
+
+## Browser rematch after ASR generation review (#46, 2026-10-16)
+
+After the real interview's new 777-passage ASR generation was activated through the browser review, Chromium opened **More options → Rematch speakers** and reloaded while the local job ran. The persisted job completed in about 21 seconds. It kept all 777 passage IDs and times, the opening user text correction and its highlight, and the manually confirmed Shireen Person on the 16-second passage. Clicking that passage sought and played audio at 16.112 seconds. The rematched generation reported five supported groups, 672 suggestions (86.5%), and 105 unresolved passages. A second API request returned the same completed job ID. At 390 pixels, the transcript and open menu fit the viewport; the completed action appeared disabled as **Speakers rematched**.
+
+Otter's earlier auto-tag request still has no observable completion or failure outcome in the signed-in UI. Its effect on a manually named speaker remains unverified there, so ticket #46 stays open. The new Stellis result tests preservation through this generation; it does not establish speaker identity accuracy.
