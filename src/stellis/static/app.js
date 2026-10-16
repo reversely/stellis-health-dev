@@ -1037,7 +1037,11 @@ async function loadSpeech(id) {
   ]);
   if (id !== activeConversationId) return;
   if (existing?.state === 'succeeded') { await showTranscript(id);
-    if (existing.kind !== 'rematch' && existing.pipeline_version !== capabilities.pipeline_version) { processButton.hidden = false; processButton.textContent = 'Reprocess with vocabulary'; }
+    const activeVersion = currentTranscript?.generation_version || existing.pipeline_version;
+    processButton.hidden = generationReview?.state === 'pending' ||
+      activeVersion === capabilities.pipeline_version ||
+      activeVersion.startsWith(`${capabilities.pipeline_version}-`);
+    if (!processButton.hidden) processButton.textContent = 'Reprocess transcript';
     return; }
   if (existing?.state === 'queued' || existing?.state === 'running') {
     if (existing.kind === 'word_alignment') await showTranscript(id);
