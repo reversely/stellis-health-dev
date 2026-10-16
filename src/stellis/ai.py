@@ -17,7 +17,7 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v9"
+PROMPT_VERSION = "cited-conversation-v10"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
@@ -379,9 +379,20 @@ def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int
         except AIError as exc:
             if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence", "weak_citation"}:
                 raise
+            cited_lines = ""
+            if exc.code == "weak_citation" and source_texts and isinstance(payload, dict):
+                for item in payload.get("overview", [])[:3]:
+                    if isinstance(item, dict):
+                        for source_id in item.get("source_segment_ids", [])[:4]:
+                            label = str(source_id).strip().strip("[]")
+                            if label in source_texts:
+                                cited_lines += f"\n[{label}] {source_texts[label][:350]}"
             correction = ("Each overview point must describe only details present in its own cited passages. "
                           "Choose one concrete claim and cite the one to three passages that directly say it. "
                           "Remove unsupported details, especially names, dates, and technical claims. "
+                          f"The prior claim had terms absent from its citations: {exc}. "
+                          f"These were its cited passages:{cited_lines}\n"
+                          "You may choose different passage labels from the supplied transcript if they better support the claim. "
                           "Return the required JSON object."
                           if exc.code == "weak_citation" else
                           "Rewrite every overview point as one complete sentence under 400 characters, "

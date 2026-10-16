@@ -185,6 +185,8 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(provider.call_count, 2)
         self.assertIn("details present in its own cited passages",
                       provider.call_args.args[0][-1]["content"])
+        self.assertIn("[s1] Speaker 1 Avery discussed satellites.",
+                      provider.call_args.args[0][-1]["content"])
         finished = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
         self.assertEqual(finished["state"], "succeeded")
         self.assertEqual(finished["result"]["overview"][0]["text"], "Avery discussed satellites.")
