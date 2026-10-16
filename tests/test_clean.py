@@ -138,3 +138,29 @@ class CleanWorkflowTest(unittest.TestCase):
         self.assertEqual(result[0]['text'], 'Avery discussed satellites.')
         self.assertFalse(result[0]['needs_review'])
         self.assertEqual(result[0]['start_ms'], 1000)
+
+    def test_substantive_deletion_falls_back_and_requires_review(self):
+        source = storage.get_display_transcript(self.conversation_id)['segments']
+        payload = {'segments': [
+            {'source_segment_id': 's1', 'text': 'Avery discussed.', 'needs_review': False},
+            {'source_segment_id': 's2', 'text': source[1]['text'], 'needs_review': False},
+        ]}
+        result = clean._validate_chunk(payload, source)
+        self.assertEqual(result[0]['text'], 'Avery discussed satellites.')
+        self.assertTrue(result[0]['needs_review'])
+        self.assertIsNotNone(result[0]['review_reason'])
+
+    def test_older_run_is_rechecked_before_browser_display(self):
+        run = self._start()
+        source = storage.get_display_transcript(self.conversation_id)['segments']
+        result = {'segments': [{**item, 'source_text': item['text'],
+                                'text': 'Avery discussed.' if index == 0 else item['text'],
+                                'needs_review': False, 'review_reason': None}
+                               for index, item in enumerate(source)]}
+        storage.update_clean_run(run['id'], state='succeeded', stage='complete', result_json=json.dumps(result))
+        with storage.connect() as conn:
+            conn.execute('UPDATE clean_runs SET prompt_version = ? WHERE id = ?',
+                         ('conservative-clean-v2', run['id']))
+        displayed = self.client.get(f"/api/v1/clean-runs/{run['id']}").json()['result']['segments'][0]
+        self.assertEqual(displayed['text'], 'Avery discussed satellites.')
+        self.assertTrue(displayed['needs_review'])
