@@ -2,6 +2,8 @@ const fileInput = document.querySelector('#audio-file');
 const status = document.querySelector('#status');
 const list = document.querySelector('#conversation-list');
 const dropZone = document.querySelector('#drop-zone');
+const importDialog = document.querySelector('#import-dialog');
+const importStatus = document.querySelector('#import-status');
 const listView = document.querySelector('#list-view');
 const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
@@ -1517,19 +1519,25 @@ async function route() {
 async function importFile(file) {
   if (!file) return;
   if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && !window.confirm('Discard unsaved transcript changes and import another recording?')) return;
+  importStatus.textContent = `Importing ${file.name}…`;
   setStatus(`Importing ${file.name}…`);
   fileInput.disabled = true;
+  document.querySelector('#import-close').disabled = true;
   const body = new FormData();
   body.append('file', file);
   try {
     const result = await json(await fetch(`${API}/conversations/import`, {method: 'POST', body}));
     history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
     await showDetail(result.conversation.id);
+    importDialog.close();
+    importStatus.textContent = '';
     setStatus(result.duplicate ? 'Already imported. Opening your recording.' : 'Recording imported.', true);
   } catch (error) {
+    importStatus.textContent = error.message;
     setStatus(error.message);
   } finally {
     fileInput.disabled = false;
+    document.querySelector('#import-close').disabled = false;
     fileInput.value = '';
   }
 }
@@ -1684,6 +1692,14 @@ document.querySelector('#pause-recording').addEventListener('click', async () =>
   captureControls();
   try {await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/events`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,media_position_ms:position})}));}
   catch (error) {recordingDetail.textContent = `Pause status could not be saved: ${error.message}`;}
+});
+document.querySelector('#import-button').addEventListener('click', () => {
+  importStatus.textContent = '';
+  importDialog.showModal();
+});
+document.querySelector('#import-close').addEventListener('click', () => importDialog.close());
+importDialog.addEventListener('cancel', event => {
+  if (fileInput.disabled) event.preventDefault();
 });
 fileInput.addEventListener('change', () => importFile(fileInput.files[0]));
 dropZone.addEventListener('click', () => fileInput.click());
