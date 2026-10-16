@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, through ticket #145 and the real summary retry for ticket #128. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, through tickets #145 and #150 and the real summary retry for ticket #128. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
