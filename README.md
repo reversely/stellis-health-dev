@@ -22,7 +22,7 @@ Open <http://127.0.0.1:8765/>. `GET /api/health` should return `{"status":"ok","
 
 Use **Import recording** or drag a file onto the home page. MP3, WAV, M4A, OGG, WebM, FLAC, and Otter ZIP exports containing one audio file are supported up to 1 GB. Imports are stored under `~/Library/Application Support/Stellis`; set `STELLIS_DATA_DIR` to use a different private local folder. Reimporting the same audio opens its existing conversation.
 
-For local transcription work, set `STELLIS_WHISPER_MODEL` to a whisper.cpp GGML model file. The current spike uses `ggml-small.en.bin`; the [whisper.cpp model collection](https://huggingface.co/ggerganov/whisper.cpp) supplies model files. Speaker models and the setup command will be added with [#12](https://github.com/reversely/stellis/issues/12). The macOS sherpa-onnx runtime uses both `sherpa-onnx` and `sherpa-onnx-core` in the lockfile because the upstream source metadata can omit the core dependency.
+For on-device transcription and speaker grouping, run `scripts/setup_models.sh` once, then restart `stellis serve`. The script downloads and verifies a whisper.cpp English small model and two sherpa-onnx speaker models into the private local model directory. `uv run --locked stellis doctor` reports whether all three files and native tools are present. The `STELLIS_WHISPER_MODEL`, `STELLIS_SEGMENTATION_MODEL`, and `STELLIS_EMBEDDING_MODEL` environment variables override individual model locations. Current output is English-only and has segment-level timing. The macOS sherpa-onnx runtime uses both `sherpa-onnx` and `sherpa-onnx-core` in the lockfile because the upstream source metadata can omit the core dependency.
 
 ## Private data
 

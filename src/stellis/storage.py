@@ -39,6 +39,31 @@ def connect() -> Iterator[sqlite3.Connection]:
         )
         """
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS processing_jobs (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(id),
+            pipeline_version TEXT NOT NULL,
+            state TEXT NOT NULL,
+            stage TEXT NOT NULL,
+            progress REAL NOT NULL,
+            error TEXT,
+            metrics_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(conversation_id, pipeline_version)
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS transcripts (
+            conversation_id TEXT PRIMARY KEY REFERENCES conversations(id),
+            revision INTEGER NOT NULL,
+            language TEXT NOT NULL,
+            segments_json TEXT NOT NULL,
+            turns_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )"""
+    )
     database.chmod(0o600)
     try:
         with conn:
@@ -84,3 +109,76 @@ def add_conversation(record: dict[str, object]) -> None:
             """,
             record,
         )
+
+
+def get_job(job_id: str) -> dict[str, object] | None:
+    """Return a persisted processing job."""
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM processing_jobs WHERE id = ?", (job_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def get_job_for_conversation(conversation_id: str, pipeline_version: str) -> dict[str, object] | None:
+    """Find the idempotent job for a recording and pipeline version."""
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM processing_jobs WHERE conversation_id = ? AND pipeline_version = ?",
+            (conversation_id, pipeline_version),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_pending_jobs() -> list[dict[str, object]]:
+    """Find unfinished work after a device-service restart."""
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM processing_jobs WHERE state IN ('queued', 'running')").fetchall()
+    return [dict(row) for row in rows]
+
+
+def add_job(record: dict[str, object]) -> None:
+    """Persist a newly queued job."""
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO processing_jobs
+               (id, conversation_id, pipeline_version, state, stage, progress, error,
+                metrics_json, created_at, updated_at)
+               VALUES (:id, :conversation_id, :pipeline_version, :state, :stage, :progress,
+                       :error, :metrics_json, :created_at, :updated_at)""",
+            record,
+        )
+
+
+def update_job(job_id: str, **fields: object) -> None:
+    """Update only known job fields."""
+    allowed = {"state", "stage", "progress", "error", "metrics_json", "updated_at"}
+    if not fields.keys() <= allowed:
+        raise ValueError("Unknown job field")
+    assignments = ", ".join(f"{key} = ?" for key in fields)
+    with connect() as conn:
+        conn.execute(
+            f"UPDATE processing_jobs SET {assignments} WHERE id = ?",
+            (*fields.values(), job_id),
+        )
+
+
+def save_transcript(record: dict[str, object]) -> None:
+    """Store a generated transcript atomically for a conversation."""
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO transcripts
+               (conversation_id, revision, language, segments_json, turns_json, updated_at)
+               VALUES (:conversation_id, :revision, :language, :segments_json,
+                       :turns_json, :updated_at)
+               ON CONFLICT(conversation_id) DO UPDATE SET
+                 revision = excluded.revision, language = excluded.language,
+                 segments_json = excluded.segments_json, turns_json = excluded.turns_json,
+                 updated_at = excluded.updated_at""",
+            record,
+        )
+
+
+def get_transcript(conversation_id: str) -> dict[str, object] | None:
+    """Return stored transcript data without exposing the database layout."""
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM transcripts WHERE conversation_id = ?", (conversation_id,)).fetchone()
+    return dict(row) if row else None

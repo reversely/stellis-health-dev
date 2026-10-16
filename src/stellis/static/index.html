@@ -33,7 +33,11 @@
           <audio id="audio-player" preload="metadata" controls></audio>
           <div class="seek-controls"><button id="back-ten" type="button" aria-label="Go back 10 seconds">−10s</button><button id="forward-ten" type="button" aria-label="Go forward 10 seconds">+10s</button><span id="current-time">0:00</span></div>
         </div>
-        <div class="next-card"><strong>Transcript is next</strong><p>On-device transcription and speaker labels are being added in the next ticket. Your recording is saved locally and ready to review.</p></div>
+        <div class="transcript-card">
+          <div class="transcript-heading"><div><span class="eyebrow">On-device transcript</span><h2>Conversation</h2></div><button id="process-button" type="button" hidden>Process recording</button></div>
+          <p id="processing-status" role="status" aria-live="polite">Checking local speech models…</p>
+          <div id="transcript" class="transcript" aria-label="Transcript"></div>
+        </div>
       </section>
     </main>
   </body>

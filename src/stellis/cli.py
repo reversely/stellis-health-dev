@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
-from pathlib import Path
 
 import uvicorn
+
+from stellis.processing import model_paths
 
 
 def main() -> None:
@@ -22,13 +22,8 @@ def main() -> None:
     if args.command == "doctor":
         for tool in ("ffmpeg", "ffprobe", "whisper-cli"):
             print(f"{tool}: {shutil.which(tool) or 'missing'}")
-        model = Path(
-            os.environ.get(
-                "STELLIS_WHISPER_MODEL",
-                str(Path.home() / ".cache/stellis/models/ggml-small.en.bin"),
-            )
-        )
-        print(f"whisper model: {model if model.is_file() else 'missing'}")
+        for label, model in zip(("whisper model", "segmentation model", "speaker embedding model"), model_paths()):
+            print(f"{label}: {model if model.is_file() else 'missing'}")
         return
 
     if not 1 <= args.port <= 65535:
