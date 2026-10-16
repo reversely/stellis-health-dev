@@ -128,6 +128,42 @@ class GenerationReviewTest(unittest.TestCase):
         self.assertEqual(storage.get_transcript(self.id)['generation_version'],'source-v1')
         self.assertEqual(len(storage.list_highlights(self.id)),1)
 
+    def test_comment_requires_explicit_remap_and_is_deleted_with_conversation(self):
+        created = self.client.post(f'/api/v1/conversations/{self.id}/comments',json={
+            'segment_id':'s1','start_offset':0,'end_offset':5,
+            'body':'Check opening','expected_revision':4})
+        self.assertEqual(created.status_code,200,created.text)
+        comment_id = created.json()['id']
+        self.assertTrue(generation_review.stage(self.record))
+        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
+        comment_item = next(item for item in review['items'] if item['kind']=='comment')
+        self.assertEqual(comment_item['source_comment_id'],comment_id)
+        for item in review['items']:
+            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions',json={
+                'item_id':item['id'],'target_segment_id':'t1' if item['kind']=='comment' else None})
+        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,200)
+        mapped = storage.list_comments(self.id)[0]
+        self.assertEqual((mapped['id'],mapped['segment_id'],mapped['quote']),(comment_id,'t1','Hello'))
+        self.client.post(f'/api/v1/conversations/{self.id}/trash')
+        self.assertEqual(self.client.delete(f'/api/v1/trash/{self.id}').status_code,200)
+        with storage.connect() as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM transcript_comments WHERE id=?',(comment_id,)).fetchone()[0],0)
+
+    def test_ambiguous_comment_quote_cannot_be_silently_remapped(self):
+        created = self.client.post(f'/api/v1/conversations/{self.id}/comments',json={
+            'segment_id':'s1','start_offset':0,'end_offset':5,
+            'body':'Two Hellos','expected_revision':4})
+        self.assertEqual(created.status_code,200)
+        self.target[0]['text'] = 'Hello Hello'
+        self.record['segments_json'] = json.dumps(self.target)
+        self.assertTrue(generation_review.stage(self.record))
+        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
+        for item in review['items']:
+            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions',json={
+                'item_id':item['id'],'target_segment_id':'t1' if item['kind']=='comment' else None})
+        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,409)
+        self.assertEqual(storage.list_comments(self.id)[0]['segment_id'],'s1')
+
 
 if __name__ == '__main__':
     unittest.main()

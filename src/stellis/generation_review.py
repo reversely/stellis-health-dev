@@ -66,6 +66,9 @@ def stage(record: dict[str, object]) -> bool:
     for highlight in storage.list_highlights(conversation_id):
         overlays.append({"kind": "highlight", "source_segment_id": highlight["segment_id"],
                          "value": highlight["quote"], "source_highlight_id": highlight["id"]})
+    for comment in storage.list_comments(conversation_id):
+        overlays.append({"kind": "comment", "source_segment_id": comment["segment_id"],
+                         "value": comment["quote"], "source_comment_id": comment["id"]})
     with storage.connect() as conn:
         people = conn.execute("SELECT segment_id, person_id FROM person_links WHERE conversation_id = ?",
                               (conversation_id,)).fetchall()
@@ -184,11 +187,13 @@ def activate(conversation_id: str) -> dict[str, object]:
         seen: set[tuple[str, str]] = set()
         for item, target_id in mappings:
             key = (item["kind"], target_id)
-            if target_id not in target_segments or key in seen:
+            if target_id not in target_segments or (item["kind"] != "comment" and key in seen):
                 raise RuntimeError("Two source changes cannot map to the same target passage and kind")
             seen.add(key)
-            if item["kind"] == "highlight" and str(item["value"]) not in str(target_segments[target_id]["text"]):
-                raise RuntimeError("The highlighted quote is absent from the chosen target passage")
+            if item["kind"] in {"highlight", "comment"} and str(item["value"]) not in str(target_segments[target_id]["text"]):
+                raise RuntimeError("The selected quote is absent from the chosen target passage")
+            if item["kind"] == "comment" and str(target_segments[target_id]["text"]).count(str(item["value"])) != 1:
+                raise RuntimeError("The selected quote appears more than once in the chosen passage")
         stamp = _now()
         # Cluster IDs are provisional across a fresh ASR/diarization pass.
         conn.execute("DELETE FROM speaker_labels WHERE conversation_id = ? AND scope = 'cluster'",
@@ -214,6 +219,13 @@ def activate(conversation_id: str) -> dict[str, object]:
                     (id, conversation_id, segment_id, start_offset, end_offset, quote, created_at)
                     VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?)""",
                     (conversation_id, target_id, start, start + len(quote), quote, stamp))
+            elif item["kind"] == "comment":
+                quote = str(item["value"])
+                start = str(target_segments[target_id]["text"]).index(quote)
+                conn.execute("""UPDATE transcript_comments SET segment_id = ?, start_offset = ?,
+                    end_offset = ?, start_ms = ?, updated_at = ? WHERE id = ? AND conversation_id = ?""",
+                    (target_id, start, start + len(quote), target_segments[target_id]["start_ms"],
+                     stamp, item["source_comment_id"], conversation_id))
         conn.execute("""UPDATE transcripts SET revision = ?, generation_version = ?, language = ?,
             segments_json = ?, turns_json = ?, updated_at = ? WHERE conversation_id = ?""",
             (int(current["revision"]) + 1, target["pipeline_version"], target["language"],

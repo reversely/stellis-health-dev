@@ -199,6 +199,14 @@ class HighlightSelection(BaseModel):
     expected_revision: int = Field(ge=1)
 
 
+class CommentSelection(HighlightSelection):
+    body: str = Field(min_length=1, max_length=2000)
+
+
+class CommentBody(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+
+
 class RecordingStart(BaseModel):
     title: str = Field(min_length=1, max_length=180)
     media_type: str
@@ -1051,6 +1059,36 @@ def add_highlight(conversation_id: str, selection: HighlightSelection) -> dict[s
 def delete_highlight(conversation_id: str, highlight_id: str) -> dict[str, bool]:
     if not storage.delete_highlight(conversation_id, highlight_id):
         raise HTTPException(status_code=404, detail="Highlight not found")
+    return {"deleted": True}
+
+
+@api.post("/conversations/{conversation_id}/comments")
+def add_comment(conversation_id: str, request: CommentSelection) -> dict[str, object]:
+    try:
+        return storage.add_comment(conversation_id, request.segment_id, request.start_offset,
+                                   request.end_offset, request.body, request.expected_revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.patch("/conversations/{conversation_id}/comments/{comment_id}")
+def update_comment(conversation_id: str, comment_id: str, request: CommentBody) -> dict[str, object]:
+    try:
+        return storage.update_comment(conversation_id, comment_id, request.body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.delete("/conversations/{conversation_id}/comments/{comment_id}")
+def delete_comment(conversation_id: str, comment_id: str) -> dict[str, bool]:
+    if not storage.delete_comment(conversation_id, comment_id):
+        raise HTTPException(status_code=404, detail="Comment not found")
     return {"deleted": True}
 
 
