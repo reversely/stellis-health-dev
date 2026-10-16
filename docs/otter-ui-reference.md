@@ -7,9 +7,9 @@ Observed from the user's Otter account and Otter's public [conversation page](ht
 | Distinct, prominent Import and Record actions | Home header and empty state, consistent hierarchy and button sizing | #11, #14 |
 | Conversation list and clear title/duration | Home | #11 |
 | Summary and Transcript views | Conversation workspace | #12, #13, #15 |
-| Audio replay, scrub, speed, and transcript follow-along | Conversation player and timestamped turns; word click seeks | #11, #12, #13 |
+| Audio replay, scrub, speed, and transcript follow-along | Conversation player and readable timestamped turns; fragment click seeks | #11, #12, #13, #38 |
 | Editable transcript words and speaker labels | Transcript controls with save/undo feedback | #13 |
-| Speaker rematch that preserves manual labels | Reprocess acoustic clusters without overwriting user edits | #12, #13 |
+| Speaker rematch that preserves manual labels | Recompute on-device speaker suggestions without overwriting user edits | #12, #13, #29 |
 | Speaker and keyword overview | Conversation header/side panel | #13, #15 |
 | Custom vocabulary and language choice | Pre-transcription settings and reprocess affordance | #12, #13 |
 | Summary, decisions, outline, and action items | Source-linked results from Nemotron | #15 |
