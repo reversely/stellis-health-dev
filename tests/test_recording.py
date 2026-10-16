@@ -47,12 +47,16 @@ class RecordingWorkflowTest(unittest.TestCase):
         pause = self.client.post(f"/api/v1/recordings/{session['id']}/events",
                                  json={"kind":"pause", "media_position_ms":500})
         self.assertEqual(pause.status_code, 200)
+        renamed = self.client.patch(f"/api/v1/recordings/{session['id']}", json={"title":"Interview mic check"})
+        self.assertEqual(renamed.status_code, 200)
+        self.assertEqual(renamed.json()["title"], "Interview mic check")
         unfinished = self.client.get("/api/v1/recordings").json()
         self.assertEqual(unfinished[0]["chunk_count"], 2)
+        self.assertEqual(unfinished[0]["title"], "Interview mic check")
         recovered = self.client.post(f"/api/v1/recordings/{session['id']}/finalize")
         self.assertEqual(recovered.status_code, 200)
         conversation = recovered.json()["conversation"]
-        self.assertEqual(conversation["title"], "Mic check")
+        self.assertEqual(conversation["title"], "Interview mic check")
         self.assertGreater(conversation["duration_ms"], 1000)
         audio = self.client.get(f"/api/v1/conversations/{conversation['id']}/audio")
         self.assertEqual(audio.status_code, 200)
@@ -60,6 +64,7 @@ class RecordingWorkflowTest(unittest.TestCase):
         self.assertGreater(len(audio.content), 1000)
         self.assertEqual(self.client.get("/api/v1/recordings").json(), [])
         self.assertEqual(self.client.post(f"/api/v1/recordings/{session['id']}/finalize").status_code, 200)
+        self.assertEqual(self.client.patch(f"/api/v1/recordings/{session['id']}", json={"title":"Later"}).status_code, 409)
 
     def test_empty_or_gapped_recording_remains_recoverable(self) -> None:
         session = self.client.post("/api/v1/recordings", json={"title":"Gap", "media_type":"audio/webm"}).json()

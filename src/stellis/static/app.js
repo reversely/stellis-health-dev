@@ -69,6 +69,8 @@ const recordingState = document.querySelector('#recording-state');
 const recordingDetail = document.querySelector('#recording-detail');
 const recordingTimer = document.querySelector('#recording-timer');
 let capture = null;
+let captureRequesting = false;
+let captureFinalizing = false;
 let librarySearchResults = [];
 let librarySearchTotal = 0;
 let librarySearchLimited = false;
@@ -190,7 +192,9 @@ function updateTranscriptSearch() {
   } else refreshTranscriptSearch();
 }
 async function showList() {
-  document.body.classList.remove('profile-page', 'conversation-page');
+  document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
+  recordingPanel.hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = false;
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
@@ -327,7 +331,9 @@ async function loadPeoplePanel() {
   }
 }
 async function showPerson(id) {
-  document.body.classList.remove('conversation-page');
+  document.body.classList.remove('conversation-page', 'recording-page');
+  recordingPanel.hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = false;
   document.body.classList.add('profile-page');
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
@@ -373,7 +379,9 @@ async function showPerson(id) {
   document.querySelector('#person-delete').hidden = person.total_link_count > 0;
 }
 async function showDetail(id) {
-  document.body.classList.remove('profile-page');
+  document.body.classList.remove('profile-page', 'recording-page');
+  recordingPanel.hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = false;
   document.body.classList.add('conversation-page');
   conversationMore.open = false; conversationMore.hidden = false;
   clearTimeout(jobTimer);
@@ -1511,7 +1519,13 @@ async function route() {
       return;
     }
   }
+  if ((capture || captureRequesting || captureFinalizing) && location.pathname !== '/recording') {
+    history.pushState({}, '', '/recording');
+    recordingDetail.textContent = 'Stop the recording before leaving.';
+    return;
+  }
   if (match) await showDetail(decodeURIComponent(match[1]));
+  else if (location.pathname === '/recording') showRecordingWorkspace();
   else if (location.pathname.match(/^\/person\/([^/]+)$/))
     await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
@@ -1549,11 +1563,27 @@ function captureElapsedMs() {
 function captureControls() {
   const active = Boolean(capture?.recorder && capture.recorder.state !== 'inactive');
   document.querySelector('#start-recording').hidden = active;
+  document.querySelector('#start-recording').disabled = captureRequesting || captureFinalizing;
   document.querySelector('#stop-recording').hidden = !active;
   document.querySelector('#pause-recording').hidden = !active || !capture.recorder.pause;
   document.querySelector('#pause-recording').textContent = capture?.recorder?.state === 'paused' ? 'Resume' : 'Pause';
-  document.querySelector('#recording-title').disabled = active;
+  document.querySelector('#back-from-recording').disabled = active || captureRequesting || captureFinalizing;
   recordingTimer.textContent = time(captureElapsedMs() / 1000);
+}
+function showRecordingWorkspace() {
+  document.body.classList.remove('profile-page', 'conversation-page');
+  document.body.classList.add('recording-page');
+  conversationMore.open = false; conversationMore.hidden = true;
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
+  player.pause(); player.removeAttribute('src'); player.load();
+  activeConversationId = null;
+  listView.hidden = true; detailView.hidden = true;
+  document.querySelector('#trash-view').hidden = true;
+  document.querySelector('#person-view').hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = true;
+  recordingPanel.hidden = false;
+  document.querySelector('#page-title').textContent = 'New recording';
+  captureControls();
 }
 async function loadRecoveries() {
   const sessions = await json(await fetch(`${API}/recordings`));
@@ -1590,8 +1620,15 @@ function captureErrorMessage(error) {
   if (error?.name === 'NotReadableError') return 'The microphone is busy or disconnected. Check the device and try again.';
   return error?.message || 'Recording could not start.';
 }
+async function saveRecordingTitle(current) {
+  const title = document.querySelector('#recording-title').value.trim() || 'New recording';
+  if (title === current.session.title) return;
+  current.session = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}`, {
+    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({title}),
+  }));
+}
 async function startCapture() {
-  if (capture) return;
+  if (capture || captureRequesting) return;
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
     recordingState.textContent = 'Recording unavailable';
     recordingDetail.textContent = 'This browser does not provide microphone recording.';
@@ -1601,9 +1638,11 @@ async function startCapture() {
     .find(candidate => MediaRecorder.isTypeSupported(candidate));
   if (!mediaType) { recordingDetail.textContent = 'This browser has no supported recording format.'; return; }
   recordingState.textContent = 'Requesting microphone access…';
+  captureRequesting = true; captureControls();
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    document.querySelector('#recording-source-label').textContent = `${stream.getAudioTracks()[0]?.label || 'Microphone'} · English`;
     const recorder = new MediaRecorder(stream, {mimeType:mediaType});
     const session = await json(await fetch(`${API}/recordings`, {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0]})}));
@@ -1647,12 +1686,15 @@ async function startCapture() {
     recordingState.textContent = 'Could not start recording';
     recordingDetail.textContent = captureErrorMessage(error);
     loadRecoveries().catch(() => {});
+  } finally {
+    captureRequesting = false; captureControls();
   }
 }
 async function finishCapture() {
   const current = capture;
   if (!current || current.stopping) return;
   current.stopping = true;
+  captureFinalizing = true; captureControls();
   clearInterval(current.timer);
   current.stream.getTracks().forEach(track => track.stop());
   recordingState.textContent = 'Saving recording…';
@@ -1661,9 +1703,11 @@ async function finishCapture() {
   if (current.uploadError) {
     recordingState.textContent = 'Recording interrupted';
     recordingDetail.textContent = 'Some audio could not be stored. Recover the chunks that were saved below.';
-    await loadRecoveries(); return;
+    await loadRecoveries(); captureFinalizing = false; captureControls(); return;
   }
   try {
+    await current.titleUpdate;
+    await saveRecordingTitle(current);
     const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/finalize`, {method:'POST'}));
     recordingState.textContent = 'Recording saved'; recordingDetail.textContent = '';
     await loadRecoveries();
@@ -1672,11 +1716,30 @@ async function finishCapture() {
   } catch (error) {
     recordingState.textContent = 'Recording needs recovery'; recordingDetail.textContent = error.message;
     await loadRecoveries();
+  } finally {
+    captureFinalizing = false; captureControls();
   }
 }
 document.querySelector('#record-button').addEventListener('click', () => {
-  recordingPanel.hidden = !recordingPanel.hidden;
-  if (!recordingPanel.hidden) recordingPanel.scrollIntoView({block:'start'});
+  if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && !window.confirm('Discard unsaved transcript changes and start recording?')) return;
+  pendingTranscriptEdits.clear(); pendingCleanEdits.clear();
+  history.pushState({}, '', '/recording');
+  showRecordingWorkspace();
+  startCapture();
+});
+document.querySelector('.brand').addEventListener('click', event => {
+  if (!capture && !captureRequesting && !captureFinalizing) return;
+  event.preventDefault(); recordingDetail.textContent = 'Stop the recording before leaving.';
+});
+document.querySelector('#back-from-recording').addEventListener('click', () => {
+  if (capture || captureRequesting || captureFinalizing) return;
+  history.pushState({}, '', '/'); showList().catch(error => setStatus(error.message));
+});
+document.querySelector('#recording-title').addEventListener('change', () => {
+  if (!capture) return;
+  const current = capture;
+  current.titleUpdate = (current.titleUpdate || Promise.resolve()).then(() => saveRecordingTitle(current))
+    .catch(error => { recordingDetail.textContent = `Title could not be saved: ${error.message}`; });
 });
 document.querySelector('#start-recording').addEventListener('click', startCapture);
 document.querySelector('#stop-recording').addEventListener('click', () => {
