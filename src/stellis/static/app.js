@@ -392,6 +392,7 @@ async function showDetail(id) {
   transcriptEditError = null;
   transcriptSegments = [];
   currentTranscript = null;
+  document.querySelector('#copy-transcript').hidden = true;
   document.querySelector('#transcript-search-input').value = '';
   document.querySelector('#transcript-search-speaker').value = '';
   transcriptSearchMatches = [];
@@ -869,6 +870,7 @@ async function showTranscript(id) {
   if (id !== activeConversationId) return;
   const previousScroll = window.scrollY;
   currentTranscript = data;
+  document.querySelector('#copy-transcript').hidden = !data.segments.length;
   await loadGenerationReview(id);
   syncTranscriptEditControls();
   document.querySelector('#clean-button').disabled = cleanRuns[0]?.state === 'queued' || cleanRuns[0]?.state === 'running';
@@ -1599,6 +1601,16 @@ document.querySelector('#trash-conversation').addEventListener('click', async ()
     history.pushState({}, '', '/');
     await showList();
   } catch (error) { setStatus(error.message); }
+});
+document.querySelector('#copy-transcript').addEventListener('click', async () => {
+  if (!currentTranscript?.segments?.length) return;
+  if (pendingTranscriptEdits.size) { setStatus('Save transcript edits first.'); return; }
+  const paragraphs = groupTranscriptSegments(currentTranscript.segments).map(group =>
+    `[${time(group[0].start_ms / 1000)}] ${group[0].speaker_display_name}: ${group.map(segment => segment.text.trim()).join(' ')}`);
+  try {
+    await navigator.clipboard.writeText(paragraphs.join('\n\n'));
+    setStatus('Transcript copied.', true);
+  } catch (error) { console.warn('Transcript copy failed', error); setStatus('Could not copy transcript.'); }
 });
 document.querySelector('#transcript-search-input').addEventListener('input', () => {
   updateTranscriptSearch();
