@@ -216,6 +216,22 @@ class AIWorkflowTest(unittest.TestCase):
             {"text":"Engineers will test the equipment before launch."},
         ]
         self.assertEqual(ai._focus_window(passages), passages[3:6])
+        tied = [{"text":"Satellite ground station testing"},
+                {"text":"University satellite ground station"},
+                {"text":"Building 3.9 meter station"},
+                {"text":"Satellite ground station tracking"}]
+        self.assertEqual(ai._focus_window(tied), tied[1:4])
+
+    def test_focused_validation_uses_every_supplied_passage(self) -> None:
+        payload = {"overview":[{"text":"The team is building a satellite ground station.",
+                                "source_segment_ids":["s1"]}],
+                   "topics":[],"decisions":[],"action_items":[]}
+        sources = {"s1":"The team is building", "s2":"a satellite ground station for local testing, tracking, control, telemetry, universities, and aerospace partners"}
+        with patch.object(ai, "_request", return_value=payload):
+            result = ai._complete([], {"s1", "s2"}, 1200, {}, kind="summary",
+                                  require_overview=True, source_texts=sources,
+                                  min_source_terms=10, source_ids_override=["s1", "s2"])
+        self.assertEqual(result["overview"][0]["source_segment_ids"], ["s1", "s2"])
 
     def test_overview_rejects_hidden_source_span_and_generalizes_speaker_number(self) -> None:
         base = {"topics":[],"decisions":[],"action_items":[]}

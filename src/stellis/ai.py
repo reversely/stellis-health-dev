@@ -251,7 +251,7 @@ def _focus_window(chunk: list[dict[str, object]]) -> list[dict[str, object]]:
     def score(start: int) -> int:
         counts = [len(_anchor_terms(str(item["text"]))) for item in chunk[start:start + 3]]
         return sum(counts) + 2 * min(counts)
-    start = max(range(len(chunk) - 2), key=score)
+    start = max(range(len(chunk) - 2), key=lambda index: (score(index), index))
     return chunk[start:start + 3]
 
 
@@ -416,10 +416,16 @@ def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int
               source_texts: dict[str, str] | None = None,
               min_coverage: float = 0.75,
               min_source_terms: int = 0,
+              source_ids_override: list[str] | None = None,
               allow_period_repair: bool = False) -> dict[str, object]:
     for attempt in range(2):
         try:
             payload = _request(messages, max_tokens, metadata, kind)
+            if source_ids_override and kind == "summary" and isinstance(payload, dict):
+                payload = {**payload, "overview": [
+                    {**item, "source_segment_ids": source_ids_override}
+                    if isinstance(item, dict) else item
+                    for item in payload.get("overview", [])]}
             return (_validate_answer(payload, allowed) if kind == "answer"
                     else _validate_items(payload, allowed, require_overview=require_overview,
                                          source_texts=source_texts, min_coverage=min_coverage,
@@ -499,11 +505,8 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
             candidate = _complete(focused_messages, set(aliases), 1200, metadata,
                                   kind="summary", require_overview=True, source_texts=focus_texts,
                                   min_coverage=0.60, min_source_terms=10 if len(chunk) > 10 else 0,
+                                  source_ids_override=list(aliases),
                                   allow_period_repair=True)
-            # The focused claim can draw on the neighboring context even when
-            # the provider names just one line. Show all three audio links.
-            for item in candidate["overview"]:
-                item["source_segment_ids"] = list(aliases)
         extracted.append(_expand_sources(candidate, aliases, "summary"))
         storage.update_ai_run(run_id, checkpoint_json=json.dumps(extracted), updated_at=_now())
         _persist_metadata(run_id, metadata)
