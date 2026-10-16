@@ -73,15 +73,54 @@ def capabilities() -> dict[str, object]:
     return {"configured": bool(_key()), "model_id": MODEL_ID, "prompt_version": PROMPT_VERSION}
 
 
+def _identity_hash(display: dict[str, object]) -> str:
+    """Version the speaker projection actually sent to Nemotron."""
+    identity = [(segment["id"], segment["speaker_display_name"], segment.get("person_id"))
+                for segment in display["segments"]]
+    return hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
+
+
+def _source_starts(record: dict[str, object], current: dict[str, object] | None) -> dict[str, int]:
+    """Retain audio links for citations from an older transcript generation."""
+    saved = json.loads(str(record["source_segments_json"]))
+    if saved:
+        return {str(key): int(value) for key, value in saved.items()}
+    if not record["result_json"]:
+        return {}
+    result = json.loads(str(record["result_json"]))
+    if record["kind"] == "answer":
+        wanted = set(result.get("source_segment_ids", []))
+    else:
+        wanted = {segment_id for field in ("overview", "topics", "decisions", "action_items")
+                  for item in result.get(field, []) for segment_id in item.get("source_segment_ids", [])}
+    found: dict[str, int] = {}
+    if current:
+        found.update({str(item["id"]): int(item["start_ms"]) for item in current["segments"]
+                      if item["id"] in wanted})
+    for generation in storage.list_transcript_generations(str(record["conversation_id"])):
+        if len(found) == len(wanted):
+            break
+        source = storage.get_transcript_generation(str(record["conversation_id"]),
+                                                   str(generation["pipeline_version"]))
+        if source:
+            found.update({str(item["id"]): int(item["start_ms"])
+                          for item in json.loads(str(source["segments_json"]))
+                          if item["id"] in wanted and item["id"] not in found})
+    return found
+
+
 def public_run(record: dict[str, object]) -> dict[str, object]:
-    current = storage.get_transcript(str(record["conversation_id"]))
+    current = storage.get_display_transcript(str(record["conversation_id"]))
+    stale = (current is None or int(current["revision"]) != int(record["source_revision"])
+             or record["source_identity_hash"] != _identity_hash(current))
     return {key: record[key] for key in ("id", "conversation_id", "kind", "source_revision", "model_id",
                                           "prompt_version", "question", "state", "stage", "error_code",
                                           "error_message", "attempts", "created_at", "updated_at")} | {
         "result": json.loads(str(record["result_json"])) if record["result_json"] else None,
         "usage": json.loads(str(record["usage_json"])),
         "provider_request_ids": json.loads(str(record["provider_request_ids_json"])),
-        "stale": bool(current and int(current["revision"]) != int(record["source_revision"])),
+        "source_starts": _source_starts(record, current),
+        "stale": stale,
     }
 
 
@@ -103,12 +142,14 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
         raise LookupError("Transcript is not ready")
     if not display["segments"]:
         raise ValueError("Transcript has no speech to analyze")
-    identity = json.dumps([display["revision"], kind, question, MODEL_ID, PROMPT_VERSION], ensure_ascii=False)
+    source_identity_hash = _identity_hash(display)
+    identity = json.dumps([display["revision"], source_identity_hash, kind, question, MODEL_ID, PROMPT_VERSION], ensure_ascii=False)
     digest = hashlib.sha256(identity.encode()).hexdigest()
     with _LOCK:
         if force:
             active = next((item for item in storage.list_ai_runs(conversation_id)
                            if item["kind"] == "summary" and item["source_revision"] == display["revision"]
+                           and item["source_identity_hash"] == source_identity_hash
                            and item["state"] in {"queued", "running"}), None)
             if active:
                 return active
@@ -125,6 +166,9 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
         record: dict[str, object] = {
             "id": str(uuid.uuid4()), "conversation_id": conversation_id, "kind": kind,
             "input_hash": digest, "source_revision": display["revision"],
+            "source_identity_hash": source_identity_hash,
+            "source_segments_json": json.dumps({str(item["id"]): int(item["start_ms"])
+                                                for item in display["segments"]}),
             "model_id": MODEL_ID, "prompt_version": PROMPT_VERSION, "question": question,
             "state": "queued", "stage": "queued", "error_code": None, "error_message": None,
             "result_json": None, "checkpoint_json": "[]", "usage_json": "{}", "provider_request_ids_json": "[]",
@@ -400,12 +444,17 @@ def _run(run_id: str) -> None:
                                    "attempts": int(record["attempts"])}
     try:
         display = storage.get_display_transcript(str(record["conversation_id"]))
-        if display is None or int(display["revision"]) != int(record["source_revision"]):
+        if (display is None or int(display["revision"]) != int(record["source_revision"])
+                or record["source_identity_hash"] != _identity_hash(display)):
             raise AIError("stale_source", "Transcript changed before analysis started. Run again")
         storage.update_ai_run(run_id, state="running", stage="preparing", updated_at=_now())
         segments = display["segments"]
         result = (_summary(segments, metadata, run_id) if record["kind"] == "summary"
                   else _answer(segments, str(record["question"]), metadata))
+        latest = storage.get_display_transcript(str(record["conversation_id"]))
+        if (latest is None or int(latest["revision"]) != int(record["source_revision"])
+                or _identity_hash(latest) != record["source_identity_hash"]):
+            raise AIError("stale_source", "Transcript changed during analysis. Run again")
         _persist_metadata(run_id, metadata)
         storage.update_ai_run(run_id, state="succeeded", stage="complete", result_json=json.dumps(result),
                               error_code=None, error_message=None, updated_at=_now())
