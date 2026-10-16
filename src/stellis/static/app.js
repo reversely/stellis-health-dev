@@ -174,7 +174,7 @@ function makeImageCard(item, scope, ownerId) {
   if (item.quote) {
     const anchor = document.createElement('p');
     const source = transcriptSegments.find(segment => segment.id === item.segment_id);
-    anchor.textContent = `${source ? source.text.slice(item.start_offset, item.end_offset) === item.quote ? '' : 'Source changed · ' : 'Earlier transcript · '}“${item.quote}”`;
+    anchor.textContent = `${source ? source.text.slice(item.start_offset, item.end_offset) === item.quote ? '' : 'Source changed: ' : 'Earlier transcript: '}“${item.quote}”`;
     info.append(anchor);
   }
   const actions = document.createElement('div'); actions.className = 'image-card-actions';
@@ -266,7 +266,7 @@ function openImageDialog(scope, id, file = null, segmentId = null, excerpt = nul
   pendingImageFiles = []; imageStatus.textContent = '';
   document.querySelector('#image-caption').value = '';
   document.querySelector('#image-anchor-label').textContent = excerpt ?
-    `At ${time(position / 1000)} · “${segment.text.slice(excerpt.start_offset, excerpt.end_offset)}”` : `At ${time(position / 1000)}`;
+    `At ${time(position / 1000)}, “${segment.text.slice(excerpt.start_offset, excerpt.end_offset)}”` : `At ${time(position / 1000)}`;
   document.querySelector('#image-preview').hidden = true;
   document.querySelector('#save-image').disabled = true;
   document.querySelector('#save-image').textContent = 'Save image';
@@ -2386,6 +2386,7 @@ function captureControls() {
   headerPause.title = paused ? 'Resume recording' : 'Pause recording';
   const liveCard = document.querySelector('#live-recording-card');
   liveCard.hidden = !active;
+  document.querySelector('#recording-live-peek').hidden = !active || document.querySelector('#recording-notes-panel').hidden;
   if (active) {
     document.querySelector('#live-recording-state').textContent = capture.recorder.state === 'paused' ? 'Paused' : 'Live';
     document.querySelector('#live-recording-title').textContent = document.querySelector('#recording-title').value.trim() || capture.session.title;
@@ -2403,9 +2404,11 @@ function showRecordingView(view) {
   document.querySelector('#recording-transcript-tab').setAttribute('aria-selected', String(transcript));
   document.querySelector('#recording-chat-toggle').setAttribute('aria-expanded', String(view === 'chat'));
   document.querySelector('.recording-workspace-grid').classList.toggle('recording-chat-open', view === 'chat');
+  document.querySelector('#recording-live-peek').hidden = !notes || !capture;
 }
 document.querySelector('#recording-notes-tab').addEventListener('click', () => showRecordingView('notes'));
 document.querySelector('#recording-transcript-tab').addEventListener('click', () => showRecordingView('transcript'));
+document.querySelector('#recording-live-peek').addEventListener('click', () => showRecordingView('transcript'));
 document.querySelector('#recording-chat-toggle').addEventListener('click', () =>
   showRecordingView(document.querySelector('#recording-chat-toggle').getAttribute('aria-expanded') === 'true' ? recordingPrimaryView : 'chat'));
 function showRecordingWorkspace() {
@@ -2442,23 +2445,40 @@ function renderRecordingPreview(result) {
     const words = document.createElement('span'); words.textContent = segment.text;
     row.append(stamp, words); container.append(row);
   }
+  const latest = segments.at(-1)?.text || 'No speech yet';
+  document.querySelector('#recording-live-peek-text').textContent = latest;
+  const homeLines = document.querySelector('#live-recording-preview-lines'); homeLines.replaceChildren();
+  const homeStatus = document.querySelector('#live-recording-preview-status');
+  homeStatus.hidden = segments.length > 0;
+  homeStatus.textContent = 'No speech yet';
+  for (const segment of segments.slice(-2)) {
+    const line = document.createElement('p'); line.textContent = segment.text;
+    homeLines.append(line);
+  }
 }
 async function updateRecordingPreview(current) {
-  if (current.previewPending || current.previewDisabled || capture !== current || current.sequence < 5) return;
+  if (current.previewPending || Date.now() < (current.previewRetryAfter || 0) || capture !== current || current.sequence < 5) return;
   if (current.sequence - current.lastPreviewSequence < 8 && current.lastPreviewSequence >= 0) return;
   current.previewPending = true;
   document.querySelector('#recording-transcript-state').textContent = 'Transcribing on this device…';
+  if (!document.querySelector('#live-recording-preview-lines').childElementCount)
+    document.querySelector('#live-recording-preview-status').textContent = 'Transcribing on this device…';
   try {
     const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/preview`, {method:'POST'}));
     if (capture === current) {current.lastPreviewSequence = result.through_sequence; renderRecordingPreview(result);}
   } catch (error) {
     if (capture === current) {
-      current.previewDisabled = true;
-      document.querySelector('#recording-transcript-state').textContent = 'Live transcript unavailable';
+      current.previewRetryAfter = Date.now() + 8000;
+      const message = error.message === 'Local transcription model unavailable' ?
+        'Install the local speech model to use Live transcript.' : 'Live transcript unavailable. Retrying.';
+      document.querySelector('#recording-transcript-state').textContent = message;
+      document.querySelector('#recording-live-peek-text').textContent = message;
+      if (!document.querySelector('#live-recording-preview-lines').childElementCount)
+        document.querySelector('#live-recording-preview-status').textContent = message;
     }
   } finally {
     current.previewPending = false;
-    if (capture === current && !current.previewDisabled && current.sequence - current.lastPreviewSequence >= 8)
+    if (capture === current && Date.now() >= (current.previewRetryAfter || 0) && current.sequence - current.lastPreviewSequence >= 8)
       updateRecordingPreview(current);
   }
 }
@@ -2511,6 +2531,16 @@ async function loadRecoveries() {
     });
     const actions = document.createElement('div'); actions.className = 'recovery-actions'; actions.append(review, button, discard);
     const summary = document.createElement('div'); summary.className = 'recovery-summary'; summary.append(title, message);
+    if (liveElsewhere) {
+      try {
+        const preview = await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}/preview`));
+        const latest = preview.segments?.at(-1)?.text;
+        if (latest) {
+          const excerpt = document.createElement('p'); excerpt.className = 'remote-live-preview'; excerpt.textContent = latest;
+          summary.append(excerpt);
+        }
+      } catch {}
+    }
     row.append(summary);
     if (!liveElsewhere) row.append(actions);
     container.append(row);
@@ -2552,7 +2582,13 @@ async function startCapture() {
       body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0]})}));
     capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
       startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false,
-      previewPending:false, previewDisabled:false, lastPreviewSequence:-1};
+      previewPending:false, previewRetryAfter:0, lastPreviewSequence:-1};
+    document.querySelector('#recording-transcript-preview').replaceChildren();
+    document.querySelector('#recording-transcript-state').textContent = 'Listening…';
+    document.querySelector('#live-recording-preview-lines').replaceChildren();
+    document.querySelector('#live-recording-preview-status').hidden = false;
+    document.querySelector('#live-recording-preview-status').textContent = 'Listening for speech';
+    document.querySelector('#recording-live-peek-text').textContent = 'Listening for speech';
     recordingImages = []; document.querySelector('#recording-image-list').replaceChildren();
     recorder.addEventListener('dataavailable', event => {
       if (!event.data.size) return;
