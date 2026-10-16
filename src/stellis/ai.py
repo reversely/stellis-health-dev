@@ -17,7 +17,7 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v13"
+PROMPT_VERSION = "cited-conversation-v14"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
@@ -265,7 +265,8 @@ def _supported_terms(text: str, sources: str) -> tuple[float, list[str]]:
 
 
 def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool,
-                    source_texts: dict[str, str] | None = None) -> dict[str, object]:
+                    source_texts: dict[str, str] | None = None,
+                    min_coverage: float = 0.75) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise AIError("invalid_json", "The model returned an invalid result shape")
     result: dict[str, object] = {}
@@ -296,7 +297,7 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
             if field == "overview" and source_texts is not None:
                 cited = " ".join(source_texts.get(source_id, "") for source_id in source_ids)
                 coverage, missing = _supported_terms(text, cited)
-                if coverage < 0.75:
+                if coverage < min_coverage:
                     raise AIError("weak_citation", f"The overview cites passages missing these claim terms: {', '.join(dict.fromkeys(missing[:8]))}")
             validated.append({"text": text, "source_segment_ids": _display_sources(source_ids)})
         result[field] = validated
@@ -388,13 +389,14 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
 
 def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int,
               metadata: dict[str, object], *, kind: str, require_overview: bool = False,
-              source_texts: dict[str, str] | None = None) -> dict[str, object]:
+              source_texts: dict[str, str] | None = None,
+              min_coverage: float = 0.75) -> dict[str, object]:
     for attempt in range(2):
         try:
             payload = _request(messages, max_tokens, metadata, kind)
             return (_validate_answer(payload, allowed) if kind == "answer"
                     else _validate_items(payload, allowed, require_overview=require_overview,
-                                         source_texts=source_texts))
+                                         source_texts=source_texts, min_coverage=min_coverage))
         except AIError as exc:
             if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence", "weak_citation"}:
                 raise
@@ -466,7 +468,8 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
                                  "Avoid speaker attribution because one passage can contain multiple voices."},
                                 {"role": "user", "content": f"Summarize only these cited lines. JSON only.\n{focus_evidence}"}]
             candidate = _complete(focused_messages, set(aliases), 1200, metadata,
-                                  kind="summary", require_overview=True, source_texts=focus_texts)
+                                  kind="summary", require_overview=True, source_texts=focus_texts,
+                                  min_coverage=0.60)
         extracted.append(_expand_sources(candidate, aliases, "summary"))
         storage.update_ai_run(run_id, checkpoint_json=json.dumps(extracted), updated_at=_now())
         _persist_metadata(run_id, metadata)
