@@ -189,7 +189,9 @@ function makeImageCard(item, scope, ownerId) {
     } catch (error) {setStatus(error.message);}
   });
   const download = document.createElement('a'); download.href = imageFileUrl(scope, ownerId, item.id, true);
-  download.textContent = 'Download'; download.setAttribute('download', `meeting-image-${item.id}.webp`);
+  download.className = 'button-with-icon';
+  download.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Download</span>';
+  download.setAttribute('download', `meeting-image-${item.id}.webp`);
   const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete';
   remove.addEventListener('click', async () => {
     if (!window.confirm('Delete this image permanently?')) return;
@@ -255,7 +257,7 @@ function chooseImageFile(file) {
   file = files[0]; pendingImageFiles = files; imagePreviewUrl = URL.createObjectURL(file);
   const preview = document.querySelector('#image-preview'); preview.src = imagePreviewUrl; preview.hidden = false;
   imageStatus.textContent = files.length > 1 ? `${files.length} images selected` : '';
-  const save = document.querySelector('#save-image'); save.textContent = files.length > 1 ? `Save ${files.length} images` : 'Save image';
+  const save = document.querySelector('#save-image'); save.querySelector('span').textContent = files.length > 1 ? `Save ${files.length} images` : 'Save image';
   save.disabled = false;
 }
 function openImageDialog(scope, id, file = null, segmentId = null, excerpt = null) {
@@ -269,7 +271,7 @@ function openImageDialog(scope, id, file = null, segmentId = null, excerpt = nul
     `At ${time(position / 1000)}, “${segment.text.slice(excerpt.start_offset, excerpt.end_offset)}”` : `At ${time(position / 1000)}`;
   document.querySelector('#image-preview').hidden = true;
   document.querySelector('#save-image').disabled = true;
-  document.querySelector('#save-image').textContent = 'Save image';
+  document.querySelector('#save-image span').textContent = 'Save image';
   document.querySelector('#image-file').value = '';
   imageDialog.showModal();
   if (file) chooseImageFile(file);
@@ -757,6 +759,7 @@ async function showList() {
   document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
   recordingPanel.hidden = true;
   document.querySelector('#vocabulary-panel').hidden = false;
+  if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
@@ -928,7 +931,7 @@ async function loadPeoplePanel() {
 async function showPerson(id) {
   document.body.classList.remove('conversation-page', 'recording-page');
   recordingPanel.hidden = true;
-  document.querySelector('#vocabulary-panel').hidden = false;
+  document.querySelector('#vocabulary-panel').hidden = true;
   document.body.classList.add('profile-page');
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(recordingChatTimer); clearTimeout(cleanRunTimer);
@@ -979,7 +982,8 @@ async function showDetail(id) {
   await flushEnhanced();
   document.body.classList.remove('profile-page', 'recording-page');
   recordingPanel.hidden = true;
-  document.querySelector('#vocabulary-panel').hidden = false;
+  document.querySelector('#vocabulary-panel').hidden = true;
+  if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
   document.body.classList.add('conversation-page');
   conversationMore.open = false; conversationMore.hidden = false;
   clearTimeout(jobTimer);
@@ -1860,7 +1864,8 @@ function openSelectionShare(toolbar, excerpt) {
   const copy = document.createElement('button'); copy.type = 'button'; copy.setAttribute('role', 'menuitem');
   copy.textContent = 'Copy snippet';
   const download = document.createElement('button'); download.type = 'button'; download.setAttribute('role', 'menuitem');
-  download.textContent = 'Download text';
+  download.className = 'button-with-icon';
+  download.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Download text</span>';
   const message = document.createElement('p'); message.setAttribute('role', 'status');
   copy.addEventListener('click', async () => {
     const snippet = selectedSnippet(excerpt);
@@ -2466,7 +2471,7 @@ function captureControls() {
   document.querySelector('#pause-recording').hidden = !active || !capture.recorder.pause;
   document.querySelector('#pause-recording').textContent = capture?.recorder?.state === 'paused' ? 'Resume' : 'Pause';
   document.querySelector('#back-from-recording').disabled = captureRequesting || captureFinalizing;
-  document.querySelector('#record-button').textContent = active ? 'Open recording' : 'Record';
+  document.querySelector('#record-button .button-label').textContent = active ? 'Open recording' : 'Record';
   const elapsed = time(captureElapsedMs() / 1000);
   recordingTimer.textContent = elapsed;
   document.querySelector('#capture-header-controls').hidden = !active || location.pathname === '/recording';
@@ -3066,6 +3071,23 @@ document.querySelector('#person-delete').addEventListener('click', async () => {
   catch (error) { document.querySelector('#person-status').textContent = error.message; }
 });
 const renameConversationDialog = document.querySelector('#rename-conversation-dialog');
+const conversationCategoriesDialog = document.querySelector('#conversation-categories-dialog');
+document.querySelector('#open-conversation-categories').addEventListener('click', async () => {
+  if (!activeConversationId) return;
+  const id = activeConversationId;
+  conversationMore.open = false;
+  try {
+    const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}`));
+    if (activeConversationId !== id) return;
+    await renderConversationCategories(item.category_ids);
+    conversationCategoriesDialog.showModal();
+    document.querySelector('#close-conversation-categories').focus();
+  } catch (error) { setStatus(error.message); }
+});
+document.querySelector('#close-conversation-categories').addEventListener('click', () => conversationCategoriesDialog.close());
+conversationCategoriesDialog.addEventListener('close', () => {
+  if (activeConversationId) conversationMore.querySelector('summary').focus();
+});
 const renameConversationInput = document.querySelector('#rename-conversation-input');
 const renameConversationStatus = document.querySelector('#rename-conversation-status');
 const renameConversationSave = document.querySelector('#rename-conversation-save');
