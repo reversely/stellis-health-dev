@@ -2278,12 +2278,29 @@ playPauseButton.addEventListener('click', () => {
   if (player.paused) player.play().catch(() => { processingStatus.textContent = 'Audio could not play.'; });
   else player.pause();
 });
-seekSlider.addEventListener('input', () => { player.currentTime = Number(seekSlider.value); syncPlayerControls(); });
+function showTranscriptAtPlaybackPosition() {
+  if (document.querySelector('#transcript-card').hidden || transcriptEditMode || !transcriptSegments.length) return;
+  const ms = player.currentTime * 1000;
+  const segment = transcriptSegments.find(item => item.start_ms <= ms && ms < item.end_ms) ||
+    transcriptSegments.find(item => item.start_ms > ms) || transcriptSegments.at(-1);
+  if (!segment) return;
+  const word = segment.words?.find(item => item.start_ms <= ms && ms < item.end_ms) ||
+    segment.words?.find(item => item.start_ms > ms);
+  const row = transcriptView.querySelector(`[data-segment-id="${CSS.escape(segment.id)}"]`);
+  (row?.querySelector(word ? `[data-word-index="${segment.words.indexOf(word)}"]` : '.segment-text') || row)
+    ?.scrollIntoView({block: 'center'});
+}
+seekSlider.addEventListener('input', () => {
+  player.currentTime = Number(seekSlider.value);
+  syncPlayerControls();
+  showTranscriptAtPlaybackPosition();
+});
 seekSlider.addEventListener('keydown', event => {
   if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
   event.preventDefault();
   player.currentTime = Math.max(0, Math.min(player.duration || Number(seekSlider.max), player.currentTime + (event.key === 'ArrowRight' ? 10 : -10)));
   syncPlayerControls();
+  showTranscriptAtPlaybackPosition();
 });
 const speedMenu = document.querySelector('#playback-speed-menu');
 async function startSilenceScan(id) {
