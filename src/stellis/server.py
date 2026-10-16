@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import processing, recording, storage
+from stellis import ai, processing, recording, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -52,6 +52,11 @@ class RecordingEvent(BaseModel):
     media_position_ms: int = Field(ge=0)
 
 
+class AIRunRequest(BaseModel):
+    kind: str
+    question: str | None = Field(default=None, max_length=500)
+
+
 def _check_vocabulary_budget(terms: list[str]) -> None:
     if len("Vocabulary: " + ", ".join(terms)) > 400:
         raise HTTPException(status_code=400, detail="Vocabulary is too long for the local model prompt")
@@ -61,6 +66,7 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 @app.on_event("startup")
 def start_speech_worker() -> None:
+    storage.fail_interrupted_ai_runs()
     processing.start_worker()
 
 
@@ -197,7 +203,36 @@ def conversation_audio(conversation_id: str) -> FileResponse:
 
 @api.get("/capabilities")
 def capabilities() -> dict[str, object]:
-    return processing.capabilities()
+    return {**processing.capabilities(), "ai": ai.capabilities()}
+
+
+@api.get("/conversations/{conversation_id}/ai-runs")
+def ai_runs(conversation_id: str) -> list[dict[str, object]]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return [ai.public_run(item) for item in storage.list_ai_runs(conversation_id)]
+
+
+@api.post("/conversations/{conversation_id}/ai-runs")
+def start_ai_run(conversation_id: str, request: AIRunRequest) -> dict[str, object]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    try:
+        return ai.public_run(ai.request_run(conversation_id, request.kind, request.question))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ai.AIError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.get("/ai-runs/{run_id}")
+def ai_run(run_id: str) -> dict[str, object]:
+    record = storage.get_ai_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="AI run not found")
+    return ai.public_run(record)
 
 
 @api.get("/conversations/{conversation_id}/processing-job")
@@ -230,40 +265,10 @@ def job(job_id: str) -> dict[str, object]:
 def transcript(conversation_id: str) -> dict[str, object]:
     if storage.get_conversation(conversation_id) is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    record = storage.get_transcript(conversation_id)
-    if record is None:
+    result = storage.get_display_transcript(conversation_id)
+    if result is None:
         raise HTTPException(status_code=404, detail="Transcript is not ready")
-    edits = storage.get_transcript_edits(conversation_id)
-    labels = storage.get_speaker_labels(conversation_id)
-    cluster_labels = {str(label["target_id"]): str(label["name"]) for label in labels if label["scope"] == "cluster"}
-    segment_labels = {str(label["target_id"]): str(label["name"]) for label in labels if label["scope"] == "segment"}
-    segments = json.loads(str(record["segments_json"]))
-    for segment in segments:
-        override = edits.get(segment["id"])
-        if override is not None:
-            segment["original_text"] = segment["text"]
-            segment["text"] = override
-            segment["text_provenance"] = "user_edit"
-        else:
-            segment["text_provenance"] = "on_device_asr"
-        cluster = segment["speaker_cluster_id"]
-        if segment["id"] in segment_labels:
-            segment["speaker_display_name"] = segment_labels[segment["id"]]
-            segment["speaker_label_source"] = "manual_segment"
-        elif cluster in cluster_labels:
-            segment["speaker_display_name"] = cluster_labels[cluster]
-            segment["speaker_label_source"] = "manual_cluster"
-        else:
-            segment["speaker_display_name"] = cluster.replace("speaker-", "Speaker ") if cluster else "Unknown speaker"
-            segment["speaker_label_source"] = "automatic"
-    return {
-        "conversation_id": conversation_id, "revision": record["revision"],
-        "generation_version": record["generation_version"],
-        "language": record["language"], "segments": segments,
-        "turns": json.loads(str(record["turns_json"])),
-        "speaker_labels": labels,
-        "highlights": storage.list_highlights(conversation_id),
-    }
+    return result
 
 
 @api.post("/conversations/{conversation_id}/highlights")

@@ -11,6 +11,7 @@ const processingStatus = document.querySelector('#processing-status');
 const transcriptView = document.querySelector('#transcript');
 let activeConversationId = null;
 let jobTimer = null;
+let aiRunTimer = null;
 let transcriptSegments = [];
 let currentTranscript = null;
 let highlightsOnly = false;
@@ -36,6 +37,7 @@ async function json(response) {
 }
 async function showList() {
   clearTimeout(jobTimer);
+  clearTimeout(aiRunTimer);
   activeConversationId = null;
   listView.hidden = false;
   detailView.hidden = true;
@@ -63,8 +65,10 @@ async function showList() {
 }
 async function showDetail(id) {
   clearTimeout(jobTimer);
+  clearTimeout(aiRunTimer);
   activeConversationId = id;
   transcriptSegments = [];
+  currentTranscript = null;
   transcriptView.replaceChildren();
   processingStatus.textContent = 'Checking local speech models…';
   processButton.hidden = true;
@@ -77,7 +81,109 @@ async function showDetail(id) {
   player.src = `${API}/conversations/${encodeURIComponent(id)}/audio`;
   player.load();
   await loadSpeech(id);
+  showConversationTab('transcript');
+  await loadAIRuns(id);
 }
+function showConversationTab(tab) {
+  const summary = tab === 'summary';
+  document.querySelector('#ai-card').hidden = !summary;
+  document.querySelector('#transcript-card').hidden = summary;
+  document.querySelector('#summary-tab').setAttribute('aria-selected', String(summary));
+  document.querySelector('#transcript-tab').setAttribute('aria-selected', String(!summary));
+}
+function sourceButtons(ids) {
+  const holder = document.createElement('span'); holder.className = 'ai-sources';
+  for (const id of ids) {
+    const segment = transcriptSegments.find(item => item.id === id);
+    const button = document.createElement('button'); button.type = 'button';
+    button.textContent = segment ? `${time(segment.start_ms / 1000)} · ${segment.speaker_display_name}` : 'Source unavailable';
+    button.disabled = !segment;
+    button.addEventListener('click', async () => {
+      if (!segment) return;
+      highlightsOnly = false; showConversationTab('transcript');
+      await showTranscript(activeConversationId);
+      player.currentTime = segment.start_ms / 1000;
+      player.play().catch(() => {});
+      transcriptView.querySelector(`[data-segment-id="${id}"]`)?.scrollIntoView({block:'center'});
+    });
+    holder.append(button);
+  }
+  return holder;
+}
+function renderAIItems(title, items, container) {
+  if (!items?.length) return;
+  const section = document.createElement('section'); section.className = 'ai-result-section';
+  const heading = document.createElement('h3'); heading.textContent = title; section.append(heading);
+  const list = document.createElement('ul');
+  for (const item of items) {
+    const row = document.createElement('li');
+    const text = document.createElement('p'); text.textContent = item.text;
+    row.append(text, sourceButtons(item.source_segment_ids)); list.append(row);
+  }
+  section.append(list); container.append(section);
+}
+function renderAIRuns(runs) {
+  const summaries = runs.filter(run => run.kind === 'summary');
+  const latest = summaries[0];
+  const summaryResults = document.querySelector('#summary-results'); summaryResults.replaceChildren();
+  const button = document.querySelector('#generate-summary');
+  button.disabled = latest?.state === 'running' || latest?.state === 'queued';
+  button.textContent = latest?.state === 'failed' ? 'Retry summary' : latest?.stale ? 'Regenerate summary' : latest?.state === 'succeeded' ? 'Summary current' : 'Generate summary';
+  if (latest?.state === 'succeeded') {
+    if (latest.stale) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = 'Transcript changed since this result. Regenerate to include corrections.'; summaryResults.append(stale);}
+    for (const [field, title] of [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']])
+      renderAIItems(title, latest.result[field], summaryResults);
+  }
+  const status = document.querySelector('#ai-status');
+  status.textContent = latest?.state === 'failed' ? `Summary stopped: ${latest.error_message}` :
+    latest?.state === 'running' || latest?.state === 'queued' ? `Generating summary · ${latest.stage}` :
+    latest?.state === 'succeeded' ? `Source-backed summary · ${latest.model_id} · ${latest.usage.total_tokens || 0} tokens` :
+    'Generate a summary after the on-device transcript is ready.';
+  const answers = document.querySelector('#ai-answers'); answers.replaceChildren();
+  for (const run of runs.filter(item => item.kind === 'answer')) {
+    const card = document.createElement('article'); card.className = 'ai-answer';
+    const q = document.createElement('h4'); q.textContent = run.question; card.append(q);
+    const body = document.createElement('p');
+    body.textContent = run.state === 'succeeded' ? run.result.answer :
+      run.state === 'failed' ? `Could not answer: ${run.error_message}` : `Answering · ${run.stage}`;
+    card.append(body);
+    if (run.stale) {const badge = document.createElement('small'); badge.textContent = 'Transcript changed since this answer'; card.append(badge);}
+    if (run.state === 'succeeded') card.append(sourceButtons(run.result.source_segment_ids));
+    if (run.state === 'failed') {
+      const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Retry answer';
+      retry.addEventListener('click', () => startAIRun('answer', run.question)); card.append(retry);
+    }
+    answers.append(card);
+  }
+}
+async function loadAIRuns(id) {
+  clearTimeout(aiRunTimer);
+  const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/ai-runs`));
+  if (id !== activeConversationId) return;
+  renderAIRuns(runs);
+  if (runs.some(run => run.state === 'queued' || run.state === 'running'))
+    aiRunTimer = setTimeout(() => loadAIRuns(id).catch(error => document.querySelector('#ai-status').textContent = error.message), 2000);
+}
+async function startAIRun(kind, question = null) {
+  const id = activeConversationId;
+  const status = document.querySelector('#ai-status'); status.textContent = 'Starting Nemotron request…';
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/ai-runs`, {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind,question})}));
+    await loadAIRuns(id);
+  } catch (error) { status.textContent = error.message; }
+}
+document.querySelector('#summary-tab').addEventListener('click', () => {
+  showConversationTab('summary');
+  if (activeConversationId) loadAIRuns(activeConversationId).catch(error => document.querySelector('#ai-status').textContent = error.message);
+});
+document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
+document.querySelector('#generate-summary').addEventListener('click', () => startAIRun('summary'));
+document.querySelector('#ai-question-form').addEventListener('submit', event => {
+  event.preventDefault(); const input = document.querySelector('#ai-question-input');
+  const question = input.value.trim(); if (!question) return;
+  input.value = ''; startAIRun('answer', question);
+});
 async function loadSpeech(id) {
   const [capabilities, existing] = await Promise.all([
     json(await fetch(`${API}/capabilities`)),
@@ -165,8 +271,8 @@ async function showTranscript(id) {
     stamp.addEventListener('click', seek);
     const speaker = document.createElement('button');
     speaker.type = 'button';
-    speaker.className = `segment-speaker${segment.speaker_uncertain ? ' uncertain' : ''}`;
-    speaker.textContent = segment.speaker_display_name + (segment.speaker_uncertain ? ' · check' : '');
+    speaker.className = 'segment-speaker';
+    speaker.textContent = segment.speaker_display_name;
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
     speaker.addEventListener('click', () => showSpeakerEditor(row, segment));
     const words = document.createElement('div');

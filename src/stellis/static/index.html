@@ -25,16 +25,15 @@
       <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
       <details class="vocabulary-card" id="vocabulary-panel">
         <summary>Vocabulary <span>Names and terms for local transcription</span></summary>
-        <p>Names and technical terms help future on-device transcripts. Existing words stay as you edited them.</p>
         <form id="vocabulary-form"><label for="vocabulary-input">Add a term</label><div class="vocabulary-entry"><input id="vocabulary-input" maxlength="100" autocomplete="off" required placeholder="e.g. a project or person name" /><button type="submit">Add term</button></div></form>
         <div id="vocabulary-list" class="vocabulary-list" aria-label="Saved vocabulary"></div>
         <p id="vocabulary-status" role="status" aria-live="polite"></p>
       </details>
       <section id="list-view">
-        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Import a recording or Otter ZIP">
+        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Import a recording or ZIP">
           <div class="drop-icon" aria-hidden="true">↥</div>
-          <strong>Drop a recording or Otter export here</strong>
-          <p>MP3, WAV, M4A, OGG, WebM, FLAC, or an Otter ZIP with one audio file.</p>
+          <strong>Drop audio or ZIP here</strong>
+          <p>MP3, WAV, M4A, OGG, WebM, FLAC, ZIP</p>
           <span>Choose a file</span>
         </div>
         <div id="conversation-list" class="conversation-list" aria-label="Conversations"></div>
@@ -42,12 +41,20 @@
       <section id="detail-view" hidden>
         <a class="back-link" href="/">← All conversations</a>
         <div class="player-card">
-          <div class="player-heading"><span class="eyebrow">Recording</span><span id="audio-duration"></span></div>
+          <div class="player-heading"><span id="audio-duration"></span></div>
           <audio id="audio-player" preload="metadata" controls></audio>
           <div class="seek-controls"><button id="back-ten" type="button" aria-label="Go back 10 seconds">−10s</button><button id="forward-ten" type="button" aria-label="Go forward 10 seconds">+10s</button><span id="current-time">0:00</span></div>
         </div>
-        <div class="transcript-card">
-          <div class="transcript-heading"><div><span class="eyebrow">On-device transcript</span><h2>Conversation</h2></div><button id="process-button" type="button" hidden>Process recording</button></div>
+        <div class="conversation-tabs" role="tablist" aria-label="Conversation view"><button id="summary-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-card">Summary &amp; AI</button><button id="transcript-tab" type="button" role="tab" aria-selected="true" aria-controls="transcript-card">Transcript</button></div>
+        <section id="ai-card" class="ai-card" role="tabpanel" hidden>
+          <div class="ai-heading"><div><h2>Conversation insights</h2></div><button id="generate-summary" type="button">Generate summary</button></div>
+          <p class="ai-privacy">Generating insights sends this conversation's displayed transcript text to Nebius. Audio and voiceprints stay on this device.</p>
+          <p id="ai-status" role="status" aria-live="polite"></p>
+          <div id="summary-results"></div>
+          <div class="ai-question"><h3>Ask about this conversation</h3><form id="ai-question-form"><label for="ai-question-input">Question</label><div><input id="ai-question-input" maxlength="500" required placeholder="Ask something about the interview" /><button type="submit">Ask Nemotron</button></div></form><div id="ai-answers"></div></div>
+        </section>
+        <div id="transcript-card" class="transcript-card" role="tabpanel">
+          <div class="transcript-heading"><div><h2>Conversation</h2></div><button id="process-button" type="button" hidden>Process recording</button></div>
           <p id="processing-status" role="status" aria-live="polite">Checking local speech models…</p>
           <div class="highlight-controls"><button id="show-highlights" type="button" aria-pressed="false">Show only highlights</button><span id="highlight-count"></span></div>
           <div id="transcript" class="transcript" aria-label="Transcript"></div>
