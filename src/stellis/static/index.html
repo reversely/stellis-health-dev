@@ -35,9 +35,10 @@
         <section class="library-tools" aria-label="Organize conversations"><div class="library-toolbar"><label for="category-filter">Category</label><select id="category-filter"><option value="">All conversations</option><option value="uncategorized">Uncategorized</option></select><button id="show-trash" type="button">Trash</button></div><details id="manage-categories"><summary>Manage categories</summary><form id="create-category-form"><label for="new-category-name">New category</label><div class="search-row"><input id="new-category-name" maxlength="80" required /><button type="submit">Create</button></div></form><div id="category-list"></div><p id="category-status" role="status" aria-live="polite"></p></details></section>
         <section class="search-card" aria-label="Search conversations">
           <form id="library-search-form"><label for="library-search-input">Search conversations, words, and speakers</label><div class="search-row"><input id="library-search-input" type="search" minlength="2" maxlength="120" autocomplete="off" placeholder="Search your library" /><button type="submit">Search</button></div></form>
-          <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option></select></div>
+          <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option><option value="person">People</option></select></div>
           <p id="library-search-status" role="status" aria-live="polite"></p><div id="library-search-results" aria-label="Search results"></div>
         </section>
+        <details id="people-panel" class="library-tools"><summary>People</summary><div id="people-list"></div></details>
         <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Import a recording or ZIP">
           <div class="drop-icon" aria-hidden="true">↥</div>
           <strong>Drop audio or ZIP here</strong>
@@ -47,6 +48,7 @@
         <div id="conversation-list" class="conversation-list" aria-label="Conversations"></div>
       </section>
       <section id="trash-view" hidden><button id="back-from-trash" type="button">← All conversations</button><h2>Trash</h2><p>Restore a conversation or delete it permanently.</p><p id="trash-status" role="status" aria-live="polite"></p><div id="trash-list" class="conversation-list"></div></section>
+      <section id="person-view" hidden><a class="back-link" href="/">← All conversations</a><form id="person-rename-form"><label for="person-rename-input">Name</label><div class="search-row"><input id="person-rename-input" maxlength="100" required /><button type="submit">Save name</button></div></form><p id="person-status" role="status" aria-live="polite"></p><h2>Conversations</h2><div id="person-conversations" class="conversation-list"></div><details id="person-merge-panel"><summary>Merge duplicate person</summary><label for="person-merge-source">Move another person's confirmations here</label><div class="search-row"><select id="person-merge-source"></select><button id="person-merge-button" type="button">Merge</button></div></details><button id="person-delete" type="button">Delete empty profile</button></section>
       <section id="detail-view" hidden>
         <a class="back-link" href="/">← All conversations</a>
         <div class="conversation-organize"><details id="conversation-categories"><summary>Categories</summary><div id="conversation-category-list"></div></details><button id="trash-conversation" type="button">Move to Trash</button></div>

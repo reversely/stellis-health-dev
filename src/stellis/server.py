@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, clean, library, processing, recording, search, storage
+from stellis import ai, clean, library, people, processing, recording, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -47,6 +47,32 @@ class VocabularyTerm(BaseModel):
 
 class CategoryName(BaseModel):
     name: str = Field(min_length=1, max_length=80)
+
+
+class PersonName(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class PersonLink(BaseModel):
+    person_id: str
+    segment_id: str
+    scope: str
+    expected_revision: int = Field(ge=1)
+
+
+class PersonUnlink(BaseModel):
+    segment_id: str
+    scope: str
+    expected_revision: int = Field(ge=1)
+
+
+class PersonMerge(BaseModel):
+    source_id: str
+
+
+class PersonMove(BaseModel):
+    conversation_id: str
+    target_id: str
 
 
 class HighlightSelection(BaseModel):
@@ -132,6 +158,11 @@ def conversation_page(conversation_id: str) -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
+@app.get("/person/{person_id}", include_in_schema=False)
+def person_page(person_id: str) -> FileResponse:
+    return FileResponse(_STATIC / "index.html")
+
+
 @api.get("/conversations")
 def conversations() -> list[dict[str, object]]:
     assigned = library.assignments()
@@ -142,6 +173,101 @@ def conversations() -> list[dict[str, object]]:
 @api.get("/categories")
 def categories() -> list[dict[str, object]]:
     return library.categories()
+
+
+@api.get("/persons")
+def persons() -> list[dict[str, object]]:
+    return people.list_people()
+
+
+@api.post("/persons")
+def create_person(request: PersonName) -> dict[str, object]:
+    try:
+        return people.create_person(request.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.get("/persons/{person_id}")
+def person_profile(person_id: str) -> dict[str, object]:
+    result = people.get_person(person_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return result
+
+
+@api.patch("/persons/{person_id}")
+def rename_person(person_id: str, request: PersonName) -> dict[str, object]:
+    try:
+        return people.rename_person(person_id, request.name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.delete("/persons/{person_id}")
+def delete_person(person_id: str) -> dict[str, object]:
+    try:
+        return people.delete_person(person_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.post("/persons/{person_id}/merge")
+def merge_people(person_id: str, request: PersonMerge) -> dict[str, object]:
+    try:
+        return people.merge_people(person_id, request.source_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/persons/{person_id}/move-conversation")
+def move_person_conversation(person_id: str, request: PersonMove) -> dict[str, object]:
+    try:
+        return people.move_conversation_links(person_id, request.conversation_id, request.target_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.delete("/persons/{person_id}/conversations/{conversation_id}")
+def remove_person_conversation(person_id: str, conversation_id: str) -> dict[str, object]:
+    try:
+        return people.remove_conversation_links(person_id, conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.put("/conversations/{conversation_id}/person-links")
+def confirm_person(conversation_id: str, request: PersonLink) -> dict[str, object]:
+    try:
+        return people.confirm_person(conversation_id, request.segment_id, request.person_id,
+                                     request.scope, request.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.post("/conversations/{conversation_id}/person-links/remove")
+def remove_person(conversation_id: str, request: PersonUnlink) -> dict[str, object]:
+    try:
+        return people.remove_person(conversation_id, request.segment_id, request.scope,
+                                    request.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api.post("/categories")

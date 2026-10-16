@@ -272,6 +272,7 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .search-result > span { color: var(--muted); font-size: 13px; }
 .search-result .search-excerpt { color: var(--ink); font-size: 14px; }
 .search-excerpt mark { color: var(--accent-ink); background: var(--accent); border-radius: 2px; }
+.search-profile-link { color: var(--accent); font-size: 13px; margin: -3px 0 7px 12px; }
 .transcript-search { margin-top: 15px; }
 .transcript-search .search-row select { max-width: 180px; }
 .segment.search-match { box-shadow: inset 3px 0 var(--accent); }
@@ -299,6 +300,22 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .trash-row { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .trash-row strong { flex: 1; min-width: 160px; }
 .trash-row button:last-child { color: var(--failure); }
+.person-list-row { display: block; padding: 10px 0; color: var(--accent); border-top: 1px solid var(--line-soft); }
+#people-panel summary, #person-merge-panel summary { color: var(--accent); cursor: pointer; font-weight: 650; }
+#person-view { padding-top: 4px; }
+.profile-page .heading-actions, .profile-page #vocabulary-panel { display: none; }
+#person-view h2 { font: 400 28px Piazzolla, Georgia, serif; margin: 26px 0 12px; }
+#person-rename-form, #person-merge-panel { margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+#person-rename-form label, #person-merge-panel label { display: block; margin-bottom: 8px; font-weight: 650; }
+.person-conversation-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px 12px; align-items: center; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.person-conversation-row a { color: var(--accent); font-weight: 650; }
+.person-conversation-row small { grid-column: 1; color: var(--muted); }
+.person-conversation-row button, #person-merge-panel button, #person-rename-form button { color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; cursor: pointer; }
+.person-conversation-row button:hover, #person-merge-panel button:hover, #person-rename-form button:hover { border-color: var(--accent); }
+#person-delete { margin-top: 18px; color: var(--failure); background: var(--raised); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; cursor: pointer; }
+.person-confirmation { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.person-confirmation label { display: grid; gap: 5px; }
+.turn-heading a { color: var(--accent); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 
 html[data-theme='light'] body { background: var(--field); }
 html[data-theme='light'] .upload-button:hover,
@@ -321,6 +338,10 @@ html[data-theme='light'] .timed-word mark { background: #f4dd84; }
   .library-toolbar select { min-width: 0; }
   .conversation-organize { align-items: flex-start; }
   .conversation-organize > * { flex-basis: 100%; }
+  .person-conversation-row { grid-template-columns: 1fr; }
+  .person-conversation-row small { grid-column: 1; }
+  #person-merge-panel .search-row { flex-wrap: wrap; }
+  #person-merge-panel select { flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }

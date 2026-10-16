@@ -53,6 +53,17 @@ def connect() -> Iterator[sqlite3.Connection]:
         category_id TEXT NOT NULL REFERENCES categories(id),
         PRIMARY KEY(conversation_id, category_id)
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS persons (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS person_links (
+        conversation_id TEXT NOT NULL REFERENCES conversations(id),
+        segment_id TEXT NOT NULL,
+        person_id TEXT NOT NULL REFERENCES persons(id),
+        start_ms INTEGER NOT NULL,
+        confirmed_at TEXT NOT NULL,
+        PRIMARY KEY(conversation_id, segment_id)
+    )""")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS processing_jobs (
             id TEXT PRIMARY KEY,
@@ -907,6 +918,11 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
         return None
     edits = get_transcript_edits(conversation_id)
     labels = get_speaker_labels(conversation_id)
+    with connect() as conn:
+        person_links = {str(row["segment_id"]): {"id": str(row["person_id"]), "name": str(row["name"])}
+                        for row in conn.execute("""SELECT pl.segment_id, p.id AS person_id, p.name
+                            FROM person_links pl JOIN persons p ON p.id = pl.person_id
+                            WHERE pl.conversation_id = ?""", (conversation_id,))}
     cluster_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "cluster"}
     segment_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "segment"}
     segments = json.loads(str(record["segments_json"]))
@@ -923,7 +939,12 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
         else:
             segment["text_provenance"] = "on_device_asr"
         cluster = segment["speaker_cluster_id"]
-        if segment["id"] in segment_labels:
+        if segment["id"] in person_links:
+            segment["speaker_display_name"] = person_links[segment["id"]]["name"]
+            segment["speaker_label_source"] = "confirmed_person"
+            segment["person_id"] = person_links[segment["id"]]["id"]
+            segment["speaker_uncertain"] = False
+        elif segment["id"] in segment_labels:
             segment["speaker_display_name"] = segment_labels[segment["id"]]
             segment["speaker_label_source"] = "manual_segment"
         elif cluster in cluster_labels:

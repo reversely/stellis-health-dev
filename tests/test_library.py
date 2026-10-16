@@ -115,6 +115,63 @@ class LibraryWorkflowTest(unittest.TestCase):
         library.recover_staged_media()
         self.assertFalse(orphan.exists())
 
+    def test_confirmed_person_history_survives_rematch_and_reprocessing(self):
+        stamp = datetime.now(timezone.utc).isoformat()
+        storage.save_transcript({'conversation_id': self.second, 'revision': 1, 'language': 'en',
+                                 'segments_json': json.dumps([{'id': 't1', 'start_ms': 100,
+                                     'end_ms': 600, 'text': 'Hello again.', 'speaker_cluster_id': 'speaker-9',
+                                     'speaker_uncertain': False, 'words': []},
+                                     {'id': 't2', 'start_ms': 700, 'end_ms': 900, 'text': 'Another voice.',
+                                      'speaker_cluster_id': 'speaker-10', 'speaker_uncertain': True, 'words': []}]),
+                                 'turns_json': '[]', 'updated_at': stamp})
+        morgan = self.client.post('/api/v1/persons', json={'name':'Morgan'}).json()
+        jordan = self.client.post('/api/v1/persons', json={'name':'Jordan'}).json()
+        for cid, sid in ((self.first, 's1'), (self.second, 't1')):
+            linked = self.client.put(f'/api/v1/conversations/{cid}/person-links', json={
+                'person_id':morgan['id'], 'segment_id':sid, 'scope':'cluster', 'expected_revision':1})
+            self.assertEqual(linked.status_code, 200)
+        profile = self.client.get(f'/api/v1/persons/{morgan["id"]}').json()
+        self.assertEqual({item['conversation_id'] for item in profile['conversations']}, {self.first, self.second})
+        self.assertEqual(self.client.delete(f'/api/v1/persons/{morgan["id"]}').status_code, 409)
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.second}/transcript').json()['segments'][1].get('person_id'), None)
+        self.assertTrue(any(item['kind']=='person' for item in self.client.get('/api/v1/search', params={'q':'Morgan'}).json()['results']))
+        self.client.patch(f'/api/v1/persons/{morgan["id"]}', json={'name':'Avery'})
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/transcript').json()['segments'][0]['speaker_display_name'], 'Avery')
+        original = storage.get_transcript(self.first)
+        rematched = [{**item, 'speaker_cluster_id':'speaker-new'} for item in json.loads(original['segments_json'])]
+        storage.save_transcript({'conversation_id':self.first, 'pipeline_version':'rematch-test',
+                                 'language':'en', 'segments_json':json.dumps(rematched),
+                                 'turns_json':'[]', 'updated_at':stamp})
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/transcript').json()['segments'][0]['person_id'], morgan['id'])
+        reprocessed = [{**rematched[0], 'id':'replacement-s1'}]
+        storage.save_transcript({'conversation_id':self.first, 'pipeline_version':'reprocess-test',
+                                 'language':'en', 'segments_json':json.dumps(reprocessed),
+                                 'turns_json':'[]', 'updated_at':stamp})
+        self.assertNotIn('person_id', self.client.get(f'/api/v1/conversations/{self.first}/transcript').json()['segments'][0])
+        historical = self.client.get(f'/api/v1/persons/{morgan["id"]}').json()['conversations']
+        self.assertFalse(next(item for item in historical if item['conversation_id']==self.first)['current_generation'])
+        self.client.put(f'/api/v1/conversations/{self.second}/person-links', json={
+            'person_id':jordan['id'], 'segment_id':'t2', 'scope':'segment', 'expected_revision':1})
+        self.assertEqual(self.client.post(f'/api/v1/persons/{morgan["id"]}/merge',
+            json={'source_id':jordan['id']}).status_code, 200)
+        separated = self.client.post('/api/v1/persons', json={'name':'Casey'}).json()
+        self.assertEqual(self.client.post(f'/api/v1/persons/{morgan["id"]}/move-conversation',
+            json={'conversation_id':self.second,'target_id':separated['id']}).json()['moved'], 2)
+        self.assertEqual(len(self.client.get(f'/api/v1/persons/{morgan["id"]}').json()['conversations']), 1)
+        self.client.post(f'/api/v1/conversations/{self.first}/trash')
+        self.assertEqual(self.client.get(f'/api/v1/persons/{morgan["id"]}').json()['conversations'], [])
+        self.client.post(f'/api/v1/trash/{self.first}/restore')
+        self.assertEqual(len(self.client.get(f'/api/v1/persons/{morgan["id"]}').json()['conversations']), 1)
+        self.client.post(f'/api/v1/conversations/{self.first}/trash')
+        self.assertEqual(self.client.delete(f'/api/v1/trash/{self.first}').status_code, 200)
+        self.assertEqual(self.client.get(f'/api/v1/persons/{morgan["id"]}').json()['conversations'], [])
+        self.assertEqual(len(self.client.get(f'/api/v1/persons/{separated["id"]}').json()['conversations']), 1)
+        self.assertEqual(self.client.delete(f'/api/v1/persons/{morgan["id"]}').status_code, 200)
+        self.assertEqual(self.client.delete(f'/api/v1/persons/{separated["id"]}/conversations/{self.second}').status_code, 200)
+        self.assertEqual(self.client.delete(f'/api/v1/persons/{separated["id"]}').status_code, 200)
+        self.assertFalse(any(item['kind']=='person' for item in self.client.get('/api/v1/search',
+                                                                                 params={'q':'Casey'}).json()['results']))
+
 
 if __name__ == '__main__':
     unittest.main()
