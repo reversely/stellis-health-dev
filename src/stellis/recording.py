@@ -106,6 +106,7 @@ def discard_session(recording_id: str) -> bool:
             return False
         if row["state"] != "recording":
             raise RuntimeError("A saved conversation cannot be discarded here")
+        conn.execute("DELETE FROM recording_ai_runs WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM meeting_notes WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM recording_chunks WHERE recording_id = ?", (recording_id,))
         conn.execute("DELETE FROM recording_events WHERE recording_id = ?", (recording_id,))
