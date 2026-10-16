@@ -17,7 +17,7 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v10"
+PROMPT_VERSION = "cited-conversation-v11"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
@@ -428,8 +428,25 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
                         for offset, segment in enumerate(chunk)}
         messages = [{"role": "system", "content": _SUMMARY_SYSTEM},
                     {"role": "user", "content": f"Analyze this transcript part. JSON only.\n{evidence}"}]
-        candidate = _complete(messages, set(aliases), 1200, metadata,
-                              kind="summary", require_overview=True, source_texts=source_texts)
+        try:
+            candidate = _complete(messages, set(aliases), 1200, metadata,
+                                  kind="summary", require_overview=True, source_texts=source_texts)
+        except AIError as exc:
+            if exc.code != "weak_citation":
+                raise
+            # If a broad claim keeps citing unrelated fragments, constrain the
+            # provider to a small contiguous passage window in this chunk.
+            center = max(range(len(chunk)), key=lambda offset: len(_anchor_terms(str(chunk[offset]["text"]))))
+            focused = chunk[max(0, center - 1):center + 2]
+            focus_evidence, aliases = _evidence(focused)
+            focus_texts = {f"s{offset + 1}": f"{segment['speaker_display_name']} {segment['text']}"
+                           for offset, segment in enumerate(focused)}
+            focused_messages = [{"role": "system", "content": _SUMMARY_SYSTEM +
+                                 " Use only these nearby passages. Return one overview point and empty other arrays. "
+                                 "Avoid speaker attribution because one passage can contain multiple voices."},
+                                {"role": "user", "content": f"Summarize only these cited lines. JSON only.\n{focus_evidence}"}]
+            candidate = _complete(focused_messages, set(aliases), 1200, metadata,
+                                  kind="summary", require_overview=True, source_texts=focus_texts)
         extracted.append(_expand_sources(candidate, aliases, "summary"))
         storage.update_ai_run(run_id, checkpoint_json=json.dumps(extracted), updated_at=_now())
         _persist_metadata(run_id, metadata)

@@ -191,6 +191,22 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(finished["state"], "succeeded")
         self.assertEqual(finished["result"]["overview"][0]["text"], "Avery discussed satellites.")
 
+    def test_weak_citation_falls_back_to_nearby_passages(self) -> None:
+        run = self._create("summary")
+        unsupported = {"overview":[{"text":"The team launched a CubeSat into orbit in 2022.",
+                                    "source_segment_ids":["s1"]}],
+                       "topics":[],"decisions":[],"action_items":[]}
+        focused = {"overview":[{"text":"Avery discussed satellites.",
+                                "source_segment_ids":["s1"]}],
+                   "topics":[],"decisions":[],"action_items":[]}
+        with patch.object(ai, "_request", side_effect=[unsupported, unsupported, focused]) as provider:
+            ai._run(run["id"])
+        self.assertEqual(provider.call_count, 3)
+        self.assertIn("Summarize only these cited lines", provider.call_args.args[0][-1]["content"])
+        finished = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
+        self.assertEqual(finished["state"], "succeeded")
+        self.assertEqual(finished["result"]["overview"][0]["source_segment_ids"], ["seg-1"])
+
     def test_answer_uses_evidence_or_marks_insufficient(self) -> None:
         run = self._create("answer", "What did Avery discuss?")
         payload = {"answer":"Satellites.","source_segment_ids":["s1"],"insufficient_evidence":False}
