@@ -1,7 +1,6 @@
 /* Browser-owned text vault prototype. Keys and plaintext stay in this page's memory. */
 const VaultUI = (() => {
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
+  const {b64,bytes,random,aad,derive,seal,open} = window.StellisCrypto;
   const status = document.querySelector('#vault-status');
   const openPanel = document.querySelector('#vault-open');
   const notes = document.querySelector('#notes');
@@ -10,24 +9,6 @@ const VaultUI = (() => {
   let cursor = 0;
   let records = new Map();
 
-  const b64 = bytes => btoa(String.fromCharCode(...bytes));
-  const bytes = value => Uint8Array.from(atob(value), char => char.charCodeAt(0));
-  const random = count => crypto.getRandomValues(new Uint8Array(count));
-  const aad = (...parts) => encoder.encode(parts.join('|'));
-
-  async function derive(passphrase, salt) {
-    const material = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:600000,hash:'SHA-256'}, material,
-      {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
-  }
-  async function seal(value, iv, binding) {
-    return b64(new Uint8Array(await crypto.subtle.encrypt(
-      {name:'AES-GCM',iv,additionalData:binding,tagLength:128}, key, encoder.encode(value))));
-  }
-  async function open(value, iv, binding) {
-    return decoder.decode(await crypto.subtle.decrypt(
-      {name:'AES-GCM',iv,additionalData:binding,tagLength:128}, key, bytes(value)));
-  }
   async function call(path, options={}) {
     const response = await fetch(`/sync/v1${path}`, options);
     const data = await response.json();
@@ -36,7 +17,32 @@ const VaultUI = (() => {
   }
   function render() {
     notes.replaceChildren();
-    for (const value of records.values()) { const row = document.createElement('li'); row.textContent = value; notes.append(row); }
+    const parts = new Map();
+    const manifests = [];
+    for (const [id,value] of records) {
+      let parsed;
+      try { parsed=JSON.parse(value); } catch {}
+      if (parsed?.kind === 'conversation_part') { parts.set(id,parsed); continue; }
+      if (parsed?.kind === 'conversation_manifest') { manifests.push(parsed); continue; }
+      const row=document.createElement('li');row.textContent=value;notes.append(row);
+    }
+    let incomplete=0;
+    for (const manifest of manifests) {
+      const segments=window.StellisSnapshot.assemble(manifest,parts);
+      if (!segments) { incomplete++;continue; }
+      const row=document.createElement('li');const details=document.createElement('details');
+      const heading=document.createElement('summary');heading.textContent=`${manifest.title} · ${segments.length} passages · text only`;
+      details.append(heading);
+      for (const segment of segments) {
+        const passage=document.createElement('p');
+        const seek=document.createElement('a');seek.href=`http://127.0.0.1:8765/conversation/${encodeURIComponent(manifest.source_conversation_id)}?at=${encodeURIComponent(segment.id)}`;
+        seek.target='_blank';seek.rel='noopener';seek.title='Open on recording device';
+        const seconds=Math.floor(segment.start_ms/1000);seek.textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+        passage.append(seek,document.createTextNode(` · ${segment.speaker||'Speaker'} · ${segment.text}`));details.append(passage);
+      }
+      row.append(details);notes.append(row);
+    }
+    return incomplete;
   }
   function database() {
     return new Promise((resolve,reject) => {
@@ -81,14 +87,14 @@ const VaultUI = (() => {
       const page = await call(`/entries?after=${cursor}&limit=100`);
       for (const entry of page.entries) {
         let text;
-        try { text = await open(entry.ciphertext, bytes(entry.iv), aad(user.id,entry.item_id,entry.id)); }
+        try { text = await open(key,entry.ciphertext, bytes(entry.iv), aad(user.id,entry.item_id,entry.id)); }
         catch { throw Error('Encrypted entry failed authentication'); }
         records.set(entry.item_id,text);
       }
       cursor = page.cursor;
       if (page.entries.length < 100) break;
     }
-    render(); status.textContent = 'Synced';
+    const incomplete=render(); status.textContent = incomplete ? 'Transcript snapshot incomplete' : 'Synced';
   }
   async function unlock(passphrase) {
     if (passphrase.length < 12) throw Error('Use at least 12 characters');
@@ -100,11 +106,11 @@ const VaultUI = (() => {
       const iv = random(12);
       vault = await call('/vault',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({salt:b64(salt),check_iv:b64(iv),
-          check_ciphertext:await seal('stellis-vault-v1',iv,aad(user.id,'vault-check-v1'))})});
+          check_ciphertext:await seal(key,'stellis-vault-v1',iv,aad(user.id,'vault-check-v1'))})});
     }
     key = await derive(passphrase,bytes(vault.salt));
     try {
-      if (await open(vault.check_ciphertext,bytes(vault.check_iv),aad(user.id,'vault-check-v1')) !== 'stellis-vault-v1')
+      if (await open(key,vault.check_ciphertext,bytes(vault.check_iv),aad(user.id,'vault-check-v1')) !== 'stellis-vault-v1')
         throw Error('Vault check failed');
     } catch { key=null; throw Error('Wrong passphrase or vault data changed'); }
     cursor=0;records.clear();openPanel.hidden=false;
@@ -120,7 +126,7 @@ const VaultUI = (() => {
     event.preventDefault(); const input=document.querySelector('#note-text'); const value=input.value.trim();
     if (!value || !key) return;
     const entry={id:crypto.randomUUID(),item_id:crypto.randomUUID(),iv:b64(random(12))};
-    entry.ciphertext=await seal(value,bytes(entry.iv),aad(user.id,entry.item_id,entry.id));
+    entry.ciphertext=await seal(key,value,bytes(entry.iv),aad(user.id,entry.item_id,entry.id));
     await queue(entry); records.set(entry.item_id,value); render(); input.value='';
     try { await sync(); } catch { status.textContent='Saved on this browser. Sync when online.'; }
   };

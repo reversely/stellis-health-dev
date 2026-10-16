@@ -342,6 +342,17 @@ html[data-theme='light'] .ai-heading button:hover { color: #ffffff; }
 html[data-theme='light'] .segment-text mark,
 html[data-theme='light'] .timed-word mark { background: #f4dd84; }
 
+#sync-dialog { width: min(400px, calc(100vw - 32px)); box-sizing: border-box; border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+#sync-dialog::backdrop { background: #02050ea8; }
+#sync-dialog h2 { margin: 0 0 18px; }
+#sync-form { display: grid; gap: 10px; }
+#sync-passphrase { box-sizing: border-box; width: 100%; background: var(--input); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 11px; font: inherit; }
+.sync-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+.sync-actions button { border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+#sync-submit { background: var(--accent); color: var(--accent-ink); }
+#sync-status { color: var(--muted); min-height: 1.4em; }
+#sync-account-link { color: var(--accent); }
+
 @media (max-width: 600px) {
   header { padding: 0 20px; }
   .header-side { gap: 0; }
