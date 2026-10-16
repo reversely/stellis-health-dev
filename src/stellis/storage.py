@@ -427,6 +427,22 @@ def get_conversation(conversation_id: str, *, include_trashed: bool = False) -> 
     return dict(row) if row else None
 
 
+def rename_conversation(conversation_id: str, title: str) -> dict[str, object]:
+    """Rename an active conversation while retaining its other fields."""
+    value = title.strip()
+    if not value or len(value) > 180:
+        raise ValueError("Enter a title of at most 180 characters")
+    with connect() as conn:
+        changed = conn.execute(
+            "UPDATE conversations SET title = ? WHERE id = ? AND trashed_at IS NULL",
+            (value, conversation_id),
+        ).rowcount
+        if not changed:
+            raise LookupError("Conversation not found")
+        row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+    return dict(row)
+
+
 def find_by_hash(source_sha256: str) -> dict[str, object] | None:
     """Find a previously imported audio file by content digest."""
     with connect() as conn:

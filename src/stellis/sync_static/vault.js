@@ -31,7 +31,7 @@ const VaultUI = (() => {
       const segments=window.StellisSnapshot.assemble(manifest,parts);
       if (!segments) { incomplete++;continue; }
       const row=document.createElement('li');const details=document.createElement('details');
-      const heading=document.createElement('summary');heading.textContent=`${manifest.title} · ${segments.length} passages · text only`;
+      const heading=document.createElement('summary');heading.textContent=`${manifest.title} (${segments.length} passages, text only)`;
       details.append(heading);
       for (const segment of segments) {
         const passage=document.createElement('p');
@@ -39,7 +39,7 @@ const VaultUI = (() => {
         const seek=document.createElement(source?'a':'span');
         if(source){seek.href=source;seek.target='_blank';seek.rel='noopener';seek.title='Open on recording device';}
         const seconds=Math.floor(segment.start_ms/1000);seek.textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
-        passage.append(seek,document.createTextNode(` · ${segment.speaker||'Speaker'} · ${segment.text}`));details.append(passage);
+        passage.append(seek,document.createTextNode(`, ${segment.speaker||'Speaker'}: ${segment.text}`));details.append(passage);
       }
       row.append(details);notes.append(row);
     }

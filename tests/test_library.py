@@ -40,6 +40,21 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
+    def test_rename_conversation_updates_detail_list_and_search(self):
+        path = f'/api/v1/conversations/{self.first}'
+        renamed = self.client.patch(path, json={'title': '  Launch interview  '})
+        self.assertEqual(renamed.status_code, 200)
+        self.assertEqual(renamed.json()['title'], 'Launch interview')
+        self.assertEqual(self.client.get(path).json()['title'], 'Launch interview')
+        listed = self.client.get('/api/v1/conversations').json()
+        self.assertEqual(next(item for item in listed if item['id'] == self.first)['title'], 'Launch interview')
+        self.assertEqual(self.client.get('/api/v1/search', params={'q': 'Launch interview'}).json()['total'], 1)
+        self.assertEqual(self.client.patch(path, json={'title': '   '}).status_code, 400)
+        self.assertEqual(self.client.get(path).json()['title'], 'Launch interview')
+        self.assertEqual(self.client.patch('/api/v1/conversations/missing', json={'title': 'Any'}).status_code, 404)
+        self.client.post(f'{path}/trash')
+        self.assertEqual(self.client.patch(path, json={'title': 'Hidden'}).status_code, 404)
+
     def test_categories_trash_restore_and_permanent_delete(self):
         categories = [self.client.post('/api/v1/categories', json={'name': name}).json()
                       for name in ('Research', 'Interviews')]
