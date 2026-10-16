@@ -1914,35 +1914,23 @@ async function showManageSpeakers(row, segment) {
       const item = document.createElement('div'); item.className = 'manage-speaker-row';
       const identity = document.createElement('span'); identity.textContent = label.name;
       const local = document.createElement('small'); local.textContent = 'This recording'; identity.append(local);
-      const rename = document.createElement('button'); rename.type = 'button'; rename.textContent = 'Rename';
-      rename.addEventListener('click', () => {
-        const form = document.createElement('form'); form.className = 'manage-speaker-rename';
-        const input = document.createElement('input'); input.value = label.name; input.maxLength = 100; input.setAttribute('aria-label', 'Speaker name');
-        const save = document.createElement('button'); save.textContent = 'Save';
-        const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', render);
-        form.append(input, save, cancel); item.replaceChildren(form); input.focus(); input.select();
-        form.addEventListener('submit', async event => {
-          event.preventDefault(); save.disabled = true;
-          try { await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/speakers/label`, {
-            method:'PUT',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({scope:label.scope,target_id:label.target_id,name:input.value,expected_revision:currentTranscript.revision}),
-          })); await showTranscript(activeConversationId); message.textContent = 'Speaker renamed.'; render();
-          } catch (error) { message.textContent = error.message; save.disabled = false; }
-        });
-      });
-      const tag = document.createElement('button'); tag.type = 'button'; tag.textContent = 'Tag as person';
+      const tag = document.createElement('button'); tag.type = 'button'; tag.textContent = 'Tag';
       tag.addEventListener('click', async () => {
         const first = currentTranscript.segments.find(item => !item.person_id &&
+          item.speaker_display_name.trim().replace(/\s+/g, ' ').toLocaleLowerCase() ===
+            label.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase() &&
           (label.scope === 'cluster' ? item.speaker_cluster_id === label.target_id : item.id === label.target_id));
         if (!first) return;
         tag.disabled = true;
         try { await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links`, {
           method:'PUT',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({name:label.name,segment_id:first.id,scope:label.scope,expected_revision:currentTranscript.revision}),
+          body:JSON.stringify({name:label.name,segment_id:first.id,
+            scope:first.speaker_label_source === 'manual_segment' ? 'segment' : label.scope,
+            expected_revision:currentTranscript.revision}),
         })); await showTranscript(activeConversationId); people = await json(await fetch(`${API}/persons`)); message.textContent = 'Speaker tagged.'; render();
         } catch (error) { message.textContent = error.message; tag.disabled = false; }
       });
-      item.append(identity, rename, tag); list.append(item);
+      item.append(identity, tag); list.append(item);
     }
     merge.disabled = selected.size !== 2;
     if (selected.size === 2) {
@@ -1956,7 +1944,6 @@ async function showManageSpeakers(row, segment) {
   editPassage.addEventListener('click', () => {
     dialog.close();
     if (pendingTranscriptEdits.size) { editStatus.textContent = 'Press Done to save word changes first.'; return; }
-    if (!transcriptEditMode) setTranscriptEditMode(true);
     showSpeakerEditor(row, segment);
   });
   merge.addEventListener('click', async () => {
@@ -1976,12 +1963,7 @@ async function showManageSpeakers(row, segment) {
 }
 function showSpeakerEditor(row, segment) {
   closeRowEditor(row);
-  const form = document.createElement('form'); form.className = 'segment-editor';
-  const nameLabel = document.createElement('label'); nameLabel.textContent = 'Speaker name';
-  const name = document.createElement('input'); name.type = 'text'; name.maxLength = 100;
-  name.placeholder = 'Name this speaker';
-  name.value = segment.speaker_label_source === 'automatic' || segment.person_id ? '' : segment.speaker_display_name;
-  nameLabel.append(name);
+  const form = document.createElement('div'); form.className = 'segment-editor';
   const scopeLabel = document.createElement('label'); scopeLabel.textContent = 'Apply to';
   const scope = document.createElement('select');
   for (const [value, caption] of [['cluster','All matching speaker turns'],['segment','This passage only']]) {
@@ -1991,41 +1973,44 @@ function showSpeakerEditor(row, segment) {
   scope.value = segment.speaker_label_source === 'manual_segment' ? 'segment' : (segment.speaker_cluster_id ? 'cluster' : 'segment');
   scopeLabel.append(scope);
   const actions = document.createElement('div'); actions.className = 'editor-actions';
-  const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save speaker';
   const clear = document.createElement('button'); clear.type = 'button'; clear.textContent = 'Clear manual label';
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', () => form.remove());
-  actions.append(save, clear, cancel);
-  if (segment.person_id) { nameLabel.hidden = true; save.hidden = true; clear.hidden = true; }
+  actions.append(clear, cancel);
+  clear.hidden = !segment.speaker_label_source?.startsWith('manual_') || !!segment.person_id;
   const message = document.createElement('p'); message.setAttribute('role', 'status');
   const personSection = document.createElement('div'); personSection.className = 'person-confirmation';
-  const personTitle = document.createElement('strong'); personTitle.textContent = segment.person_id ?
-    `Confirmed as ${segment.speaker_display_name}` : 'Confirm a person';
-  const personSelectLabel = document.createElement('label'); personSelectLabel.textContent = 'Existing person';
+  const personTitle = document.createElement('strong'); personTitle.textContent = 'Tag speaker';
+  const personSelectLabel = document.createElement('label'); personSelectLabel.textContent = 'Existing speaker';
   const personSelect = document.createElement('select'); personSelect.append(new Option('Choose a person', ''));
   personSelectLabel.append(personSelect);
-  const newPersonLabel = document.createElement('label'); newPersonLabel.textContent = 'Or create a person';
+  const newPersonLabel = document.createElement('label'); newPersonLabel.textContent = 'New speaker name';
   const newPerson = document.createElement('input'); newPerson.type = 'text'; newPerson.maxLength = 100;
-  newPerson.placeholder = 'Person name'; newPersonLabel.append(newPerson);
+  newPerson.placeholder = 'Name';
+  if (segment.speaker_label_source?.startsWith('manual_') && !segment.person_id) newPerson.value = segment.speaker_display_name;
+  newPersonLabel.append(newPerson);
   const personActions = document.createElement('div'); personActions.className = 'editor-actions';
-  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.textContent = segment.person_id ? 'Update confirmation' : 'Confirm speaker';
-  const unlink = document.createElement('button'); unlink.type = 'button'; unlink.textContent = 'Remove confirmation'; unlink.hidden = !segment.person_id;
+  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.textContent = 'Tag';
+  const unlink = document.createElement('button'); unlink.type = 'button'; unlink.textContent = 'Untag'; unlink.hidden = !segment.person_id;
   personActions.append(confirm, unlink);
   personSection.append(personTitle, personSelectLabel, newPersonLabel, personActions);
   fetch(`${API}/persons`).then(json).then(people => {
     personSelect.replaceChildren(new Option('Choose a person', ''), ...people.map(person => new Option(person.name, person.id)));
     if (segment.person_id) personSelect.value = segment.person_id;
   }).catch(error => { message.textContent = error.message; });
+  personSelect.addEventListener('change', () => { if (personSelect.value) newPerson.value = ''; });
+  newPerson.addEventListener('input', () => { if (newPerson.value.trim()) personSelect.value = ''; });
   confirm.addEventListener('click', async () => {
     confirm.disabled = true;
     try {
-      const person = newPerson.value.trim() ? await json(await fetch(`${API}/persons`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newPerson.value})})) : {id:personSelect.value};
-      if (!person.id) throw new Error('Choose or create a person.');
+      const speakerName = newPerson.value.trim();
+      if (!speakerName && !personSelect.value) throw new Error('Choose or name a speaker.');
       await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links`, {
         method:'PUT',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({person_id:person.id,segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
+        body:JSON.stringify({person_id:speakerName ? null : personSelect.value,name:speakerName || null,
+          segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = 'Speaker confirmed.';
+      processingStatus.textContent = 'Speaker tagged.';
     } catch (error) { message.textContent = error.message; confirm.disabled = false; }
   });
   newPerson.addEventListener('keydown', event => { if (event.key === 'Enter') {event.preventDefault();confirm.click();} });
@@ -2037,24 +2022,23 @@ function showSpeakerEditor(row, segment) {
         body:JSON.stringify({segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = 'Confirmation removed.';
+      processingStatus.textContent = 'Speaker untagged.';
     } catch (error) { message.textContent = error.message; unlink.disabled = false; }
   });
-  async function submitLabel(value) {
+  clear.addEventListener('click', async () => {
     const targetId = scope.value === 'cluster' ? segment.speaker_cluster_id : segment.id;
+    clear.disabled = true;
     try {
       await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/speakers/label`, {
         method:'PUT', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({scope:scope.value,target_id:targetId,name:value,expected_revision:currentTranscript.revision}),
+        body:JSON.stringify({scope:scope.value,target_id:targetId,name:null,expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = value ? 'Speaker saved.' : 'Speaker label cleared.';
-    } catch (error) { message.textContent = error.message; }
-  }
-  form.addEventListener('submit', event => {event.preventDefault(); submitLabel(name.value.trim() || null);});
-  clear.addEventListener('click', () => submitLabel(null));
-  form.append(nameLabel, scopeLabel, actions, personSection, message);
-  row.append(form); form.scrollIntoView({block:'start'}); name.focus();
+      processingStatus.textContent = 'Speaker label cleared.';
+    } catch (error) { message.textContent = error.message; clear.disabled = false; }
+  });
+  form.append(scopeLabel, personSection, actions, message);
+  row.append(form); form.scrollIntoView({block:'start'}); newPerson.focus();
 }
 async function loadVocabulary() {
   const terms = await json(await fetch(`${API}/vocabulary`));
