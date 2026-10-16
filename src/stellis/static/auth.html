@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="theme-color" content="#0a1020" /><title>Sign in · Stellis</title>
+<script>try { if (localStorage.getItem('stellis-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}</script>
+<link rel="stylesheet" href="/static/app.css" /><link rel="stylesheet" href="/static/theme.css" /><link rel="stylesheet" href="/static/auth.css" /><script src="/static/auth.js" defer></script></head>
+<body><header><a class="brand" href="/">stellis</a></header><main class="auth-main"><section class="auth-card"><h1 id="auth-title">Sign in</h1><form id="auth-form"><label for="username">Username</label><input id="username" name="username" autocomplete="username" required minlength="3" maxlength="80" /><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="1024" /><button id="auth-submit" type="submit">Sign in</button></form><p id="auth-error" role="alert"></p></section></main></body></html>
