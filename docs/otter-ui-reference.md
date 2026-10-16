@@ -1,5 +1,11 @@
 # Otter workflow reference and Stellis UI scope
 
+## Speaker index, observed 2026-10-16
+
+In the signed-in CIFAR interview's Transcript view, Otter's **Speakers** line showed effective names and rounded speaking-time shares: Speaker 3 (38%), Afzal (23%), Shereen (19%), Jay (10%), Speaker 1 (9%), Speaker 2 (2%). The entries were plain spans, not controls. Named speakers also appeared on transcript turns. This observation does not establish how Otter stores labels or calculates percentages internally.
+
+Before ticket #132, Stellis's index counted raw acoustic clusters and consulted only cluster-scope manual labels; a saved passage label or confirmed Person could appear on a turn while absent from the index. Ticket #132 derives the index from persisted effective passage names; database and fresh-client tests cover label and Person projection and passage-label removal. In an isolated browser fixture, Tag persisted both Person links and the index name across reload; Untag removed both links and restored the automatic name across reload. Chromium also showed Jay Matlock and Shereen Lee in the real interview index at desktop and 390px width. This is a Stellis implementation decision, separate from the Otter observation.
+
 Observed from the user's Otter account and Otter's public [conversation page](https://help.otter.ai/hc/en-us/articles/5093228433687-Conversation-Page-Overview), [AI Chat](https://help.otter.ai/hc/en-us/articles/19682180167575-Otter-AI-Chat-Overview), [speaker rematch](https://help.otter.ai/hc/en-us/articles/40643231903639-Disable-Speaker-Learning), and [language](https://help.otter.ai/hc/en-us/articles/26660468516631-Transcribe-conversations-in-English-Spanish-French-German-Japanese-or-Chinese-Simplified) documentation. This is a behavior reference, not a pixel copy.
 
 | Otter interaction | Stellis destination | Ticket |
