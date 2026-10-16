@@ -129,6 +129,15 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
         self.assertTrue(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['manual_override'])
 
+    def test_missing_provider_key_is_retryable_without_changing_transcript(self):
+        self.client.put('/api/v1/categories/automation', json={'enabled': True})
+        with patch('stellis.ai._key', return_value=None):
+            result = self.client.post(f'/api/v1/conversations/{self.first}/categorization').json()
+        self.assertEqual(result['state'], 'failed')
+        self.assertIn('Nebius API key', result['error'])
+        self.assertIsNotNone(storage.get_transcript(self.first))
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+
     def test_initial_categories_are_seeded_once_and_remain_editable(self):
         endpoint = '/api/v1/categories'
         initial = self.client.get(endpoint).json()

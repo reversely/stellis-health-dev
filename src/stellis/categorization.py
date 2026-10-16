@@ -114,9 +114,6 @@ def classify(source: str, key: str) -> tuple[str, float]:
 def request(conversation_id: str, *, retry: bool = False) -> dict[str, object]:
     if not settings()["enabled"]:
         return status(conversation_id)
-    key = ai._key()
-    if not key:
-        raise RuntimeError("Nebius API key is unavailable")
     display = storage.get_display_transcript(conversation_id)
     if display is None:
         raise RuntimeError("Transcript is not ready")
@@ -140,6 +137,13 @@ def request(conversation_id: str, *, retry: bool = False) -> dict[str, object]:
             transcript_revision = excluded.transcript_revision, confidence = NULL, error = NULL,
             updated_at = excluded.updated_at""", (conversation_id, MODEL_ID, revision, _now()))
     if skip:
+        return status(conversation_id)
+    key = ai._key()
+    if not key:
+        with storage.connect() as conn:
+            conn.execute("""UPDATE category_decisions SET state = 'failed',
+                error = 'Nebius API key is unavailable', updated_at = ? WHERE conversation_id = ?""",
+                         (_now(), conversation_id))
         return status(conversation_id)
     with _LOCK:
         if conversation_id not in _RUNNING:

@@ -778,7 +778,8 @@ async function showList() {
   libraryCategories = categories;
   const automation = await json(await fetch(`${API}/categories/automation`));
   document.querySelector('#auto-categories').checked = automation.enabled;
-  document.querySelector('#category-status').textContent = '';
+  document.querySelector('#category-status').textContent = automation.enabled && !automation.configured ?
+    'Nebius API key is unavailable. Classification will wait for a key.' : '';
   renderCategoryControls();
   renderConversationList();
   captureControls();
@@ -3022,8 +3023,10 @@ document.querySelector('#auto-categories').addEventListener('change', async even
   const checkbox = event.target;
   checkbox.disabled = true;
   try {
-    await json(await fetch(`${API}/categories/automation`, {method:'PUT',
+    const setting = await json(await fetch(`${API}/categories/automation`, {method:'PUT',
       headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:checkbox.checked})}));
+    document.querySelector('#category-status').textContent = checkbox.checked && !setting.configured ?
+      'Nebius API key is unavailable. Classification will wait for a key.' : '';
   } catch (error) {
     checkbox.checked = !checkbox.checked;
     document.querySelector('#category-status').textContent = error.message;
