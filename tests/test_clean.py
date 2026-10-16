@@ -150,6 +150,21 @@ class CleanWorkflowTest(unittest.TestCase):
         self.assertTrue(result[0]['needs_review'])
         self.assertIsNotNone(result[0]['review_reason'])
 
+    def test_unusual_asr_word_is_flagged_even_when_cleanup_keeps_it(self):
+        source = storage.get_display_transcript(self.conversation_id)['segments'][:1]
+        source[0]['text'] = 'We discussed q-sets.'
+        payload = {'segments': [{'source_segment_id': 's1', 'text': source[0]['text'], 'needs_review': False}]}
+        checked = clean._validate_chunk(payload, source)[0]
+        self.assertEqual(checked['text'], source[0]['text'])
+        self.assertTrue(checked['needs_review'])
+        self.assertEqual(checked['review_reason'], 'Unusual word; check audio')
+        run = self._start()
+        saved = {'segments': [{**checked, 'needs_review': False, 'review_reason': None}]}
+        storage.update_clean_run(run['id'], state='succeeded', stage='complete', result_json=json.dumps(saved))
+        shown = self.client.get(f"/api/v1/clean-runs/{run['id']}").json()['result']['segments'][0]
+        self.assertTrue(shown['needs_review'])
+        self.assertEqual(shown['review_reason'], 'Unusual word; check audio')
+
     def test_older_run_is_rechecked_before_browser_display(self):
         run = self._start()
         source = storage.get_display_transcript(self.conversation_id)['segments']
