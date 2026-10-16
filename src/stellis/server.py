@@ -10,6 +10,7 @@ import os
 import sqlite3
 import subprocess
 import threading
+from typing import Literal
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
@@ -52,8 +53,8 @@ async def development_cache_policy(request: Request, call_next):
     path = request.url.path
     if path.startswith(("/static/", "/shared/")):
         response.headers["Cache-Control"] = "private, no-cache"
-    elif (path in {"/", "/auth", "/recording"} or
-          path.startswith(("/conversation/", "/person/"))):
+    elif (path in {"/", "/auth", "/recording", "/vocabulary"} or
+          path.startswith(("/conversation/", "/person/", "/vocabulary/"))):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -155,6 +156,23 @@ class SpeakerLabelEdit(BaseModel):
 
 class VocabularyTerm(BaseModel):
     term: str = Field(min_length=1, max_length=100)
+
+
+class VocabularyCreate(VocabularyTerm):
+    kind: Literal["name", "other"] = "other"
+
+
+class VocabularyBatch(BaseModel):
+    terms: list[str] = Field(min_length=1, max_length=200)
+    kind: Literal["name", "other"] = "other"
+
+
+class VocabularySelection(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=200)
+
+
+class VocabularyMove(VocabularySelection):
+    kind: Literal["name", "other"]
 
 
 class CategoryName(BaseModel):
@@ -275,9 +293,6 @@ class WordAlignmentRequest(BaseModel):
     source_generation_version: str | None = None
 
 
-def _check_vocabulary_budget(terms: list[str]) -> None:
-    if len("Vocabulary: " + ", ".join(terms)) > 400:
-        raise HTTPException(status_code=400, detail="Vocabulary is too long for the local model prompt")
 _STATIC = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 app.mount("/shared", StaticFiles(directory=Path(__file__).parent / "shared"), name="shared")
@@ -354,6 +369,14 @@ def recording_page() -> FileResponse:
 
 @app.get("/person/{person_id}", include_in_schema=False)
 def person_page(person_id: str) -> FileResponse:
+    return FileResponse(_STATIC / "index.html")
+
+
+@app.get("/vocabulary", include_in_schema=False)
+@app.get("/vocabulary/{section}", include_in_schema=False)
+def vocabulary_page(section: str | None = None) -> FileResponse:
+    if section not in {None, "names", "other"}:
+        raise HTTPException(status_code=404, detail="Page not found")
     return FileResponse(_STATIC / "index.html")
 
 
@@ -1260,18 +1283,17 @@ def label_speaker(conversation_id: str, edit: SpeakerLabelEdit) -> dict[str, int
 
 
 @api.get("/vocabulary")
-def vocabulary() -> list[dict[str, object]]:
-    return storage.list_vocabulary()
+def vocabulary(kind: Literal["name", "other"] | None = None) -> list[dict[str, object]]:
+    return storage.list_vocabulary(kind)
 
 
 @api.post("/vocabulary")
-def add_vocabulary(term: VocabularyTerm) -> dict[str, object]:
+def add_vocabulary(term: VocabularyCreate) -> dict[str, object]:
     cleaned = term.term.strip()
     if not cleaned:
         raise HTTPException(status_code=400, detail="Vocabulary term cannot be empty")
-    _check_vocabulary_budget([*[str(item["term"]) for item in storage.list_vocabulary()], cleaned])
     try:
-        return storage.add_vocabulary(cleaned)
+        return storage.add_vocabulary(cleaned, term.kind)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(status_code=409, detail="Vocabulary term already exists") from exc
 
@@ -1281,10 +1303,6 @@ def update_vocabulary(term_id: str, term: VocabularyTerm) -> dict[str, object]:
     cleaned = term.term.strip()
     if not cleaned:
         raise HTTPException(status_code=400, detail="Vocabulary term cannot be empty")
-    current = storage.list_vocabulary()
-    if not any(item["id"] == term_id for item in current):
-        raise HTTPException(status_code=404, detail="Vocabulary term not found")
-    _check_vocabulary_budget([cleaned if item["id"] == term_id else str(item["term"]) for item in current])
     try:
         result = storage.update_vocabulary(term_id, cleaned)
     except sqlite3.IntegrityError as exc:
@@ -1299,6 +1317,32 @@ def delete_vocabulary(term_id: str) -> dict[str, bool]:
     if not storage.delete_vocabulary(term_id):
         raise HTTPException(status_code=404, detail="Vocabulary term not found")
     return {"deleted": True}
+
+
+@api.post("/vocabulary/batch")
+def add_vocabulary_batch(request: VocabularyBatch) -> dict[str, object]:
+    terms = [term.strip() for term in request.terms]
+    if any(not term or len(term) > 100 for term in terms):
+        raise HTTPException(status_code=400, detail="Each term must be 1–100 characters")
+    return storage.add_vocabulary_batch(terms, request.kind)
+
+
+@api.post("/vocabulary/move")
+def move_vocabulary(request: VocabularyMove) -> dict[str, int]:
+    ids = list(dict.fromkeys(request.ids))
+    try:
+        return {"moved": storage.move_vocabulary(ids, request.kind)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.post("/vocabulary/delete")
+def delete_vocabulary_selected(request: VocabularySelection) -> dict[str, int]:
+    ids = list(dict.fromkeys(request.ids))
+    try:
+        return {"deleted": storage.delete_vocabulary_batch(ids)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @api.get("/conversations/{conversation_id}/clean-runs")

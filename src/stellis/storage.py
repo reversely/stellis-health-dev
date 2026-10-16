@@ -261,10 +261,14 @@ def connect() -> Iterator[sqlite3.Connection]:
             id TEXT PRIMARY KEY,
             term TEXT NOT NULL,
             normalized TEXT NOT NULL UNIQUE,
+            kind TEXT NOT NULL DEFAULT 'other',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )"""
     )
+    if "kind" not in {row["name"] for row in conn.execute("PRAGMA table_info(vocabulary)")}:
+        conn.execute("ALTER TABLE vocabulary ADD COLUMN kind TEXT NOT NULL DEFAULT 'other'")
+    conn.execute("CREATE INDEX IF NOT EXISTS vocabulary_kind_normalized ON vocabulary(kind, normalized)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS transcript_highlights (
             id TEXT PRIMARY KEY,
@@ -968,21 +972,45 @@ def set_speaker_label(conversation_id: str, scope: str, target_id: str,
     return revision
 
 
-def list_vocabulary() -> list[dict[str, object]]:
+def list_vocabulary(kind: str | None = None) -> list[dict[str, object]]:
     """List user-provided ASR hints in stable order."""
     with connect() as conn:
-        rows = conn.execute("SELECT id, term, created_at, updated_at FROM vocabulary ORDER BY normalized").fetchall()
+        rows = conn.execute(
+            "SELECT id, term, kind, created_at, updated_at FROM vocabulary"
+            + (" WHERE kind = ?" if kind else "") + " ORDER BY normalized",
+            (kind,) if kind else (),
+        ).fetchall()
     return [dict(row) for row in rows]
 
 
-def add_vocabulary(term: str) -> dict[str, object]:
+def add_vocabulary(term: str, kind: str = "other") -> dict[str, object]:
     """Add one unique vocabulary hint."""
     stamp = datetime.now(timezone.utc).isoformat()
-    record = {"id": str(uuid.uuid4()), "term": term, "normalized": term.casefold(),
+    record = {"id": str(uuid.uuid4()), "term": term, "normalized": term.casefold(), "kind": kind,
               "created_at": stamp, "updated_at": stamp}
     with connect() as conn:
-        conn.execute("INSERT INTO vocabulary (id, term, normalized, created_at, updated_at) VALUES (:id, :term, :normalized, :created_at, :updated_at)", record)
-    return {key: record[key] for key in ("id", "term", "created_at", "updated_at")}
+        conn.execute("INSERT INTO vocabulary (id, term, normalized, kind, created_at, updated_at) VALUES (:id, :term, :normalized, :kind, :created_at, :updated_at)", record)
+    return {key: record[key] for key in ("id", "term", "kind", "created_at", "updated_at")}
+
+
+def add_vocabulary_batch(terms: list[str], kind: str) -> dict[str, object]:
+    """Add distinct terms in one transaction and report existing terms."""
+    added: list[dict[str, object]] = []
+    skipped: list[str] = []
+    with connect() as conn:
+        existing = {row[0] for row in conn.execute("SELECT normalized FROM vocabulary")}
+        for term in terms:
+            normalized = term.casefold()
+            if normalized in existing:
+                skipped.append(term)
+                continue
+            stamp = datetime.now(timezone.utc).isoformat()
+            record = {"id": str(uuid.uuid4()), "term": term, "normalized": normalized,
+                      "kind": kind, "created_at": stamp, "updated_at": stamp}
+            conn.execute("INSERT INTO vocabulary (id, term, normalized, kind, created_at, updated_at) VALUES (:id, :term, :normalized, :kind, :created_at, :updated_at)", record)
+            added.append({key: record[key] for key in ("id", "term", "kind", "created_at", "updated_at")})
+            existing.add(normalized)
+    return {"added": added, "skipped": skipped}
 
 
 def update_vocabulary(term_id: str, term: str) -> dict[str, object] | None:
@@ -993,9 +1021,32 @@ def update_vocabulary(term_id: str, term: str) -> dict[str, object] | None:
                               (term, term.casefold(), stamp, term_id))
         if cursor.rowcount == 0:
             return None
-        row = conn.execute("SELECT id, term, created_at, updated_at FROM vocabulary WHERE id = ?",
+        row = conn.execute("SELECT id, term, kind, created_at, updated_at FROM vocabulary WHERE id = ?",
                            (term_id,)).fetchone()
     return dict(row)
+
+
+def move_vocabulary(ids: list[str], kind: str) -> int:
+    """Move a selected set of terms between vocabulary sections atomically."""
+    with connect() as conn:
+        found = {row[0] for row in conn.execute(
+            f"SELECT id FROM vocabulary WHERE id IN ({','.join('?' for _ in ids)})", ids)}
+        if found != set(ids):
+            raise KeyError("Vocabulary term not found")
+        conn.executemany("UPDATE vocabulary SET kind = ?, updated_at = ? WHERE id = ?",
+                         [(kind, datetime.now(timezone.utc).isoformat(), term_id) for term_id in ids])
+    return len(ids)
+
+
+def delete_vocabulary_batch(ids: list[str]) -> int:
+    """Delete a selected set of terms atomically."""
+    with connect() as conn:
+        found = {row[0] for row in conn.execute(
+            f"SELECT id FROM vocabulary WHERE id IN ({','.join('?' for _ in ids)})", ids)}
+        if found != set(ids):
+            raise KeyError("Vocabulary term not found")
+        conn.executemany("DELETE FROM vocabulary WHERE id = ?", [(term_id,) for term_id in ids])
+    return len(ids)
 
 
 def delete_vocabulary(term_id: str) -> bool:

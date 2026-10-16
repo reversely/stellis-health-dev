@@ -62,8 +62,15 @@ def capabilities() -> dict[str, object]:
 
 
 def vocabulary_snapshot() -> list[str]:
-    """Return the saved terms that a new ASR job will use."""
-    return [str(item["term"]) for item in storage.list_vocabulary()]
+    """Fit recently changed terms into the local model's bounded prompt."""
+    terms: list[str] = []
+    records = sorted(storage.list_vocabulary(),
+                     key=lambda item: (str(item["updated_at"]), str(item["id"])), reverse=True)
+    for item in records:
+        candidate = [*terms, str(item["term"])]
+        if len("Vocabulary: " + ", ".join(candidate)) <= 400:
+            terms = candidate
+    return terms
 
 
 def pipeline_version(terms: list[str] | None = None) -> str:

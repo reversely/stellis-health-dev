@@ -774,7 +774,7 @@ function updateTranscriptSearch() {
 async function showList() {
   document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
   recordingPanel.hidden = true;
-  document.querySelector('#vocabulary-panel').hidden = false;
+  document.querySelector('#vocabulary-panel').hidden = true;
   if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer);
@@ -2324,34 +2324,114 @@ function showSpeakerEditor(row, segment) {
   form.append(scopeLabel, personSection, actions, message);
   row.append(form); form.scrollIntoView({block:'start'}); newPerson.focus();
 }
+let vocabularyKind = 'other';
+let vocabularyTerms = [];
+const vocabularySelected = new Set();
+const vocabularyStatus = document.querySelector('#vocabulary-status');
+function vocabularyLetter(term) {
+  const initial = term.normalize('NFD').replace(/[\u0300-\u036f]/g, '').charAt(0).toUpperCase();
+  return /^[A-Z]$/.test(initial) ? initial : '#';
+}
+function syncVocabularySelection() {
+  const count = vocabularySelected.size;
+  document.querySelector('#vocabulary-delete-selected').disabled = !count;
+  document.querySelector('#vocabulary-move-selected').disabled = !count;
+  const selectAll = document.querySelector('#vocabulary-select-all');
+  selectAll.checked = !!vocabularyTerms.length && count === vocabularyTerms.length;
+  selectAll.indeterminate = count > 0 && count < vocabularyTerms.length;
+}
+function renderVocabularyTerms() {
+  const container = document.querySelector('#vocabulary-list');
+  const letters = document.querySelector('#vocabulary-letters');
+  container.replaceChildren(); letters.replaceChildren(); vocabularySelected.clear();
+  document.querySelector('#vocabulary-empty').hidden = !!vocabularyTerms.length;
+  document.querySelector('#vocabulary-bulk').hidden = !vocabularyTerms.length;
+  const groups = new Map();
+  for (const term of vocabularyTerms) {
+    const letter = vocabularyLetter(term.term);
+    if (!groups.has(letter)) groups.set(letter, []);
+    groups.get(letter).push(term);
+  }
+  for (const [letter, terms] of groups) {
+    const jump = document.createElement('a'); jump.href = `#vocabulary-letter-${letter === '#' ? 'other' : letter}`;
+    jump.textContent = letter; letters.append(jump);
+    const group = document.createElement('section'); group.className = 'vocab-group';
+    const heading = document.createElement('h3'); heading.id = `vocabulary-letter-${letter === '#' ? 'other' : letter}`;
+    heading.textContent = letter; group.append(heading);
+    for (const term of terms) {
+      const row = document.createElement('div'); row.className = 'vocab-row';
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = term.id;
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) vocabularySelected.add(term.id); else vocabularySelected.delete(term.id);
+        syncVocabularySelection();
+      });
+      const name = document.createElement('span'); name.textContent = term.term;
+      label.append(checkbox, name);
+      const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit';
+      edit.addEventListener('click', () => {
+        row.replaceChildren();
+        const form = document.createElement('form'); form.className = 'vocab-edit';
+        const input = document.createElement('input'); input.value = term.term; input.maxLength = 100; input.required = true;
+        input.setAttribute('aria-label', `Edit ${term.term}`);
+        const save = document.createElement('button'); save.type = 'submit'; save.className = 'button-with-icon';
+        save.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h14l3 3v15H3V3h1Zm3 0v6h10V3M7 21v-8h10v8"/></svg><span>Save</span>';
+        const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', () => renderVocabularyTerms());
+        form.append(input, save, cancel); row.append(form); input.focus();
+        form.addEventListener('submit', async event => {
+          event.preventDefault(); save.disabled = true;
+          try {
+            await json(await fetch(`${API}/vocabulary/${encodeURIComponent(term.id)}`, {method:'PATCH',
+              headers:{'Content-Type':'application/json'},body:JSON.stringify({term:input.value})}));
+            vocabularyStatus.textContent = 'Saved.'; await loadVocabulary();
+          } catch (error) { vocabularyStatus.textContent = error.message; save.disabled = false; }
+        });
+      });
+      row.append(label, edit); group.append(row);
+    }
+    container.append(group);
+  }
+  syncVocabularySelection();
+}
 async function loadVocabulary() {
   const terms = await json(await fetch(`${API}/vocabulary`));
-  const container = document.querySelector('#vocabulary-list');
-  container.replaceChildren();
-  for (const term of terms) {
-    const row = document.createElement('div'); row.className = 'vocabulary-term';
-    const name = document.createElement('span'); name.textContent = term.term;
-    const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit';
-    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove';
-    edit.addEventListener('click', () => {
-      row.replaceChildren();
-      const form = document.createElement('form'); form.className = 'vocabulary-edit';
-      const input = document.createElement('input'); input.value = term.term; input.maxLength = 100; input.required = true;
-      const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save';
-      const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', () => loadVocabulary());
-      form.append(input, save, cancel); row.append(form); input.focus();
-      form.addEventListener('submit', async event => {
-        event.preventDefault();
-        try { await json(await fetch(`${API}/vocabulary/${encodeURIComponent(term.id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({term:input.value})})); await loadVocabulary(); }
-        catch (error) { document.querySelector('#vocabulary-status').textContent = error.message; }
-      });
-    });
-    remove.addEventListener('click', async () => {
-      try { await json(await fetch(`${API}/vocabulary/${encodeURIComponent(term.id)}`, {method:'DELETE'})); await loadVocabulary(); }
-      catch (error) { document.querySelector('#vocabulary-status').textContent = error.message; }
-    });
-    row.append(name, edit, remove); container.append(row);
+  const nameCount = terms.filter(term => term.kind === 'name').length;
+  const otherCount = terms.filter(term => term.kind === 'other').length;
+  document.querySelector('#vocabulary-name-count').textContent = `${nameCount} ${nameCount === 1 ? 'term' : 'terms'}`;
+  document.querySelector('#vocabulary-other-count').textContent = `${otherCount} ${otherCount === 1 ? 'term' : 'terms'}`;
+  vocabularyTerms = terms.filter(term => term.kind === vocabularyKind);
+  renderVocabularyTerms();
+}
+async function showVocabulary(section = null) {
+  await flushNotes(notesStates.conversation);
+  await flushEnhanced();
+  document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
+  recordingPanel.hidden = true;
+  if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
+  conversationMore.open = false; conversationMore.hidden = true;
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer);
+  clearTimeout(recordingChatTimer); clearTimeout(cleanRunTimer); clearTimeout(silenceScanTimer);
+  player.pause(); player.removeAttribute('src'); player.load();
+  activeConversationId = null; activePersonId = null;
+  listView.hidden = true; detailView.hidden = true;
+  document.querySelector('#trash-view').hidden = true;
+  document.querySelector('#person-view').hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = false;
+  document.querySelector('#vocabulary-overview').hidden = !!section;
+  document.querySelector('#vocabulary-terms-page').hidden = !section;
+  for (const link of document.querySelectorAll('.vocab-subnav a')) {
+    if (link.getAttribute('href') === location.pathname) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   }
+  vocabularyKind = section === 'names' ? 'name' : 'other';
+  document.querySelector('#page-title').textContent = 'Vocabulary';
+  document.querySelector('#vocabulary-kind-title').textContent = section === 'names' ? 'Names of people' : 'Other vocabulary';
+  document.querySelector('#vocabulary-form label').textContent = section === 'names' ? 'Add names of people' : 'Add words or phrases';
+  document.querySelector('#vocabulary-move-selected').textContent = section === 'names' ? 'Move to Other vocabulary' : 'Move to Names of people';
+  vocabularyStatus.textContent = '';
+  await loadVocabulary();
+  captureControls();
 }
 async function route() {
   const match = location.pathname.match(/^\/conversation\/([^/]+)$/);
@@ -2363,6 +2443,9 @@ async function route() {
   }
   if (match) await showDetail(decodeURIComponent(match[1]));
   else if (location.pathname === '/recording') showRecordingWorkspace();
+  else if (location.pathname === '/vocabulary') await showVocabulary();
+  else if (location.pathname === '/vocabulary/names') await showVocabulary('names');
+  else if (location.pathname === '/vocabulary/other') await showVocabulary('other');
   else if (location.pathname.match(/^\/person\/([^/]+)$/))
     await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
@@ -3038,7 +3121,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3188,15 +3271,63 @@ document.querySelector('#transcript-search-clear').addEventListener('click', () 
 document.querySelector('#vocabulary-form').addEventListener('submit', async event => {
   event.preventDefault();
   const input = document.querySelector('#vocabulary-input');
-  try { await json(await fetch(`${API}/vocabulary`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({term:input.value})}));
-    input.value = ''; document.querySelector('#vocabulary-status').textContent = 'Term saved for future on-device processing.'; await loadVocabulary();
-    if (activeConversationId && currentTranscript) {processButton.hidden = false; processButton.textContent = 'Reprocess with vocabulary';}
-  } catch (error) { document.querySelector('#vocabulary-status').textContent = error.message; }
+  const terms = input.value.split(/[,\n]/).map(value => value.trim()).filter(Boolean);
+  if (!terms.length) { vocabularyStatus.textContent = 'Enter a term.'; return; }
+  if (terms.length > 200 || terms.some(term => term.length > 100)) {
+    vocabularyStatus.textContent = 'Add up to 200 terms, each at most 100 characters.'; return;
+  }
+  const button = document.querySelector('#vocabulary-form button[type=submit]'); button.disabled = true;
+  try {
+    const result = await json(await fetch(`${API}/vocabulary/batch`, {method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({terms,kind:vocabularyKind})}));
+    input.value = '';
+    vocabularyStatus.textContent = `${result.added.length} added${result.skipped.length ? `, ${result.skipped.length} already saved` : ''}.`;
+    await loadVocabulary();
+  } catch (error) { vocabularyStatus.textContent = error.message; }
+  finally { button.disabled = false; }
 });
-document.querySelector('#vocabulary-panel').addEventListener('toggle', event => {
-  if (event.target.open) event.target.scrollIntoView({block:'start'});
+document.querySelector('#vocabulary-select-all').addEventListener('change', event => {
+  vocabularySelected.clear();
+  for (const checkbox of document.querySelectorAll('#vocabulary-list .vocab-row input[type=checkbox]')) {
+    checkbox.checked = event.target.checked;
+    if (checkbox.checked) vocabularySelected.add(checkbox.value);
+  }
+  syncVocabularySelection();
 });
-loadVocabulary().catch(error => document.querySelector('#vocabulary-status').textContent = error.message);
+document.querySelector('#vocabulary-move-selected').addEventListener('click', async () => {
+  if (!vocabularySelected.size) return;
+  const count = vocabularySelected.size;
+  const target = vocabularyKind === 'name' ? 'other' : 'name';
+  try {
+    await json(await fetch(`${API}/vocabulary/move`, {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ids:[...vocabularySelected],kind:target})}));
+    vocabularyStatus.textContent = `${count} moved.`; await loadVocabulary();
+  } catch (error) { vocabularyStatus.textContent = error.message; }
+});
+const vocabularyDeleteDialog = document.querySelector('#vocabulary-delete-dialog');
+document.querySelector('#vocabulary-delete-selected').addEventListener('click', () => {
+  if (!vocabularySelected.size) return;
+  document.querySelector('#vocabulary-delete-message').textContent =
+    `Delete ${vocabularySelected.size} selected ${vocabularySelected.size === 1 ? 'term' : 'terms'}?`;
+  vocabularyDeleteDialog.showModal();
+  document.querySelector('#vocabulary-delete-cancel').focus();
+});
+document.querySelector('#vocabulary-delete-cancel').addEventListener('click', () => vocabularyDeleteDialog.close());
+vocabularyDeleteDialog.addEventListener('close', () => {
+  const button = document.querySelector('#vocabulary-delete-selected');
+  if (!document.querySelector('#vocabulary-panel').hidden && !button.disabled) button.focus();
+});
+document.querySelector('#vocabulary-delete-confirm').addEventListener('click', async () => {
+  const ids = [...vocabularySelected];
+  const button = document.querySelector('#vocabulary-delete-confirm'); button.disabled = true;
+  try {
+    await json(await fetch(`${API}/vocabulary/delete`, {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ids})}));
+    vocabularyDeleteDialog.close(); vocabularyStatus.textContent = `${ids.length} deleted.`;
+    await loadVocabulary(); document.querySelector('#vocabulary-input').focus();
+  } catch (error) { vocabularyStatus.textContent = error.message; vocabularyDeleteDialog.close(); }
+  finally { button.disabled = false; }
+});
 loadRecoveries().catch(error => setStatus(error.message));
 window.addEventListener('storage', event => {
   if (!event.key?.startsWith('stellis-recording-live-')) return;
