@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, tickets #55, #65, #68, #48, #71, and #73. This page describes the running development code. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, tickets #55, #65, #68, #48, #71, #73, and #75. This page describes the running development code. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -14,6 +14,7 @@ flowchart LR
   C -->|light preference only| L[(Browser localStorage)]
   C -->|/api/v1 JSON + multipart| A[FastAPI device API]
   C -->|separate loopback origin: account and devices| SI[FastAPI sync identity dev]
+  C -->|optional exact-origin credentialed CORS bridge| SI
   C -->|Web Crypto AES-GCM ciphertext envelopes| SI
   C -->|offline encrypted entry queue| IDB[(Browser IndexedDB)]
   SI --> SID[(Private identity SQLite: users, sessions, devices, vault salt, ciphertext journal)]
@@ -84,7 +85,7 @@ flowchart LR
 | Component | Current implementation | Owns |
 | --- | --- | --- |
 | Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/`; local Inter/Piazzolla WOFF2 assets, OFL notices, and `theme.css` are served by FastAPI without a build step | Dark-default cosmos theme, light preference in browser localStorage, optional login page and logout control, semantic colors and reduced-motion styling; category creation, assignment, filtering, and Recently Deleted/Restore/permanent-delete controls with visible 30-day expiry; concise labels and a top-right three-dot More options menu for regeneration, rematch, alignment, reprocessing, and Delete; Person panel and profiles with explicit passage/group confirmation, rename, merge, separation, and removal; generation-review panel with before/after wording, source/target audio, per-overlay mapping or unresolved choices, and source/new generation decision; library search results and local in-conversation phrase/speaker navigation; file selection/drop, microphone permission and MediaRecorder capture, chunk upload/recovery, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript with view-only speaker-turn grouping, per-fragment and measured word seeking with playback tracking, highlight filter, transcript-wide Edit/Done mode with in-place passage editing and atomic save in both source and Edited Transcript tabs, contextual speaker editing, vocabulary panel, speaker rematch and change filter, summary and question controls with linked evidence. |
-| Sync identity dev | `src/stellis/sync_server.py`, `src/stellis/sync_identity.py`, and `src/stellis/sync_static/`, started by `uv run stellis sync-serve` | Separate loopback origin (`127.0.0.1:8769` by default), account shell, independent multi-user credentials and seven-day sessions, account-owned device metadata, public vault salt/check ciphertext, bounded opaque text journal, own private SQLite directory. No conversation, media, or plaintext-content routes. |
+| Sync identity dev | `src/stellis/sync_server.py`, `src/stellis/sync_identity.py`, and `src/stellis/sync_static/`, started by `uv run stellis sync-serve` | Separate loopback origin (`127.0.0.1:8769` by default), account shell, independent multi-user credentials and seven-day sessions, account-owned device metadata, public vault salt/check ciphertext, bounded opaque text journal, optional exact-loopback-origin credentialed CORS, own private SQLite directory. No conversation, media, or plaintext-content routes. |
 | Device service | FastAPI in `src/stellis/server.py`, started by `uv run stellis serve` | Loopback HTTP (`127.0.0.1:8765`), API routes, static UI, audio range responses, optional single-account session middleware, worker startup, startup and hourly Recently Deleted retention sweep. |
 | Local auth | `src/stellis/auth.py` | Opt-in one-account verifier and seven-day hashed-token sessions in a separate private SQLite file; protected browser and API routes, with public health/login/static resources. |
 | Importer | `src/stellis/importer.py` | Bounded multipart/ZIP extraction, SHA-256 deduplication, `ffprobe` duration/stream validation. |
@@ -97,6 +98,8 @@ flowchart LR
 | Hosted service | Nebius Token Factory | Receives bounded displayed transcript excerpts and speaker labels only when the user starts an AI run; returns generated JSON, provider IDs, and usage. It does not receive audio. |
 
 ## Implemented connections
+
+- If `STELLIS_DEVICE_ORIGIN` names one exact loopback origin with a port, the sync identity service allows credentialed `/sync/v1` CORS reads and writes from that origin after the browser signs in at the sync origin. Foreign origins fail preflight or state-changing requests. This connects the two development origins for browser experiments; no device conversation is synced yet. [ADR 0022](decisions/0022-loopback-browser-sync-bridge.md) records the production browser-permission and cross-site session limits.
 
 - `stellis sync-serve` starts a separate development identity origin. `POST /sync/v1/auth/register|login|logout`, `GET /sync/v1/me`, `POST /sync/v1/sessions/revoke-all`, and `GET/POST/DELETE /sync/v1/devices` manage development accounts, sessions, and account-owned device names/IDs. Its browser shell works without a local speech worker. `GET/POST /sync/v1/vault` and `GET/POST /sync/v1/entries` store a public salt, encrypted vault check, and account-owned append-only text envelopes. The browser derives a nonextractable AES-GCM key from a separate vault passphrase, authenticates routing IDs, and queues encrypted entries in IndexedDB offline. It exposes no `/api/v1` device resources or plaintext content. [ADR 0021](decisions/0021-browser-encrypted-text-journal.md) records the prototype and threat limits. [ADR 0020](decisions/0020-separate-sync-identity-origin.md) records the separation.
 
@@ -154,3 +157,5 @@ Forty-eight tests pass, including a recognition-artifact check for an unusual si
 Fifty tests pass with two-account sync-identity isolation, device ownership and cross-account 404, login/logout, forged and expired sessions, all-session revocation, Origin rejection, and absence of device content routes. Two isolated Chromium profiles registered on the separate origin; Alice's device list stayed private from Bob, logout returned 401, and the origin returned 404 for a device-service conversation route. The account shell fit a 390-pixel viewport. No ciphertext sync or production OIDC was exercised.
 
 Fifty-one tests pass with ciphertext journal size/IV checks, immutable per-account salt, idempotent entry IDs, cursor pagination, and cross-account isolation. Two Chromium profiles on one account encrypted and decrypted the same note, then converged after one created another while offline. A wrong vault passphrase failed at unlock; a modified stored ciphertext failed AES-GCM authentication. Captured POST bodies and raw SQLite bytes contained no sample note or vault passphrase. The separate account page fit 390 pixels. This prototype does not sync the device conversation library.
+
+Fifty-two tests pass with exact-origin credentialed preflight and mutation, denial of another loopback origin, and rejection of an external-origin configuration. Chromium signed in on the sync origin at port 8769, then from the device origin at port 8765 read account/vault metadata and created and removed a temporary device through credentialed CORS. A fresh profile received 401, and a page from port 8770 could not read a sync response. The network trace included OPTIONS preflights. No real conversation data crossed the bridge.

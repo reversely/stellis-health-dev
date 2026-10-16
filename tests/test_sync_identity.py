@@ -2,6 +2,7 @@
 
 import os
 import base64
+import importlib
 import sqlite3
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from stellis import sync_identity
+from stellis import sync_server
 from stellis.sync_server import app
 
 
@@ -64,6 +66,9 @@ class SyncIdentityTest(unittest.TestCase):
                          ((datetime.now(timezone.utc)-timedelta(seconds=1)).isoformat(),
                           sync_identity._digest(token)))
         self.assertEqual(self.alice.get('/sync/v1/me').status_code, 401)
+        self.alice.post('/sync/v1/auth/login', json=self.a)
+        self.assertEqual(self.alice.post('/sync/v1/sessions/revoke-all').status_code, 200)
+        self.assertEqual(self.alice.get('/sync/v1/me').status_code, 401)
 
     def test_ciphertext_journal_is_isolated_bounded_and_idempotent(self):
         self.alice.post('/sync/v1/auth/register', json=self.a)
@@ -92,6 +97,31 @@ class SyncIdentityTest(unittest.TestCase):
             columns = [row[1] for row in conn.execute('PRAGMA table_info(ciphertext_entries)')]
         self.assertNotIn('text', columns)
         self.assertNotIn('audio', columns)
-        self.alice.post('/sync/v1/auth/login', json=self.a)
-        self.assertEqual(self.alice.post('/sync/v1/sessions/revoke-all').status_code, 200)
-        self.assertEqual(self.alice.get('/sync/v1/me').status_code, 401)
+
+    def test_configured_device_origin_has_credentialed_cors_without_wildcard(self):
+        with patch.dict(os.environ, {'STELLIS_DEVICE_ORIGIN':'http://127.0.0.1:8765'}):
+            module = importlib.reload(sync_server)
+            with TestClient(module.app) as client:
+                allowed = client.options('/sync/v1/devices', headers={
+                    'Origin':'http://127.0.0.1:8765',
+                    'Access-Control-Request-Method':'POST',
+                    'Access-Control-Request-Headers':'content-type'})
+                self.assertEqual(allowed.status_code, 200)
+                self.assertEqual(allowed.headers['access-control-allow-origin'], 'http://127.0.0.1:8765')
+                self.assertEqual(allowed.headers['access-control-allow-credentials'], 'true')
+                denied = client.options('/sync/v1/devices', headers={
+                    'Origin':'http://127.0.0.1:8770',
+                    'Access-Control-Request-Method':'POST'})
+                self.assertEqual(denied.status_code, 400)
+                self.assertNotIn('access-control-allow-origin', denied.headers)
+                client.post('/sync/v1/auth/register', json=self.a)
+                self.assertEqual(client.post('/sync/v1/devices', json={'name':'Blocked'},
+                    headers={'Origin':'http://127.0.0.1:8770'}).status_code, 403)
+                accepted = client.post('/sync/v1/devices', json={'name':'Allowed'},
+                    headers={'Origin':'http://127.0.0.1:8765'})
+                self.assertEqual(accepted.status_code, 200)
+                self.assertEqual(accepted.headers['access-control-allow-origin'], 'http://127.0.0.1:8765')
+        importlib.reload(sync_server)
+        with patch.dict(os.environ, {'STELLIS_DEVICE_ORIGIN':'https://example.com'}):
+            with self.assertRaises(RuntimeError):
+                sync_server._device_origin()
