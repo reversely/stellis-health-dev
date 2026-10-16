@@ -85,10 +85,13 @@ def public_run(record: dict[str, object]) -> dict[str, object]:
     }
 
 
-def request_run(conversation_id: str, kind: str, question: str | None = None) -> dict[str, object]:
+def request_run(conversation_id: str, kind: str, question: str | None = None,
+                force: bool = False) -> dict[str, object]:
     """Create or resume one idempotent request for the displayed revision."""
     if kind not in {"summary", "answer"}:
         raise ValueError("Choose summary or answer")
+    if force and kind != "summary":
+        raise ValueError("Only summaries can be regenerated")
     if kind == "answer" and (not question or not question.strip()):
         raise ValueError("Enter a question")
     if kind == "summary":
@@ -103,6 +106,13 @@ def request_run(conversation_id: str, kind: str, question: str | None = None) ->
     identity = json.dumps([display["revision"], kind, question, MODEL_ID, PROMPT_VERSION], ensure_ascii=False)
     digest = hashlib.sha256(identity.encode()).hexdigest()
     with _LOCK:
+        if force:
+            active = next((item for item in storage.list_ai_runs(conversation_id)
+                           if item["kind"] == "summary" and item["source_revision"] == display["revision"]
+                           and item["state"] in {"queued", "running"}), None)
+            if active:
+                return active
+            digest = hashlib.sha256((identity + str(uuid.uuid4())).encode()).hexdigest()
         existing = storage.find_ai_run(conversation_id, kind, digest)
         if existing:
             if existing["state"] == "failed":

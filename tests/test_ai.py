@@ -61,6 +61,16 @@ class AIWorkflowTest(unittest.TestCase):
                           json={"text":"Avery discussed rockets.", "expected_revision":1})
         self.assertTrue(self.client.get(f"/api/v1/ai-runs/{run['id']}").json()["stale"])
 
+    def test_summary_regeneration_creates_new_run_without_duplicate_active_request(self) -> None:
+        first = self._create("summary")
+        storage.update_ai_run(first['id'], state='succeeded', stage='complete')
+        with patch.object(ai, '_key', return_value='test-key'), patch.object(ai, '_launch'):
+            second = self.client.post(f'{self.base}/ai-runs', json={'kind':'summary','force':True}).json()
+            repeated = self.client.post(f'{self.base}/ai-runs', json={'kind':'summary','force':True}).json()
+        self.assertNotEqual(second['id'], first['id'])
+        self.assertEqual(repeated['id'], second['id'])
+        self.assertEqual(second['source_revision'], first['source_revision'])
+
     def test_invented_source_ids_fail_even_after_one_repair(self) -> None:
         run = self._create("summary")
         bad = {"overview":[{"text":"Unsupported","source_segment_ids":["invented"]}],

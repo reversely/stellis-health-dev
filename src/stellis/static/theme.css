@@ -127,7 +127,7 @@ h1, .transcript-heading h2, .ai-heading h2 {
 h1 { font-size: clamp(36px, 5vw, 54px); line-height: 1.05; }
 .transcript-heading h2, .ai-heading h2 { font-size: 27px; }
 main { max-width: 1100px; }
-.heading { margin-bottom: 12px; }
+.heading { position: relative; z-index: 21; margin-bottom: 12px; }
 .heading > div:first-child p { max-width: 56ch; }
 
 .transcript-card, .ai-card, .player-card, .next-card, .vocabulary-card,
@@ -291,7 +291,17 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .category-row span { flex: 1; }
 .category-tag { display: inline-block; margin: 6px 5px 0 0; padding: 3px 8px; border-radius: 20px; color: var(--accent-strong); background: var(--raised); font-size: 12px; }
 .conversation-organize { justify-content: space-between; margin-top: 14px; }
-#conversation-categories { flex: 1; }
+#conversation-categories { flex: 1; min-width: 0; }
+.more-menu { position: relative; flex: 0 0 auto; }
+.more-menu summary { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); color: var(--ink); font-size: 25px; line-height: 1; cursor: pointer; list-style: none; }
+.more-menu summary::-webkit-details-marker { display: none; }
+.more-menu summary:hover, .more-menu[open] summary { border-color: var(--accent); }
+.more-menu-items { position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; display: grid; gap: 2px; width: min(260px, calc(100vw - 40px)); padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.heading-actions .more-menu-items button { width: 100%; border: 0; background: transparent; color: var(--ink); text-align: left; }
+.more-menu-items button:hover { background: var(--raised); }
+.more-menu-items button[hidden] { display: none; }
+.more-menu-items #trash-conversation { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+#recording-detail:empty { display: none; }
 #conversation-category-list { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
 .category-checkbox { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .category-checkbox input { accent-color: var(--accent); }
@@ -338,7 +348,9 @@ html[data-theme='light'] .timed-word mark { background: #f4dd84; }
   .transcript-search .search-row select { max-width: none; flex: 1; }
   .library-toolbar select { min-width: 0; }
   .conversation-organize { align-items: flex-start; }
-  .conversation-organize > * { flex-basis: 100%; }
+.conversation-organize > * { flex-basis: auto; }
+  .heading-actions .more-menu { position: absolute; right: 0; top: 0; flex: none; }
+  .conversation-page .heading > div:first-child { padding-right: 50px; }
   .person-conversation-row { grid-template-columns: 1fr; }
   .person-conversation-row small { grid-column: 1; }
   #person-merge-panel .search-row { flex-wrap: wrap; }
