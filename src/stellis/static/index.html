@@ -5,27 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f6f7fb" />
     <title>Stellis</title>
-    <style>
-      :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #17202b; background: #f6f7fb; }
-      * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; }
-      header { height: 68px; display: flex; align-items: center; padding: 0 32px; border-bottom: 1px solid #e4e8ef; background: white; }
-      .brand { font-size: 21px; font-weight: 750; letter-spacing: -.04em; color: #263a84; }
-      main { max-width: 1040px; margin: 0 auto; padding: 52px 28px; }
-      h1 { font-size: clamp(30px, 5vw, 46px); letter-spacing: -.05em; margin: 0 0 12px; }
-      p { line-height: 1.55; color: #586273; margin: 0; }
-      .empty { background: white; border: 1px solid #e4e8ef; border-radius: 18px; margin-top: 36px; min-height: 300px; display: grid; place-items: center; text-align: center; padding: 32px; }
-      .empty strong { display: block; font-size: 19px; margin-bottom: 8px; }
-      @media (max-width: 600px) { header { padding: 0 20px; } main { padding: 36px 20px; } }
-    </style>
+    <link rel="stylesheet" href="/static/app.css" />
+    <script src="/static/app.js" defer></script>
   </head>
   <body>
-    <header><div class="brand">stellis</div></header>
+    <header><a class="brand" href="/">stellis</a><span class="header-note">Private, local interview workspace</span></header>
     <main>
-      <h1>Your conversations</h1>
-      <p>Recordings, transcripts, and useful insights in one place.</p>
-      <section class="empty" aria-label="Empty conversations">
-        <div><strong>No conversations yet</strong><p>Your recordings will appear here.</p></div>
+      <section class="heading">
+        <div><h1 id="page-title">Your conversations</h1><p id="page-subtitle">Listen, review, and return to what matters.</p></div>
+        <label class="upload-button" for="audio-file">Import recording</label>
+        <input id="audio-file" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.zip,audio/*,application/zip" />
+      </section>
+      <div id="status" role="status" aria-live="polite"></div>
+      <section id="list-view">
+        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Import a recording or Otter ZIP">
+          <div class="drop-icon" aria-hidden="true">↥</div>
+          <strong>Drop a recording or Otter export here</strong>
+          <p>MP3, WAV, M4A, OGG, WebM, FLAC, or an Otter ZIP with one audio file.</p>
+          <span>Choose a file</span>
+        </div>
+        <div id="conversation-list" class="conversation-list" aria-label="Conversations"></div>
+      </section>
+      <section id="detail-view" hidden>
+        <a class="back-link" href="/">← All conversations</a>
+        <div class="player-card">
+          <div class="player-heading"><span class="eyebrow">Recording</span><span id="audio-duration"></span></div>
+          <audio id="audio-player" preload="metadata" controls></audio>
+          <div class="seek-controls"><button id="back-ten" type="button" aria-label="Go back 10 seconds">−10s</button><button id="forward-ten" type="button" aria-label="Go forward 10 seconds">+10s</button><span id="current-time">0:00</span></div>
+        </div>
+        <div class="next-card"><strong>Transcript is next</strong><p>On-device transcription and speaker labels are being added in the next ticket. Your recording is saved locally and ready to review.</p></div>
       </section>
     </main>
   </body>

@@ -4,7 +4,7 @@ Stellis is a browser workspace for recordings, transcripts, speakers, and source
 
 ## Current state
 
-The local browser shell and health endpoint run. Import, recording, transcript editing, diarization, and Nebius views are being built in the ordered tickets. The acceptance test will run through the browser on a real interview, rather than by accepting command-line output alone.
+The local browser app imports audio or an Otter ZIP, lists conversations, and replays recordings with seeking. Recording, transcript editing, diarization, and Nebius views are being built in the ordered tickets. The acceptance test runs through the browser on a real interview.
 
 ## Setup and run
 
@@ -17,6 +17,8 @@ uv run --locked stellis serve
 ```
 
 Open <http://127.0.0.1:8765/>. `GET /api/health` should return `{"status":"ok","mode":"local","version":"0.1.0"}`. Use `--port` to select another loopback port.
+
+Use **Import recording** or drag a file onto the home page. MP3, WAV, M4A, OGG, WebM, FLAC, and Otter ZIP exports containing one audio file are supported up to 1 GB. Imports are stored under `~/Library/Application Support/Stellis`; set `STELLIS_DATA_DIR` to use a different private local folder. Reimporting the same audio opens its existing conversation.
 
 For local transcription work, set `STELLIS_WHISPER_MODEL` to a whisper.cpp GGML model file. The current spike uses `ggml-small.en.bin`; the [whisper.cpp model collection](https://huggingface.co/ggerganov/whisper.cpp) supplies model files. Speaker models and the setup command will be added with [#12](https://github.com/reversely/stellis/issues/12). The macOS sherpa-onnx runtime uses both `sherpa-onnx` and `sherpa-onnx-core` in the lockfile because the upstream source metadata can omit the core dependency.
 
