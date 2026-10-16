@@ -22,9 +22,8 @@ def _name(value: str) -> str:
 
 
 def _matching_person(conn: sqlite3.Connection, name: str) -> sqlite3.Row | None:
-    key = name.casefold()
-    return next((row for row in conn.execute("SELECT id, name FROM persons")
-                 if " ".join(str(row["name"]).split()).casefold() == key), None)
+    return conn.execute("SELECT id, name FROM persons WHERE name_key = ?",
+                        (storage.normalized_person_name(name),)).fetchone()
 
 
 def list_people() -> list[dict[str, object]]:
@@ -46,8 +45,9 @@ def create_person(name: str) -> dict[str, object]:
         if existing:
             row = conn.execute("SELECT id, name, created_at FROM persons WHERE id = ?", (existing["id"],)).fetchone()
             return dict(row)
-        conn.execute("INSERT INTO persons (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-                     (person["id"], value, person["created_at"], person["created_at"]))
+        conn.execute("INSERT INTO persons (id, name, name_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                     (person["id"], value, storage.normalized_person_name(value),
+                      person["created_at"], person["created_at"]))
     return person
 
 
@@ -58,8 +58,8 @@ def rename_person(person_id: str, name: str) -> dict[str, object]:
         existing = _matching_person(conn, value)
         if existing and str(existing["id"]) != person_id:
             raise ValueError("A speaker with that name already exists")
-        changed = conn.execute("UPDATE persons SET name = ?, updated_at = ? WHERE id = ?",
-                               (value, _now(), person_id)).rowcount
+        changed = conn.execute("UPDATE persons SET name = ?, name_key = ?, updated_at = ? WHERE id = ?",
+                               (value, storage.normalized_person_name(value), _now(), person_id)).rowcount
     if not changed:
         raise LookupError("Person not found")
     return {"id": person_id, "name": value}
@@ -149,8 +149,8 @@ def confirm_person(conversation_id: str, segment_id: str, person_id: str | None,
                 person_id = str(found["id"])
             else:
                 person_id = str(uuid.uuid4())
-                conn.execute("INSERT INTO persons (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-                             (person_id, cleaned_name, stamp, stamp))
+                conn.execute("INSERT INTO persons (id, name, name_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                             (person_id, cleaned_name, storage.normalized_person_name(cleaned_name), stamp, stamp))
         else:
             found = conn.execute("SELECT id, name FROM persons WHERE id = ?", (person_id,)).fetchone()
             if not found:
@@ -163,7 +163,7 @@ def confirm_person(conversation_id: str, segment_id: str, person_id: str | None,
         skipped = 0
         labels = conn.execute(
             "SELECT scope, target_id, name FROM speaker_labels WHERE conversation_id = ?", (conversation_id,)).fetchall()
-        normalized_name = cleaned_name.casefold()
+        normalized_name = storage.normalized_person_name(cleaned_name)
         manual_labels = [row for row in labels
                          if " ".join(str(row["name"]).split()).casefold() == normalized_name]
         passage_labels = {str(row["target_id"]): str(row["name"]) for row in labels if row["scope"] == "segment"}

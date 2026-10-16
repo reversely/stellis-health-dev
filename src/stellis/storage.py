@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Iterator
 
 
+def normalized_person_name(value: str) -> str:
+    """Return the durable identity key used by every Person write."""
+    return " ".join(value.split()).casefold()
+
+
 def data_dir() -> Path:
     """Return the private local data directory, creating it when needed."""
     configured = os.environ.get("STELLIS_DATA_DIR")
@@ -54,11 +59,14 @@ def connect() -> Iterator[sqlite3.Connection]:
         PRIMARY KEY(conversation_id, category_id)
     )""")
     conn.execute("""CREATE TABLE IF NOT EXISTS persons (
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     )""")
     person_columns = {row["name"] for row in conn.execute("PRAGMA table_info(persons)")}
     if "hidden_at" not in person_columns:
         conn.execute("ALTER TABLE persons ADD COLUMN hidden_at TEXT")
+    if "name_key" not in person_columns:
+        conn.execute("ALTER TABLE persons ADD COLUMN name_key TEXT")
     conn.execute("""CREATE TABLE IF NOT EXISTS person_links (
         conversation_id TEXT NOT NULL REFERENCES conversations(id),
         segment_id TEXT NOT NULL,
@@ -67,6 +75,28 @@ def connect() -> Iterator[sqlite3.Connection]:
         confirmed_at TEXT NOT NULL,
         PRIMARY KEY(conversation_id, segment_id)
     )""")
+    if conn.execute("SELECT 1 FROM persons WHERE name_key IS NULL LIMIT 1").fetchone():
+        # Prefer a visible profile, then the oldest ID; move links before deleting
+        # duplicate legacy rows so confirmed passages stay attached to one Person.
+        rows = conn.execute("""SELECT id, name FROM persons
+            ORDER BY hidden_at IS NOT NULL, created_at, id""").fetchall()
+        keeper_by_key: dict[str, str] = {}
+        for row in rows:
+            key = normalized_person_name(str(row["name"]))
+            keeper = keeper_by_key.get(key)
+            if keeper:
+                conn.execute("UPDATE person_links SET person_id = ? WHERE person_id = ?", (keeper, row["id"]))
+                conn.execute("DELETE FROM persons WHERE id = ?", (row["id"],))
+            else:
+                keeper_by_key[key] = str(row["id"])
+                conn.execute("UPDATE persons SET name_key = ? WHERE id = ?", (key, row["id"]))
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS persons_name_key_unique ON persons(name_key)")
+    conn.execute("""CREATE TRIGGER IF NOT EXISTS persons_name_key_required_insert
+        BEFORE INSERT ON persons WHEN NEW.name_key IS NULL OR NEW.name_key = ''
+        BEGIN SELECT RAISE(ABORT, 'Normalized speaker name is required'); END""")
+    conn.execute("""CREATE TRIGGER IF NOT EXISTS persons_name_key_required_update
+        BEFORE UPDATE OF name, name_key ON persons WHEN NEW.name_key IS NULL OR NEW.name_key = ''
+        BEGIN SELECT RAISE(ABORT, 'Normalized speaker name is required'); END""")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS processing_jobs (
             id TEXT PRIMARY KEY,

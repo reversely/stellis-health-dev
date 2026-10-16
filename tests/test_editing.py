@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -180,12 +181,21 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(again.json()['person_id'], person_id)
         self.assertEqual(self.client.post('/api/v1/persons', json={'name': 'JAY MATLOCK'}).json()['id'], person_id)
         with storage.connect() as conn:
-            people = conn.execute('SELECT id, name FROM persons ORDER BY name').fetchall()
+            people = conn.execute('SELECT id, name, name_key FROM persons ORDER BY name').fetchall()
             links = conn.execute('SELECT person_id, COUNT(*) AS n FROM person_links WHERE conversation_id = ? GROUP BY person_id',
                                  (self.conversation_id,)).fetchall()
             labels = conn.execute('SELECT * FROM speaker_labels WHERE conversation_id = ?',
                                   (self.conversation_id,)).fetchall()
         self.assertEqual(len(people), 2)
+        self.assertEqual({row['name_key'] for row in people}, {'jay matlock', 'shereen'})
+        with self.assertRaises(sqlite3.IntegrityError):
+            with storage.connect() as conn:
+                conn.execute('''INSERT INTO persons (id, name, name_key, created_at, updated_at)
+                    VALUES ('duplicate-jay', 'JAY MATLOCK', 'jay matlock', 'now', 'now')''')
+        with self.assertRaises(sqlite3.IntegrityError):
+            with storage.connect() as conn:
+                conn.execute('''INSERT INTO persons (id, name, created_at, updated_at)
+                    VALUES ('missing-key', 'Jay Matlock', 'now', 'now')''')
         self.assertEqual({row['person_id']: row['n'] for row in links}, {person_id: 74, shereen['id']: 1})
         self.assertEqual(labels, [])
         with TestClient(app) as reloaded:
