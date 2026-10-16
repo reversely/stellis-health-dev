@@ -219,6 +219,46 @@ def connect() -> Iterator[sqlite3.Connection]:
     ai_columns = {row["name"] for row in conn.execute("PRAGMA table_info(ai_runs)")}
     if "checkpoint_json" not in ai_columns:
         conn.execute("ALTER TABLE ai_runs ADD COLUMN checkpoint_json TEXT NOT NULL DEFAULT '[]'")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS clean_runs (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(id),
+            input_hash TEXT NOT NULL,
+            source_revision INTEGER NOT NULL,
+            model_id TEXT NOT NULL,
+            prompt_version TEXT NOT NULL,
+            state TEXT NOT NULL CHECK (state IN ('queued', 'running', 'succeeded', 'failed')),
+            stage TEXT NOT NULL,
+            error_code TEXT,
+            error_message TEXT,
+            result_json TEXT,
+            checkpoint_json TEXT NOT NULL DEFAULT '[]',
+            usage_json TEXT NOT NULL DEFAULT '{}',
+            provider_request_ids_json TEXT NOT NULL DEFAULT '[]',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            edit_revision INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(conversation_id, input_hash)
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS clean_transcript_edits (
+            run_id TEXT NOT NULL REFERENCES clean_runs(id),
+            segment_id TEXT NOT NULL,
+            text TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(run_id, segment_id)
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS clean_run_reviews (
+            run_id TEXT NOT NULL REFERENCES clean_runs(id),
+            segment_id TEXT NOT NULL,
+            reviewed_at TEXT NOT NULL,
+            PRIMARY KEY(run_id, segment_id)
+        )"""
+    )
     conn.commit()
     database.chmod(0o600)
     try:
@@ -699,6 +739,152 @@ def fail_interrupted_ai_runs() -> None:
                updated_at = ? WHERE state IN ('queued', 'running')""",
             (datetime.now(timezone.utc).isoformat(),),
         )
+
+
+def add_clean_run(record: dict[str, object]) -> None:
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO clean_runs
+               (id, conversation_id, input_hash, source_revision, model_id, prompt_version,
+                state, stage, error_code, error_message, result_json, checkpoint_json,
+                usage_json, provider_request_ids_json, attempts, edit_revision, created_at, updated_at)
+               VALUES (:id, :conversation_id, :input_hash, :source_revision, :model_id, :prompt_version,
+                       :state, :stage, :error_code, :error_message, :result_json, :checkpoint_json,
+                       :usage_json, :provider_request_ids_json, :attempts, :edit_revision, :created_at, :updated_at)""",
+            record,
+        )
+
+
+def get_clean_run(run_id: str) -> dict[str, object] | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM clean_runs WHERE id = ?", (run_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def find_clean_run(conversation_id: str, input_hash: str) -> dict[str, object] | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM clean_runs WHERE conversation_id = ? AND input_hash = ?",
+                           (conversation_id, input_hash)).fetchone()
+    return dict(row) if row else None
+
+
+def list_clean_runs(conversation_id: str) -> list[dict[str, object]]:
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM clean_runs WHERE conversation_id = ? ORDER BY created_at DESC",
+                            (conversation_id,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_clean_run(run_id: str, **fields: object) -> None:
+    allowed = {"state", "stage", "error_code", "error_message", "result_json", "checkpoint_json",
+               "usage_json", "provider_request_ids_json", "attempts", "updated_at"}
+    if not fields.keys() <= allowed:
+        raise ValueError("Unknown clean run field")
+    assignments = ", ".join(f"{key} = ?" for key in fields)
+    with connect() as conn:
+        conn.execute(f"UPDATE clean_runs SET {assignments} WHERE id = ?", (*fields.values(), run_id))
+
+
+def fail_interrupted_clean_runs() -> None:
+    with connect() as conn:
+        conn.execute(
+            """UPDATE clean_runs SET state = 'failed', stage = 'interrupted', error_code = 'interrupted',
+               error_message = 'The device service stopped during this request', updated_at = ?
+               WHERE state IN ('queued', 'running')""",
+            (datetime.now(timezone.utc).isoformat(),),
+        )
+
+
+def clean_run_edits(run_id: str) -> dict[str, str]:
+    with connect() as conn:
+        rows = conn.execute("SELECT segment_id, text FROM clean_transcript_edits WHERE run_id = ?", (run_id,)).fetchall()
+    return {str(row["segment_id"]): str(row["text"]) for row in rows}
+
+
+def clean_run_reviews(run_id: str) -> set[str]:
+    with connect() as conn:
+        rows = conn.execute("SELECT segment_id FROM clean_run_reviews WHERE run_id = ?", (run_id,)).fetchall()
+    return {str(row["segment_id"]) for row in rows}
+
+
+def set_clean_run_review(run_id: str, segment_id: str, expected_revision: int) -> int:
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT state, edit_revision, result_json FROM clean_runs WHERE id = ?", (run_id,)).fetchone()
+        if row is None or row["state"] != "succeeded":
+            raise LookupError("Edited transcript is not ready")
+        if int(row["edit_revision"]) != expected_revision:
+            raise RuntimeError("Edited transcript changed. Reload and try again")
+        if not any(item["id"] == segment_id for item in json.loads(str(row["result_json"]))["segments"]):
+            raise LookupError("Segment not found")
+        conn.execute("INSERT OR REPLACE INTO clean_run_reviews (run_id, segment_id, reviewed_at) VALUES (?, ?, ?)",
+                     (run_id, segment_id, stamp))
+        revision = expected_revision + 1
+        conn.execute("UPDATE clean_runs SET edit_revision = ?, updated_at = ? WHERE id = ?",
+                     (revision, stamp, run_id))
+    return revision
+
+
+def set_clean_run_edit(run_id: str, segment_id: str, text: str, expected_revision: int) -> int:
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT state, edit_revision, result_json FROM clean_runs WHERE id = ?", (run_id,)).fetchone()
+        if row is None or row["state"] != "succeeded":
+            raise LookupError("Edited transcript is not ready")
+        if int(row["edit_revision"]) != expected_revision:
+            raise RuntimeError("Edited transcript changed. Reload and try again")
+        result = json.loads(str(row["result_json"]))
+        original = next((item["text"] for item in result["segments"] if item["id"] == segment_id), None)
+        if original is None:
+            raise LookupError("Segment not found")
+        if text == original:
+            conn.execute("DELETE FROM clean_transcript_edits WHERE run_id = ? AND segment_id = ?",
+                         (run_id, segment_id))
+        else:
+            conn.execute(
+                """INSERT INTO clean_transcript_edits (run_id, segment_id, text, updated_at)
+                   VALUES (?, ?, ?, ?) ON CONFLICT(run_id, segment_id) DO UPDATE SET
+                   text = excluded.text, updated_at = excluded.updated_at""",
+                (run_id, segment_id, text, stamp),
+            )
+        revision = expected_revision + 1
+        conn.execute("UPDATE clean_runs SET edit_revision = ?, updated_at = ? WHERE id = ?",
+                     (revision, stamp, run_id))
+    return revision
+
+
+def set_clean_run_edits(run_id: str, edits: list[dict[str, str]], expected_revision: int) -> int:
+    """Save an edited clean-transcript session without changing the source."""
+    if len({item["segment_id"] for item in edits}) != len(edits):
+        raise ValueError("Each passage may appear only once")
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT state, edit_revision, result_json FROM clean_runs WHERE id = ?", (run_id,)).fetchone()
+        if row is None or row["state"] != "succeeded":
+            raise LookupError("Edited transcript is not ready")
+        if int(row["edit_revision"]) != expected_revision:
+            raise RuntimeError("Edited transcript changed. Your wording is still in the browser")
+        sources = {item["id"]: item["text"] for item in json.loads(str(row["result_json"]))["segments"]}
+        if any(item["segment_id"] not in sources for item in edits):
+            raise LookupError("Segment not found")
+        for item in edits:
+            if item["text"] == sources[item["segment_id"]]:
+                conn.execute("DELETE FROM clean_transcript_edits WHERE run_id = ? AND segment_id = ?",
+                             (run_id, item["segment_id"]))
+            else:
+                conn.execute(
+                    """INSERT INTO clean_transcript_edits (run_id, segment_id, text, updated_at)
+                       VALUES (?, ?, ?, ?) ON CONFLICT(run_id, segment_id) DO UPDATE SET
+                       text = excluded.text, updated_at = excluded.updated_at""",
+                    (run_id, item["segment_id"], item["text"], stamp),
+                )
+        revision = expected_revision + 1
+        conn.execute("UPDATE clean_runs SET edit_revision = ?, updated_at = ? WHERE id = ?",
+                     (revision, stamp, run_id))
+    return revision
 
 
 def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
