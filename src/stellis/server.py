@@ -5,7 +5,9 @@ from __future__ import annotations
 from importlib.metadata import version
 from pathlib import Path
 import json
+import logging
 import sqlite3
+import threading
 
 from fastapi import APIRouter, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -17,6 +19,20 @@ from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
 api = APIRouter()
+_retention_stop = threading.Event()
+_retention_thread: threading.Thread | None = None
+
+
+def _retention_loop() -> None:
+    while not _retention_stop.is_set():
+        try:
+            result = library.delete_expired()
+            if result["deleted"] or result["deferred"]:
+                logging.getLogger(__name__).info("Recently Deleted retention sweep: %s", result)
+        except Exception:
+            logging.getLogger(__name__).exception("Recently Deleted retention sweep failed")
+        if _retention_stop.wait(3600):
+            break
 
 
 class SegmentEdit(BaseModel):
@@ -124,10 +140,20 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 @app.on_event("startup")
 def start_speech_worker() -> None:
+    global _retention_thread
     library.recover_staged_media()
     storage.fail_interrupted_ai_runs()
     storage.fail_interrupted_clean_runs()
     processing.start_worker()
+    if _retention_thread is None or not _retention_thread.is_alive():
+        _retention_stop.clear()
+        _retention_thread = threading.Thread(target=_retention_loop, name="stellis-retention", daemon=True)
+        _retention_thread.start()
+
+
+@app.on_event("shutdown")
+def stop_retention_worker() -> None:
+    _retention_stop.set()
 
 
 def _public(record: dict[str, object]) -> dict[str, object]:
@@ -314,7 +340,8 @@ def remove_category(conversation_id: str, category_id: str) -> dict[str, object]
 @api.get("/trash")
 def trash() -> list[dict[str, object]]:
     assigned = library.assignments()
-    return [{**item, "category_ids": assigned.get(str(item["id"]), [])}
+    return [{**item, "category_ids": assigned.get(str(item["id"]), []),
+             "expires_at": library.expires_at(str(item["trashed_at"]))}
             for item in storage.list_conversations(trashed=True)]
 
 

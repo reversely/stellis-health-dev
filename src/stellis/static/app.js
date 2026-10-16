@@ -276,7 +276,7 @@ async function showTrash() {
   listView.hidden = true; detailView.hidden = true; document.querySelector('#person-view').hidden = true;
   document.querySelector('#trash-view').hidden = false;
   const container = document.querySelector('#trash-list'); container.replaceChildren();
-  if (!items.length) { const empty = document.createElement('p'); empty.textContent = 'Trash is empty.'; container.append(empty); }
+  if (!items.length) { const empty = document.createElement('p'); empty.textContent = 'Recently Deleted is empty.'; container.append(empty); }
   for (const item of items) {
     const row = document.createElement('div'); row.className = 'trash-row';
     const title = document.createElement('strong'); title.textContent = item.title;
@@ -291,7 +291,9 @@ async function showTrash() {
       try { await json(await fetch(`${API}/trash/${encodeURIComponent(item.id)}`, {method:'DELETE'})); await showTrash(); }
       catch (error) { document.querySelector('#trash-status').textContent = error.message; }
     });
-    row.append(title, restore, remove); container.append(row);
+    const expiry = document.createElement('span'); expiry.className = 'trash-expiry';
+    expiry.textContent = `Deletes automatically ${new Date(item.expires_at).toLocaleString()}`;
+    row.append(title, expiry, restore, remove); container.append(row);
   }
 }
 async function loadPeoplePanel() {
@@ -1496,7 +1498,7 @@ document.querySelector('#person-delete').addEventListener('click', async () => {
   catch (error) { document.querySelector('#person-status').textContent = error.message; }
 });
 document.querySelector('#trash-conversation').addEventListener('click', async () => {
-  if (!activeConversationId || !window.confirm('Move this conversation to Trash? You can restore it later.')) return;
+  if (!activeConversationId || !window.confirm('Move this conversation to Recently Deleted? You can restore it within 30 days.')) return;
   try {
     await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/trash`, {method:'POST'}));
     player.pause(); player.removeAttribute('src'); player.load();
