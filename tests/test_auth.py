@@ -10,6 +10,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from stellis import auth, storage
+from stellis import cli
 from stellis.server import app
 from test_import import wav_bytes
 
@@ -76,3 +77,43 @@ class LocalAuthTest(unittest.TestCase):
                          ((datetime.now(timezone.utc)-timedelta(seconds=1)).isoformat(),
                           auth._token_hash(token)))
         self.assertEqual(self.client.get('/api/v1/conversations').status_code, 401)
+
+    def test_single_use_recovery_revokes_sessions(self):
+        registered = self.client.post('/api/v1/auth/register', json=self.credentials)
+        code = registered.json()['recovery_code']
+        self.assertGreaterEqual(len(code), 40)
+        second = TestClient(app, follow_redirects=False)
+        try:
+            self.assertEqual(second.post('/api/v1/auth/login', json=self.credentials).status_code, 200)
+            reset = {'username': self.credentials['username'], 'recovery_code': code,
+                     'new_password': 'a different correct password'}
+            self.assertEqual(self.client.post('/api/v1/auth/recover', json={**reset,
+                'recovery_code': 'A' * len(code)}).status_code, 401)
+            self.assertEqual(self.client.get('/api/v1/conversations').status_code, 200)
+            self.assertEqual(self.client.post('/api/v1/auth/recover', json=reset).status_code, 200)
+            self.assertEqual(self.client.get('/api/v1/conversations').status_code, 401)
+            self.assertEqual(second.get('/api/v1/conversations').status_code, 401)
+            self.assertEqual(self.client.post('/api/v1/auth/recover', json=reset).status_code, 401)
+            self.assertEqual(self.client.post('/api/v1/auth/login', json=self.credentials).status_code, 401)
+            self.assertEqual(self.client.post('/api/v1/auth/login', json={**self.credentials,
+                'password': reset['new_password']}).status_code, 200)
+        finally:
+            second.close()
+
+    def test_existing_account_receives_recovery_code_on_login(self):
+        self.client.post('/api/v1/auth/register', json=self.credentials)
+        with sqlite3.connect(storage.data_dir() / 'auth.sqlite3') as conn:
+            conn.execute('DELETE FROM recovery_codes')
+        self.client.post('/api/v1/auth/logout')
+        first = self.client.post('/api/v1/auth/login', json=self.credentials)
+        self.assertIn('recovery_code', first.json())
+        second = self.client.post('/api/v1/auth/login', json=self.credentials)
+        self.assertNotIn('recovery_code', second.json())
+
+    def test_cli_serve_requires_login_by_default(self):
+        with patch.dict(os.environ):
+            os.environ.pop('STELLIS_AUTH_MODE', None)
+            with patch('sys.argv', ['stellis', 'serve', '--port', '8899']), patch.object(cli.uvicorn, 'run') as run:
+                cli.main()
+                self.assertEqual(os.environ['STELLIS_AUTH_MODE'], 'required')
+                run.assert_called_once()

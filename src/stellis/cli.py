@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 
 import uvicorn
@@ -30,5 +31,7 @@ def main() -> None:
 
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
+    if args.command == "serve":
+        os.environ.setdefault("STELLIS_AUTH_MODE", "required")
     uvicorn.run("stellis.sync_server:app" if args.command == "sync-serve" else "stellis.server:app",
                 host="127.0.0.1", port=args.port)
