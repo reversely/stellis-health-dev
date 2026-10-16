@@ -54,7 +54,7 @@ def _field(scope: str) -> str:
 
 
 def _public(row) -> dict[str, object]:
-    return {key: row[key] for key in ("id", "media_position_ms", "segment_id", "caption",
+    return {key: row[key] for key in ("id", "media_position_ms", "segment_id", "start_offset", "end_offset", "quote", "caption",
                                       "width", "height", "size_bytes", "created_at", "updated_at")}
 
 
@@ -91,7 +91,9 @@ def list_images(scope: str, item_id: str) -> list[dict[str, object]]:
 
 
 def add(scope: str, item_id: str, data: bytes, media_position_ms: int,
-        segment_id: str | None = None, caption: str = "") -> dict[str, object]:
+        segment_id: str | None = None, caption: str = "",
+        start_offset: int | None = None, end_offset: int | None = None,
+        expected_revision: int | None = None) -> dict[str, object]:
     if media_position_ms < 0 or media_position_ms > 86_400_000:
         raise ValueError("Invalid image time")
     if len(caption.strip()) > MAX_CAPTION:
@@ -112,26 +114,40 @@ def add(scope: str, item_id: str, data: bytes, media_position_ms: int,
         with storage.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             owner = _owner(conn, scope, item_id)
+            quote = None
+            selected_range = any(value is not None for value in (start_offset, end_offset, expected_revision))
+            if selected_range and (scope != "conversation" or not segment_id or
+                                   start_offset is None or end_offset is None or expected_revision is None):
+                raise ValueError("Select text within one passage")
             if scope == "conversation":
                 if media_position_ms > int(owner["duration_ms"]):
                     raise ValueError("Image time exceeds recording length")
                 if segment_id:
-                    transcript = conn.execute("SELECT segments_json FROM transcripts WHERE conversation_id = ?",
+                    transcript = conn.execute("SELECT revision, segments_json FROM transcripts WHERE conversation_id = ?",
                                               (item_id,)).fetchone()
+                    if selected_range and (transcript is None or int(transcript["revision"]) != expected_revision):
+                        raise ValueError("Transcript changed. Reload and try again")
                     segments = json.loads(str(transcript["segments_json"])) if transcript else []
                     selected = next((segment for segment in segments if segment["id"] == segment_id), None)
                     if selected is None:
                         raise ValueError("Transcript passage changed; choose it again")
                     media_position_ms = int(selected["start_ms"])
+                    if selected_range:
+                        edit = conn.execute("SELECT text FROM transcript_edits WHERE conversation_id = ? AND segment_id = ?",
+                                            (item_id, segment_id)).fetchone()
+                        displayed = str(edit["text"]) if edit else str(selected["text"])
+                        if start_offset < 0 or end_offset > len(displayed) or start_offset >= end_offset:
+                            raise ValueError("Select text within one passage")
+                        quote = displayed[start_offset:end_offset]
             elif segment_id:
                 raise ValueError("A live image cannot use a final passage ID")
             stamp = _stamp()
             os.replace(temporary, destination)
             conn.execute(f"""INSERT INTO conversation_images
-                (id, {_field(scope)}, media_position_ms, segment_id, caption, filename, media_type,
+                (id, {_field(scope)}, media_position_ms, segment_id, start_offset, end_offset, quote, caption, filename, media_type,
                  size_bytes, width, height, sha256, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?)""",
-                (image_id, item_id, media_position_ms, segment_id, caption.strip(), filename,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?)""",
+                (image_id, item_id, media_position_ms, segment_id, start_offset, end_offset, quote, caption.strip(), filename,
                  len(normalized), width, height, hashlib.sha256(normalized).hexdigest(), stamp, stamp))
         return get(scope, item_id, image_id)
     except Exception:

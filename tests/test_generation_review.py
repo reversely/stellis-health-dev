@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from stellis import generation_review, storage
 from stellis.server import app
 from test_import import wav_bytes
+from test_images import png_bytes
 
 
 class GenerationReviewTest(unittest.TestCase):
@@ -163,6 +164,41 @@ class GenerationReviewTest(unittest.TestCase):
                 'item_id':item['id'],'target_segment_id':'t1' if item['kind']=='comment' else None})
         self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,409)
         self.assertEqual(storage.list_comments(self.id)[0]['segment_id'],'s1')
+
+    def test_selected_image_requires_explicit_exact_remap(self):
+        endpoint = f'/api/v1/conversations/{self.id}/images'
+        created = self.client.post(endpoint, files={'file':('slide.png',png_bytes(),'image/png')},
+                                   data={'media_position_ms':'0','segment_id':'s1','start_offset':'0',
+                                         'end_offset':'5','expected_revision':'4'})
+        self.assertEqual(created.status_code, 200, created.text)
+        image_id = created.json()['id']
+        self.assertTrue(generation_review.stage(self.record))
+        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
+        image_item = next(item for item in review['items'] if item['kind'] == 'image')
+        self.assertEqual(image_item['source_image_id'], image_id)
+        for item in review['items']:
+            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions', json={
+                'item_id':item['id'], 'target_segment_id':'t1' if item['kind']=='image' else None})
+        result = self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate')
+        self.assertEqual(result.status_code, 200, result.text)
+        mapped = self.client.get(endpoint).json()[0]
+        self.assertEqual((mapped['id'], mapped['segment_id'], mapped['quote'], mapped['start_offset']),
+                         (image_id, 't1', 'Hello', 0))
+
+    def test_ambiguous_image_quote_keeps_source_generation(self):
+        endpoint = f'/api/v1/conversations/{self.id}/images'
+        self.assertEqual(self.client.post(endpoint, files={'file':('slide.png',png_bytes(),'image/png')},
+                          data={'media_position_ms':'0','segment_id':'s1','start_offset':'0',
+                                'end_offset':'5','expected_revision':'4'}).status_code, 200)
+        self.target[0]['text'] = 'Hello Hello'
+        self.record['segments_json'] = json.dumps(self.target)
+        self.assertTrue(generation_review.stage(self.record))
+        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
+        for item in review['items']:
+            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions', json={
+                'item_id':item['id'], 'target_segment_id':'t1' if item['kind']=='image' else None})
+        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code, 409)
+        self.assertEqual(self.client.get(endpoint).json()[0]['segment_id'], 's1')
 
 
 if __name__ == '__main__':
