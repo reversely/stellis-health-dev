@@ -2,6 +2,8 @@
 
 Stellis is a browser workspace for recordings, transcripts, speakers, and source-backed AI insights. The first implementation slice runs on macOS with local speech processing. The larger product direction is in [`plans/Personal_AI_Assistant_Implementation_Plan.md`](plans/Personal_AI_Assistant_Implementation_Plan.md); current delivery tickets are [#10–#18](https://github.com/reversely/stellis/issues).
 
+The cross-app/browser direction is recorded in [ADR 0003](docs/decisions/0003-cross-client-architecture.md), with the [device API v1 contract](contracts/v1.md). The loopback service handles local media and native speech jobs; a separate encrypted sync service will connect devices later.
+
 ## Current state
 
 The local browser app imports audio or an Otter ZIP, lists conversations, and replays recordings with seeking. Recording, transcript editing, diarization, and Nebius views are being built in the ordered tickets. The acceptance test runs through the browser on a real interview.

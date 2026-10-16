@@ -40,16 +40,17 @@ class ImportWorkflowTest(unittest.TestCase):
         self.temp.cleanup()
 
     def test_upload_replay_range_and_duplicate(self) -> None:
+        self.assertEqual(self.client.get("/api/v1/health").json()["api_version"], "v1")
         content = wav_bytes()
-        imported = self.client.post("/api/conversations/import", files={"file": ("interview.wav", content, "audio/wav")})
+        imported = self.client.post("/api/v1/conversations/import", files={"file": ("interview.wav", content, "audio/wav")})
         self.assertEqual(imported.status_code, 200)
         record = imported.json()["conversation"]
         self.assertFalse(imported.json()["duplicate"])
         self.assertEqual(record["duration_ms"], 1000)
-        self.assertEqual(len(self.client.get("/api/conversations").json()), 1)
-        self.assertEqual(self.client.get(f"/api/conversations/{record['id']}").json(), record)
+        self.assertEqual(len(self.client.get("/api/v1/conversations").json()), 1)
+        self.assertEqual(self.client.get(f"/api/v1/conversations/{record['id']}").json(), record)
         self.assertEqual(self.client.get(f"/conversation/{record['id']}").status_code, 200)
-        audio = self.client.get(f"/api/conversations/{record['id']}/audio", headers={"Range": "bytes=0-15"})
+        audio = self.client.get(f"/api/v1/conversations/{record['id']}/audio", headers={"Range": "bytes=0-15"})
         self.assertEqual(audio.status_code, 206)
         self.assertEqual(audio.content, content[:16])
         self.assertEqual(audio.headers["content-range"], f"bytes 0-15/{len(content)}")

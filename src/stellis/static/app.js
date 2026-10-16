@@ -5,6 +5,7 @@ const dropZone = document.querySelector('#drop-zone');
 const listView = document.querySelector('#list-view');
 const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
+const API = '/api/v1';
 
 function time(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -24,7 +25,7 @@ async function showList() {
   detailView.hidden = true;
   document.querySelector('#page-title').textContent = 'Your conversations';
   document.querySelector('#page-subtitle').textContent = 'Listen, review, and return to what matters.';
-  const conversations = await json(await fetch('/api/conversations'));
+  const conversations = await json(await fetch(`${API}/conversations`));
   list.replaceChildren();
   for (const item of conversations) {
     const row = document.createElement('a');
@@ -45,13 +46,13 @@ async function showList() {
   }
 }
 async function showDetail(id) {
-  const item = await json(await fetch(`/api/conversations/${encodeURIComponent(id)}`));
+  const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}`));
   listView.hidden = true;
   detailView.hidden = false;
   document.querySelector('#page-title').textContent = item.title;
   document.querySelector('#page-subtitle').textContent = 'Replay and scrub through your recording.';
   document.querySelector('#audio-duration').textContent = time(item.duration_ms / 1000);
-  player.src = `/api/conversations/${encodeURIComponent(id)}/audio`;
+  player.src = `${API}/conversations/${encodeURIComponent(id)}/audio`;
   player.load();
 }
 async function route() {
@@ -66,7 +67,7 @@ async function importFile(file) {
   const body = new FormData();
   body.append('file', file);
   try {
-    const result = await json(await fetch('/api/conversations/import', {method: 'POST', body}));
+    const result = await json(await fetch(`${API}/conversations/import`, {method: 'POST', body}));
     history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
     await showDetail(result.conversation.id);
     setStatus(result.duplicate ? 'Already imported. Opening your recording.' : 'Recording imported.', true);
