@@ -594,6 +594,11 @@ async def import_conversation(file: UploadFile = File(...)) -> dict[str, object]
         ready = processing.capabilities()["features"]
         if ready["transcribe"] and ready["diarize"]:
             job = processing.request_processing(str(record["id"]))
+    else:
+        try:
+            enhanced_notes.request(str(record["id"]))
+        except (LookupError, ValueError, ai.AIError):
+            pass
     return {
         "conversation": _public(record),
         "duplicate": duplicate,
@@ -673,6 +678,16 @@ def recording_event(recording_id: str, event: RecordingEvent) -> dict[str, objec
 async def finalize_recording(recording_id: str) -> dict[str, object]:
     try:
         result = await recording.finalize_session(recording_id)
+        conversation_id = str(result["conversation"]["id"])
+        if storage.get_transcript(conversation_id) is None:
+            ready = processing.capabilities()["features"]
+            if ready["transcribe"] and ready["diarize"]:
+                processing.request_processing(conversation_id)
+        else:
+            try:
+                enhanced_notes.request(conversation_id)
+            except (LookupError, ValueError, ai.AIError):
+                pass
         return {"conversation": _public(result["conversation"]), "duplicate": result["duplicate"]}
     except (ValueError, ImportFailure) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

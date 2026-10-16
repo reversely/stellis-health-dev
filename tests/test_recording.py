@@ -53,9 +53,12 @@ class RecordingWorkflowTest(unittest.TestCase):
         unfinished = self.client.get("/api/v1/recordings").json()
         self.assertEqual(unfinished[0]["chunk_count"], 2)
         self.assertEqual(unfinished[0]["title"], "Interview mic check")
-        recovered = self.client.post(f"/api/v1/recordings/{session['id']}/finalize")
+        with patch("stellis.server.processing.capabilities", return_value={"features": {"transcribe": True, "diarize": True}}), \
+             patch("stellis.server.processing.request_processing") as start_speech:
+            recovered = self.client.post(f"/api/v1/recordings/{session['id']}/finalize")
         self.assertEqual(recovered.status_code, 200)
         conversation = recovered.json()["conversation"]
+        start_speech.assert_called_once_with(conversation["id"])
         self.assertEqual(conversation["title"], "Interview mic check")
         self.assertGreater(conversation["duration_ms"], 1000)
         audio = self.client.get(f"/api/v1/conversations/{conversation['id']}/audio")

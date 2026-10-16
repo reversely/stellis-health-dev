@@ -227,11 +227,15 @@ def _worker_loop() -> None:
             else:
                 job = storage.get_job(job_id)
                 if job and job["kind"] == "speech" and job["state"] == "succeeded" and job["stage"] == "complete":
-                    from stellis import categorization
+                    from stellis import categorization, enhanced_notes
                     try:
                         categorization.request(str(job["conversation_id"]))
                     except (RuntimeError, LookupError):
                         pass  # The transcript remains ready; classification has its own retry path.
+                    try:
+                        enhanced_notes.request(str(job["conversation_id"]))
+                    except (RuntimeError, LookupError, ValueError, enhanced_notes.ai.AIError):
+                        pass  # Summary failure must not change the completed speech job.
         except Exception:
             # Keep the queue alive even if persistence or a native adapter fails unexpectedly.
             try:

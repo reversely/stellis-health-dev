@@ -586,8 +586,8 @@ async function selectEnhanced(run) {
   enhancedSelectedId = run.id;
   const status = document.querySelector('#enhanced-status');
   status.textContent = run.state === 'failed' ? run.error_message :
-    run.state === 'running' || run.state === 'queued' ? `Generating: ${run.stage}` :
-    run.stale ? 'Sources changed. Refresh to update.' : '';
+    run.state === 'running' || run.state === 'queued' ? `Generating summary: ${run.stage}` :
+    run.stale ? 'Notes or transcript changed. Regenerate summary.' : '';
   const sources = document.querySelector('#enhanced-sources'); sources.replaceChildren();
   if (run.state !== 'succeeded') {
     enhancedState = null;
@@ -632,8 +632,10 @@ async function loadEnhancedRuns(id, autoStart = false) {
   if (chosen) {
     picker.value = chosen.id;
     if (enhancedState?.id !== chosen.id || chosen.state !== 'succeeded') await selectEnhanced(chosen);
+    else document.querySelector('#enhanced-status').textContent = chosen.stale ?
+      'Notes or transcript changed. Regenerate summary.' : '';
   }
-  else {document.querySelector('#enhanced-status').textContent = currentTranscript ? 'No Enhanced Notes yet.' : 'Transcribe before generating notes.';}
+  else {document.querySelector('#enhanced-status').textContent = currentTranscript?.segments?.length ? 'Summary is not ready.' : 'Summary will generate after transcription.';}
   clearTimeout(enhancedPollTimer);
   if (runs.some(run => run.state === 'queued' || run.state === 'running'))
     enhancedPollTimer = setTimeout(() => loadEnhancedRuns(id).catch(error => {
@@ -641,13 +643,16 @@ async function loadEnhancedRuns(id, autoStart = false) {
 }
 async function startEnhanced(force) {
   const id = activeConversationId;
-  document.querySelector('#enhanced-status').textContent = 'Generating…';
+  const status = document.querySelector('#enhanced-status');
+  if (!currentTranscript?.segments?.length) { status.textContent = 'Summary will generate after transcription.'; return; }
+  if (!(await flushNotes(notesStates.conversation))) { status.textContent = 'Save My Notes before regenerating.'; return; }
+  status.textContent = 'Generating summary…';
   try {
     const run = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/enhanced-notes`, {
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force})}));
     enhancedSelectedId = run.id;
     await loadEnhancedRuns(id);
-  } catch (error) {document.querySelector('#enhanced-status').textContent = error.message;}
+  } catch (error) {status.textContent = error.message;}
 }
 function showNotesChoice(choice) {
   const enhanced = choice === 'enhanced';
@@ -657,7 +662,13 @@ function showNotesChoice(choice) {
   document.querySelector('#enhanced-notes-tab').setAttribute('aria-selected', String(enhanced));
 }
 document.querySelector('#my-notes-tab').addEventListener('click', () => showNotesChoice('my'));
-document.querySelector('#enhanced-notes-tab').addEventListener('click', () => showNotesChoice('enhanced'));
+document.querySelector('#enhanced-notes-tab').addEventListener('click', async () => {
+  showNotesChoice('enhanced');
+  await flushNotes(notesStates.conversation);
+  if (activeConversationId) loadEnhancedRuns(activeConversationId, true).catch(error => {
+    document.querySelector('#enhanced-status').textContent = error.message;
+  });
+});
 document.querySelector('#refresh-enhanced').addEventListener('click', () => startEnhanced(true));
 document.querySelector('#enhanced-version').addEventListener('change', async event => {
   const run = enhancedRuns.find(item => item.id === event.target.value);
@@ -1053,9 +1064,9 @@ async function showDetail(id) {
     document.querySelector('#import-reference-text').textContent = reference.transcript_text;
     importReference.hidden = false;
   }
-  await loadNotes('conversation', id);
+  const notes = await loadNotes('conversation', id);
   showConversationTab('summary');
-  showNotesChoice('my');
+  showNotesChoice(notes.pendingMarkdown.trim() ? 'my' : 'enhanced');
   await loadAIRuns(id);
   await loadSavedRecordingChat(id);
   await loadCleanRuns(id);
@@ -1127,28 +1138,11 @@ function renderAIItems(title, items, container, sourceStarts) {
   section.append(list); container.append(section);
 }
 function renderAIRuns(runs) {
-  const summaries = runs.filter(run => run.kind === 'summary');
-  const latest = summaries[0];
-  const displayed = latest?.state === 'succeeded' ? latest : summaries.find(run => run.state === 'succeeded');
-  const summaryResults = document.querySelector('#summary-results'); summaryResults.replaceChildren();
-  const button = document.querySelector('#generate-summary');
-  const regenerate = document.querySelector('#regenerate-summary');
-  button.disabled = latest?.state === 'running' || latest?.state === 'queued';
-  button.hidden = latest?.state === 'succeeded' && !latest.stale;
-  button.textContent = latest?.state === 'failed' ? 'Retry summary' : 'Generate summary';
-  regenerate.hidden = latest?.state !== 'succeeded' || latest.stale;
-  if (displayed) {
-    if (displayed.stale || displayed !== latest) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = displayed !== latest ? 'Previous summary.' : 'Summary is outdated.'; summaryResults.append(stale);}
-    for (const [field, title] of [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']])
-      renderAIItems(title, displayed.result[field], summaryResults, displayed.source_starts);
-  }
+  const answers = runs.filter(run => run.kind === 'answer');
   const status = document.querySelector('#ai-status');
-  status.textContent = latest?.state === 'failed' ? `Summary stopped: ${latest.error_message}` :
-    latest?.state === 'running' || latest?.state === 'queued' ? `Generating summary: ${latest.stage}` :
-    latest?.state === 'succeeded' ? '' :
-    currentTranscript ? '' : 'Transcribe before generating a summary.';
-  const answers = document.querySelector('#ai-answers'); answers.replaceChildren();
-  for (const run of runs.filter(item => item.kind === 'answer')) {
+  status.textContent = answers.some(run => run.state === 'queued' || run.state === 'running') ? 'Answering…' : '';
+  const container = document.querySelector('#ai-answers'); container.replaceChildren();
+  for (const run of answers) {
     const card = document.createElement('article'); card.className = 'ai-answer';
     const q = document.createElement('h4'); q.textContent = run.question; card.append(q);
     const body = document.createElement('p');
@@ -1161,7 +1155,7 @@ function renderAIRuns(runs) {
       const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Retry answer';
       retry.addEventListener('click', () => startAIRun('answer', run.question)); card.append(retry);
     }
-    answers.append(card);
+    container.append(card);
   }
 }
 async function loadAIRuns(id) {
@@ -1169,15 +1163,15 @@ async function loadAIRuns(id) {
   const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/ai-runs`));
   if (id !== activeConversationId) return;
   renderAIRuns(runs);
-  if (runs.some(run => run.state === 'queued' || run.state === 'running'))
+  if (runs.some(run => run.kind === 'answer' && (run.state === 'queued' || run.state === 'running')))
     aiRunTimer = setTimeout(() => loadAIRuns(id).catch(error => document.querySelector('#ai-status').textContent = error.message), 2000);
 }
-async function startAIRun(kind, question = null, force = false) {
+async function startAIRun(kind, question = null) {
   const id = activeConversationId;
-  const status = document.querySelector('#ai-status'); status.textContent = kind === 'summary' ? 'Generating summary…' : 'Answering…';
+  const status = document.querySelector('#ai-status'); status.textContent = 'Answering…';
   try {
     await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/ai-runs`, {method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind,question,force})}));
+      body:JSON.stringify({kind,question})}));
     await loadAIRuns(id);
   } catch (error) { status.textContent = error.message; }
 }
@@ -1188,9 +1182,9 @@ document.querySelector('#summary-tab').addEventListener('click', () => {
 });
 document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
 document.querySelector('#edited-tab').addEventListener('click', () => showConversationTab('edited'));
-document.querySelector('#generate-summary').addEventListener('click', () =>
-  startAIRun('summary', null, document.querySelector('#generate-summary').textContent === 'Retry summary'));
-document.querySelector('#regenerate-summary').addEventListener('click', () => startAIRun('summary', null, true));
+document.querySelector('#regenerate-summary').addEventListener('click', () => {
+  showConversationTab('summary'); showNotesChoice('enhanced'); startEnhanced(true);
+});
 document.querySelector('#clean-button').addEventListener('click', async () => {
   const id = activeConversationId;
   const status = document.querySelector('#clean-status');
@@ -1428,7 +1422,8 @@ async function beginProcessing(id) {
 function watchJob(job) {
   if (job.conversation_id !== activeConversationId) return;
   clearTimeout(jobTimer);
-  if (job.state === 'succeeded') { showTranscript(job.conversation_id).catch(error => {
+  if (job.state === 'succeeded') { showTranscript(job.conversation_id).then(() =>
+    loadEnhancedRuns(job.conversation_id, true)).catch(error => {
     setTranscriptLoading(false); processingStatus.textContent = error.message;
   }); return; }
   if (job.state === 'failed') {
@@ -1541,6 +1536,7 @@ async function showTranscript(id) {
   currentTranscript = data;
   renderSeekSegments(data.segments);
   document.querySelector('#copy-transcript').hidden = !data.segments.length;
+  document.querySelector('#regenerate-summary').hidden = !data.segments.length;
   await loadGenerationReview(id);
   syncTranscriptEditControls();
   document.querySelector('#clean-button').disabled = cleanRuns[0]?.state === 'queued' || cleanRuns[0]?.state === 'running';

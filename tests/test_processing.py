@@ -11,6 +11,7 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -33,6 +34,31 @@ class ProcessingWorkflowTest(unittest.TestCase):
         self.client.close()
         self.env.stop()
         self.temp.cleanup()
+
+    def test_completed_transcription_starts_summary_without_opening_conversation(self) -> None:
+        job = processing.request_processing(self.conversation_id)
+        storage.update_job(str(job["id"]), state="succeeded", stage="complete", updated_at=processing.now())
+
+        class OneJobQueue:
+            def __init__(self) -> None:
+                self.read = False
+
+            def get(self):
+                if self.read:
+                    raise KeyboardInterrupt
+                self.read = True
+                return str(job["id"])
+
+            def task_done(self) -> None:
+                pass
+
+        with patch.object(processing, "_QUEUE", OneJobQueue()), \
+             patch.object(processing.subprocess, "run", return_value=SimpleNamespace(returncode=0)), \
+             patch("stellis.categorization.request"), \
+             patch("stellis.enhanced_notes.request") as summary:
+            with self.assertRaises(KeyboardInterrupt):
+                processing._worker_loop()
+        summary.assert_called_once_with(self.conversation_id)
 
     def test_persisted_job_and_transcript(self) -> None:
         model = Path(self.temp.name, "model.bin")

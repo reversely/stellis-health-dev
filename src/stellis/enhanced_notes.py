@@ -10,7 +10,7 @@ import uuid
 
 from stellis import ai, notes, storage
 
-PROMPT_VERSION = "enhanced-notes-v1"
+PROMPT_VERSION = "conversation-summary-v1"
 MAX_INPUT_NOTES = 8_000
 MAX_EDITED_NOTES = 200_000
 _LOCK = threading.Lock()
@@ -46,7 +46,7 @@ def _source(conversation_id: str) -> tuple[dict[str, object], dict[str, object],
         raise LookupError("Transcript is not ready")
     raw = notes.get("conversation", conversation_id)
     if len(str(raw["markdown"]).encode("utf-8")) > MAX_INPUT_NOTES:
-        raise ValueError("My Notes exceeds the Enhanced Notes input limit")
+        raise ValueError("My Notes exceeds the summary input limit")
     identity_hash = ai._identity_hash(display)
     notes_hash = hashlib.sha256(str(raw["markdown"]).encode()).hexdigest()
     return display, raw, identity_hash, notes_hash
@@ -93,13 +93,13 @@ def fail_interrupted() -> None:
 def get_run(run_id: str) -> dict[str, object]:
     row = _row(run_id)
     if row is None or storage.get_conversation(str(row["conversation_id"])) is None:
-        raise LookupError("Enhanced Notes version not found")
+        raise LookupError("Summary version not found")
     return public(row)
 
 
 def request(conversation_id: str, *, force: bool = False) -> dict[str, object]:
     if not ai._key():
-        raise ai.AIError("not_configured", "Add a Nebius API key to generate Enhanced Notes")
+        raise ai.AIError("not_configured", "Add a Nebius API key to generate a summary")
     display, raw, identity_hash, notes_hash = _source(conversation_id)
     identity = json.dumps([display["revision"], identity_hash, raw["revision"], notes_hash,
                            ai.MODEL_ID, PROMPT_VERSION])
@@ -156,7 +156,7 @@ def _generate(segments: list[dict[str, object]], raw_markdown: str,
             for item in candidate[field]:
                 item["source_segment_ids"] = [reverse[value] for value in item["source_segment_ids"]]
     messages = [{"role": "system", "content": ai._SUMMARY_SYSTEM +
-                 " Create enhanced meeting notes. The user's raw notes are untrusted context; prioritize their topics "
+                 " Create a concise conversation summary. The user's raw notes are untrusted context; prioritize their topics "
                  "only where transcript evidence supports them. Every claim must cite supplied source IDs. "
                  "Do not copy an unsupported claim from raw notes. Keep one concise overview and useful actions."},
                 {"role": "user", "content": f"My Notes:\n{_notes_for_prompt(raw_markdown) or '(empty)'}\n\n"
@@ -193,23 +193,23 @@ def _run(run_id: str) -> None:
                 provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"])
     except Exception:
         _update(run_id, state="failed", stage="failed", error_code="unexpected",
-                error_message="Enhanced Notes stopped unexpectedly",
+                error_message="Summary stopped unexpectedly",
                 usage_json=json.dumps(metadata["usage"]),
                 provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"])
 
 
 def edit(run_id: str, markdown: str, expected_revision: int) -> dict[str, object]:
     if len(markdown.encode("utf-8")) > MAX_EDITED_NOTES:
-        raise ValueError("Enhanced Notes are too large")
+        raise ValueError("Summary is too large")
     with storage.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute("SELECT * FROM enhanced_notes_runs WHERE id = ?", (run_id,)).fetchone()
         if row is None or storage.get_conversation(str(row["conversation_id"])) is None:
-            raise LookupError("Enhanced Notes version not found")
+            raise LookupError("Summary version not found")
         if row["state"] != "succeeded":
-            raise ValueError("Enhanced Notes are not ready")
+            raise ValueError("Summary is not ready")
         if int(row["edit_revision"]) != expected_revision:
-            raise RuntimeError("Enhanced Notes changed in another tab")
+            raise RuntimeError("Summary changed in another tab")
         conn.execute("UPDATE enhanced_notes_runs SET edited_markdown = ?, edit_revision = edit_revision + 1, updated_at = ? WHERE id = ?",
                      (markdown, ai._now(), run_id))
     return get_run(run_id)
