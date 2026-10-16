@@ -6,16 +6,21 @@ import shutil
 import sqlite3
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from stellis import storage
 
 _LOCK = threading.Lock()
+RETENTION_DAYS = 30
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def expires_at(trashed_at: str) -> str:
+    return (datetime.fromisoformat(trashed_at) + timedelta(days=RETENTION_DAYS)).isoformat()
 
 
 def categories() -> list[dict[str, object]]:
@@ -102,7 +107,7 @@ def restore(conversation_id: str) -> dict[str, object]:
         changed = conn.execute("UPDATE conversations SET trashed_at = NULL WHERE id = ? AND trashed_at IS NOT NULL",
                                (conversation_id,)).rowcount
     if not changed:
-        raise LookupError("Conversation not found in Trash")
+        raise LookupError("Conversation not found in Recently Deleted")
     return {"id": conversation_id, "trashed": False}
 
 
@@ -134,15 +139,16 @@ def recover_staged_media() -> None:
                 staged.rename(destination)
 
 
-def delete_permanently(conversation_id: str) -> dict[str, object]:
+def delete_permanently(conversation_id: str, *, expired_before: str | None = None) -> dict[str, object]:
     """Remove a trashed item only after its device and AI jobs have settled."""
     with _LOCK:
         with storage.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute("SELECT audio_filename FROM conversations WHERE id = ? AND trashed_at IS NOT NULL",
-                               (conversation_id,)).fetchone()
+            row = conn.execute("""SELECT audio_filename FROM conversations
+                WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?)""",
+                (conversation_id, expired_before, expired_before)).fetchone()
             if row is None:
-                raise LookupError("Conversation not found in Trash")
+                raise LookupError("Conversation not found in Recently Deleted")
             for table in ("processing_jobs", "ai_runs", "clean_runs"):
                 if conn.execute(f"SELECT 1 FROM {table} WHERE conversation_id = ? AND state IN ('queued', 'running') LIMIT 1",
                                 (conversation_id,)).fetchone():
@@ -185,3 +191,24 @@ def delete_permanently(conversation_id: str) -> dict[str, object]:
         for job_id in job_ids:
             (storage.data_dir() / "job-locks" / f"{job_id}.lock").unlink(missing_ok=True)
     return {"id": conversation_id, "deleted": True}
+
+
+def delete_expired(*, now: datetime | None = None) -> dict[str, object]:
+    """Sweep expired items; retry busy jobs during the next scheduled sweep."""
+    cutoff = ((now or datetime.now(timezone.utc)).astimezone(timezone.utc) -
+              timedelta(days=RETENTION_DAYS)).isoformat()
+    with storage.connect() as conn:
+        expired = [str(row["id"]) for row in conn.execute(
+            "SELECT id FROM conversations WHERE trashed_at IS NOT NULL AND trashed_at <= ?",
+            (cutoff,)).fetchall()]
+    deleted, deferred = [], []
+    for conversation_id in expired:
+        try:
+            delete_permanently(conversation_id, expired_before=cutoff)
+            deleted.append(conversation_id)
+        except LookupError:
+            # Restored or moved to Recently Deleted again after the sweep query.
+            continue
+        except RuntimeError:
+            deferred.append(conversation_id)
+    return {"deleted": deleted, "deferred": deferred}

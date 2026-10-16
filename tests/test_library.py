@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -102,6 +102,41 @@ class LibraryWorkflowTest(unittest.TestCase):
         storage.update_job(job_id, state='failed', stage='failed', error='cancelled', updated_at=now)
         self.assertEqual(self.client.delete(f'/api/v1/trash/{self.first}').status_code, 200)
         self.assertIsNone(storage.get_job(job_id))
+
+    def test_recently_deleted_auto_expires_after_30_days_and_retries_busy_items(self):
+        now = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
+        old = (now - timedelta(days=30, seconds=1)).isoformat()
+        fresh = (now - timedelta(days=29)).isoformat()
+        person = self.client.post('/api/v1/persons', json={'name':'Retention QA'}).json()
+        self.client.put(f'/api/v1/conversations/{self.first}/person-links', json={
+            'person_id':person['id'], 'segment_id':'s1', 'scope':'segment', 'expected_revision':1})
+        media = storage.data_dir() / 'media' / storage.get_conversation(self.first)['audio_filename']
+        self.client.post(f'/api/v1/conversations/{self.first}/trash')
+        with storage.connect() as conn:
+            conn.execute('UPDATE conversations SET trashed_at = ? WHERE id = ?', (old, self.first))
+        record = self.client.get('/api/v1/trash').json()[0]
+        self.assertEqual(record['expires_at'], (datetime.fromisoformat(old) + timedelta(days=30)).isoformat())
+        job_id = str(uuid.uuid4())
+        storage.add_job({'id':job_id, 'conversation_id':self.first, 'pipeline_version':'queued-test',
+                         'kind':'speech', 'state':'queued', 'stage':'queued', 'progress':0,
+                         'error':None, 'metrics_json':None, 'vocabulary_json':'[]',
+                         'created_at':old, 'updated_at':old})
+        self.assertEqual(library.delete_expired(now=now), {'deleted': [], 'deferred': [self.first]})
+        self.assertTrue(media.exists())
+        storage.update_job(job_id, state='failed', stage='failed', error='cancelled', updated_at=old)
+        self.client.post(f'/api/v1/trash/{self.first}/restore')
+        self.client.post(f'/api/v1/conversations/{self.first}/trash')
+        with storage.connect() as conn:
+            conn.execute('UPDATE conversations SET trashed_at = ? WHERE id = ?', (fresh, self.first))
+        self.assertEqual(library.delete_expired(now=now)['deleted'], [])
+        self.assertTrue(media.exists())
+        with storage.connect() as conn:
+            conn.execute('UPDATE conversations SET trashed_at = ? WHERE id = ?', (old, self.first))
+        self.assertEqual(library.delete_expired(now=now)['deleted'], [self.first])
+        self.assertFalse(media.exists())
+        self.assertIsNone(storage.get_conversation(self.first, include_trashed=True))
+        self.assertEqual(self.client.get(f'/api/v1/persons/{person["id"]}').json()['total_link_count'], 0)
+        self.assertIsNotNone(storage.get_conversation(self.second))
 
     def test_interrupted_media_staging_recovers_or_cleans_up(self):
         original = storage.data_dir() / 'media' / storage.get_conversation(self.first)['audio_filename']

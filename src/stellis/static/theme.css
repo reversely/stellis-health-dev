@@ -299,6 +299,7 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 #trash-view h2 { margin: 22px 0 4px; font: 400 30px Piazzolla, Georgia, serif; }
 .trash-row { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .trash-row strong { flex: 1; min-width: 160px; }
+.trash-expiry { color: var(--muted); font-size: .88rem; }
 .trash-row button:last-child { color: var(--failure); }
 .person-list-row { display: block; padding: 10px 0; color: var(--accent); border-top: 1px solid var(--line-soft); }
 #people-panel summary, #person-merge-panel summary { color: var(--accent); cursor: pointer; font-weight: 650; }
