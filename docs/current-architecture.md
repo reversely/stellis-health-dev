@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, through the summary validation code for ticket #128. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, through the citation guard for ticket #128. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -91,7 +91,7 @@ flowchart LR
   A -->|displayed transcript revision| O
   A -->|bounded excerpts, strict JSON schema| N[Nebius Token Factory: Nemotron]
   N -->|source labels, request IDs, token usage| A
-  N -->|summary JSON| SV[Local overview and citation-ID validator]
+  N -->|summary JSON| SV[Local overview completeness, citation-ID, and word-anchor validator]
   SV -->|result or one repair request| A
   A --> H[(SQLite: AI runs, identity hashes, source audio times, chunk checkpoints)]
   C -->|explicit Clean transcript| A
@@ -130,7 +130,7 @@ flowchart LR
 | Speech worker | `src/stellis/processing.py`, `src/stellis/rematch.py`, and `src/stellis/worker.py` | One queue, isolated child process with per-job file lock, restart requeue, ffmpeg decode, whisper.cpp segment ASR with a vocabulary snapshot prompt, short-clip plain candidate and diarization-turn coverage guard, and native token timing grouped into words and bounded to decoded media frames; guarded split of an ASR passage where measured words and acoustic turns locate a clear speaker change, then overlap assignment with stable IDs for unaffected passages; source-preserving alignment of retained passages, sherpa-onnx acoustic turns, TitaNet segment embeddings and conservative speaker rematch, aggregate metrics. |
 | Silence scanner | `src/stellis/silence.py`, `src/stellis/processing.py`, and the existing isolated worker | Versioned idempotent job uses local ffmpeg low-energy detection, 200 ms edge trim, and a 250 ms timed-speech guard; stores playback-only intervals in job metrics. A transcript is required. |
 | Model distribution | `scripts/setup_models.sh` | Downloads pinned model files to private local storage and verifies SHA-256; models do not enter Git. |
-| AI adapter | `src/stellis/ai.py` | Explicit Nebius Nemotron calls, bounded chunk extraction and synthesis, lexical question evidence, strict schema and source-ID validation, complete punctuated overview points up to 400 characters with one repair attempt, persisted result and failure metadata; a source speaker-projection hash makes Person rename, merge, confirmation, unlink, and generation remap stale only affected runs; retained generation lookup restores older citation audio times; explicit summary regeneration creates a fresh run for the current revision and projection unless one is active; `src/stellis/clean.py` validates one-to-one clean passages, preserves source timing, flags suspect single-letter hyphen terms for audio review, and saves separate clean versions and user wording overlays. Passage-ID validity does not establish claim support; [ADR 0037](decisions/0037-complete-cited-summary-points.md) records the validation limit. |
+| AI adapter | `src/stellis/ai.py` | Explicit Nebius Nemotron calls, bounded chunk extraction and synthesis, lexical question evidence, strict schema and source-ID validation, complete punctuated overview points up to 400 characters, a 45% concrete-word anchor against each chunk point's own cited passages, and one repair attempt; persisted result and failure metadata; a source speaker-projection hash makes Person rename, merge, confirmation, unlink, and generation remap stale only affected runs; retained generation lookup restores older citation audio times; explicit summary regeneration creates a fresh run for the current revision and projection unless one is active; `src/stellis/clean.py` validates one-to-one clean passages, preserves source timing, flags suspect single-letter hyphen terms for audio review, and saves separate clean versions and user wording overlays. These checks do not establish factual support; [ADR 0037](decisions/0037-complete-cited-summary-points.md) records the validation limit. |
 | Local search | `src/stellis/search.py` | On-demand scan of current displayed transcript text, titles, speaker labels, and confirmed Person names; bounded result delivery with total count. Search is not sent to Nebius. |
 | Hosted service | Nebius Token Factory | Receives bounded displayed transcript excerpts and speaker labels only when the user starts an AI run; returns generated JSON, provider IDs, and usage. It does not receive audio. |
 
