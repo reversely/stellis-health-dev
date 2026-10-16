@@ -8,6 +8,8 @@ The cross-app/browser direction is recorded in [ADR 0003](docs/decisions/0003-cr
 
 The local browser app imports audio or an Otter ZIP, records from the microphone, lists conversations, replays recordings, and runs on-device English transcription and acoustic speaker grouping. The transcript supports segment seeking, selected highlights, transcript-wide Edit/Done corrections, vocabulary hints, and reversible speaker labels. The Summary & AI tab requests source-linked summaries, answers, and a separate Edited Transcript from Nemotron through Nebius. The acceptance test runs through the browser on a real interview. The [current architecture](docs/current-architecture.md) describes only running components.
 
+The [UI style guide](docs/ui-style-guide.md) defines the palette, surface and control rules, copy conventions, and browser checks for interface changes.
+
 ## Setup and run
 
 Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. On a Mac with Homebrew, the native tools can be installed with `brew install ffmpeg whisper.cpp`. The application binds to loopback only.

@@ -1,1 +1,100 @@
-.auth-main{max-width:440px;margin:12vh auto;padding:0 20px}.auth-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;box-shadow:var(--shadow)}.auth-card h1{font-size:28px;margin:24px 0 26px}.auth-modes{display:flex;gap:8px;border-bottom:1px solid var(--line)}.auth-modes[hidden]{display:none}.auth-modes button{flex:1;padding:12px;background:transparent;color:var(--ink);border:0;border-bottom:2px solid transparent;font:inherit;font-weight:650;cursor:pointer}.auth-modes button[aria-current="page"]{border-bottom-color:var(--accent);color:var(--accent)}.auth-card form{display:grid;gap:10px}.auth-card label{font-size:14px;font-weight:650}.auth-card input{width:100%;box-sizing:border-box;background:var(--input);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;font:inherit;margin-bottom:10px}.auth-card form button{padding:12px;margin-top:4px;background:var(--accent);color:var(--accent-ink);border:0;font-weight:700;cursor:pointer}.auth-card form button:disabled{opacity:.5;cursor:not-allowed}.auth-card p{color:var(--failure);min-height:1.5em;margin:12px 0 0}
+/* The account form uses the same dark rail and light paper roles as the workspace. */
+body.auth-page {
+  min-height: 100vh;
+  background: #27222B;
+}
+body.auth-page::before { display: none; }
+body.auth-page header {
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+body.auth-page .brand { color: #F7F5F6; }
+
+.auth-main {
+  width: min(100%, 460px);
+  max-width: none;
+  margin: clamp(36px, 10vh, 100px) auto 64px;
+  padding: 0 20px;
+}
+.auth-card {
+  padding: 32px;
+  border: 1px solid #DDD5DE;
+  border-radius: 6px;
+  background: #F7F5F6;
+  color: #2A252F;
+  box-shadow: 0 18px 44px #17131D38;
+}
+.auth-card h1 {
+  margin: 12px 0 26px;
+  color: #2A252F;
+  font-size: 30px;
+}
+.auth-modes {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #DDD5DE;
+}
+.auth-modes[hidden] { display: none; }
+.auth-modes button {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #635B65;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.auth-modes button[aria-current='page'] {
+  border-bottom-color: #413A48;
+  color: #2A252F;
+}
+.auth-modes button:hover { color: #2A252F; }
+.auth-card form { display: grid; gap: 10px; }
+.auth-card label { font-size: 14px; font-weight: 650; }
+.auth-card input {
+  width: 100%;
+  min-height: 46px;
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  border: 1px solid #CFC5D0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2A252F;
+  font: inherit;
+}
+.auth-card form button {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 11px 16px;
+  border: 1px solid #413A48;
+  border-radius: 8px;
+  background: #413A48;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.auth-card form button:hover:not(:disabled) {
+  border-color: #51465B;
+  background: #51465B;
+}
+.auth-card form button:disabled { opacity: .55; cursor: not-allowed; }
+.auth-card :is(button, input):focus-visible {
+  outline: 3px solid #335C63;
+  outline-offset: 3px;
+}
+.auth-card p { margin: 14px 0 0; color: #A33232; }
+.auth-card p:empty { display: none; }
+
+html[data-theme='light'] body.auth-page { background: #F7F5F6; }
+html[data-theme='light'] .auth-card { background: #ffffff; box-shadow: 0 14px 36px #2A252F1C; }
+html[data-theme='light'] body.auth-page .brand { color: #2A252F; }
+
+@media (max-width: 600px) {
+  .auth-main { margin-top: 44px; }
+  .auth-card { padding: 24px; }
+}
