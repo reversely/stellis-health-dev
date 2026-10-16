@@ -249,6 +249,8 @@ def _command(command: list[str], timeout: int) -> None:
 
 def _transcribe(audio_path: Path, model: Path, output_base: Path,
                 vocabulary: list[str]) -> list[dict[str, object]]:
+    audio_info = sf.info(audio_path)
+    duration_ms = round(audio_info.frames / audio_info.samplerate * 1000)
     command = ["whisper-cli", "-m", str(model), "-f", str(audio_path), "-l", "en",
                "-t", "4", "-ojf", "-of", str(output_base), "-np"]
     if vocabulary:
@@ -257,11 +259,17 @@ def _transcribe(audio_path: Path, model: Path, output_base: Path,
     result = json.loads(output_base.with_suffix(".json").read_text())
     segments: list[dict[str, object]] = []
     for item in result["transcription"]:
-        start = int(item["offsets"]["from"])
-        end = int(item["offsets"]["to"])
+        start = max(0, int(item["offsets"]["from"]))
+        end = min(duration_ms, int(item["offsets"]["to"]))
         if end > start and str(item["text"]).strip():
+            words = []
+            for word in _measured_words(item):
+                word_start = max(start, int(word["start_ms"]))
+                word_end = min(end, int(word["end_ms"]))
+                if word_end > word_start:
+                    words.append({**word, "start_ms": word_start, "end_ms": word_end})
             segments.append({"start_ms": start, "end_ms": end, "text": str(item["text"]).strip(),
-                             "words": _measured_words(item)})
+                             "words": words})
     if not segments:
         raise RuntimeError("The on-device model returned no speech segments")
     return segments

@@ -68,6 +68,8 @@ class ProcessingWorkflowTest(unittest.TestCase):
 
     def test_vocabulary_reaches_whisper_initial_prompt(self) -> None:
         output = Path(self.temp.name, "transcript")
+        audio_path = Path(self.temp.name, "audio.wav")
+        audio_path.write_bytes(wav_bytes())
         observed: list[str] = []
 
         def native_command(command: list[str], timeout: int) -> None:
@@ -77,10 +79,29 @@ class ProcessingWorkflowTest(unittest.TestCase):
             ]}))
 
         with patch.object(processing, "_command", side_effect=native_command):
-            result = processing._transcribe(Path("/audio.wav"), Path("/model.bin"), output, ["CIFAR"])
+            result = processing._transcribe(audio_path, Path("/model.bin"), output, ["CIFAR"])
         self.assertEqual(result[0]["text"], "CIFAR")
         self.assertIn("--prompt", observed)
         self.assertIn("Vocabulary: CIFAR", observed)
+
+    def test_native_asr_times_cannot_outlive_source_audio(self) -> None:
+        audio_path = Path(self.temp.name, "audio.wav")
+        audio_path.write_bytes(wav_bytes())
+        output = Path(self.temp.name, "bounded")
+
+        def native_command(command: list[str], timeout: int) -> None:
+            output.with_suffix(".json").write_text(json.dumps({"transcription": [
+                {"offsets": {"from": 0, "to": 30000}, "text": " Test", "tokens": [
+                    {"text": " Test", "offsets": {"from": 100, "to": 30000}, "p": .8},
+                ]},
+                {"offsets": {"from": 1200, "to": 30000}, "text": "Beyond audio"},
+            ]}))
+
+        with patch.object(processing, "_command", side_effect=native_command):
+            result = processing._transcribe(audio_path, Path("/model.bin"), output, [])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["end_ms"], 1000)
+        self.assertEqual(result[0]["words"][0]["end_ms"], 1000)
 
     def test_native_token_times_form_words_without_invented_offsets(self) -> None:
         item = {"offsets": {"from": 1000, "to": 2000}, "text": " Space flight, now.", "tokens": [
