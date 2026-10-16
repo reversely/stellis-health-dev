@@ -56,6 +56,9 @@ def connect() -> Iterator[sqlite3.Connection]:
     conn.execute("""CREATE TABLE IF NOT EXISTS persons (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     )""")
+    person_columns = {row["name"] for row in conn.execute("PRAGMA table_info(persons)")}
+    if "hidden_at" not in person_columns:
+        conn.execute("ALTER TABLE persons ADD COLUMN hidden_at TEXT")
     conn.execute("""CREATE TABLE IF NOT EXISTS person_links (
         conversation_id TEXT NOT NULL REFERENCES conversations(id),
         segment_id TEXT NOT NULL,

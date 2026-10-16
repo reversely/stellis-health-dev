@@ -22,7 +22,7 @@ def _name(value: str) -> str:
 
 def list_people() -> list[dict[str, object]]:
     with storage.connect() as conn:
-        rows = conn.execute("""SELECT p.id, p.name, p.created_at, p.updated_at,
+        rows = conn.execute("""SELECT p.id, p.name, p.created_at, p.updated_at, p.hidden_at,
             COUNT(DISTINCT CASE WHEN c.trashed_at IS NULL THEN pl.conversation_id END) AS conversation_count
             FROM persons p LEFT JOIN person_links pl ON pl.person_id = p.id
             LEFT JOIN conversations c ON c.id = pl.conversation_id
@@ -49,6 +49,16 @@ def rename_person(person_id: str, name: str) -> dict[str, object]:
     return {"id": person_id, "name": value}
 
 
+def set_person_hidden(person_id: str, hidden: bool) -> dict[str, object]:
+    stamp = _now()
+    with storage.connect() as conn:
+        changed = conn.execute("UPDATE persons SET hidden_at = ?, updated_at = ? WHERE id = ?",
+                               (stamp if hidden else None, stamp, person_id)).rowcount
+    if not changed:
+        raise LookupError("Person not found")
+    return {"id": person_id, "hidden": hidden}
+
+
 def delete_person(person_id: str) -> dict[str, object]:
     with storage.connect() as conn:
         if conn.execute("SELECT 1 FROM person_links WHERE person_id = ? LIMIT 1", (person_id,)).fetchone():
@@ -61,7 +71,7 @@ def delete_person(person_id: str) -> dict[str, object]:
 
 def get_person(person_id: str) -> dict[str, object] | None:
     with storage.connect() as conn:
-        person = conn.execute("SELECT id, name, created_at, updated_at FROM persons WHERE id = ?",
+        person = conn.execute("SELECT id, name, created_at, updated_at, hidden_at FROM persons WHERE id = ?",
                               (person_id,)).fetchone()
         if person is None:
             return None

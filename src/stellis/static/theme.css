@@ -345,10 +345,36 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .speaker-picker-list strong { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
 .speaker-picker-list button { width: 100%; text-align: left; padding: 9px 11px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); cursor: pointer; font-weight: 400; }
 .speaker-picker-list button:hover { background: var(--raised); text-decoration: none; }
+.speaker-picker-option { display: flex; align-items: center; }
+.speaker-picker-option button:first-child { flex: 1; }
+.speaker-picker-option button:last-child:not(:first-child) { flex: 0; color: var(--accent); font-size: 12px; }
 .speaker-picker p { padding: 0 12px; color: var(--failure); font-size: 12px; }
 .speaker-picker p:empty { display: none; }
 .speaker-picker-manage { margin: auto 10px 10px; width: calc(100% - 20px); padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); color: var(--ink); cursor: pointer; font-weight: 650; }
 .speaker-picker-manage:hover { border-color: var(--accent); }
+#manage-speakers-dialog { width: min(820px, calc(100vw - 24px)); max-height: min(680px, calc(100vh - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+#manage-speakers-dialog::backdrop { background: #050a17aa; }
+.manage-speakers-heading, .manage-speakers-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; }
+.manage-speakers-heading h2 { margin: 0; font-size: 19px; }
+.manage-speakers-heading button { border: 0; background: transparent; color: var(--ink); cursor: pointer; font-size: 24px; }
+#manage-speakers-dialog > input { display: block; width: calc(50% - 30px); margin: 0 20px 12px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--ink); }
+.manage-speakers-body { display: grid; grid-template-columns: 1fr 1fr; min-height: 280px; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+.manage-speakers-list { padding: 12px 20px; overflow: auto; max-height: 410px; }
+.manage-speakers-detail { display: grid; align-content: center; justify-items: center; padding: 20px; border-left: 1px solid var(--line-soft); color: var(--muted); }
+.manage-speakers-detail label { display: grid; gap: 8px; width: 100%; max-width: 220px; }
+.manage-speakers-detail select, .manage-speaker-rename input { padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--input); color: var(--ink); }
+.manage-speaker-row { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 6px; border: 1px solid var(--line-soft); border-radius: 8px; margin-bottom: 6px; }
+.manage-speaker-row > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.manage-speaker-row small { display: block; color: var(--quiet); font-size: 11px; }
+.manage-speaker-row button, .manage-speaker-rename button, .manage-speakers-footer button { border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; background: var(--raised); color: var(--ink); cursor: pointer; }
+.manage-speaker-row button:hover, .manage-speakers-footer button:hover { border-color: var(--accent); }
+.manage-speaker-rename { display: flex; gap: 5px; flex: 1; min-width: 0; }
+.manage-speaker-rename input { flex: 1; min-width: 0; }
+.manage-speakers-footer { justify-content: flex-end; }
+.manage-speakers-footer button:disabled { opacity: .45; cursor: default; }
+#manage-speakers-dialog > p { padding: 0 20px; color: var(--failure); font-size: 13px; }
+#manage-speakers-dialog > p:empty { display: none; }
+@media(max-width:600px) { #manage-speakers-dialog > input { width: calc(100% - 40px); } .manage-speakers-body { grid-template-columns: 1fr; } .manage-speakers-detail { border-left: 0; border-top: 1px solid var(--line-soft); min-height: 90px; } }
 
 html[data-theme='light'] body { background: var(--field); }
 html[data-theme='light'] .upload-button:hover,

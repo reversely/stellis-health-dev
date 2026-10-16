@@ -146,6 +146,10 @@ class PersonName(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+class PersonVisibility(BaseModel):
+    hidden: bool
+
+
 class PersonLink(BaseModel):
     person_id: str | None = None
     name: str | None = Field(default=None, max_length=100)
@@ -328,6 +332,14 @@ def rename_person(person_id: str, request: PersonName) -> dict[str, object]:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.patch("/persons/{person_id}/visibility")
+def set_person_visibility(person_id: str, request: PersonVisibility) -> dict[str, object]:
+    try:
+        return people.set_person_hidden(person_id, request.hidden)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @api.delete("/persons/{person_id}")
