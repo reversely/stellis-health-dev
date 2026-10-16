@@ -6,6 +6,20 @@ const listView = document.querySelector('#list-view');
 const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
 const API = '/api/v1';
+const themeButton = document.querySelector('#theme-toggle');
+function syncThemeButton() {
+  const light = document.documentElement.dataset.theme === 'light';
+  themeButton.textContent = light ? 'Dark mode' : 'Light mode';
+  themeButton.setAttribute('aria-label', `Switch to ${light ? 'dark' : 'light'} mode`);
+  document.querySelector('meta[name="theme-color"]').content = light ? '#f7f8fb' : '#0a1020';
+}
+syncThemeButton();
+themeButton.addEventListener('click', () => {
+  const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('stellis-theme', theme); } catch {}
+  syncThemeButton();
+});
 const processButton = document.querySelector('#process-button');
 const rematchButton = document.querySelector('#rematch-button');
 const alignWordsButton = document.querySelector('#align-words-button');

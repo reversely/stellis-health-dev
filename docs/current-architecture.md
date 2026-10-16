@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, ticket #39. This page describes the running development code. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, ticket #23. This page describes the running development code. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -10,6 +10,8 @@ flowchart LR
   Z[Otter ZIP or audio] -->|select or drop| C
   Mic[Microphone] -->|MediaRecorder| C
   C -->|HTML, CSS, JS| F[FastAPI static routes]
+  F -->|local Inter/Piazzolla WOFF2, OFL notices, theme CSS| C
+  C -->|light preference only| L[(Browser localStorage)]
   C -->|/api/v1 JSON + multipart| A[FastAPI device API]
   C -->|HTTP byte ranges| A
   C -->|transcript-wide edit batch, vocabulary, selected highlights| A
@@ -63,7 +65,7 @@ flowchart LR
 
 | Component | Current implementation | Owns |
 | --- | --- | --- |
-| Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/` | File selection/drop, microphone permission and MediaRecorder capture, chunk upload/recovery, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript with view-only speaker-turn grouping, per-fragment and measured word seeking with playback tracking, highlight filter, transcript-wide Edit/Done mode with in-place passage editing and atomic save in both source and Edited Transcript tabs, contextual speaker editing, vocabulary panel, speaker rematch and change filter, summary and question controls with linked evidence. |
+| Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/`; local Inter/Piazzolla WOFF2 assets, OFL notices, and `theme.css` are served by FastAPI without a build step | Dark-default cosmos theme, light preference in browser localStorage, semantic colors and reduced-motion styling; file selection/drop, microphone permission and MediaRecorder capture, chunk upload/recovery, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript with view-only speaker-turn grouping, per-fragment and measured word seeking with playback tracking, highlight filter, transcript-wide Edit/Done mode with in-place passage editing and atomic save in both source and Edited Transcript tabs, contextual speaker editing, vocabulary panel, speaker rematch and change filter, summary and question controls with linked evidence. |
 | Device service | FastAPI in `src/stellis/server.py`, started by `uv run stellis serve` | Loopback HTTP (`127.0.0.1:8765`), API routes, static UI, audio range responses, worker startup. |
 | Importer | `src/stellis/importer.py` | Bounded multipart/ZIP extraction, SHA-256 deduplication, `ffprobe` duration/stream validation. |
 | Recorder | `src/stellis/recording.py` | Private bounded chunk files with fsync/digest, interrupted-session listing, pause/device events, verified join, ffmpeg stream-copy remux, import handoff, explicit discard. |
@@ -100,4 +102,8 @@ The supplied 57:49 Otter ZIP imported through Chromium; its audio loaded, sought
 
 The full 789-passage interview completed a real conservative-clean-v2 Nemotron run in 52 provider attempts. Its stored v2 result changed 157 passages and initially flagged 82 for audio review; a later conservative audit found 10 passages needing source fallback and 12 additional review flags. The browser now applies this safety check to earlier versions before display. Chromium checks covered a later passage seek, two distant clean edits in one save and reload, source comparison, review confirmation, and 390-pixel width without overflow. Independent Otter reference text exists but has its own recognition errors; quote fidelity still requires listening at uncertain passages.
 
+A fresh conservative-clean-v3 run on the same 789-passage interview succeeded in 54 Nebius attempts. It changed 154 passages, flagged 108 for audio review, and remained current for source revision 26. A second validation pass found no unflagged substantive deletions; six short passages contained only safe filler deletion yet crossed the conservative overlap threshold if checked in isolation. This is a structural guard check, not an audio-fidelity result.
+
 The versioned native-word pipeline produced 29 timed words on a 10.8-second browser-recorded sample. A source-preserving alignment job attached 7,612 measured words to the original 789 interview passages while retaining all 789 IDs, texts, speaker assignments, and segment times. Twelve passages remained untimed. Five comparison windows showed 0.16–0.25-second median absolute difference from independently timed Otter words; see [aggregate timing validation](validation/real-interview-word-timing.md). Chromium checks covered clicking a word at 500.04 seconds, scrub-to-active-word tracking, selection/highlight/removal across word spans, the fixed player, and 390-pixel layout. A second 50-second browser conversation ran Measure word timing through the UI, produced 122 timed words, and retained them after completion.
+
+The cosmos theme was checked in Chromium at 1440 and 390 pixels across home, transcript, Edited Transcript, AI, and light mobile states. Theme persistence, locally served fonts, import/record entry, vocabulary, transcript Edit/Done, speaker editor, tabs, audio seeking, reduced motion, and mobile width passed. All browser resource requests stayed on the loopback origin. Text, muted/status, and accent control color pairs measured above 4.5:1 in both themes; [ADR 0013](decisions/0013-cosmos-browser-theme.md) records the measured ratios and design choice.
