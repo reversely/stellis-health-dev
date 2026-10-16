@@ -26,7 +26,7 @@ function syncThemeButton() {
   const light = document.documentElement.dataset.theme === 'light';
   themeButton.textContent = light ? 'Dark mode' : 'Light mode';
   themeButton.setAttribute('aria-label', `Switch to ${light ? 'dark' : 'light'} mode`);
-  document.querySelector('meta[name="theme-color"]').content = light ? '#f7f8fb' : '#0a1020';
+  document.querySelector('meta[name="theme-color"]').content = light ? '#172830' : '#101b24';
 }
 syncThemeButton();
 themeButton.addEventListener('click', () => {
@@ -1825,7 +1825,7 @@ function selectedSnippet(excerpt) {
   const source = new URL(`/conversation/${encodeURIComponent(activeConversationId)}`, location.origin);
   source.searchParams.set('at', segment.id);
   source.searchParams.set('t', String(sourceTime));
-  return {text:`“${quote}”\n— ${segment.speaker_display_name} · ${time(sourceTime / 1000)}\nSource on this device: ${source.href}`,
+  return {text:`“${quote}”\n— ${segment.speaker_display_name}, ${time(sourceTime / 1000)}\nSource on this device: ${source.href}`,
     sourceTime};
 }
 function openSelectionShare(toolbar, excerpt) {
@@ -2790,6 +2790,7 @@ document.querySelector('#import-button').addEventListener('click', () => {
   importStatus.textContent = '';
   importDialog.showModal();
 });
+document.querySelector('#recording-import').addEventListener('click', () => document.querySelector('#import-button').click());
 document.querySelector('#import-close').addEventListener('click', () => importDialog.close());
 importDialog.addEventListener('cancel', event => {
   if (fileInput.disabled) event.preventDefault();
