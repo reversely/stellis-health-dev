@@ -71,6 +71,19 @@ def connect() -> Iterator[sqlite3.Connection]:
         category_id TEXT NOT NULL REFERENCES categories(id),
         PRIMARY KEY(conversation_id, category_id)
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS category_automation (
+        id INTEGER PRIMARY KEY CHECK (id = 1), enabled INTEGER NOT NULL DEFAULT 0
+    )""")
+    if conn.execute("SELECT 1 FROM category_automation WHERE id = 1").fetchone() is None:
+        conn.execute("INSERT OR IGNORE INTO category_automation (id, enabled) VALUES (1, 0)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS category_decisions (
+        conversation_id TEXT PRIMARY KEY REFERENCES conversations(id),
+        manual_override INTEGER NOT NULL DEFAULT 0,
+        auto_category_id TEXT,
+        state TEXT NOT NULL DEFAULT 'idle',
+        model_id TEXT, transcript_revision INTEGER,
+        confidence REAL, error TEXT, updated_at TEXT NOT NULL
+    )""")
     conn.execute("""CREATE TABLE IF NOT EXISTS persons (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL

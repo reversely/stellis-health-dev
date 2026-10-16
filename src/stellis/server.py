@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, clean, enhanced_notes, generation_review, images, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, categorization, clean, enhanced_notes, generation_review, images, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -156,6 +156,10 @@ class CategoryName(BaseModel):
     name: str = Field(min_length=1, max_length=80)
 
 
+class CategoryAutomationSetting(BaseModel):
+    enabled: bool
+
+
 class PersonName(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
@@ -281,6 +285,7 @@ def start_speech_worker() -> None:
     images.recover_orphans()
     storage.fail_interrupted_ai_runs()
     storage.fail_interrupted_clean_runs()
+    categorization.fail_interrupted()
     enhanced_notes.fail_interrupted()
     recording_ai.fail_interrupted()
     processing.start_worker()
@@ -458,6 +463,34 @@ def remove_person(conversation_id: str, request: PersonUnlink) -> dict[str, obje
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.get("/categories/automation")
+def category_automation_settings() -> dict[str, object]:
+    return categorization.settings()
+
+
+@api.put("/categories/automation")
+def set_category_automation(request: CategoryAutomationSetting) -> dict[str, object]:
+    return categorization.set_enabled(request.enabled)
+
+
+@api.get("/conversations/{conversation_id}/categorization")
+def categorization_status(conversation_id: str) -> dict[str, object]:
+    try:
+        return categorization.status(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.post("/conversations/{conversation_id}/categorization")
+def retry_categorization(conversation_id: str) -> dict[str, object]:
+    try:
+        return categorization.request(conversation_id, retry=True)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -1035,7 +1068,12 @@ def decide_transcript_review(conversation_id: str, request: GenerationReviewDeci
 @api.post("/conversations/{conversation_id}/transcript/review/activate")
 def activate_transcript_review(conversation_id: str) -> dict[str, object]:
     try:
-        return generation_review.activate(conversation_id)
+        result = generation_review.activate(conversation_id)
+        try:
+            categorization.request(conversation_id)
+        except (RuntimeError, LookupError):
+            pass
+        return result
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:

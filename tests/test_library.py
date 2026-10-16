@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import library, storage
+from stellis import categorization, library, storage
 from stellis.server import app
 from test_import import wav_bytes
 
@@ -104,6 +104,30 @@ class LibraryWorkflowTest(unittest.TestCase):
                           'transcript_edit_events', 'conversation_categories'):
                 self.assertEqual(conn.execute(f'SELECT COUNT(*) FROM {table} WHERE conversation_id = ?',
                                               (self.first,)).fetchone()[0], 0)
+
+    def test_automatic_category_requires_opt_in_and_respects_manual_change(self):
+        self.client.patch(f'/api/v1/conversations/{self.first}/transcript/segments/s1',
+            json={'text': 'The interviewer asked about prior projects and the candidate described their work, '
+                          'then answered questions about collaboration, deadlines, and the role on the team.',
+                  'expected_revision': 1})
+        setting = self.client.get('/api/v1/categories/automation').json()
+        self.assertFalse(setting['enabled'])
+        self.assertEqual(self.client.put('/api/v1/categories/automation', json={'enabled': True}).status_code, 200)
+        revision = storage.get_transcript(self.first)['revision']
+        with storage.connect() as conn:
+            conn.execute("""INSERT INTO category_decisions
+                (conversation_id, state, model_id, transcript_revision, updated_at)
+                VALUES (?, 'queued', ?, ?, ?)""", (self.first, categorization.MODEL_ID, revision, datetime.now(timezone.utc).isoformat()))
+        with patch.object(categorization, 'classify', return_value=('Interview', 0.98)):
+            categorization._run(self.first, revision, 'test-key')
+        category = next(item for item in self.client.get('/api/v1/categories').json() if item['name'] == 'Interview')
+        self.assertIn(category['id'], self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'])
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['state'], 'assigned')
+        self.client.delete(f'/api/v1/conversations/{self.first}/categories/{category["id"]}')
+        with patch.object(categorization, 'classify', return_value=('Meeting', 0.99)):
+            categorization._run(self.first, revision, 'test-key')
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+        self.assertTrue(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['manual_override'])
 
     def test_initial_categories_are_seeded_once_and_remain_editable(self):
         endpoint = '/api/v1/categories'

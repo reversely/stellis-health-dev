@@ -93,6 +93,10 @@ def set_category(conversation_id: str, category_id: str, assigned: bool) -> list
         else:
             conn.execute("DELETE FROM conversation_categories WHERE conversation_id = ? AND category_id = ?",
                          (conversation_id, category_id))
+        conn.execute("""INSERT INTO category_decisions (conversation_id, manual_override, state, updated_at)
+            VALUES (?, 1, 'manual', ?) ON CONFLICT(conversation_id) DO UPDATE SET
+            manual_override = 1, auto_category_id = NULL, state = 'manual', updated_at = excluded.updated_at""",
+                     (conversation_id, _now()))
     return assignments(conversation_id).get(conversation_id, [])
 
 
@@ -179,7 +183,7 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
                     conn.execute("DELETE FROM recording_chunks WHERE recording_id = ?", (session_id,))
                     conn.execute("DELETE FROM recording_events WHERE recording_id = ?", (session_id,))
                     conn.execute("DELETE FROM recording_ai_runs WHERE recording_id = ?", (session_id,))
-                for table in ("enhanced_notes_runs", "meeting_notes", "recording_sessions", "clean_runs", "ai_runs", "transcript_comments", "transcript_highlights",
+                for table in ("category_decisions", "enhanced_notes_runs", "meeting_notes", "recording_sessions", "clean_runs", "ai_runs", "transcript_comments", "transcript_highlights",
                               "speaker_label_events", "speaker_labels", "transcript_edit_events",
                               "transcript_edits", "transcript_generations", "transcripts", "processing_jobs",
                               "conversation_categories", "person_links", "transcript_reviews",

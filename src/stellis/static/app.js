@@ -776,6 +776,8 @@ async function showList() {
   ]);
   libraryConversations = conversations;
   libraryCategories = categories;
+  const automation = await json(await fetch(`${API}/categories/automation`));
+  document.querySelector('#auto-categories').checked = automation.enabled;
   document.querySelector('#category-status').textContent = '';
   renderCategoryControls();
   renderConversationList();
@@ -859,6 +861,29 @@ async function renderConversationCategories(ids) {
       checkbox.disabled = false;
     });
     label.append(checkbox, document.createTextNode(category.name)); container.append(label);
+  }
+  await refreshCategorizationStatus();
+}
+
+async function refreshCategorizationStatus() {
+  if (!activeConversationId) return;
+  const [setting, result] = await Promise.all([
+    json(await fetch(`${API}/categories/automation`)),
+    json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/categorization`)),
+  ]);
+  const status = document.querySelector('#categorization-status');
+  const retry = document.querySelector('#retry-categorization');
+  status.textContent = result.state === 'failed' ? result.error :
+    result.state === 'running' || result.state === 'queued' ? 'Categorizing…' :
+    result.state === 'unclear' ? 'Category unclear. Choose one above.' : '';
+  retry.hidden = !setting.enabled || !result.ready || result.manual_override || !['failed', 'unclear', 'idle'].includes(result.state);
+  if (result.state === 'running' || result.state === 'queued') {
+    const conversationId = activeConversationId;
+    setTimeout(async () => {
+      if (activeConversationId !== conversationId || detailView.hidden) return;
+      const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(conversationId)}`));
+      await renderConversationCategories(item.category_ids);
+    }, 2000);
   }
 }
 async function showTrash() {
@@ -2992,6 +3017,24 @@ document.querySelector('#category-filter').addEventListener('change', () => {
   renderConversationList();
   if (document.querySelector('#library-search-input').value.trim().length >= 2)
     submitLibrarySearch(new Event('submit'));
+});
+document.querySelector('#auto-categories').addEventListener('change', async event => {
+  const checkbox = event.target;
+  checkbox.disabled = true;
+  try {
+    await json(await fetch(`${API}/categories/automation`, {method:'PUT',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:checkbox.checked})}));
+  } catch (error) {
+    checkbox.checked = !checkbox.checked;
+    document.querySelector('#category-status').textContent = error.message;
+  }
+  checkbox.disabled = false;
+});
+document.querySelector('#retry-categorization').addEventListener('click', async () => {
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/categorization`, {method:'POST'}));
+    await refreshCategorizationStatus();
+  } catch (error) { document.querySelector('#categorization-status').textContent = error.message; }
 });
 document.querySelector('#create-category-form').addEventListener('submit', async event => {
   event.preventDefault();
