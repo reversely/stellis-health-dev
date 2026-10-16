@@ -459,26 +459,29 @@ function showConversationTab(tab) {
   document.querySelector('#transcript-tab').setAttribute('aria-selected', String(!summary && !edited));
   document.querySelector('#edited-tab').setAttribute('aria-selected', String(edited));
 }
-function sourceButtons(ids) {
+function sourceButtons(ids, sourceStarts = {}) {
   const holder = document.createElement('span'); holder.className = 'ai-sources';
   for (const id of ids) {
     const segment = transcriptSegments.find(item => item.id === id);
+    const startMs = segment?.start_ms ?? sourceStarts[id];
     const button = document.createElement('button'); button.type = 'button';
-    button.textContent = segment ? `${time(segment.start_ms / 1000)} · ${segment.speaker_display_name}` : 'Source unavailable';
-    button.disabled = !segment;
+    button.textContent = Number.isFinite(startMs) ? `${time(startMs / 1000)} · ${segment?.speaker_display_name || 'Earlier source'}` : 'Source unavailable';
+    button.disabled = !Number.isFinite(startMs);
     button.addEventListener('click', async () => {
-      if (!segment) return;
-      highlightsOnly = false; showConversationTab('transcript');
-      await showTranscript(activeConversationId);
-      player.currentTime = segment.start_ms / 1000;
+      if (!Number.isFinite(startMs)) return;
+      if (segment) {
+        highlightsOnly = false; showConversationTab('transcript');
+        await showTranscript(activeConversationId);
+        transcriptView.querySelector(`[data-segment-id="${id}"]`)?.scrollIntoView({block:'center'});
+      }
+      player.currentTime = startMs / 1000;
       player.play().catch(() => {});
-      transcriptView.querySelector(`[data-segment-id="${id}"]`)?.scrollIntoView({block:'center'});
     });
     holder.append(button);
   }
   return holder;
 }
-function renderAIItems(title, items, container) {
+function renderAIItems(title, items, container, sourceStarts) {
   if (!items?.length) return;
   const section = document.createElement('section'); section.className = 'ai-result-section';
   const heading = document.createElement('h3'); heading.textContent = title; section.append(heading);
@@ -486,7 +489,7 @@ function renderAIItems(title, items, container) {
   for (const item of items) {
     const row = document.createElement('li');
     const text = document.createElement('p'); text.textContent = item.text;
-    row.append(text, sourceButtons(item.source_segment_ids)); list.append(row);
+    row.append(text, sourceButtons(item.source_segment_ids, sourceStarts)); list.append(row);
   }
   section.append(list); container.append(section);
 }
@@ -497,13 +500,13 @@ function renderAIRuns(runs) {
   const button = document.querySelector('#generate-summary');
   const regenerate = document.querySelector('#regenerate-summary');
   button.disabled = latest?.state === 'running' || latest?.state === 'queued';
-  button.hidden = latest?.state === 'succeeded';
+  button.hidden = latest?.state === 'succeeded' && !latest.stale;
   button.textContent = latest?.state === 'failed' ? 'Retry summary' : 'Generate summary';
-  regenerate.hidden = latest?.state !== 'succeeded';
+  regenerate.hidden = latest?.state !== 'succeeded' || latest.stale;
   if (latest?.state === 'succeeded') {
     if (latest.stale) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = 'Summary is outdated.'; summaryResults.append(stale);}
     for (const [field, title] of [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']])
-      renderAIItems(title, latest.result[field], summaryResults);
+      renderAIItems(title, latest.result[field], summaryResults, latest.source_starts);
   }
   const status = document.querySelector('#ai-status');
   status.textContent = latest?.state === 'failed' ? `Summary stopped: ${latest.error_message}` :
@@ -518,8 +521,8 @@ function renderAIRuns(runs) {
     body.textContent = run.state === 'succeeded' ? run.result.answer :
       run.state === 'failed' ? `Could not answer: ${run.error_message}` : `Answering · ${run.stage}`;
     card.append(body);
-    if (run.stale) {const badge = document.createElement('small'); badge.textContent = 'Transcript changed since this answer'; card.append(badge);}
-    if (run.state === 'succeeded') card.append(sourceButtons(run.result.source_segment_ids));
+    if (run.stale) {const badge = document.createElement('small'); badge.textContent = 'Source changed since this answer'; card.append(badge);}
+    if (run.state === 'succeeded') card.append(sourceButtons(run.result.source_segment_ids, run.source_starts));
     if (run.state === 'failed') {
       const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Retry answer';
       retry.addEventListener('click', () => startAIRun('answer', run.question)); card.append(retry);

@@ -246,6 +246,8 @@ def connect() -> Iterator[sqlite3.Connection]:
             kind TEXT NOT NULL CHECK (kind IN ('summary', 'answer')),
             input_hash TEXT NOT NULL,
             source_revision INTEGER NOT NULL,
+            source_identity_hash TEXT,
+            source_segments_json TEXT NOT NULL DEFAULT '{}',
             model_id TEXT NOT NULL,
             prompt_version TEXT NOT NULL,
             question TEXT,
@@ -266,6 +268,10 @@ def connect() -> Iterator[sqlite3.Connection]:
     ai_columns = {row["name"] for row in conn.execute("PRAGMA table_info(ai_runs)")}
     if "checkpoint_json" not in ai_columns:
         conn.execute("ALTER TABLE ai_runs ADD COLUMN checkpoint_json TEXT NOT NULL DEFAULT '[]'")
+    if "source_identity_hash" not in ai_columns:
+        conn.execute("ALTER TABLE ai_runs ADD COLUMN source_identity_hash TEXT")
+    if "source_segments_json" not in ai_columns:
+        conn.execute("ALTER TABLE ai_runs ADD COLUMN source_segments_json TEXT NOT NULL DEFAULT '{}'")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS clean_runs (
             id TEXT PRIMARY KEY,
@@ -744,10 +750,10 @@ def add_ai_run(record: dict[str, object]) -> None:
     with connect() as conn:
         conn.execute(
             """INSERT INTO ai_runs
-               (id, conversation_id, kind, input_hash, source_revision, model_id, prompt_version,
+               (id, conversation_id, kind, input_hash, source_revision, source_identity_hash, source_segments_json, model_id, prompt_version,
                 question, state, stage, error_code, error_message, result_json, checkpoint_json, usage_json,
                 provider_request_ids_json, attempts, created_at, updated_at)
-               VALUES (:id, :conversation_id, :kind, :input_hash, :source_revision, :model_id,
+               VALUES (:id, :conversation_id, :kind, :input_hash, :source_revision, :source_identity_hash, :source_segments_json, :model_id,
                        :prompt_version, :question, :state, :stage, :error_code, :error_message,
                        :result_json, :checkpoint_json, :usage_json, :provider_request_ids_json, :attempts,
                        :created_at, :updated_at)""",

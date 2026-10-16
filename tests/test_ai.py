@@ -71,6 +71,67 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(repeated['id'], second['id'])
         self.assertEqual(second['source_revision'], first['source_revision'])
 
+    def test_shared_person_changes_stale_only_affected_conversation_runs(self) -> None:
+        other_audio = bytearray(wav_bytes())
+        other_audio[-1] = 1
+        imported = self.client.post('/api/v1/conversations/import',
+                                    files={'file': ('other.wav', bytes(other_audio), 'audio/wav')})
+        other_id = imported.json()['conversation']['id']
+        storage.save_transcript({'conversation_id': other_id, 'revision': 1, 'language': 'en',
+                                 'segments_json': json.dumps([{'id':'other-seg', 'start_ms':0, 'end_ms':1000,
+                                     'text':'A second recording.', 'speaker_cluster_id':'speaker-2',
+                                     'speaker_uncertain':False, 'words':[]}]),
+                                 'turns_json':'[]', 'updated_at':datetime.now(timezone.utc).isoformat()})
+        a = self.client.post('/api/v1/persons', json={'name':'Avery'}).json()['id']
+        b = self.client.post('/api/v1/persons', json={'name':'Blair'}).json()['id']
+        for cid, segment in [(self.conversation_id, 'seg-1'), (other_id, 'other-seg')]:
+            response = self.client.put(f'/api/v1/conversations/{cid}/person-links', json={
+                'person_id':a, 'segment_id':segment, 'scope':'segment', 'expected_revision':1})
+            self.assertEqual(response.status_code, 200)
+        first = self._create('summary')
+        with patch.object(ai, '_key', return_value='test-key'), patch.object(ai, '_launch'):
+            second = self.client.post(f'/api/v1/conversations/{other_id}/ai-runs',
+                                      json={'kind':'summary'}).json()
+        self.assertFalse(first['stale'])
+        self.assertFalse(second['stale'])
+        self.client.patch(f'/api/v1/persons/{a}', json={'name':'Avery Renamed'})
+        for run in (first, second):
+            self.assertTrue(self.client.get(f"/api/v1/ai-runs/{run['id']}").json()['stale'])
+        fresh_first = self._create('summary')
+        self.assertNotEqual(fresh_first['id'], first['id'])
+        self.assertFalse(fresh_first['stale'])
+        with patch.object(ai, '_key', return_value='test-key'), patch.object(ai, '_launch'):
+            fresh_second = self.client.post(f'/api/v1/conversations/{other_id}/ai-runs',
+                                            json={'kind':'summary'}).json()
+        self.assertFalse(fresh_second['stale'])
+        self.client.put(f'{self.base}/person-links', json={
+            'person_id':b, 'segment_id':'seg-1', 'scope':'segment', 'expected_revision':1})
+        fresh_b = self._create('summary')
+        self.assertFalse(fresh_b['stale'])
+        self.client.post(f'/api/v1/persons/{a}/merge', json={'source_id':b})
+        self.assertTrue(self.client.get(f"/api/v1/ai-runs/{fresh_b['id']}").json()['stale'])
+        self.assertFalse(self.client.get(f"/api/v1/ai-runs/{fresh_second['id']}").json()['stale'])
+        unlinked = self.client.post(f'/api/v1/conversations/{other_id}/person-links/remove', json={
+            'segment_id':'other-seg', 'scope':'segment', 'expected_revision':1})
+        self.assertEqual(unlinked.status_code, 200)
+        self.assertTrue(self.client.get(f"/api/v1/ai-runs/{fresh_second['id']}").json()['stale'])
+
+    def test_older_citation_keeps_audio_time_after_generation_changes(self) -> None:
+        run = self._create('summary')
+        result = {'overview':[{'text':'Earlier claim', 'source_segment_ids':['seg-2']}],
+                  'topics':[], 'decisions':[], 'action_items':[]}
+        storage.update_ai_run(run['id'], state='succeeded', stage='complete', result_json=json.dumps(result))
+        with storage.connect() as conn:
+            conn.execute("UPDATE ai_runs SET source_segments_json = '{}' WHERE id = ?", (run['id'],))
+        replacement = [{'id':'new-seg', 'start_ms':0, 'end_ms':3000, 'text':'New wording.',
+                        'speaker_cluster_id':'speaker-1', 'speaker_uncertain':False, 'words':[]}]
+        storage.save_transcript({'conversation_id':self.conversation_id, 'pipeline_version':'replacement',
+                                 'revision':2, 'language':'en', 'segments_json':json.dumps(replacement),
+                                 'turns_json':'[]', 'updated_at':datetime.now(timezone.utc).isoformat()})
+        old = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
+        self.assertTrue(old['stale'])
+        self.assertEqual(old['source_starts']['seg-2'], 1500)
+
     def test_invented_source_ids_fail_even_after_one_repair(self) -> None:
         run = self._create("summary")
         bad = {"overview":[{"text":"Unsupported","source_segment_ids":["invented"]}],
