@@ -65,14 +65,14 @@ def request(recording_id: str, question: str) -> dict[str, object]:
     question = question.strip()
     if not question or len(question) > 500:
         raise ValueError("Enter a shorter question")
-    if not ai._key():
-        raise ai.AIError("not_configured", "Add a Nebius API key to use AI Chat")
     with storage.connect() as conn:
         owner = conn.execute("SELECT state FROM recording_sessions WHERE id = ?", (recording_id,)).fetchone()
     if owner is None:
         raise LookupError("Recording session not found")
     if owner["state"] != "recording":
         raise RuntimeError("Recording is already finalized")
+    if not ai._key():
+        raise ai.AIError("not_configured", "Add a Nebius API key to use AI Chat")
     preview = recording_preview.latest(recording_id)
     segments = preview["segments"][-MAX_PREVIEW_SEGMENTS:]
     if not segments:
