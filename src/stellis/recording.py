@@ -227,6 +227,7 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
                          (conversation["id"], _stamp(), recording_id))
         for row in rows:
             (directory / f"{row['sequence']:08d}.chunk").unlink(missing_ok=True)
+        (directory / "preview.json").unlink(missing_ok=True)
         return {"conversation": conversation, "duplicate": duplicate}
     finally:
         joined.unlink(missing_ok=True)

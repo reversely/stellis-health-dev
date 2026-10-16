@@ -1596,7 +1596,41 @@ function showRecordingWorkspace() {
   document.querySelector('#vocabulary-panel').hidden = true;
   recordingPanel.hidden = false;
   document.querySelector('#page-title').textContent = 'New recording';
+  if (!capture) {
+    document.querySelector('#recording-transcript-state').textContent = 'Listening…';
+    document.querySelector('#recording-transcript-preview').replaceChildren();
+  }
   captureControls();
+}
+function renderRecordingPreview(result) {
+  const container = document.querySelector('#recording-transcript-preview'); container.replaceChildren();
+  const segments = result.segments || [];
+  document.querySelector('#recording-transcript-state').textContent = segments.length ? 'Provisional transcript' : 'No speech yet';
+  for (const segment of segments) {
+    const row = document.createElement('p');
+    const stamp = document.createElement('time'); stamp.textContent = time(segment.start_ms / 1000);
+    const words = document.createElement('span'); words.textContent = segment.text;
+    row.append(stamp, words); container.append(row);
+  }
+}
+async function updateRecordingPreview(current) {
+  if (current.previewPending || current.previewDisabled || capture !== current || current.sequence < 5) return;
+  if (current.sequence - current.lastPreviewSequence < 8 && current.lastPreviewSequence >= 0) return;
+  current.previewPending = true;
+  document.querySelector('#recording-transcript-state').textContent = 'Transcribing on this device…';
+  try {
+    const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/preview`, {method:'POST'}));
+    if (capture === current) {current.lastPreviewSequence = result.through_sequence; renderRecordingPreview(result);}
+  } catch (error) {
+    if (capture === current) {
+      current.previewDisabled = true;
+      document.querySelector('#recording-transcript-state').textContent = 'Live transcript unavailable';
+    }
+  } finally {
+    current.previewPending = false;
+    if (capture === current && !current.previewDisabled && current.sequence - current.lastPreviewSequence >= 8)
+      updateRecordingPreview(current);
+  }
 }
 async function loadRecoveries() {
   const sessions = await json(await fetch(`${API}/recordings`));
@@ -1660,7 +1694,8 @@ async function startCapture() {
     const session = await json(await fetch(`${API}/recordings`, {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0]})}));
     capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
-      startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false};
+      startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false,
+      previewPending:false, previewDisabled:false, lastPreviewSequence:-1};
     recorder.addEventListener('dataavailable', event => {
       if (!event.data.size) return;
       const current = capture;
@@ -1671,6 +1706,7 @@ async function startCapture() {
           {method:'PUT',headers:{'Content-Type':session.media_type},body:event.data});
         await json(response);
         recordingDetail.textContent = 'Saved locally';
+        updateRecordingPreview(current);
       }).catch(error => {
         current.uploadError = error;
         recordingState.textContent = 'Saving stopped';
