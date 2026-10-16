@@ -7,12 +7,12 @@ from pathlib import Path
 import json
 import sqlite3
 
-from fastapi import APIRouter, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, clean, processing, recording, storage
+from stellis import ai, clean, processing, recording, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -129,6 +129,14 @@ def conversation_page(conversation_id: str) -> FileResponse:
 @api.get("/conversations")
 def conversations() -> list[dict[str, object]]:
     return storage.list_conversations()
+
+
+@api.get("/search")
+def library_search(q: str = Query(min_length=2, max_length=120)) -> dict[str, object]:
+    try:
+        return search.search_library(q)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @api.post("/conversations/import")

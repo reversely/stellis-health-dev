@@ -32,6 +32,11 @@
         <p id="vocabulary-status" role="status" aria-live="polite"></p>
       </details>
       <section id="list-view">
+        <section class="search-card" aria-label="Search conversations">
+          <form id="library-search-form"><label for="library-search-input">Search conversations, words, and speakers</label><div class="search-row"><input id="library-search-input" type="search" minlength="2" maxlength="120" autocomplete="off" placeholder="Search your library" /><button type="submit">Search</button></div></form>
+          <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option></select></div>
+          <p id="library-search-status" role="status" aria-live="polite"></p><div id="library-search-results" aria-label="Search results"></div>
+        </section>
         <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Import a recording or ZIP">
           <div class="drop-icon" aria-hidden="true">↥</div>
           <strong>Drop audio or ZIP here</strong>
@@ -66,6 +71,7 @@
           <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="restore-passage-button" type="button" hidden>Restore passage</button><button id="discard-edits-button" type="button" hidden>Discard edits</button><button id="edit-transcript-button" type="button" hidden>Edit transcript</button><button id="align-words-button" type="button" hidden>Measure word timing</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="process-button" type="button" hidden>Process recording</button></div></div>
           <p id="edit-status" role="status" aria-live="polite" hidden></p>
           <p id="processing-status" role="status" aria-live="polite">Checking local speech models…</p>
+          <div id="transcript-search" class="transcript-search"><label for="transcript-search-input">Find in transcript</label><div class="search-row"><input id="transcript-search-input" type="search" placeholder="Find words or a phrase" autocomplete="off" /><select id="transcript-search-speaker" aria-label="Filter by speaker"><option value="">All speakers</option></select><button id="transcript-search-previous" type="button" aria-label="Previous match">↑</button><button id="transcript-search-next" type="button" aria-label="Next match">↓</button><button id="transcript-search-clear" type="button">Clear</button></div><p id="transcript-search-status" role="status" aria-live="polite"></p></div>
           <div class="highlight-controls"><div class="filter-option"><button id="show-highlights" type="button" aria-pressed="false">Show only highlights</button><span id="highlight-count"></span></div><div class="filter-option"><button id="show-rematch-changes" type="button" aria-pressed="false" hidden>Show speaker changes</button><span id="rematch-change-count"></span></div></div>
           <div id="transcript" class="transcript" aria-label="Transcript"></div>
         </div>

@@ -58,6 +58,11 @@ const recordingState = document.querySelector('#recording-state');
 const recordingDetail = document.querySelector('#recording-detail');
 const recordingTimer = document.querySelector('#recording-timer');
 let capture = null;
+let librarySearchResults = [];
+let librarySearchTotal = 0;
+let librarySearchLimited = false;
+let transcriptSearchMatches = [];
+let transcriptSearchIndex = -1;
 
 function time(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -71,6 +76,87 @@ async function json(response) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || 'The request failed.');
   return data;
+}
+function appendSearchExcerpt(container, value, query) {
+  const position = value.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
+  if (position < 0) { container.textContent = value; return; }
+  container.append(document.createTextNode(value.slice(0, position)));
+  const mark = document.createElement('mark'); mark.textContent = value.slice(position, position + query.length);
+  container.append(mark, document.createTextNode(value.slice(position + query.length)));
+}
+function renderLibrarySearch() {
+  const kind = document.querySelector('#library-search-kind').value;
+  const container = document.querySelector('#library-search-results');
+  const query = document.querySelector('#library-search-input').value.trim();
+  container.replaceChildren();
+  const visible = librarySearchResults.filter(item => kind === 'all' || item.kind === kind);
+  document.querySelector('#library-search-status').textContent = visible.length ?
+    `${kind === 'all' ? librarySearchTotal : visible.length} results${kind === 'all' && librarySearchLimited ? ' · first 150 shown' : ''}` :
+    (kind === 'all' ? 'No results.' : 'No results in this category.');
+  for (const item of visible) {
+    const row = document.createElement('a'); row.className = 'search-result';
+    row.href = `/conversation/${encodeURIComponent(item.conversation_id)}${item.segment_id ? `?at=${encodeURIComponent(item.segment_id)}` : ''}`;
+    const heading = document.createElement('strong'); heading.textContent = item.conversation_title;
+    const detail = document.createElement('span');
+    detail.textContent = item.kind === 'conversation' ? 'Conversation' :
+      `${item.kind === 'speaker' ? 'Speaker' : 'Passage'} · ${item.speaker} · ${time(item.start_ms / 1000)}${item.speaker_uncertain ? ' · Uncertain speaker match' : ''}`;
+    const excerpt = document.createElement('span'); excerpt.className = 'search-excerpt';
+    appendSearchExcerpt(excerpt, item.excerpt, query);
+    row.append(heading, detail, excerpt); container.append(row);
+  }
+}
+async function submitLibrarySearch(event) {
+  event.preventDefault();
+  const query = document.querySelector('#library-search-input').value.trim();
+  const status = document.querySelector('#library-search-status');
+  if (query.length < 2) { status.textContent = 'Enter at least two characters.'; return; }
+  status.textContent = 'Searching local transcripts…';
+  document.querySelector('#library-search-results').replaceChildren();
+  try {
+    const data = await json(await fetch(`${API}/search?q=${encodeURIComponent(query)}`));
+    if (document.querySelector('#library-search-input').value.trim() !== query) return;
+    librarySearchResults = data.results;
+    librarySearchTotal = data.total;
+    librarySearchLimited = data.limited;
+    document.querySelector('#library-search-controls').hidden = false;
+    document.querySelector('#library-search-kind').value = 'all';
+    renderLibrarySearch();
+  } catch (error) { status.textContent = error.message; }
+}
+function refreshTranscriptSearch() {
+  const query = document.querySelector('#transcript-search-input').value.trim().toLocaleLowerCase();
+  const picker = document.querySelector('#transcript-search-speaker');
+  const selectedSpeaker = picker.value;
+  const speakers = [...new Set(transcriptSegments.map(segment => segment.speaker_display_name))];
+  picker.replaceChildren(new Option('All speakers', ''), ...speakers.map(name => new Option(name, name)));
+  picker.value = speakers.includes(selectedSpeaker) ? selectedSpeaker : '';
+  transcriptSearchMatches = transcriptSegments.filter(segment =>
+    (!query || segment.text.toLocaleLowerCase().includes(query)) &&
+    (!picker.value || segment.speaker_display_name === picker.value));
+  if (!query && !picker.value) transcriptSearchMatches = [];
+  for (const row of transcriptView.querySelectorAll('.segment')) row.classList.remove('search-match', 'search-current');
+  for (const segment of transcriptSearchMatches) transcriptView.querySelector(`[data-segment-id="${CSS.escape(segment.id)}"]`)?.classList.add('search-match');
+  if (transcriptSearchIndex >= transcriptSearchMatches.length) transcriptSearchIndex = -1;
+  const current = transcriptSearchMatches[transcriptSearchIndex];
+  if (current) transcriptView.querySelector(`[data-segment-id="${CSS.escape(current.id)}"]`)?.classList.add('search-current');
+  document.querySelector('#transcript-search-status').textContent =
+    query || picker.value ? `${transcriptSearchMatches.length} matches${current ? ` · ${transcriptSearchIndex + 1} of ${transcriptSearchMatches.length}` : ''}` : '';
+}
+function moveTranscriptSearch(direction) {
+  if (!transcriptSearchMatches.length) return;
+  transcriptSearchIndex = transcriptSearchIndex < 0 ? (direction > 0 ? 0 : transcriptSearchMatches.length - 1) :
+    (transcriptSearchIndex + direction + transcriptSearchMatches.length) % transcriptSearchMatches.length;
+  refreshTranscriptSearch();
+  const segment = transcriptSearchMatches[transcriptSearchIndex];
+  transcriptView.querySelector(`[data-segment-id="${CSS.escape(segment.id)}"]`)?.scrollIntoView({block: 'center'});
+  player.pause(); player.currentTime = segment.start_ms / 1000;
+}
+function updateTranscriptSearch() {
+  transcriptSearchIndex = -1;
+  if (highlightsOnly || rematchChangesOnly) {
+    highlightsOnly = false; rematchChangesOnly = false;
+    showTranscript(activeConversationId).catch(error => document.querySelector('#transcript-search-status').textContent = error.message);
+  } else refreshTranscriptSearch();
 }
 async function showList() {
   clearTimeout(jobTimer);
@@ -121,6 +207,10 @@ async function showDetail(id) {
   transcriptEditError = null;
   transcriptSegments = [];
   currentTranscript = null;
+  document.querySelector('#transcript-search-input').value = '';
+  document.querySelector('#transcript-search-speaker').value = '';
+  transcriptSearchMatches = [];
+  transcriptSearchIndex = -1;
   syncTranscriptEditControls();
   transcriptView.replaceChildren();
   processingStatus.textContent = 'Checking local speech models…';
@@ -138,6 +228,15 @@ async function showDetail(id) {
   showConversationTab('transcript');
   await loadAIRuns(id);
   await loadCleanRuns(id);
+  const targetSegmentId = new URLSearchParams(location.search).get('at');
+  if (targetSegmentId) {
+    const target = transcriptSegments.find(segment => segment.id === targetSegmentId);
+    if (target) {
+      const seek = () => { player.pause(); player.currentTime = target.start_ms / 1000; };
+      if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
+      transcriptView.querySelector(`[data-segment-id="${CSS.escape(target.id)}"]`)?.scrollIntoView({block: 'center'});
+    }
+  }
 }
 function showConversationTab(tab) {
   const summary = tab === 'summary';
@@ -675,6 +774,7 @@ async function showTranscript(id) {
   processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a word or passage to play; drag across words to highlight.`;
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
+  refreshTranscriptSearch();
   window.scrollTo(0, previousScroll);
 }
 function renderHighlightedText(container, value, highlights, timedWords = []) {
@@ -1124,6 +1224,30 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
   if (activeConversationId && currentTranscript) showTranscript(activeConversationId).catch(error => processingStatus.textContent = error.message);
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
+document.querySelector('#library-search-form').addEventListener('submit', submitLibrarySearch);
+document.querySelector('#library-search-input').addEventListener('input', () => {
+  librarySearchResults = []; librarySearchTotal = 0;
+  document.querySelector('#library-search-controls').hidden = true;
+  document.querySelector('#library-search-results').replaceChildren();
+  document.querySelector('#library-search-status').textContent = '';
+});
+document.querySelector('#library-search-kind').addEventListener('change', renderLibrarySearch);
+document.querySelector('#transcript-search-input').addEventListener('input', () => {
+  updateTranscriptSearch();
+});
+document.querySelector('#transcript-search-input').addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); moveTranscriptSearch(event.shiftKey ? -1 : 1); }
+});
+document.querySelector('#transcript-search-speaker').addEventListener('change', () => {
+  updateTranscriptSearch();
+});
+document.querySelector('#transcript-search-previous').addEventListener('click', () => moveTranscriptSearch(-1));
+document.querySelector('#transcript-search-next').addEventListener('click', () => moveTranscriptSearch(1));
+document.querySelector('#transcript-search-clear').addEventListener('click', () => {
+  document.querySelector('#transcript-search-input').value = '';
+  document.querySelector('#transcript-search-speaker').value = '';
+  transcriptSearchIndex = -1; refreshTranscriptSearch();
+});
 document.querySelector('#vocabulary-form').addEventListener('submit', async event => {
   event.preventDefault();
   const input = document.querySelector('#vocabulary-input');
