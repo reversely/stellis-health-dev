@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
@@ -66,6 +67,52 @@ class ProcessingWorkflowTest(unittest.TestCase):
         result, fraction = processing.align_segments(self.conversation_id, segments, turns)
         self.assertTrue(result[0]["speaker_uncertain"])
         self.assertEqual(fraction, 0)
+
+    def test_clear_word_boundary_splits_speaker_change_without_shifting_other_ids(self) -> None:
+        text = "Hello there. Great, thanks."
+        words = [
+            {"text": "Hello", "start_offset": 0, "end_offset": 5, "start_ms": 0, "end_ms": 300},
+            {"text": "there.", "start_offset": 6, "end_offset": 12, "start_ms": 300, "end_ms": 700},
+            {"text": "Great,", "start_offset": 13, "end_offset": 19, "start_ms": 900, "end_ms": 1200},
+            {"text": "thanks.", "start_offset": 20, "end_offset": 27, "start_ms": 1200, "end_ms": 1550},
+        ]
+        segments = [
+            {"start_ms": 0, "end_ms": 1600, "text": text, "words": words},
+            {"start_ms": 1800, "end_ms": 2500, "text": "Next passage."},
+        ]
+        turns = [
+            {"start_ms": 0, "end_ms": 800, "speaker_cluster_id": "speaker-1"},
+            {"start_ms": 900, "end_ms": 2500, "speaker_cluster_id": "speaker-2"},
+        ]
+        result, _ = processing.align_segments(self.conversation_id, segments, turns)
+        self.assertEqual([item["text"] for item in result],
+                         ["Hello there.", "Great, thanks.", "Next passage."])
+        self.assertEqual([item["speaker_cluster_id"] for item in result],
+                         ["speaker-1", "speaker-2", "speaker-2"])
+        self.assertEqual((result[1]["start_ms"], result[1]["end_ms"]), (900, 1600))
+        self.assertEqual([(word["start_offset"], word["end_offset"]) for word in result[1]["words"]],
+                         [(0, 6), (7, 14)])
+        self.assertEqual(result[2]["id"],
+                         str(uuid.uuid5(uuid.UUID(self.conversation_id), "segment:1:1800:2500")))
+
+    def test_missing_word_timing_or_short_speaker_flip_does_not_split(self) -> None:
+        words = [
+            {"text": "One", "start_offset": 0, "end_offset": 3, "start_ms": 0, "end_ms": 300},
+            {"text": "voice", "start_offset": 4, "end_offset": 9, "start_ms": 300, "end_ms": 700},
+            {"text": "brief", "start_offset": 10, "end_offset": 15, "start_ms": 700, "end_ms": 1000},
+            {"text": "return", "start_offset": 16, "end_offset": 22, "start_ms": 1000, "end_ms": 1500},
+        ]
+        segment = {"start_ms": 0, "end_ms": 1500, "text": "One voice brief return", "words": words}
+        turns = [
+            {"start_ms": 0, "end_ms": 700, "speaker_cluster_id": "speaker-1"},
+            {"start_ms": 700, "end_ms": 1000, "speaker_cluster_id": "speaker-2"},
+            {"start_ms": 1000, "end_ms": 1500, "speaker_cluster_id": "speaker-1"},
+        ]
+        self.assertEqual(len(processing.split_segments_at_speaker_changes([segment], turns)), 1)
+        self.assertEqual(len(processing.split_segments_at_speaker_changes(
+            [{**segment, "words": []}], turns)), 1)
+        self.assertEqual(len(processing.split_segments_at_speaker_changes(
+            [{**segment, "words": [{**words[0], "start_offset": 1}, *words[1:]]}], turns)), 1)
 
     def test_short_vocabulary_prompt_cannot_drop_spoken_opening(self) -> None:
         storage.add_vocabulary("Shereen")

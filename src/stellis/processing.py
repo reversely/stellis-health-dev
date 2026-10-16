@@ -23,7 +23,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v2"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v3"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 _QUEUE: queue.Queue[str] = queue.Queue()
@@ -372,12 +372,108 @@ def _diarize(audio_path: Path, segmentation: Path, embedding: Path, job_id: str)
     ]
 
 
+def _split_once_at_speaker_change(segment: dict[str, object],
+                                  turns: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Split one ASR passage only when timed words locate a clear voice change."""
+    def dominant_cluster(part_start: int, part_end: int) -> tuple[str | None, float]:
+        coverage: dict[str, int] = {}
+        for turn in turns:
+            overlap = max(0, min(part_end, int(turn["end_ms"])) -
+                          max(part_start, int(turn["start_ms"])))
+            if overlap:
+                cluster = str(turn["speaker_cluster_id"])
+                coverage[cluster] = coverage.get(cluster, 0) + overlap
+        if not coverage:
+            return None, 0.0
+        cluster, duration = max(coverage.items(), key=lambda item: item[1])
+        return cluster, duration / (part_end - part_start)
+
+    text = str(segment["text"])
+    words = segment.get("words", [])
+    matches = list(re.finditer(r"\S+", text))
+    if not isinstance(words, list) or len(words) < 3 or len(words) != len(matches):
+        return [segment]
+    if any(not isinstance(word, dict) or word.get("text") != match.group()
+           or word.get("start_offset") != match.start() or word.get("end_offset") != match.end()
+           for word, match in zip(words, matches)):
+        return [segment]
+    start, end = int(segment["start_ms"]), int(segment["end_ms"])
+    candidates: list[tuple[int, int]] = []
+    ordered = sorted(turns, key=lambda turn: int(turn["start_ms"]))
+    for old, new in zip(ordered, ordered[1:]):
+        if old["speaker_cluster_id"] == new["speaker_cluster_id"]:
+            continue
+        old_end, new_start = int(old["end_ms"]), int(new["start_ms"])
+        if not -100 <= new_start - old_end <= 600:
+            continue
+        if min(end, old_end) - max(start, int(old["start_ms"])) < 500:
+            continue
+        if min(end, int(new["end_ms"])) - max(start, new_start) < 250:
+            continue
+        for index in range(1, len(words)):
+            word = words[index]
+            word_start, word_end = int(word["start_ms"]), int(word["end_ms"])
+            duration = word_end - word_start
+            if duration <= 0 or abs(word_start - new_start) > 450:
+                continue
+            new_overlap = max(0, min(word_end, int(new["end_ms"])) - max(word_start, new_start))
+            if new_overlap < max(80, 0.6 * duration):
+                continue
+            if int(words[index - 1]["end_ms"]) > word_start:
+                continue
+            old_anchor = any(
+                max(0, min(int(prior["end_ms"]), old_end) -
+                    max(int(prior["start_ms"]), int(old["start_ms"]))) >=
+                max(80, 0.6 * (int(prior["end_ms"]) - int(prior["start_ms"])))
+                for prior in words[max(0, index - 3):index]
+                if int(prior["end_ms"]) > int(prior["start_ms"])
+            )
+            if old_anchor and word_start - start >= 500 and end - word_start >= 250:
+                left_cluster, left_coverage = dominant_cluster(start, word_start)
+                right_cluster, right_coverage = dominant_cluster(word_start, end)
+                if (left_cluster != old["speaker_cluster_id"] or left_coverage < 0.55 or
+                        right_cluster != new["speaker_cluster_id"] or right_coverage < 0.55):
+                    continue
+                candidates.append((abs(word_start - new_start), index))
+                break
+    if not candidates:
+        return [segment]
+    _, split_index = min(candidates)
+    split_offset = int(words[split_index]["start_offset"])
+    split_time = int(words[split_index]["start_ms"])
+    left_text, right_text = text[:split_offset].rstrip(), text[split_offset:].lstrip()
+    if not left_text or not right_text or text[len(left_text):split_offset].strip():
+        return [segment]
+    left = {**segment, "end_ms": split_time, "text": left_text,
+            "words": [dict(word) for word in words[:split_index]]}
+    right = {**segment, "start_ms": split_time, "text": right_text,
+             "words": [{**word, "start_offset": int(word["start_offset"]) - split_offset,
+                        "end_offset": int(word["end_offset"]) - split_offset}
+                       for word in words[split_index:]]}
+    return [left, right]
+
+
+def split_segments_at_speaker_changes(segments: list[dict[str, object]],
+                                      turns: list[dict[str, object]]) -> list[tuple[int, dict[str, object]]]:
+    """Keep original ASR indexes so unrelated passage IDs remain stable."""
+    result: list[tuple[int, dict[str, object]]] = []
+    for source_index, segment in enumerate(segments):
+        parts = [segment]
+        for _ in range(3):
+            next_parts = [piece for part in parts for piece in _split_once_at_speaker_change(part, turns)]
+            if len(next_parts) == len(parts):
+                break
+            parts = next_parts
+        result.extend((source_index, part) for part in parts)
+    return result
+
+
 def align_segments(conversation_id: str, segments: list[dict[str, object]],
                    turns: list[dict[str, object]]) -> tuple[list[dict[str, object]], float]:
-    """Attach the dominant acoustic cluster, retaining uncertainty."""
+    """Split clear speaker changes, then attach acoustic clusters with uncertainty."""
     aligned: list[dict[str, object]] = []
     confident = 0
-    for index, segment in enumerate(segments):
+    for index, segment in split_segments_at_speaker_changes(segments, turns):
         start, end = int(segment["start_ms"]), int(segment["end_ms"])
         overlap: dict[str, int] = {}
         for turn in turns:
