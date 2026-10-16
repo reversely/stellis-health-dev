@@ -21,6 +21,7 @@ import soundfile as sf
 from stellis import storage
 
 PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-v1"
+REMATCH_VERSION = "speaker-embedding-v1"
 _QUEUE: queue.Queue[str] = queue.Queue()
 _WORKER_LOCK = threading.Lock()
 _REQUEST_LOCK = threading.Lock()
@@ -74,7 +75,7 @@ def public_job(record: dict[str, object]) -> dict[str, object]:
     """Exclude internal database fields and decode metrics."""
     return {
         key: record[key]
-        for key in ("id", "conversation_id", "pipeline_version", "state", "stage", "progress", "error", "created_at", "updated_at")
+        for key in ("id", "conversation_id", "pipeline_version", "kind", "state", "stage", "progress", "error", "created_at", "updated_at")
     } | {"metrics": json.loads(str(record["metrics_json"])) if record["metrics_json"] else None}
 
 
@@ -107,10 +108,40 @@ def request_processing(conversation_id: str) -> dict[str, object]:
         stamp = now()
         record: dict[str, object] = {
             "id": str(uuid.uuid4()), "conversation_id": conversation_id,
-            "pipeline_version": version, "state": "queued", "stage": "queued",
+            "pipeline_version": version, "kind": "speech", "state": "queued", "stage": "queued",
             "progress": 0, "error": None, "metrics_json": None,
             "vocabulary_json": json.dumps(terms, ensure_ascii=False),
             "created_at": stamp, "updated_at": stamp,
+        }
+        storage.add_job(record)
+        _QUEUE.put(str(record["id"]))
+        return record
+
+
+def request_rematch(conversation_id: str) -> dict[str, object]:
+    """Queue an idempotent acoustic rematch without rerunning transcription."""
+    with _REQUEST_LOCK:
+        transcript = storage.get_transcript(conversation_id)
+        if transcript is None:
+            raise LookupError("Transcript is not ready")
+        base_version = str(transcript["generation_version"]).split("-" + REMATCH_VERSION)[0]
+        if storage.get_transcript_generation(conversation_id, base_version) is None:
+            raise LookupError("Original machine generation is unavailable")
+        version = f"{base_version}-{REMATCH_VERSION}"
+        existing = storage.get_job_for_conversation(conversation_id, version)
+        if existing:
+            if existing["state"] == "failed":
+                storage.update_job(str(existing["id"]), state="queued", stage="retrying", progress=0,
+                                   error=None, updated_at=now())
+                _QUEUE.put(str(existing["id"]))
+                return storage.get_job(str(existing["id"])) or existing
+            return existing
+        stamp = now()
+        record: dict[str, object] = {
+            "id": str(uuid.uuid4()), "conversation_id": conversation_id,
+            "pipeline_version": version, "source_generation_version": base_version, "kind": "rematch",
+            "state": "queued", "stage": "queued", "progress": 0, "error": None,
+            "metrics_json": None, "vocabulary_json": "[]", "created_at": stamp, "updated_at": stamp,
         }
         storage.add_job(record)
         _QUEUE.put(str(record["id"]))
@@ -244,6 +275,9 @@ def run_job(job_id: str) -> None:
     job = storage.get_job(job_id)
     if not job or job["state"] == "succeeded":
         return
+    if job["kind"] == "rematch":
+        run_rematch_job(job_id)
+        return
     conversation = storage.get_conversation(str(job["conversation_id"]))
     if not conversation:
         storage.update_job(job_id, state="failed", stage="failed", error="Recording missing", updated_at=now())
@@ -283,5 +317,45 @@ def run_job(job_id: str) -> None:
             })
             storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
                                metrics_json=json.dumps(metrics), error=None, updated_at=now())
+    except Exception as exc:
+        storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())
+
+
+def run_rematch_job(job_id: str) -> None:
+    """Decode audio and reuse stored model turns and words for speaker rematch."""
+    from stellis import rematch
+
+    job = storage.get_job(job_id)
+    if not job:
+        return
+    conversation_id = str(job["conversation_id"])
+    source = storage.get_transcript_generation(conversation_id, str(job["source_generation_version"]))
+    conversation = storage.get_conversation(conversation_id)
+    if not source or not conversation:
+        storage.update_job(job_id, state="failed", stage="failed", error="Source transcript is missing", updated_at=now())
+        return
+    try:
+        embedding_model = model_paths()[2]
+        if not embedding_model.is_file():
+            raise RuntimeError("Speaker embedding model is unavailable")
+        media = storage.data_dir() / "media" / str(conversation["audio_filename"])
+        if not media.is_file():
+            raise RuntimeError("Source audio is missing")
+        segments = json.loads(str(source["segments_json"]))
+        with tempfile.TemporaryDirectory(prefix="stellis-rematch-", dir=storage.data_dir()) as temporary:
+            wav = Path(temporary) / "audio.wav"
+            _stage(job_id, "decoding for speaker rematch", 0.05)
+            _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(media),
+                      "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
+            _stage(job_id, "matching acoustic speakers", 0.35)
+            embeddings, valid = rematch.extract_embeddings(wav, embedding_model, segments)
+            aligned, metrics = rematch.suggest_speakers(segments, embeddings, valid)
+        _stage(job_id, "saving speaker suggestions", 0.95)
+        storage.save_transcript({"conversation_id": conversation_id, "revision": 1,
+                                 "pipeline_version": job["pipeline_version"], "language": source["language"],
+                                 "segments_json": json.dumps(aligned), "turns_json": source["turns_json"],
+                                 "updated_at": now()})
+        storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
+                           metrics_json=json.dumps(metrics), error=None, updated_at=now())
     except Exception as exc:
         storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())
