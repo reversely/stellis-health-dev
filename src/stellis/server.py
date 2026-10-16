@@ -216,6 +216,10 @@ class RecordingRename(BaseModel):
     title: str = Field(min_length=1, max_length=180)
 
 
+class ConversationRename(BaseModel):
+    title: str = Field(min_length=1, max_length=180)
+
+
 class RecordingEvent(BaseModel):
     kind: str
     media_position_ms: int = Field(ge=0)
@@ -880,6 +884,16 @@ def conversation(conversation_id: str) -> dict[str, object]:
     if record is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return _public(record)
+
+
+@api.patch("/conversations/{conversation_id}")
+def rename_conversation(conversation_id: str, request: ConversationRename) -> dict[str, object]:
+    try:
+        return _public(storage.rename_conversation(conversation_id, request.title))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @api.get("/conversations/{conversation_id}/audio")

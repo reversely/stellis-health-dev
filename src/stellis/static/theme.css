@@ -103,6 +103,12 @@ header {
   letter-spacing: -.045em;
 }
 .header-side { display: flex; align-items: center; gap: 16px; }
+.capture-header-controls { display: flex; align-items: center; gap: 7px; }
+.capture-header-controls[hidden] { display: none; }
+#capture-header-timer { min-width: 42px; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.capture-header-controls button { width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 11px; background: var(--raised); color: var(--ink); cursor: pointer; }
+.capture-header-controls button:hover { border-color: var(--accent); }
+#capture-header-stop { color: #fff; background: #c73632; border-color: #c73632; }
 .header-note, p, .conversation-row small, .player-heading, .segment-time,
 .turn-heading span, .seek-controls span, .highlight-controls span,
 .vocabulary-card summary span, .ai-privacy { color: var(--muted); }
@@ -534,9 +540,77 @@ html[data-theme='light'] .timed-word mark { background: #f4dd84; }
 #sync-status { color: var(--muted); min-height: 1.4em; }
 #sync-account-link { color: var(--accent); }
 
+#rename-conversation-dialog { width: min(440px, calc(100vw - 32px)); box-sizing: border-box; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+#rename-conversation-dialog::backdrop { background: #02050ea8; }
+#rename-conversation-form { display: grid; gap: 10px; }
+#rename-conversation-form h2 { margin: 0 0 8px; font-size: 20px; }
+#rename-conversation-form label { font-size: 13px; font-weight: 650; }
+#rename-conversation-input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--input); color: var(--ink); }
+#rename-conversation-status { color: var(--failure); font-size: 13px; }
+#rename-conversation-status:empty { display: none; }
+.rename-conversation-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.rename-conversation-actions button { min-height: 44px; padding: 9px 15px; border: 1px solid var(--line); border-radius: 9px; background: var(--raised); color: var(--ink); cursor: pointer; }
+#rename-conversation-save { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+
+/* Keep the home library close to its main task: opening a conversation. */
+body:has(#list-view:not([hidden])) main { max-width: 920px; padding-top: 42px; }
+body:has(#list-view:not([hidden])) .heading { margin-bottom: 25px; }
+body:has(#list-view:not([hidden])) h1 { font-size: clamp(34px, 4vw, 46px); }
+body:has(#list-view:not([hidden])) #status:empty { display: none; }
+body:has(#list-view:not([hidden])) #status:not(:empty) { min-height: 0; margin: -8px 0 18px; }
+#list-view .search-card { padding: 0; margin: 0 0 15px; border: 0; border-radius: 0; background: transparent; }
+#list-view .search-card label { margin-bottom: 7px; font-size: 13px; }
+#list-view .search-row input { min-height: 44px; }
+#list-view .search-row button { min-height: 44px; }
+#list-view #library-search-status:empty { display: none; }
+#list-view #library-search-status:not(:empty) { min-height: 0; margin: 9px 0; }
+#list-view #library-search-controls { margin: 12px 0 0; }
+#list-view #library-search-results:not(:empty) { margin: 12px 0 18px; }
+#list-view .library-toolbar { gap: 9px; margin-bottom: 10px; color: var(--muted); font-size: 13px; }
+#list-view .library-toolbar select { flex: 0 1 250px; max-width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--raised); color: var(--ink); }
+#list-view .conversation-list { margin-top: 0; gap: 9px; }
+#list-view .conversation-row { min-height: 74px; padding: 15px 18px; }
+#list-view .conversation-row strong { font-size: 16px; }
+#list-view .conversation-row small { color: var(--muted); }
+#list-view .conversation-row .arrow { font-size: 21px; }
+.live-recording-card { position: relative; display: grid; gap: 8px; margin: 0 0 10px; padding: 19px 54px 20px 20px; border: 1px solid #e25752; border-radius: 13px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.live-recording-card[hidden] { display: none; }
+.live-recording-card:hover, .live-recording-card:focus-visible { background: var(--raised); border-color: #f16c66; }
+.live-recording-state { color: #ef7770; font-size: 12px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+.live-recording-state::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: currentColor; }
+.live-recording-card strong { font-size: 20px; overflow-wrap: anywhere; }
+.live-recording-card small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.live-recording-arrow { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 21px; }
+#list-view .recover-recordings:empty { display: none; }
+#list-view .recover-recordings { display: grid; gap: 10px; margin: 0 0 10px; }
+#list-view .recovery-row { margin: 0; background: var(--surface); color: var(--ink); border-color: var(--line); }
+#list-view .remote-live-recording { border-color: #e25752; }
+#list-view .remote-live-recording .recovery-summary span { color: #ef7770; }
+.recovery-summary { display: grid; gap: 4px; }
+.recovery-summary strong { font-size: 16px; overflow-wrap: anywhere; }
+.recovery-summary span { color: var(--muted); }
+#list-view .library-management { margin-top: 18px; border-top: 1px solid var(--line-soft); }
+#list-view .library-management > summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); cursor: pointer; font-size: 13px; list-style: none; }
+#list-view .library-management > summary::-webkit-details-marker { display: none; }
+#list-view .library-management > summary::before { content: '▸'; margin-right: 8px; }
+#list-view .library-management[open] > summary::before { content: '▾'; }
+#list-view .library-management-content { display: grid; gap: 12px; padding: 8px 0 18px; }
+#list-view .library-management-content > details, #list-view .library-management-content > button { margin: 0; padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+#list-view .library-management-content > button { min-height: 44px; text-align: left; cursor: pointer; }
+#list-view .library-management-content > button:hover { border-color: var(--accent); }
+#list-view .library-management-content > details > summary { color: var(--ink); cursor: pointer; font-weight: 650; }
+#list-view #manage-categories { margin-top: 0; }
+body:has(#list-view:not([hidden])) #vocabulary-panel { max-width: 920px; margin: 0 auto 35px; padding: 0; border-top: 1px solid var(--line-soft); border-bottom: 0; border-left: 0; border-right: 0; border-radius: 0; background: transparent; box-shadow: none; }
+body:has(#list-view:not([hidden])) #vocabulary-panel summary { padding: 13px 0; color: var(--muted); font-size: 13px; font-weight: 400; }
+body:has(#list-view:not([hidden])) #vocabulary-panel[open] { padding: 0 0 18px; }
+body:has(#list-view:not([hidden])) #vocabulary-panel[open] summary { margin: 0; border: 0; }
+
 @media (max-width: 600px) {
   header { padding: 0 20px; }
   .header-side { gap: 0; }
+  .capture-header-controls { gap: 4px; margin-right: 6px; }
+  .capture-header-controls button { width: 36px; height: 36px; }
+  #capture-header-timer { min-width: 37px; font-size: 12px; }
   #theme-toggle { padding: 7px 10px; }
   h1 { font-size: clamp(35px, 9vw, 44px); }
   .transcript-heading h2, .ai-heading h2 { font-size: 25px; }
@@ -555,6 +629,13 @@ html[data-theme='light'] .timed-word mark { background: #f4dd84; }
   .person-conversation-row small { grid-column: 1; }
   #person-merge-panel .search-row { flex-wrap: wrap; }
   #person-merge-panel select { flex-basis: 100%; }
+  body:has(#list-view:not([hidden])) main { padding-top: 34px; }
+  body:has(#list-view:not([hidden])) .heading { gap: 13px; margin-bottom: 25px; }
+  body:has(#list-view:not([hidden])) h1 { font-size: 36px; }
+  #list-view .search-row { gap: 7px; }
+  #list-view .search-row button { padding: 9px 12px; }
+  #list-view .library-toolbar select { flex: 1; }
+  #list-view .conversation-row { padding: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
