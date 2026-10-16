@@ -32,18 +32,31 @@
           <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option><option value="person">People</option></select></div>
           <p id="library-search-status" role="status" aria-live="polite"></p><div id="library-search-results" aria-label="Search results"></div>
         </section>
-        <div class="library-toolbar"><label for="category-filter">Show</label><select id="category-filter"><option value="">All conversations</option><option value="uncategorized">Uncategorized</option></select></div>
+        <div class="library-toolbar"><label for="category-filter">Show</label><select id="category-filter"><option value="">All conversations</option><option value="uncategorized">Uncategorized</option></select><a class="library-vocabulary-link" href="/vocabulary">Vocabulary</a></div>
         <a id="live-recording-card" class="live-recording-card" href="/recording" hidden><span id="live-recording-state" class="live-recording-state">Live</span><strong id="live-recording-title">New recording</strong><small id="live-recording-time">0:00</small><div class="live-recording-preview"><span id="live-recording-preview-status">Listening for speech</span><div id="live-recording-preview-lines"></div></div><span class="live-recording-arrow" aria-hidden="true">→</span></a>
         <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
         <div id="conversation-list" class="conversation-list" aria-label="Conversations"></div>
         <details class="library-management"><summary>Manage library</summary><div class="library-management-content"><details id="manage-categories"><summary>Categories</summary><label class="category-checkbox"><input id="auto-categories" type="checkbox" /> Categorize after processing</label><p>When enabled, transcript excerpts and the title are sent to Nebius. Audio stays on this device.</p><form id="create-category-form"><label for="new-category-name">New category</label><div class="search-row"><input id="new-category-name" maxlength="80" required /><button type="submit">Create</button></div></form><div id="category-list"></div><p id="category-status" role="status" aria-live="polite"></p></details><details id="people-panel" class="library-tools"><summary>People</summary><div id="people-list"></div></details><button id="show-trash" type="button">Recently Deleted</button></div></details>
       </section>
-      <details class="vocabulary-card" id="vocabulary-panel">
-        <summary>Vocabulary</summary>
-        <form id="vocabulary-form"><label for="vocabulary-input">Add a term</label><div class="vocabulary-entry"><input id="vocabulary-input" maxlength="100" autocomplete="off" required placeholder="e.g. a project or person name" /><button type="submit">Add term</button></div></form>
-        <div id="vocabulary-list" class="vocabulary-list" aria-label="Saved vocabulary"></div>
-        <p id="vocabulary-status" role="status" aria-live="polite"></p>
-      </details>
+      <section id="vocabulary-panel" class="vocab-page" hidden>
+        <a class="back-link" href="/">← All conversations</a>
+        <div id="vocabulary-overview">
+          <h2>Personal vocabulary</h2>
+          <a class="vocab-section-link" href="/vocabulary/names"><span>Names of people</span><span id="vocabulary-name-count"></span><span aria-hidden="true">→</span></a>
+          <a class="vocab-section-link" href="/vocabulary/other"><span>Other vocabulary</span><span id="vocabulary-other-count"></span><span aria-hidden="true">→</span></a>
+        </div>
+        <div id="vocabulary-terms-page" hidden>
+          <nav class="vocab-subnav" aria-label="Vocabulary sections"><a href="/vocabulary">All vocabulary</a><a href="/vocabulary/names">Names of people</a><a href="/vocabulary/other">Other vocabulary</a></nav>
+          <h2 id="vocabulary-kind-title">Other vocabulary</h2>
+          <form id="vocabulary-form"><label for="vocabulary-input">Add words or phrases</label><div class="vocab-entry"><textarea id="vocabulary-input" rows="2" maxlength="20000" placeholder="Separate terms with commas or line breaks" required></textarea><button type="submit">Add</button></div></form>
+          <p class="vocab-limit">Newest terms take priority; recordings use up to 400 characters.</p>
+          <p id="vocabulary-status" role="status" aria-live="polite"></p>
+          <div id="vocabulary-bulk" class="vocab-bulk" hidden><label><input id="vocabulary-select-all" type="checkbox" /> Select all</label><button id="vocabulary-delete-selected" type="button" disabled>Delete</button><button id="vocabulary-move-selected" type="button" disabled>Move to Names of people</button></div>
+          <nav id="vocabulary-letters" class="vocab-letters" aria-label="Jump to letter"></nav>
+          <div id="vocabulary-list" class="vocab-list" aria-label="Saved vocabulary"></div>
+          <p id="vocabulary-empty" class="vocab-empty" hidden>No vocabulary yet.</p>
+        </div>
+      </section>
       <section id="trash-view" hidden><button id="back-from-trash" type="button">← All conversations</button><h2>Recently Deleted</h2><p>Automatically deleted after 30 days.</p><p id="trash-status" role="status" aria-live="polite"></p><div id="trash-list" class="conversation-list"></div></section>
       <section id="person-view" hidden><a class="back-link" href="/">← All conversations</a><form id="person-rename-form"><label for="person-rename-input">Name</label><div class="search-row"><input id="person-rename-input" maxlength="100" required /><button type="submit">Save name</button></div></form><p id="person-status" role="status" aria-live="polite"></p><h2>Conversations</h2><div id="person-conversations" class="conversation-list"></div><details id="person-merge-panel"><summary>Merge people</summary><label for="person-merge-source">Merge with</label><div class="search-row"><select id="person-merge-source"></select><button id="person-merge-button" type="button">Merge</button></div></details><button id="person-delete" type="button">Delete profile</button></section>
       <section id="detail-view" hidden>
@@ -99,6 +112,7 @@
       <input id="audio-file" type="file" accept=".mp3,audio/mpeg" />
     </dialog>
     <dialog id="conversation-categories-dialog" aria-labelledby="conversation-categories-title"><div class="category-dialog-header"><h2 id="conversation-categories-title">Categories</h2><button id="close-conversation-categories" type="button" aria-label="Close categories">×</button></div><div id="conversation-category-list"></div><p id="categorization-status" role="status" aria-live="polite"></p><button id="retry-categorization" type="button" hidden>Retry categorization</button></dialog>
+    <dialog id="vocabulary-delete-dialog" aria-labelledby="vocabulary-delete-title"><h2 id="vocabulary-delete-title">Delete vocabulary</h2><p id="vocabulary-delete-message"></p><div class="vocab-dialog-actions"><button id="vocabulary-delete-cancel" type="button">Cancel</button><button id="vocabulary-delete-confirm" type="button">Delete</button></div></dialog>
     <dialog id="rename-conversation-dialog" aria-labelledby="rename-conversation-title">
       <form id="rename-conversation-form">
         <h2 id="rename-conversation-title">Rename conversation</h2>
