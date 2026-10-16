@@ -103,6 +103,21 @@ header {
   letter-spacing: -.045em;
 }
 .header-side { display: flex; align-items: center; gap: 16px; }
+.calendar-card { margin: 0 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.calendar-heading, .calendar-connection, .calendar-meeting { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.calendar-heading h2 { margin: 0; font-size: 20px; }
+.calendar-privacy { margin: 10px 0 0; font-size: 13px; }
+.calendar-card button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--raised); color: var(--ink); cursor: pointer; }
+.calendar-card button:hover { border-color: var(--accent); }
+.calendar-card button:disabled { opacity: .6; cursor: default; }
+.calendar-connections { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.calendar-connection { padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 9px; font-size: 13px; }
+#calendar-status { margin: 14px 0 0; min-height: 20px; }
+.calendar-meeting { padding: 13px 0; border-top: 1px solid var(--line-soft); }
+.calendar-meeting > div { min-width: 0; display: grid; gap: 4px; }
+.calendar-meeting strong { overflow-wrap: anywhere; }
+.calendar-meeting span { color: var(--muted); font-size: 13px; }
+@media (max-width: 560px) { .calendar-card { padding: 16px; } .calendar-connections { display: grid; } .calendar-connection { width: 100%; box-sizing: border-box; } }
 .capture-header-controls { display: flex; align-items: center; gap: 7px; }
 .capture-header-controls[hidden] { display: none; }
 #capture-header-timer { min-width: 42px; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }

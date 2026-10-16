@@ -805,6 +805,7 @@ async function showList() {
   await loadPeoplePanel();
   if (document.querySelector('#library-search-input').value.trim().length >= 2)
     await submitLibrarySearch(new Event('submit'));
+  window.StellisCalendar?.refresh();
 }
 function renderConversationList() {
   const category = document.querySelector('#category-filter').value;
