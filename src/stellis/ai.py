@@ -17,7 +17,7 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v12"
+PROMPT_VERSION = "cited-conversation-v13"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
@@ -226,6 +226,17 @@ def _chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
             break
         start = end - 2 if end - start > 2 else end
     return result
+
+
+def _focus_window(chunk: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Prefer three informative adjacent passages over one long isolated fragment."""
+    if len(chunk) <= 3:
+        return chunk
+    def score(start: int) -> int:
+        counts = [len(_anchor_terms(str(item["text"]))) for item in chunk[start:start + 3]]
+        return sum(counts) + 2 * min(counts)
+    start = max(range(len(chunk) - 2), key=score)
+    return chunk[start:start + 3]
 
 
 _ANCHOR_STOPWORDS = set("""about after again also because been before being between both could
@@ -446,8 +457,7 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
                 raise
             # If a broad claim keeps citing unrelated fragments, constrain the
             # provider to a small contiguous passage window in this chunk.
-            center = max(range(len(chunk)), key=lambda offset: len(_anchor_terms(str(chunk[offset]["text"]))))
-            focused = chunk[max(0, center - 1):center + 2]
+            focused = _focus_window(chunk)
             focus_evidence, aliases = _evidence(focused)
             focus_texts = {f"s{offset + 1}": f"{segment['speaker_display_name']} {segment['text']}"
                            for offset, segment in enumerate(focused)}

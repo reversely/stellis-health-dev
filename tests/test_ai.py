@@ -207,6 +207,16 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(finished["state"], "succeeded")
         self.assertEqual(finished["result"]["overview"][0]["source_segment_ids"], ["seg-1"])
 
+    def test_focused_window_avoids_lone_long_fragment(self) -> None:
+        passages = [
+            {"text":"A long isolated passage about individual satellite systems, implementation, development, testing, and methods."},
+            {"text":"and"}, {"text":"one"},
+            {"text":"The ground station needs antennas and radios."},
+            {"text":"The campus team will install it next year."},
+            {"text":"Engineers will test the equipment before launch."},
+        ]
+        self.assertEqual(ai._focus_window(passages), passages[3:6])
+
     def test_overview_rejects_hidden_source_span_and_generalizes_speaker_number(self) -> None:
         base = {"topics":[],"decisions":[],"action_items":[]}
         with self.assertRaises(ai.AIError) as excessive:
