@@ -760,7 +760,7 @@ html[data-theme='dark'] body::before { display: none; }
   }
   body:has(#list-view:not([hidden])) {
     background:
-      radial-gradient(ellipse 140% 100% at 0% 0%, #413A48 0%, #335C63 42%, #55484C 76%, #27222B 100%)
+      radial-gradient(ellipse 85% 55% at 52% 42%, #335C63 0%, #394C56 30%, #413A48 66%, #27222B 100%)
         left top / var(--rail-width) 120% no-repeat,
       var(--field);
     animation: home-rail-drift 24s ease-in-out infinite alternate;
