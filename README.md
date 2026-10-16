@@ -6,7 +6,7 @@ The cross-app/browser direction is recorded in [ADR 0003](docs/decisions/0003-cr
 
 ## Current state
 
-The local browser app imports audio or an Otter ZIP, records from the microphone, lists conversations, replays recordings, and runs on-device English transcription and acoustic speaker grouping. The transcript supports segment seeking, selected highlights, word corrections, vocabulary hints, and reversible speaker labels. Nebius views are being built in the ordered tickets. The acceptance test runs through the browser on a real interview. The [current architecture](docs/current-architecture.md) describes only running components.
+The local browser app imports audio or an Otter ZIP, records from the microphone, lists conversations, replays recordings, and runs on-device English transcription and acoustic speaker grouping. The transcript supports segment seeking, selected highlights, word corrections, vocabulary hints, and reversible speaker labels. The Summary & AI tab requests source-linked summaries and answers from Nemotron through Nebius. The acceptance test runs through the browser on a real interview. The [current architecture](docs/current-architecture.md) describes only running components.
 
 ## Setup and run
 
@@ -28,9 +28,11 @@ In a transcript, click a passage to play from its timestamp, drag within a passa
 
 Press **Record** to grant microphone access and capture locally. Pause/resume and Stop and save appear during capture. Chunks are saved to the loopback service as they arrive; if the tab closes, the next visit offers **Recover and save** for acknowledged chunks. A recovered recording may end before the interrupted moment. The finished media uses the same import and transcription workflow as an uploaded file.
 
+For summaries and questions, set `NEBIUS_API_KEY` in the environment or an ignored `.env` file, then open **Summary & AI** on a processed conversation. Press **Generate summary** or ask a question. These actions send bounded transcript excerpts and displayed speaker labels to Nebius; source links seek to the cited audio. Existing results remain visible after edits with a stale notice until regenerated. Provider request IDs, model, prompt version, and token usage are saved locally with each run.
+
 ## Private data
 
-`.env`, `data/`, `.private/`, and generated environments are excluded from Git. The user-supplied interview ZIP and all extracted audio, transcripts, and model outputs stay local. Only selected transcript text will be sent to Nebius when an AI feature is explicitly run. Do not place real recordings or API keys in issues, PRs, logs, or tests.
+`.env`, `data/`, `.private/`, and generated environments are excluded from Git. The user-supplied interview ZIP and extracted audio stay local. On a user-triggered AI run, bounded transcript excerpts and displayed speaker labels are sent to Nebius. AI results and provider metadata are stored locally. Do not place real recordings or API keys in issues, PRs, logs, or tests.
 
 ## Verified environment
 

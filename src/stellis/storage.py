@@ -186,6 +186,33 @@ def connect() -> Iterator[sqlite3.Connection]:
             created_at TEXT NOT NULL
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS ai_runs (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(id),
+            kind TEXT NOT NULL CHECK (kind IN ('summary', 'answer')),
+            input_hash TEXT NOT NULL,
+            source_revision INTEGER NOT NULL,
+            model_id TEXT NOT NULL,
+            prompt_version TEXT NOT NULL,
+            question TEXT,
+            state TEXT NOT NULL CHECK (state IN ('queued', 'running', 'succeeded', 'failed')),
+            stage TEXT NOT NULL,
+            error_code TEXT,
+            error_message TEXT,
+            result_json TEXT,
+            checkpoint_json TEXT NOT NULL DEFAULT '[]',
+            usage_json TEXT NOT NULL DEFAULT '{}',
+            provider_request_ids_json TEXT NOT NULL DEFAULT '[]',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(conversation_id, kind, input_hash)
+        )"""
+    )
+    ai_columns = {row["name"] for row in conn.execute("PRAGMA table_info(ai_runs)")}
+    if "checkpoint_json" not in ai_columns:
+        conn.execute("ALTER TABLE ai_runs ADD COLUMN checkpoint_json TEXT NOT NULL DEFAULT '[]'")
     conn.commit()
     database.chmod(0o600)
     try:
@@ -558,3 +585,99 @@ def delete_vocabulary(term_id: str) -> bool:
     with connect() as conn:
         cursor = conn.execute("DELETE FROM vocabulary WHERE id = ?", (term_id,))
     return cursor.rowcount > 0
+
+
+def find_ai_run(conversation_id: str, kind: str, input_hash: str) -> dict[str, object] | None:
+    """Find an idempotent AI request for an exact transcript revision and input."""
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM ai_runs WHERE conversation_id = ? AND kind = ? AND input_hash = ?",
+            (conversation_id, kind, input_hash),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def add_ai_run(record: dict[str, object]) -> None:
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO ai_runs
+               (id, conversation_id, kind, input_hash, source_revision, model_id, prompt_version,
+                question, state, stage, error_code, error_message, result_json, checkpoint_json, usage_json,
+                provider_request_ids_json, attempts, created_at, updated_at)
+               VALUES (:id, :conversation_id, :kind, :input_hash, :source_revision, :model_id,
+                       :prompt_version, :question, :state, :stage, :error_code, :error_message,
+                       :result_json, :checkpoint_json, :usage_json, :provider_request_ids_json, :attempts,
+                       :created_at, :updated_at)""",
+            record,
+        )
+
+
+def get_ai_run(run_id: str) -> dict[str, object] | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM ai_runs WHERE id = ?", (run_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_ai_runs(conversation_id: str) -> list[dict[str, object]]:
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM ai_runs WHERE conversation_id = ? ORDER BY created_at DESC",
+                            (conversation_id,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_ai_run(run_id: str, **fields: object) -> None:
+    """Update only runtime fields, leaving the source identity immutable."""
+    allowed = {"state", "stage", "error_code", "error_message", "result_json", "checkpoint_json", "usage_json",
+               "provider_request_ids_json", "attempts", "updated_at"}
+    if not fields.keys() <= allowed:
+        raise ValueError("Unknown AI run field")
+    assignments = ", ".join(f"{key} = ?" for key in fields)
+    with connect() as conn:
+        conn.execute(f"UPDATE ai_runs SET {assignments} WHERE id = ?", (*fields.values(), run_id))
+
+
+def fail_interrupted_ai_runs() -> None:
+    """Make a server-restart interruption visible and explicitly retryable."""
+    with connect() as conn:
+        conn.execute(
+            """UPDATE ai_runs SET state = 'failed', stage = 'interrupted',
+               error_code = 'interrupted', error_message = 'The device service stopped during this request',
+               updated_at = ? WHERE state IN ('queued', 'running')""",
+            (datetime.now(timezone.utc).isoformat(),),
+        )
+
+
+def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
+    """Compose current model output with user edits and speaker labels."""
+    record = get_transcript(conversation_id)
+    if record is None:
+        return None
+    edits = get_transcript_edits(conversation_id)
+    labels = get_speaker_labels(conversation_id)
+    cluster_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "cluster"}
+    segment_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "segment"}
+    segments = json.loads(str(record["segments_json"]))
+    for segment in segments:
+        override = edits.get(segment["id"])
+        if override is not None:
+            segment["original_text"] = segment["text"]
+            segment["text"] = override
+            segment["text_provenance"] = "user_edit"
+        else:
+            segment["text_provenance"] = "on_device_asr"
+        cluster = segment["speaker_cluster_id"]
+        if segment["id"] in segment_labels:
+            segment["speaker_display_name"] = segment_labels[segment["id"]]
+            segment["speaker_label_source"] = "manual_segment"
+        elif cluster in cluster_labels:
+            segment["speaker_display_name"] = cluster_labels[cluster]
+            segment["speaker_label_source"] = "manual_cluster"
+        else:
+            segment["speaker_display_name"] = cluster.replace("speaker-", "Speaker ") if cluster else "Unknown speaker"
+            segment["speaker_label_source"] = "automatic"
+    return {
+        "conversation_id": conversation_id, "revision": record["revision"],
+        "generation_version": record["generation_version"], "language": record["language"],
+        "segments": segments, "turns": json.loads(str(record["turns_json"])),
+        "speaker_labels": labels, "highlights": list_highlights(conversation_id),
+    }
