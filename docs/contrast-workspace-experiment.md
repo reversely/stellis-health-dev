@@ -18,6 +18,8 @@ This is a layout and color experiment. It does not claim the reference image sho
 
 ## Cooler night-sky palette and file tabs
 
+This iteration was superseded by the measured and darker correction below. Its color choices were inferred from the image rather than sampled, which did not meet the user’s direction.
+
 **Feedback, implemented and browser checked 2026-10-16:** The user asked to move the contrast palette away from green, keep a dark core with red undertones and smooth radial color, avoid black, lighten the highlight, and make the primary views look like larger staggered notebook tabs with outward curves around 20px.
 
 **Observed references:** The supplied [gradient image](refs/night-sky-tabs/reference-gradient.png) is a static background with muted mauve at the upper left, blue and teal near the center, and a warm light edge. It does not show an interface state. The supplied [Stellis tab crop](refs/night-sky-tabs/reference-current-tabs.png) shows a green selected Notes pill, a plain Transcript label, and quieter My Notes and Enhanced Notes controls inside the page. The supplied [OneNote image](refs/night-sky-tabs/reference-onenote.png) shows several colored section tabs attached to a horizontal page edge, each with rounded upper corners. Their labels are small and dark on light colors. The image does not show selection or tab switching.
@@ -25,3 +27,15 @@ This is a layout and color experiment. It does not claim the reference image sho
 **Stellis decision:** The desktop rail uses a very dark blue-plum base, mauve and blue radial glows, and no black fill. The default canvas shifts to a cool pale blue; Dark mode uses deep indigo on both sides. Primary recording and saved-conversation tabs are 20px-curved file tabs with outward lower corners. All have dark fills and light text; the selected tab lifts 6px and uses a lighter blue. A muted wine tab distinguishes Edited Transcript when available. My Notes and Enhanced Notes remain quieter secondary controls so the page does not gain two competing tab rows.
 
 [Home](refs/night-sky-tabs/home-1440.png), [desktop recording](refs/night-sky-tabs/recording-1440.png), [mobile recording](refs/night-sky-tabs/recording-390.png), [mobile conversation](refs/night-sky-tabs/conversation-390.png), and [dark recording](refs/night-sky-tabs/recording-dark-1440.png) were captured in an isolated browser against fixture data. Primary tabs switched at both widths, and neither width had horizontal page overflow or JavaScript errors. These are Stellis observations, not behavior inferred from the reference images.
+
+## Measured mauve correction and square page
+
+**Feedback, implemented and browser checked 2026-10-16:** The user rejected the inferred blue palette, asked for mauve in place of near-black, then clarified that the sampled colors themselves should all move darker. They also rejected gradients spread across the interface and the rounded document box under the file tabs. The conversation document should have square corners.
+
+**Measured reference:** The supplied [gradient image](refs/night-sky-tabs/reference-gradient.png) is 2880 × 1620 pixels. Direct RGB samples outside the white overlay gave `#64596F` at `(57, 32)` in the mauve corner, `#4F8D99` at `(1439, 32)` in the blue-teal region, and `#CEB195` at `(2821, 809)` on the warm right edge. These are pixel observations. The UI colors below are darker transformations of those picks, not additional sampled pixels.
+
+**Applied color roles:** The single decorative radial gradient is confined to the desktop rail. Its lighter point `#413A48` is about 65% of the sampled mauve RGB channels, and its dark core is `#27222B`; neither is black. The waveform uses `#335C63`, about 65% of the sampled teal. Recording Stop uses `#867361`, about 65% of the sampled warm edge, with light text for contrast. The writing canvas stays flat `#F7F5F6`. Dark mode uses a flat mauve `#2A252F` canvas. Text and focus colors remain lighter where readability requires them.
+
+**Shape correction:** Notes, Transcript, and Edited Transcript retain their file-tab shape, but the saved conversation document beneath them has zero corner radius and no top border gap. The saved player and prominent home rows use small 6px corners. The user’s correction changes the document box rather than assuming every surface should inherit the tab curvature.
+
+[Home](refs/mauve-square/home-1440.png), [square conversation page](refs/mauve-square/conversation-1440.png), [mobile conversation page](refs/mauve-square/conversation-390.png), [recording](refs/mauve-square/recording-1440.png), and [dark recording](refs/mauve-square/recording-dark-1440.png) are isolated browser captures of this pass. The conversation document computed to `border-radius: 0px` at desktop and 390px. Both widths had no horizontal overflow or page errors. The screenshots contain fixture recordings, not user data.
