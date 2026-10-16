@@ -2,6 +2,8 @@
 
 Last updated: 2026-10-16, ticket #21. This page describes running code on `main` after #21 merges. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
+The browser client shown here is the temporary HTML/JavaScript validation shell. Flutter is required for the deployable web and app UI, but is not yet in this repository's running architecture. Its migration is ticket #25.
+
 ```mermaid
 flowchart LR
   U[User] --> C[Chromium browser]

@@ -1,10 +1,10 @@
 # ADR 0003: Cross-app and browser architecture
 
-Status: accepted for implementation, 2026-10-16. Supersedes the Flutter-first client choice in the original plan; retains its encrypted sync boundary.
+Status: corrected 2026-10-16 by ticket #24. Flutter is required for the deployable web app and shared app UI; the current HTML/JS client is a validation prototype.
 
 ## Decision
 
-Stellis is a local-first product with a **shared, versioned resource contract**. The browser UI is the primary client and will move from the small plain-JavaScript validation shell to a TypeScript web application as the interaction model grows. A packaged desktop app can host that UI and bundle a local speech worker. Mobile apps will reuse the web interface where practical and provide native capture, local processing, and secure key storage through platform bridges. We will assess the packaging framework when the mobile processing spike exists; the contract does not depend on that framework.
+Stellis is a local-first product with a **shared, versioned resource contract**. Flutter is the required deployable web client and the shared UI foundation for desktop and mobile apps. The small plain-JavaScript browser shell is a temporary validation client for proving import, speech, and interaction workflows. We will migrate these workflows to Flutter after tickets #12–#15 establish the resource and interaction shape, and before authentication, encryption, dark-theme integration, or final browser acceptance. Flutter web will use the same versioned HTTP API; native Flutter targets can use platform channels/FFI for capture, local processing, and secure key storage where a loopback service is unsuitable. The API contract remains independent of the client implementation.
 
 The current loopback FastAPI process is a **device service**, not the future hosted sync backend. It owns local media, SQLite records, processing jobs, native model invocation, and a versioned API. Desktop browser and packaged app can connect to it on loopback while it is running. On mobile, a native bridge may implement the same client-facing operations in process if a loopback service is unreliable under OS background rules. The browser must still support reviewing, editing, chatting, and syncing without a local worker; processing controls must explain when no on-device engine is available.
 
@@ -14,10 +14,10 @@ A separate hosted service will own OIDC sessions, vault membership, encrypted ch
 
 | Option | Assessment |
 | --- | --- |
-| Flutter for every screen (original plan) | Good native reach, but a rewrite of the now validated browser UI and extra web/native bridges for current Python speech tools. Revisit if shared web UI fails mobile accessibility or performance checks. |
+| Flutter for deployable web and app UI (required) | One shared product interface across browser and apps, with explicit platform bridges for local speech and capture. The current HTML/JS prototype will be migrated after core workflows are validated. Selected. |
 | Single hosted backend doing speech and sync | Cannot claim on-device transcription or zero-knowledge sync when it processes uploaded plaintext recordings. It also makes recording dependent on network access. |
 | Browser-only processing in WebAssembly | Attractive for a pure PWA, but model size, mobile memory, worker scheduling, and long recordings need device benchmarks before it can be the only processing path. It may become an optional adapter. |
-| Shared web UI plus local workers and encrypted sync | Reuses the browser acceptance surface, keeps native speech on the recording device, and lets browser-only sessions review synced results. Requires a capability handshake and explicit states for unavailable local processing. Selected. |
+| Flutter UI plus local workers and encrypted sync | Preserves on-device speech and browser access to synced results. Requires capability reporting and explicit states for unavailable local processing. Selected backend connection pattern. |
 
 ## Contract rules
 
@@ -34,11 +34,11 @@ A separate hosted service will own OIDC sessions, vault membership, encrypted ch
 
 | Client state | Operations |
 | --- | --- |
-| Desktop browser on the recording device | Connect to the loopback device service. Import, record, process, edit, and replay locally. |
-| Packaged desktop app | Same UI and resource contract, with bundled native worker and OS key storage. |
-| Mobile app | Capture and process locally through a native bridge; queue work when the OS suspends processing; sync ciphertext when online. |
-| Browser without a local worker | Sign in, enroll/decrypt vault, review and edit synced content, run explicitly authorized Nebius requests. Processing remains queued on a capable device; no hidden cloud ASR fallback. |
+| Flutter web in a desktop browser on the recording device | Connect to the loopback device service. Import, record, process, edit, and replay locally. The current HTML/JS shell validates this path before migration. |
+| Flutter desktop app | Same UI and resource contract, with bundled local worker and OS key storage. |
+| Flutter mobile app | Capture and process locally through platform channels/FFI; queue work when the OS suspends processing; sync ciphertext when online. |
+| Flutter web without a local worker | Sign in, enroll/decrypt vault, review and edit synced content, run explicitly authorized Nebius requests. Processing remains queued on a capable device; no hidden cloud ASR fallback. |
 
 ## Migration and risks
 
-Tickets #12–#15 grow the device API while the current browser UI proves workflows. Before packaging, move UI state and transport into a typed TypeScript client, test against the `/api/v1` schema, and provide a device capability handshake. Ticket #16 adds session separation. Ticket #17 implements encrypted operation/media sync and browser key enrollment, with a threat model and independent review before production E2EE claims. A future mobile spike must benchmark on-device model size, thermals, battery, recording persistence, and background restrictions. The current loopback API has no authentication and must not be exposed on a LAN or hosted as-is.
+Tickets #12–#15 grow the device API while the current browser prototype proves workflows. Ticket #25 migrates the UI and its browser acceptance paths to Flutter, tests against `/api/v1`, and keeps capability handling explicit. Ticket #16 adds session separation. Ticket #17 implements encrypted operation/media sync and browser key enrollment, with a threat model and independent review before production E2EE claims. A future mobile spike must benchmark on-device model size, thermals, battery, recording persistence, and background restrictions. The current loopback API has no authentication and must not be exposed on a LAN or hosted as-is.
