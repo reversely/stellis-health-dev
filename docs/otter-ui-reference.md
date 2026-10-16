@@ -23,3 +23,9 @@ Design notes: Preserve a large readable conversation title, compact metadata, cl
 In the signed-in CIFAR interview, Otter displays speaker turns as text bubbles with a speaker label and timestamp. Normal transcript words are individual `transcript-word` spans carrying timing attributes; clicking a bubble/word navigates playback, while a fixed bottom player provides seeking and transport. The transcript header has one **Edit transcript** action. Activating it changes that control to **Done**, exposes undo/redo, and makes the transcript editable. The same page was observed via REA CDP target evidence `ev_6a786392add5fdad9aa4c1d8d8ca7523ecec36aa3c7248853f266d92fbe27238`; the edit-mode screenshot was inspected in the signed-in Chromium session. These are observed browser behaviors, not a claim about Otter’s internal storage model.
 
 Stellis implements the global mode and segment-start seeking in #45. Exact measured word timing and word-level seeking remain #39.
+
+## Speaker rematch, observed 2026-10-16
+
+On the signed-in conversation, **Rematch speakers** is in the conversation's top **More options** menu, beside actions such as language change and text/audio sync. Selecting it immediately submitted a request; no confirmation dialog or speaker-selection form appeared. A toast said the auto-tag request was accepted and to check back in 10–15 minutes. The transcript stayed visible with its normal speaker labels and playback controls. This entry and request state were observed with REA browser target evidence `ev_5f16389173b5d1d26bb4f2f8488d025e27fc41f57b14ba6a3a119880a6afbd85` and screenshot evidence `ev_8512abed128528cd80867f4bdca820c51499b31f80f3d98baa20c2e6fb6bab49`.
+
+Completion, failure, retry, and preservation of manually assigned names have not yet been observed in Otter. Those behaviors must be checked after the requested run completes; do not infer them from the toast.
