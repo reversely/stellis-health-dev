@@ -144,6 +144,34 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(finished["error_code"], "invalid_source")
         self.assertIsNone(finished["result"])
 
+    def test_incomplete_overview_is_repaired_before_persistence(self) -> None:
+        run = self._create("summary")
+        incomplete = {"overview":[{"text":"Avery discussed satellites and then",
+                                   "source_segment_ids":["s1"]}],
+                      "topics":[],"decisions":[],"action_items":[]}
+        repaired = {"overview":[{"text":"Avery discussed satellites.",
+                                 "source_segment_ids":["s1"]}],
+                    "topics":[],"decisions":[],"action_items":[]}
+        with patch.object(ai, "_request", side_effect=[incomplete, repaired]) as provider:
+            ai._run(run["id"])
+        self.assertEqual(provider.call_count, 2)
+        self.assertIn("Rewrite every overview point", provider.call_args.args[0][-1]["content"])
+        finished = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
+        self.assertEqual(finished["state"], "succeeded")
+        self.assertEqual(finished["result"]["overview"][0]["text"], "Avery discussed satellites.")
+
+    def test_overlong_overview_fails_without_persisting_partial_result(self) -> None:
+        run = self._create("summary")
+        too_long = {"overview":[{"text":"A" * 401 + ".", "source_segment_ids":["s1"]}],
+                    "topics":[],"decisions":[],"action_items":[]}
+        with patch.object(ai, "_request", return_value=too_long) as provider:
+            ai._run(run["id"])
+        self.assertEqual(provider.call_count, 2)
+        finished = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()
+        self.assertEqual(finished["state"], "failed")
+        self.assertEqual(finished["error_code"], "incomplete_sentence")
+        self.assertIsNone(finished["result"])
+
     def test_answer_uses_evidence_or_marks_insufficient(self) -> None:
         run = self._create("answer", "What did Avery discuss?")
         payload = {"answer":"Satellites.","source_segment_ids":["s1"],"insufficient_evidence":False}

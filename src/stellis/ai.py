@@ -17,12 +17,12 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v7"
+PROMPT_VERSION = "cited-conversation-v8"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
 _ITEM_SCHEMA = {"type": "object", "properties": {
-    "text": {"type": "string", "maxLength": 280},
+    "text": {"type": "string", "maxLength": 1000},
     "source_segment_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 4}},
     "required": ["text", "source_segment_ids"], "additionalProperties": False}
 SUMMARY_SCHEMA = {"type": "object", "properties": {
@@ -246,6 +246,8 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
             text = item["text"].strip()
             if not text or len(text) > 1000:
                 raise AIError("invalid_json", f"The model returned invalid {field} text")
+            if field == "overview" and (len(text) > 400 or not re.search(r"[.!?][\"'’”)]*$", text)):
+                raise AIError("incomplete_sentence", "The model returned an unfinished overview point")
             validated.append({"text": text, "source_segment_ids": _display_sources(source_ids)})
         result[field] = validated
     if require_overview and not result["overview"]:
@@ -342,10 +344,14 @@ def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int
             return (_validate_answer(payload, allowed) if kind == "answer"
                     else _validate_items(payload, allowed, require_overview=require_overview))
         except AIError as exc:
-            if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit"}:
+            if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence"}:
                 raise
-            messages = [*messages, {"role": "user", "content":
-                "Your previous response failed local validation. Return only a compact JSON object with the required fields and source IDs from the supplied evidence."}]
+            correction = ("Rewrite every overview point as one complete sentence under 400 characters, "
+                          "ending in punctuation. Cite only passages that directly support every claim. "
+                          "Return the required JSON object."
+                          if exc.code == "incomplete_sentence" else
+                          "Your previous response failed local validation. Return only a compact JSON object with the required fields and source IDs from the supplied evidence.")
+            messages = [*messages, {"role": "user", "content": correction}]
     raise AIError("invalid_json", "Nebius did not return a valid result")
 
 
@@ -354,6 +360,9 @@ _SUMMARY_SYSTEM = ("You summarize an interview using only the supplied transcrip
                    "Return JSON with arrays overview, topics, decisions, action_items. "
                    "Every array item is {text, source_segment_ids}; use at most three short s-number source labels per item. "
                    "For nonempty evidence, include at least one overview item about spoken content. "
+                   "Make each overview point one complete sentence under 400 characters and end it with punctuation; "
+                   "never cut off a phrase to meet a length limit. Each claim must be supported by its cited passages; "
+                   "split claims with different evidence into separate items. "
                    "Omit unsupported decisions or actions by returning an empty array. Keep each item concise.")
 
 
