@@ -985,9 +985,10 @@ async function loadGenerationReview(id) {
   const decisions = generationReview.decisions;
   const resolved = items.filter(item => Object.hasOwn(decisions, item.id) && decisions[item.id] !== null).length;
   const reviewed = items.filter(item => Object.hasOwn(decisions, item.id)).length;
+  panel.hidden = !pending && resolved === items.length;
   document.querySelector('#generation-review-status').textContent = pending ?
-    `${reviewed} of ${items.length} changes reviewed. The current transcript stays active until you choose the new one. Confirm a target only after listening to the voice.` :
-    `${resolved} changes moved to the new transcript; ${items.length - resolved} remain linked to the prior generation for review.`;
+    `${reviewed} of ${items.length} reviewed. Listen before assigning.` :
+    `${items.length - resolved} unresolved changes. Prior wording remains in history.`;
   const container = document.querySelector('#generation-review-items'); container.replaceChildren();
   for (const item of items) {
     if (!pending && decisions[item.id] !== null) continue;
@@ -1012,7 +1013,7 @@ async function loadGenerationReview(id) {
         `${time(candidate.start_ms / 1000)} · ${candidate.text.slice(0, 120)} (${Math.round(candidate.score * 100)}% match)`, candidate.segment_id));
       if (Object.hasOwn(decisions, item.id)) choice.value = decisions[item.id] ?? 'unresolved';
       const suggestion = document.createElement('small'); suggestion.textContent = item.suggestion ?
-        'Close text and time match; choose only after checking the recording.' : 'Boundary or wording changed; review both passages.';
+        'Check the recording before assigning.' : 'Listen to both passages.';
       choice.addEventListener('change', async () => {
         if (!choice.value) return;
         try {
