@@ -1,49 +1,65 @@
 # Stellis
 
-Stellis is a browser workspace for recordings, transcripts, speakers, and source-backed AI insights. The first implementation slice runs on macOS with local speech processing. The larger product direction is in [`plans/Personal_AI_Assistant_Implementation_Plan.md`](plans/Personal_AI_Assistant_Implementation_Plan.md); current delivery tickets are [#10–#18](https://github.com/reversely/stellis/issues).
+Stellis is a local browser workspace for recording, transcribing, reviewing, and finding interviews. It runs on macOS today. Audio and speech processing stay on the device; AI features send bounded transcript text to Nebius when configured.
 
-The cross-app/browser direction is recorded in [ADR 0003](docs/decisions/0003-cross-client-architecture.md), with the [device API v1 contract](contracts/v1.md). The browser app is the primary acceptance surface. Flutter is required for the iOS app and the shared iOS/Android/desktop stretch; Flutter web is optional. The loopback service handles local media and native speech jobs; a separate encrypted sync service will connect devices later.
+The browser is the current product interface. Flutter is planned for iOS and the shared Android/desktop client; it is not part of the running app. The detailed [current architecture](docs/current-architecture.md), [device API contract](contracts/v1.md), and [implementation plan](plans/Personal_AI_Assistant_Implementation_Plan.md) separate shipped behavior from future work.
 
-## Current state
+## What works today
 
-The local browser app imports audio or an Otter ZIP, records from the microphone, lists conversations, replays recordings, and runs on-device English transcription and acoustic speaker grouping. The transcript supports segment seeking, selected highlights, transcript-wide Edit/Done corrections, vocabulary hints, and reversible speaker labels. The Summary & AI tab requests source-linked summaries, answers, and a separate Edited Transcript from Nemotron through Nebius. The acceptance test runs through the browser on a real interview. The [current architecture](docs/current-architecture.md) describes only running components.
+- **Capture and library:** Import MP3 files up to 1 GB or record with the microphone. Recording saves chunks as they arrive, supports pause/resume, provisional local transcription, My Notes, and AI Chat against a saved preview. A recording interrupted by a closed tab can be recovered from acknowledged chunks. The library supports search, categories, optional AI categorization, and Recently Deleted with restore and automatic deletion after 30 days.
+- **Local transcription:** `ffmpeg`, whisper.cpp, and sherpa-onnx produce English passages, measured word times, and provisional speaker groups. Rematch speakers uses the saved audio without retranscribing. A new transcription that changes passage IDs while user edits exist waits for explicit review before activation.
+- **Listen and correct:** The fixed player supports scrubbing, speed, five-second skips, and optional Skip Silence. Clicking a passage or measured word seeks the recording; playback follows the transcript. Search within a conversation, highlight or comment on selected text, edit multiple passages in one session, and compare an Edited Transcript with the source. Speaker tagging creates reusable Person profiles; speaker names and passage links persist across reloads.
+- **Vocabulary:** Separate [Names of people and Other vocabulary pages](docs/decisions/0049-vocabulary-workspace-and-prompt-budget.md) support batch entry, alphabet navigation, editing, moving, and deletion. The stored list can grow; each speech job uses a bounded snapshot of recently changed terms in its Whisper prompt.
+- **Notes and AI:** My Notes autosaves during recording and after import. Images can be pasted into notes or attached to a transcript time. A versioned Summary is generated after transcription and can be edited or regenerated. Nebius Nemotron also provides source-linked answers and a reviewable clean transcript. AI output can be wrong; use its source links to check the audio before quoting.
+- **Access and sharing:** A local single-workspace sign-in protects the device service by default. Selected transcript text can be copied or downloaded with a device-local source link. An optional, separate loopback account service stores browser-encrypted note entries and one-way encrypted conversation snapshots with audio for read-only access from another signed-in browser.
 
-The [UI style guide](docs/ui-style-guide.md) defines the palette, surface and control rules, copy conventions, and browser checks for interface changes.
+## Architecture
 
-## Setup and run
+```mermaid
+flowchart LR
+  B[Browser UI] -->|JSON, uploads, audio ranges| D[Loopback FastAPI device service]
+  D --> S[(Private SQLite and media)]
+  D --> W[Local speech worker]
+  W -->|decode and transcribe| M[ffmpeg, whisper.cpp, sherpa-onnx]
+  D -->|bounded text for AI actions| N[Nebius]
+  B -.->|optional encrypted copy| A[Separate loopback account service]
+  A --> C[(Ciphertext storage)]
+  F[Planned Flutter client] -.->|versioned device API| D
+```
 
-Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. On a Mac with Homebrew, the native tools can be installed with `brew install ffmpeg whisper.cpp`. The application binds to loopback only.
+The device service serves the browser files and `/api/v1`, owns local authentication, stores media and revisioned records, and starts isolated speech jobs. Original audio does not go to Nebius. Summary, answer, clean-transcript, recording-chat, and optional categorization requests send selected transcript or note text; results, source IDs, and provider metadata are stored locally. The optional account service has its own login and ciphertext database. Its current sync path is a one-way copy, without edit replay, deletion propagation, or recovery. The [architecture document](docs/current-architecture.md) records components, data flows, verification, and limits in more detail.
+
+## Install and run
+
+Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. With Homebrew, install the native tools using `brew install ffmpeg whisper.cpp`. The services bind to loopback.
 
 ```sh
 uv sync --locked
+scripts/setup_models.sh
 uv run --locked stellis doctor
 uv run --locked stellis serve
 ```
 
-Open <http://127.0.0.1:8765/>. `GET /api/health` should return `{"status":"ok","mode":"local","version":"0.1.0"}`. Use `--port` to select another loopback port.
+Open <http://127.0.0.1:8765/>. `scripts/setup_models.sh` downloads and verifies the English Whisper and two sherpa-onnx model files in private local storage. `stellis doctor` reports model and tool readiness. You can set `STELLIS_WHISPER_MODEL`, `STELLIS_SEGMENTATION_MODEL`, or `STELLIS_EMBEDDING_MODEL` to use other local model paths. Use `--port` to change the loopback port.
 
-`stellis serve` requires local login by default. On the first visit, choose **Sign up** to create the one account for that local data directory; afterward, use **Sign in**. Passwords for normal accounts must be at least 12 characters. Sessions expire after seven days, and Log out is in the top bar. This is a single-workspace loopback service, not a multi-user deployment. Keep `STELLIS_DATA_DIR` pointed at the same folder on restart to retain the account and conversations. There is no password reset for this local account.
+On first launch, **Sign up** creates the one account for that local data directory. Later, **Sign in**; sessions last seven days. Normal account passwords require at least 12 characters. There is no local password reset. For an explicitly open development workspace, set `STELLIS_AUTH_MODE=open`. For a development account without normal signup, set `STELLIS_DEV_ACCOUNT=1` and `STELLIS_DEV_PASSWORD`, then sign in as `dev`. Keep the same `STELLIS_DATA_DIR` across restarts to retain data and credentials; its default is `~/Library/Application Support/Stellis`.
 
-For local development, start with `STELLIS_DEV_ACCOUNT=1 STELLIS_DEV_PASSWORD=your-local-password uv run --locked stellis serve`. Sign in as `dev` with that password. This account can enter the workspace before normal signup and can use a shorter password; it sees the same local data and is unavailable when the setting is off. Do not expose this development service beyond loopback. `STELLIS_AUTH_MODE=open` remains available for an explicitly open local workspace.
+Set `NEBIUS_API_KEY` in the environment or in an ignored `.env` file to use summaries, questions, clean transcript, recording AI Chat, or optional AI categorization. Import and local transcription work without the key.
 
-To try the separate account and encrypted text journal, run `uv run --locked stellis sync-serve --port 8769` and open <http://127.0.0.1:8769/>. It supports development accounts, sessions, account-owned device names, and a browser-encrypted notes vault in its own private directory (`STELLIS_SYNC_DATA_DIR` overrides it). Use a vault passphrase distinct from the account password; it is required on each browser and cannot be recovered by this prototype. Notes written offline queue as ciphertext in that browser and sync after reconnecting. This origin has no plaintext transcript or audio routes. The command binds to loopback only; bidirectional sync, production identity, vault recovery, and full E2EE validation remain future work.
+## Use the browser workspace
 
-For encrypted conversation copies, start the account service with `STELLIS_DEVICE_ORIGIN=http://127.0.0.1:8765 uv run --locked stellis sync-serve --port 8769` and the device service with `STELLIS_SYNC_ORIGIN=http://127.0.0.1:8769 uv run --locked stellis serve`. Sign in and unlock the vault at the account origin. Open a transcribed conversation on the device origin and choose **More options → Sync conversation**; enter the same vault passphrase. The browser encrypts transcript parts and up to 128 MiB of audio before upload. The account page decrypts the text and loads authenticated audio on demand, including from a second browser signed into that account. This is a one-way copy: later edits, tombstones, offline media retries, device revocation, and recovery are not yet supported. Only the exact configured device origin receives credentialed CORS responses. A hosted page reaching loopback needs a separate production authorization design.
+Choose **Import recording** for an MP3 or **Record** for microphone capture. A completed import or recording starts local transcription when the models are ready. Reimporting the same audio opens its existing conversation. To migrate a browser-downloaded Otter ZIP, run `scripts/prepare_otter_migration.py` outside the app, import its MP3, and attach the exported text as a reference; that text does not replace the machine transcript.
 
-Use **Import recording** or drag a file onto the home page. MP3 files are supported up to 1 GB. Imports are stored under `~/Library/Application Support/Stellis`; set `STELLIS_DATA_DIR` to use a different private local folder. An import starts on-device transcription as soon as the local models are ready. Reimporting the same audio opens its existing conversation. Browser-downloaded ZIP exports can be unpacked outside the app with `scripts/prepare_otter_migration.py`; upload their MP3s through the interface, then attach their transcript text as a separate reference with the script’s `attach` phase. The reference appears in the conversation transcript view and does not replace on-device transcription.
+Open a conversation to play or scrub its audio. **Notes** contains My Notes and the generated Summary. **Transcript** contains the source wording; **Edited Transcript** appears as a third tab after cleanup. Use the transcript's selection controls for highlights, comments, and sharing, or **Edit transcript** to save wording changes together. Use **More options** for rematching, reprocessing, summary regeneration, and deletion. Open **Vocabulary** from the library to manage speech hints for future processing.
 
-For on-device transcription and speaker grouping, run `scripts/setup_models.sh` once, then restart `stellis serve`. The script downloads and verifies a whisper.cpp English small model and two sherpa-onnx speaker models into the private local model directory. `uv run --locked stellis doctor` reports whether all three files and native tools are present. The `STELLIS_WHISPER_MODEL`, `STELLIS_SEGMENTATION_MODEL`, and `STELLIS_EMBEDDING_MODEL` environment variables override individual model locations. Current output is English-only and has segment-level timing. The macOS sherpa-onnx runtime uses both `sherpa-onnx` and `sherpa-onnx-core` in the lockfile because the upstream source metadata can omit the core dependency.
+## Optional encrypted account prototype
 
-The transcript combines adjacent fragments from one resolved speaker into readable turns. Click a timed word to seek within its passage, drag within a fragment to highlight or copy, or use the fixed player to scrub. Passages without measured word timing still seek to their start. Older conversations offer **Measure word timing**, which retains their source passage IDs, text, speaker assignments, and edits. **Edit transcript** opens one session to correct words across turns; **Done** saves the changes together. Open **Vocabulary** from the library to add names or technical terms, including several at once, for later local processing runs. **Rematch speakers** uses local voice embeddings to suggest speaker groups from the saved audio without retranscribing; unresolved passages remain visible and manual names survive. Corrections and highlights are stored locally.
+Start the separate service with `uv run --locked stellis sync-serve --port 8769` and open <http://127.0.0.1:8769/>. It has independent development accounts and a vault passphrase that the service cannot recover. Browser Web Crypto encrypts note entries before upload and queues them in IndexedDB while offline.
 
-Press **Record** to grant microphone access and capture locally. Pause/resume and Stop and save appear during capture. Chunks are saved to the loopback service as they arrive; if the tab closes, the next visit offers **Recover and save** for acknowledged chunks. A recovered recording may end before the interrupted moment. The finished media uses the same import and transcription workflow as an uploaded file.
+To copy a transcribed conversation, start the account service with `STELLIS_DEVICE_ORIGIN=http://127.0.0.1:8765` and the device service with `STELLIS_SYNC_ORIGIN=http://127.0.0.1:8769`. Sign in and unlock the vault on the account page. In the device conversation, choose **More options → Sync conversation** and enter the same passphrase. The browser encrypts transcript parts and up to 128 MiB of audio; another browser signed into that account can decrypt the read-only copy. Source links to the device work only while that machine's loopback service is reachable. This prototype has no bidirectional edits, deletion sync, device revocation of existing ciphertext, or vault recovery.
 
-For summaries and questions, set `NEBIUS_API_KEY` in the environment or an ignored `.env` file, then open **Summary & AI** on a processed conversation. Press **Generate summary**, ask a question, or use **Clean transcript** to create a reviewable third tab. Clicking an edited passage plays its source audio. These actions send bounded transcript excerpts and displayed speaker labels to Nebius; source links seek to the cited audio. Existing results remain visible after edits with a stale notice until regenerated. Provider request IDs, model, prompt version, and token usage are saved locally with each run.
+## Local data and limits
 
-## Private data
+`.env`, `data/`, `.private/`, private recordings, and generated environments are excluded from Git. Do not put recordings or API keys in issues, pull requests, or tests. The current speech models are English-only. Speaker assignments remain suggestions until confirmed; word times and AI citations should be checked against the recording. The [real-interview speech](docs/validation/real-interview-speech.md) and [word-timing](docs/validation/real-interview-word-timing.md) records describe measured results and remaining gaps.
 
-`.env`, `data/`, `.private/`, and generated environments are excluded from Git. The user-supplied interview ZIP and extracted audio stay local. On a user-triggered AI run, bounded transcript excerpts and displayed speaker labels are sent to Nebius. AI results and provider metadata are stored locally. Do not place real recordings or API keys in issues, PRs, logs, or tests.
-
-## Verified environment
-
-Initial setup was tested on macOS arm64 with Python 3.12.13 and uv 0.11.17. Run `uv sync --locked` and the commands above after a fresh checkout; platform-specific recording and speech behavior still needs the browser acceptance tests in the product tickets.
+The [UI style guide](docs/ui-style-guide.md) covers interface decisions. [Architecture decisions](docs/decisions/) explain consequential forks. Run `uv run --locked --with pytest pytest -q` for the project test suite.
