@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, clean, generation_review, library, notes, people, processing, recording, recording_preview, search, storage
+from stellis import ai, auth, clean, enhanced_notes, generation_review, library, notes, people, processing, recording, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -205,6 +205,10 @@ class NotesWrite(BaseModel):
     expected_revision: int = Field(ge=0)
 
 
+class EnhancedNotesRequest(BaseModel):
+    force: bool = False
+
+
 class AIRunRequest(BaseModel):
     kind: str
     question: str | None = Field(default=None, max_length=500)
@@ -243,6 +247,7 @@ def start_speech_worker() -> None:
     library.recover_staged_media()
     storage.fail_interrupted_ai_runs()
     storage.fail_interrupted_clean_runs()
+    enhanced_notes.fail_interrupted()
     processing.start_worker()
     if _retention_thread is None or not _retention_thread.is_alive():
         _retention_stop.clear()
@@ -653,6 +658,46 @@ def conversation_notes(conversation_id: str) -> dict[str, object]:
 @api.put("/conversations/{conversation_id}/notes")
 def save_conversation_notes(conversation_id: str, request: NotesWrite) -> dict[str, object]:
     return _write_notes("conversation", conversation_id, request)
+
+
+@api.get("/conversations/{conversation_id}/enhanced-notes")
+def list_enhanced_notes(conversation_id: str) -> list[dict[str, object]]:
+    try:
+        return enhanced_notes.list_runs(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.post("/conversations/{conversation_id}/enhanced-notes")
+def generate_enhanced_notes(conversation_id: str, request: EnhancedNotesRequest) -> dict[str, object]:
+    try:
+        return enhanced_notes.request(conversation_id, force=request.force)
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ai.AIError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.get("/enhanced-notes/{run_id}")
+def enhanced_note(run_id: str) -> dict[str, object]:
+    try:
+        return enhanced_notes.get_run(run_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.put("/enhanced-notes/{run_id}")
+def edit_enhanced_note(run_id: str, request: NotesWrite) -> dict[str, object]:
+    try:
+        return enhanced_notes.edit(run_id, request.markdown, request.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api.get("/conversations/{conversation_id}")
