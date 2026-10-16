@@ -26,7 +26,7 @@ function syncThemeButton() {
   const light = document.documentElement.dataset.theme === 'light';
   themeButton.textContent = light ? 'Dark mode' : 'Light mode';
   themeButton.setAttribute('aria-label', `Switch to ${light ? 'dark' : 'light'} mode`);
-  document.querySelector('meta[name="theme-color"]').content = light ? '#1d203a' : '#191c35';
+  document.querySelector('meta[name="theme-color"]').content = light ? '#27222B' : '#2A252F';
 }
 syncThemeButton();
 themeButton.addEventListener('click', () => {
@@ -2372,7 +2372,7 @@ function drawRecordingWaveform(current, audioContext) {
   const analyser = audioContext.createAnalyser(); analyser.fftSize = 1024;
   source.connect(analyser);
   const samples = new Uint8Array(analyser.fftSize);
-  const color = getComputedStyle(document.documentElement).getPropertyValue('--accent-strong').trim() || '#3652b4';
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--waveform').trim() || '#335C63';
   let frame;
   const draw = () => {
     context.clearRect(0, 0, canvas.width, canvas.height);
