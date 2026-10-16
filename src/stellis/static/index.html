@@ -1,15 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f7fb" />
+    <meta name="theme-color" content="#0a1020" />
     <title>Stellis</title>
+    <script>try { if (localStorage.getItem('stellis-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}</script>
     <link rel="stylesheet" href="/static/app.css" />
+    <link rel="stylesheet" href="/static/theme.css" />
     <script src="/static/app.js" defer></script>
   </head>
   <body>
-    <header><a class="brand" href="/">stellis</a><span class="header-note">Private, local interview workspace</span></header>
+    <header><a class="brand" href="/">stellis</a><div class="header-side"><span class="header-note">Private, local interview workspace</span><button id="theme-toggle" type="button" aria-label="Switch to light mode">Light mode</button></div></header>
     <main>
       <section class="heading">
         <div><h1 id="page-title">Your conversations</h1><p id="page-subtitle">Listen, review, and return to what matters.</p></div>

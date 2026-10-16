@@ -1,0 +1,275 @@
+/* Self-hosted Inter and Piazzolla from Penguin; OFL notices are in /static/fonts/. */
+@font-face {
+  font-family: Inter;
+  src: url('/static/fonts/inter-v20-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: Piazzolla;
+  src: url('/static/fonts/piazzolla-v42-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Piazzolla;
+  src: url('/static/fonts/piazzolla-v42-latin-italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --field: #0a1020;
+  --surface: #111a2c;
+  --raised: #1b2740;
+  --input: #101a2e;
+  --line: #35435f;
+  --line-soft: #28354e;
+  --ink: #f2f5fc;
+  --muted: #b0bdd2;
+  --quiet: #94a5c2;
+  --accent: #adbdff;
+  --accent-strong: #c3ccff;
+  --accent-ink: #0b1430;
+  --selected: #26365c;
+  --selection: #445c9b;
+  --warning: #f3c983;
+  --warning-bg: #322919;
+  --success: #8bddba;
+  --failure: #ffaaa7;
+  --focus: #b9c6ff;
+  --shadow: 0 20px 60px #02050e88;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--field);
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+  --field: #f7f8fb;
+  --surface: #ffffff;
+  --raised: #f1f3f9;
+  --input: #ffffff;
+  --line: #c9d3e4;
+  --line-soft: #e3e8f2;
+  --ink: #17202e;
+  --muted: #4d5b70;
+  --quiet: #5d6d86;
+  --accent: #344ab2;
+  --accent-strong: #27398d;
+  --accent-ink: #ffffff;
+  --selected: #e8edff;
+  --selection: #bed0ff;
+  --warning: #765311;
+  --warning-bg: #fff5df;
+  --success: #176e4c;
+  --failure: #a33232;
+  --focus: #354ec0;
+  --shadow: 0 12px 35px #192b481c;
+}
+
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at 86% 4%, #465da52a, transparent 36%),
+    radial-gradient(ellipse at 8% 67%, #5b438e1b, transparent 43%),
+    var(--field);
+}
+html[data-theme='dark'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 12% 21%, #b6c9ff96 0 1px, transparent 2px),
+    radial-gradient(circle at 78% 15%, #b6c9ff75 0 1px, transparent 2px),
+    radial-gradient(circle at 38% 61%, #b6c9ff55 0 1px, transparent 2px),
+    radial-gradient(circle at 92% 77%, #b6c9ff62 0 1px, transparent 2px);
+}
+header, main { position: relative; }
+header {
+  z-index: 2;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border-color: var(--line-soft);
+  backdrop-filter: blur(18px);
+}
+.brand {
+  color: var(--ink);
+  font: italic 400 28px/1 Piazzolla, Georgia, serif;
+  letter-spacing: -.045em;
+}
+.header-side { display: flex; align-items: center; gap: 16px; }
+.header-note, p, .conversation-row small, .player-heading, .segment-time,
+.turn-heading span, .seek-controls span, .highlight-controls span,
+.vocabulary-card summary span, .ai-privacy { color: var(--muted); }
+#theme-toggle {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--ink);
+  padding: 8px 13px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+#theme-toggle:hover { border-color: var(--accent); }
+h1, .transcript-heading h2, .ai-heading h2 {
+  color: var(--ink);
+  font-family: Piazzolla, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -.035em;
+}
+h1 { font-size: clamp(36px, 5vw, 54px); line-height: 1.05; }
+.transcript-heading h2, .ai-heading h2 { font-size: 27px; }
+main { max-width: 1100px; }
+.heading { margin-bottom: 12px; }
+.heading > div:first-child p { max-width: 56ch; }
+
+.transcript-card, .ai-card, .player-card, .next-card, .vocabulary-card,
+.conversation-row, .recording-panel, .recovery-row, .drop-zone {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 1px 0 #ffffff0c;
+}
+.conversation-row:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--raised);
+  box-shadow: var(--shadow);
+}
+.conversation-row small, .conversation-row .arrow,
+.back-link, .vocabulary-card summary { color: var(--accent); }
+.drop-icon, .drop-zone span { color: var(--accent); }
+.drop-zone { min-height: 220px; background: color-mix(in srgb, var(--surface) 90%, transparent); }
+.drop-zone strong, .conversation-row strong { color: var(--ink); }
+.speaker-turn, .ai-result-section, .ai-question, .ai-result-section li,
+.segment, .conversation-tabs { border-color: var(--line-soft); }
+.turn-heading button, .turn-heading strong, .segment .segment-text,
+.clean-turn .segment-text, .ai-result-section p, .ai-answer p { color: var(--ink); }
+.turn-heading span, .segment-speaker, .segment-speaker.uncertain { color: var(--quiet); }
+.segment:hover, .segment.active, .speaker-turn .segment.active,
+.speaker-turn:not(.editing) .segment:hover,
+.speaker-turn:not(.editing) .segment.active,
+.clean-turn .segment.active { background: var(--selected); }
+.segment-time, .segment-action, .turn-heading .turn-edit,
+.clean-compare-button { color: var(--accent); }
+.speaker-pill, .ai-sources button, .highlight-controls button[aria-pressed='true'] {
+  color: var(--accent-strong);
+  background: var(--raised);
+  border-color: var(--line);
+}
+.clean-review, .ai-answer small { color: var(--warning); }
+
+.upload-button, .ai-heading button, .ai-question button, .ai-answer > button,
+.vocabulary-entry button, .recording-actions button:first-child,
+.recording-actions button:last-child {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.upload-button:hover, .ai-heading button:hover, .ai-question button:hover,
+.vocabulary-entry button:hover { background: var(--accent-strong); }
+.heading-actions #record-button {
+  color: var(--ink);
+  background: var(--raised);
+  border-color: var(--line);
+}
+.heading-actions #record-button:hover { border-color: var(--accent); }
+.transcript-heading button, .highlight-controls button, .seek-controls button,
+.recording-actions button, .recovery-row button, .vocabulary-card button,
+.segment-editor .editor-actions button, #clean-compare .editor-actions button {
+  color: var(--ink);
+  background: var(--raised);
+  border-color: var(--line);
+}
+.transcript-heading button:hover, .highlight-controls button:hover,
+.seek-controls button:hover, .recording-actions button:hover,
+.recovery-row button:hover, .vocabulary-card button:hover,
+#clean-compare .editor-actions button:hover { background: var(--selected); }
+.segment button, .turn-heading button, .clean-compare-button { background: transparent; border: 0; }
+.segment button:hover, .turn-heading button:hover { color: var(--accent-strong); }
+#clean-compare .editor-actions button:first-child {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+button:disabled { opacity: .56; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible,
+select:focus-visible, .drop-zone:focus-visible, .upload-button:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+input, textarea, select, #clean-version, .segment-editor textarea,
+.segment-editor input, .segment-editor select, .vocabulary-card input,
+.recording-panel input, .ai-question input {
+  color: var(--ink);
+  background: var(--input);
+  border-color: var(--line);
+}
+input::placeholder, textarea::placeholder { color: var(--quiet); }
+.segment-editor, #clean-compare, .ai-answer {
+  color: var(--ink);
+  background: var(--raised);
+  border-color: var(--line);
+}
+.segment-editor label, .recording-panel label, .ai-question form label,
+.vocabulary-card label { color: var(--ink); }
+.segment-editor p, #processing-status, #edit-status,
+#clean-status, #ai-status, #vocabulary-status { color: var(--muted); }
+#status { color: var(--failure); }
+#status.success { color: var(--success); }
+.ai-stale, .recovery-row { color: var(--warning); background: var(--warning-bg); }
+.ai-privacy { color: var(--quiet); }
+.conversation-tabs button { color: var(--muted); }
+.conversation-tabs button[aria-selected='true'] {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.segment-text mark, .timed-word mark { color: var(--ink); background: #766338; }
+.segment-text::selection, .segment-text *::selection { color: var(--ink); background: var(--selection); }
+.timed-word:hover, .timed-word.active-word {
+  background: var(--selected);
+  box-shadow: 0 0 0 2px var(--selected);
+}
+.timed-word.active-word mark { box-shadow: 0 0 0 2px var(--selected); }
+.speaker-turn.editing .segment-text[contenteditable='true']:focus,
+.clean-turn.editing .segment-text[contenteditable='true']:focus {
+  color: var(--ink);
+  background: var(--input);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px var(--selected);
+}
+#selection-toolbar {
+  color: var(--ink);
+  background: var(--raised);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+#selection-toolbar button { color: var(--ink); background: var(--selected); }
+.player-card { background: var(--raised); box-shadow: var(--shadow); }
+.player-card audio { color-scheme: inherit; }
+
+html[data-theme='light'] body { background: var(--field); }
+html[data-theme='light'] .upload-button:hover,
+html[data-theme='light'] .ai-heading button:hover { color: #ffffff; }
+html[data-theme='light'] .segment-text mark,
+html[data-theme='light'] .timed-word mark { background: #f4dd84; }
+
+@media (max-width: 600px) {
+  header { padding: 0 20px; }
+  .header-side { gap: 0; }
+  #theme-toggle { padding: 7px 10px; }
+  h1 { font-size: clamp(35px, 9vw, 44px); }
+  .transcript-heading h2, .ai-heading h2 { font-size: 25px; }
+  .transcript-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .transcript-actions button, .transcript-actions select { min-width: 0; max-width: none; white-space: normal; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
