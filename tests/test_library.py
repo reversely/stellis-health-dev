@@ -108,7 +108,8 @@ class LibraryWorkflowTest(unittest.TestCase):
     def test_automatic_category_requires_opt_in_and_respects_manual_change(self):
         self.client.patch(f'/api/v1/conversations/{self.first}/transcript/segments/s1',
             json={'text': 'The interviewer asked about prior projects and the candidate described their work, '
-                          'then answered questions about collaboration, deadlines, and the role on the team.',
+                          'then answered questions about collaboration, deadlines, and the role on the team, '
+                          'including several specific examples from their experience.',
                   'expected_revision': 1})
         setting = self.client.get('/api/v1/categories/automation').json()
         self.assertFalse(setting['enabled'])
@@ -137,6 +138,19 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertIn('Nebius API key', result['error'])
         self.assertIsNotNone(storage.get_transcript(self.first))
         self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+
+    def test_short_transcript_abstains_without_provider_call(self):
+        self.client.put('/api/v1/categories/automation', json={'enabled': True})
+        with storage.connect() as conn:
+            conn.execute("""INSERT INTO category_decisions
+                (conversation_id, state, model_id, prompt_version, transcript_revision, updated_at)
+                VALUES (?, 'queued', ?, ?, 1, ?)""",
+                (self.first, categorization.MODEL_ID, categorization.PROMPT_VERSION,
+                 datetime.now(timezone.utc).isoformat()))
+        with patch.object(categorization, 'classify') as classify:
+            categorization._run(self.first, 1, 'test-key')
+            classify.assert_not_called()
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['state'], 'unclear')
 
     def test_initial_categories_are_seeded_once_and_remain_editable(self):
         endpoint = '/api/v1/categories'

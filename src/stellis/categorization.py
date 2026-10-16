@@ -62,9 +62,11 @@ def _sample(display: dict[str, object], title: str) -> str:
         return ""
     # Cover the beginning, middle, and end without uploading a full long transcript.
     count = len(segments)
-    windows = ((0, min(count, 25)), (max(0, count // 2 - 12), min(count, count // 2 + 13)),
-               (max(0, count - 25), count))
-    chunks = [" ".join(segments[start:end])[:1600] for start, end in windows]
+    if count <= 50:
+        chunks = [" ".join(segments)[:4800]]
+    else:
+        windows = ((0, 25), (count // 2 - 12, count // 2 + 13), (count - 25, count))
+        chunks = [" ".join(segments[start:end])[:1600] for start, end in windows]
     return f"Title: {title[:120]}\nTranscript excerpts:\n" + "\n…\n".join(chunks)
 
 
@@ -167,7 +169,7 @@ def _run(conversation_id: str, revision: int, key: str) -> None:
         if not display or not conversation or int(display["revision"]) != revision:
             raise RuntimeError("Transcript changed; retry classification")
         source = _sample(display, str(conversation["title"]))
-        if len(source.split()) < 25:
+        if sum(len(str(segment.get("text", "")).split()) for segment in display["segments"]) < 25:
             label, confidence = "Unclear", 0.0
         else:
             label, confidence = classify(source, key)
