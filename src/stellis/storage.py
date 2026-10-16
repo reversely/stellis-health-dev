@@ -1226,8 +1226,10 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
     cluster_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "cluster"}
     segment_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "segment"}
     segments = json.loads(str(record["segments_json"]))
-    cluster_order = list(dict.fromkeys(segment["speaker_cluster_id"] for segment in segments
-                                       if segment["speaker_cluster_id"]))
+    # Older generations may still hold passages with no acoustic turn.
+    from stellis import speaker_fallback
+    speaker_fallback.fill_unassigned(segments, json.loads(str(record["turns_json"])))
+    cluster_order = list(dict.fromkeys(segment["speaker_cluster_id"] for segment in segments))
     display_names = {cluster: f"Speaker {index + 1}" for index, cluster in enumerate(cluster_order)}
     for segment in segments:
         override = edits.get(segment["id"])
@@ -1251,7 +1253,7 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
             segment["speaker_display_name"] = cluster_labels[cluster]
             segment["speaker_label_source"] = "manual_cluster"
         else:
-            segment["speaker_display_name"] = display_names[cluster] if cluster else "Unknown speaker"
+            segment["speaker_display_name"] = display_names[cluster]
             segment["speaker_label_source"] = "automatic"
     return {
         "conversation_id": conversation_id, "revision": record["revision"],

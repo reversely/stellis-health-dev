@@ -23,7 +23,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v3"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v4"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 _QUEUE: queue.Queue[str] = queue.Queue()
@@ -511,6 +511,20 @@ def align_segments(conversation_id: str, segments: list[dict[str, object]],
     return aligned, confident / len(aligned) if aligned else 0
 
 
+def _fill_unassigned_speakers(wav: Path, embedding_model: Path, segments: list[dict[str, object]],
+                              turns: list[dict[str, object]]) -> int:
+    """Embed only prototype and no-turn passages, then assign the no-turn ones."""
+    from stellis import rematch, speaker_fallback
+
+    missing = speaker_fallback.unassigned_indices(segments)
+    if not missing:
+        return 0
+    wanted = sorted(set(missing) | set(speaker_fallback.prototype_indices(segments)))
+    vectors, valid = rematch.extract_embeddings(wav, embedding_model, [segments[index] for index in wanted])
+    embeddings = {index: vectors[position] for position, index in enumerate(wanted) if valid[position]}
+    return speaker_fallback.fill_unassigned(segments, turns, embeddings)
+
+
 def align_existing_words(source: list[dict[str, object]],
                          measured: list[dict[str, object]]) -> tuple[list[dict[str, object]], float]:
     """Attach only text-matched audio timing to old passages without changing their IDs."""
@@ -695,11 +709,13 @@ def run_job(job_id: str) -> None:
                     vocabulary_fallback = True
             _stage(job_id, "aligning", 0.96)
             aligned, coverage = align_segments(str(conversation["id"]), segments, turns)
+            fallback_count = _fill_unassigned_speakers(wav, embedding, aligned, turns)
             metrics = {
                 "processing_seconds": round(time.monotonic() - started, 2),
                 "segment_count": len(aligned), "turn_count": len(turns),
                 "cluster_count": len({turn["speaker_cluster_id"] for turn in turns}),
                 "confident_segment_fraction": round(coverage, 3),
+                "fallback_speaker_segment_count": fallback_count,
                 "vocabulary_fallback": vocabulary_fallback,
                 "speech_turn_coverage": round(_speech_turn_coverage(segments, turns), 3),
             }
@@ -748,6 +764,9 @@ def run_rematch_job(job_id: str) -> None:
             _stage(job_id, "matching acoustic speakers", 0.35)
             embeddings, valid = rematch.extract_embeddings(wav, embedding_model, segments)
             aligned, metrics = rematch.suggest_speakers(segments, embeddings, valid)
+            from stellis import speaker_fallback
+            metrics["fallback_speaker_segment_count"] = speaker_fallback.fill_unassigned(
+                aligned, json.loads(str(source["turns_json"])))
         _stage(job_id, "saving speaker suggestions", 0.95)
         storage.save_transcript({"conversation_id": conversation_id, "revision": 1,
                                  "pipeline_version": job["pipeline_version"], "language": source["language"],
