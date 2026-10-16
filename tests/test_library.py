@@ -2,6 +2,7 @@
 
 import json
 import os
+import sqlite3
 import tempfile
 import unittest
 import uuid
@@ -71,7 +72,7 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertEqual(self.client.get('/api/v1/search', params={'q':'Asteroid',
             'category_id': 'uncategorized'}).json()['total'], 0)
         self.client.patch(f'/api/v1/categories/{categories[0]["id"]}', json={'name':'Science'})
-        self.assertEqual(self.client.get('/api/v1/categories').json()[1]['name'], 'Science')
+        self.assertIn('Science', [item['name'] for item in self.client.get('/api/v1/categories').json()])
         self.client.patch(f'/api/v1/conversations/{self.first}/transcript/segments/s1',
                           json={'text':'Asteroid corrected.', 'expected_revision':1})
         media = storage.data_dir() / 'media' / storage.get_conversation(self.first)['audio_filename']
@@ -96,13 +97,43 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertFalse(media.exists())
         self.assertIsNone(storage.get_conversation(self.first, include_trashed=True))
         self.assertEqual(self.client.get('/api/v1/search', params={'q':'Asteroid'}).json()['total'], 0)
-        self.assertEqual(len(self.client.get('/api/v1/categories').json()), 1)
+        self.assertEqual(len(self.client.get('/api/v1/categories').json()), 5)
         self.assertEqual(len(self.client.get('/api/v1/conversations').json()), 1)
         with storage.connect() as conn:
             for table in ('transcripts', 'transcript_generations', 'transcript_edits',
                           'transcript_edit_events', 'conversation_categories'):
                 self.assertEqual(conn.execute(f'SELECT COUNT(*) FROM {table} WHERE conversation_id = ?',
                                               (self.first,)).fetchone()[0], 0)
+
+    def test_initial_categories_are_seeded_once_and_remain_editable(self):
+        endpoint = '/api/v1/categories'
+        initial = self.client.get(endpoint).json()
+        self.assertEqual([item['name'] for item in initial], list(storage.INITIAL_CATEGORIES))
+        meeting = initial[0]
+        self.assertEqual(self.client.patch(f"{endpoint}/{meeting['id']}", json={'name':'Workshop'}).status_code, 200)
+        self.assertEqual(self.client.delete(f"{endpoint}/{initial[1]['id']}").status_code, 200)
+        with storage.connect():
+            pass
+        current = self.client.get(endpoint).json()
+        self.assertEqual({item['name'] for item in current}, {'Workshop', 'Interview', 'Conversation'})
+        self.assertEqual(next(item['id'] for item in current if item['name'] == 'Workshop'), meeting['id'])
+        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
+
+    def test_existing_categories_survive_one_time_seed(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'STELLIS_DATA_DIR': directory}):
+            database = Path(directory) / 'stellis.sqlite3'
+            with sqlite3.connect(database) as conn:
+                conn.execute('CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)')
+                conn.execute('INSERT INTO categories VALUES (?, ?, ?, ?)',
+                             ('existing-meeting', 'MEETING', 'meeting', '2026-01-01'))
+                conn.execute('INSERT INTO categories VALUES (?, ?, ?, ?)',
+                             ('custom', 'Research', 'research', '2026-01-01'))
+            seeded = library.categories()
+            self.assertEqual([item['name'] for item in seeded[:4]],
+                             ['MEETING', 'Event', 'Interview', 'Conversation'])
+            self.assertEqual(seeded[0]['id'], 'existing-meeting')
+            self.assertEqual(len(seeded), 5)
+            self.assertEqual(library.categories(), seeded)
 
     def test_pending_job_blocks_permanent_delete_until_settled(self):
         now = datetime.now(timezone.utc).isoformat()

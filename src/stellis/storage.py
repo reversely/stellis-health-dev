@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
+INITIAL_CATEGORIES = ("Meeting", "Event", "Interview", "Conversation")
+
 
 def normalized_person_name(value: str) -> str:
     """Return the durable identity key used by every Person write."""
@@ -53,6 +55,17 @@ def connect() -> Iterator[sqlite3.Connection]:
     conn.execute("""CREATE TABLE IF NOT EXISTS categories (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS schema_migrations (
+        name TEXT PRIMARY KEY, applied_at TEXT NOT NULL
+    )""")
+    if conn.execute("SELECT 1 FROM schema_migrations WHERE name = 'initial_categories'").fetchone() is None:
+        stamp = datetime.now(timezone.utc).isoformat()
+        seeded = conn.execute("INSERT OR IGNORE INTO schema_migrations (name, applied_at) VALUES ('initial_categories', ?)",
+                              (stamp,)).rowcount
+        if seeded:
+            for name in INITIAL_CATEGORIES:
+                conn.execute("INSERT OR IGNORE INTO categories (id, name, normalized, created_at) VALUES (?, ?, ?, ?)",
+                             (str(uuid.uuid4()), name, name.casefold(), stamp))
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_categories (
         conversation_id TEXT NOT NULL REFERENCES conversations(id),
         category_id TEXT NOT NULL REFERENCES categories(id),
