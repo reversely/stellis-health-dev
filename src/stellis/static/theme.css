@@ -158,6 +158,26 @@ main { max-width: 1100px; }
 #import-dialog .drop-zone { min-height: 200px; }
 .import-formats { margin: 12px 0 0; text-align: center; }
 #import-status { min-height: 20px; margin-top: 12px; color: var(--failure); }
+.recording-page main { max-width: none; padding: 24px 32px 130px; }
+.recording-page .heading, .recording-page #status { display: none; }
+.recording-page .recording-panel { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.recording-workspace-head { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
+.recording-workspace-head button { border: 0; background: transparent; color: var(--accent); cursor: pointer; }
+.recording-workspace-head label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.recording-workspace-head input { width: min(560px, 100%); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); font-size: 28px; font-weight: 700; }
+.recording-workspace-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 31%); gap: 24px; min-height: calc(100vh - 260px); }
+.recording-workspace-grid > * { padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.recording-workspace-grid h2 { margin: 0 0 22px; font-size: 24px; }
+.recording-workspace-grid p { color: var(--quiet); }
+.recording-bar { position: fixed; z-index: 30; inset: auto 0 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 88px; padding: 14px max(32px, calc((100vw - 1440px)/2)); border-top: 1px solid var(--line); background: var(--surface); box-shadow: 0 -8px 26px #00000018; }
+.recording-source { display: grid; gap: 3px; }
+.recording-source strong { font-size: 15px; }
+.recording-source span, .recording-source p { color: var(--quiet); font-size: 13px; }
+.recording-source p:empty { display: none; }
+.recording-actions { display: flex; align-items: center; gap: 12px; margin: 0; }
+.recording-actions #recording-timer { min-width: 46px; font-variant-numeric: tabular-nums; font-weight: 700; text-align: center; }
+.recording-actions #stop-recording { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+@media(max-width:700px) { .recording-page main { padding: 18px 16px 175px; } .recording-workspace-head { display: grid; gap: 12px; } .recording-workspace-head input { font-size: 24px; } .recording-workspace-grid { grid-template-columns: 1fr; gap: 12px; min-height: 0; } .recording-workspace-grid > * { min-height: 180px; padding: 20px; } .recording-bar { align-items: flex-start; flex-direction: column; gap: 10px; padding: 12px 16px; } .recording-actions { width: 100%; justify-content: space-between; } }
 .speaker-turn, .ai-result-section, .ai-question, .ai-result-section li,
 .segment, .conversation-tabs { border-color: var(--line-soft); }
 .turn-heading button, .turn-heading strong, .segment .segment-text,
@@ -223,6 +243,7 @@ input, textarea, select, #clean-version, .segment-editor textarea,
   background: var(--input);
   border-color: var(--line);
 }
+.recording-panel .recording-workspace-head input { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
 input::placeholder, textarea::placeholder { color: var(--quiet); }
 .segment-editor, #clean-compare, .ai-answer {
   color: var(--ink);

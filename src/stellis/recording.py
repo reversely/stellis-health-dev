@@ -78,6 +78,25 @@ def get_session(recording_id: str) -> dict[str, object] | None:
     return dict(row) if row else None
 
 
+def rename_session(recording_id: str, title: str) -> dict[str, object]:
+    """Save the visible title while a recording remains unfinished."""
+    cleaned = title.strip()[:180]
+    if not cleaned:
+        raise ValueError("Enter a recording title")
+    with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT state FROM recording_sessions WHERE id = ?", (recording_id,)).fetchone()
+        if row is None:
+            raise LookupError("Recording session not found")
+        if row["state"] != "recording":
+            raise RuntimeError("Recording is already finalized")
+        conn.execute("UPDATE recording_sessions SET title = ?, updated_at = ? WHERE id = ?",
+                     (cleaned, _stamp(), recording_id))
+    session = get_session(recording_id)
+    assert session is not None
+    return _public(session)
+
+
 def discard_session(recording_id: str) -> bool:
     """Delete an unfinished capture after the user explicitly discards it."""
     with storage.connect() as conn:

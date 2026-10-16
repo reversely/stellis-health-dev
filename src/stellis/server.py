@@ -190,6 +190,10 @@ class RecordingStart(BaseModel):
     media_type: str
 
 
+class RecordingRename(BaseModel):
+    title: str = Field(min_length=1, max_length=180)
+
+
 class RecordingEvent(BaseModel):
     kind: str
     media_position_ms: int = Field(ge=0)
@@ -283,6 +287,12 @@ def index() -> FileResponse:
 @app.get("/conversation/{conversation_id}", include_in_schema=False)
 def conversation_page(conversation_id: str) -> FileResponse:
     """Serve the same browser workspace for a direct conversation link."""
+    return FileResponse(_STATIC / "index.html")
+
+
+@app.get("/recording", include_in_schema=False)
+def recording_page() -> FileResponse:
+    """Serve the recording workspace on reload."""
     return FileResponse(_STATIC / "index.html")
 
 
@@ -521,6 +531,18 @@ def start_recording(request: RecordingStart) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except OSError as exc:
         raise HTTPException(status_code=507, detail="Could not reserve local recording storage") from exc
+
+
+@api.patch("/recordings/{recording_id}")
+def rename_recording(recording_id: str, request: RecordingRename) -> dict[str, object]:
+    try:
+        return recording.rename_session(recording_id, request.title)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api.put("/recordings/{recording_id}/chunks/{sequence}")

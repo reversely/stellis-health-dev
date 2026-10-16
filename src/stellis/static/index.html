@@ -22,9 +22,9 @@
       </section>
       <div id="status" role="status" aria-live="polite"></div>
       <section id="recording-panel" class="recording-panel" hidden aria-label="Microphone recording">
-        <div class="recording-top"><div><strong id="recording-state">Ready to record</strong><p id="recording-detail"></p></div><span id="recording-timer">0:00</span></div>
-        <label for="recording-title">Recording title</label><input id="recording-title" value="New recording" maxlength="180" />
-        <div class="recording-actions"><button id="start-recording" type="button">Start recording</button><button id="pause-recording" type="button" hidden>Pause</button><button id="stop-recording" type="button" hidden>Stop and save</button></div>
+        <div class="recording-workspace-head"><button id="back-from-recording" type="button">← All conversations</button><label for="recording-title">Title</label><input id="recording-title" value="New recording" maxlength="180" required /></div>
+        <div class="recording-workspace-grid"><section class="recording-transcript" aria-label="Transcript"><h2>Transcript</h2><p id="recording-transcript-state">Transcript appears after recording.</p></section><aside class="recording-ai" aria-label="AI Chat"><h2>AI Chat</h2><p>Available after transcription.</p></aside></div>
+        <div class="recording-bar"><div class="recording-source"><strong id="recording-state">Ready to record</strong><span id="recording-source-label">Microphone · English</span><p id="recording-detail" role="status" aria-live="polite"></p></div><div class="recording-actions"><button id="start-recording" type="button">Start recording</button><button id="pause-recording" type="button" hidden>Pause</button><span id="recording-timer">0:00</span><button id="stop-recording" type="button" hidden>Stop</button></div></div>
       </section>
       <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
       <details class="vocabulary-card" id="vocabulary-panel">
