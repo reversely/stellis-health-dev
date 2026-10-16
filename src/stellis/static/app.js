@@ -76,6 +76,8 @@ const recordingTimer = document.querySelector('#recording-timer');
 let capture = null;
 let captureRequesting = false;
 let captureFinalizing = false;
+let recordingChatTimer = null;
+let recordingPrimaryView = 'notes';
 let librarySearchResults = [];
 let librarySearchTotal = 0;
 let librarySearchLimited = false;
@@ -467,6 +469,7 @@ async function showList() {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(enhancedPollTimer);
+  clearTimeout(recordingChatTimer);
   clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   activeConversationId = null;
@@ -606,7 +609,7 @@ async function showPerson(id) {
   document.querySelector('#vocabulary-panel').hidden = false;
   document.body.classList.add('profile-page');
   conversationMore.open = false; conversationMore.hidden = true;
-  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(cleanRunTimer);
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(recordingChatTimer); clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null; activePersonId = id;
@@ -660,6 +663,7 @@ async function showDetail(id) {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(enhancedPollTimer);
+  clearTimeout(recordingChatTimer);
   enhancedRuns = []; enhancedSelectedId = null; enhancedState = null;
   clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
@@ -709,6 +713,7 @@ async function showDetail(id) {
   showConversationTab('summary');
   showNotesChoice('my');
   await loadAIRuns(id);
+  await loadSavedRecordingChat(id);
   await loadCleanRuns(id);
   const query = new URLSearchParams(location.search);
   const targetSegmentId = query.get('at');
@@ -1845,6 +1850,95 @@ function captureElapsedMs() {
   const paused = capture.pausedAt ? Date.now() - capture.pausedAt : 0;
   return Math.max(0, Date.now() - capture.startedAt - capture.totalPausedMs - paused);
 }
+function drawRecordingWaveform(current, audioContext) {
+  const canvas = document.querySelector('#recording-waveform');
+  const context = canvas.getContext('2d');
+  if (!context || !audioContext) {audioContext?.close().catch(() => {}); return () => {};}
+  const source = audioContext.createMediaStreamSource(current.stream);
+  const analyser = audioContext.createAnalyser(); analyser.fftSize = 1024;
+  source.connect(analyser);
+  const samples = new Uint8Array(analyser.fftSize);
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--accent-strong').trim() || '#3652b4';
+  let frame;
+  const draw = () => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (capture === current && current.recorder.state === 'recording') analyser.getByteTimeDomainData(samples);
+    const count = 48, barWidth = 3, gap = 3;
+    context.fillStyle = color;
+    for (let index = 0; index < count; index++) {
+      let peak = 0;
+      if (capture === current && current.recorder.state === 'recording') {
+        const start = Math.floor(index * samples.length / count);
+        const end = Math.floor((index + 1) * samples.length / count);
+        for (let sample = start; sample < end; sample++) peak = Math.max(peak, Math.abs(samples[sample] - 128));
+      }
+      const height = Math.max(2, Math.min(38, peak * 1.2 + 2));
+      context.fillRect(index * (barWidth + gap) + 12, (canvas.height - height) / 2, barWidth, height);
+    }
+    frame = requestAnimationFrame(draw);
+  };
+  draw();
+  return () => {cancelAnimationFrame(frame); source.disconnect(); audioContext.close().catch(() => {});
+    context.clearRect(0, 0, canvas.width, canvas.height);};
+}
+function renderRecordingChat(runs, container, saved = false) {
+  container.replaceChildren();
+  for (const run of runs) {
+    const card = document.createElement('article');
+    const heading = document.createElement(saved ? 'h4' : 'h3'); heading.textContent = run.question;
+    const answer = document.createElement('p');
+    answer.textContent = run.state === 'succeeded' ? run.result.answer :
+      run.state === 'failed' ? run.error_message : `Answering · ${run.stage}`;
+    card.append(heading, answer);
+    if (run.state === 'succeeded' && run.result.source_segment_ids.length) {
+      if (saved) card.append(sourceButtons(run.result.source_segment_ids, run.source_starts));
+      else {const times = document.createElement('small');
+        times.textContent = run.result.source_segment_ids.map(id => time((run.source_starts[id] || 0) / 1000)).join(', ');
+        card.append(times);}
+    }
+    if (!saved && run.state === 'succeeded') {
+      const note = document.createElement('small'); note.textContent = 'Based on live transcript'; card.append(note);
+    }
+    container.append(card);
+  }
+}
+async function loadRecordingChat(recordingId) {
+  clearTimeout(recordingChatTimer);
+  const runs = await json(await fetch(`${API}/recordings/${encodeURIComponent(recordingId)}/chat`));
+  if (capture?.session.id !== recordingId && notesStates.recording?.id !== recordingId) return;
+  renderRecordingChat(runs, document.querySelector('#recording-chat-messages'));
+  if (runs.some(run => run.state === 'queued' || run.state === 'running'))
+    recordingChatTimer = setTimeout(() => loadRecordingChat(recordingId).catch(error => {
+      document.querySelector('#recording-chat-status').textContent = error.message;}), 2000);
+}
+async function askRecordingChat(question) {
+  const recordingId = capture?.session.id || notesStates.recording?.id;
+  const status = document.querySelector('#recording-chat-status');
+  if (!recordingId) {status.textContent = 'Start recording first.'; return;}
+  status.textContent = 'Answering…';
+  try {
+    await json(await fetch(`${API}/recordings/${encodeURIComponent(recordingId)}/chat`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question})}));
+    document.querySelector('#recording-chat-input').value = '';
+    status.textContent = '';
+    await loadRecordingChat(recordingId);
+  } catch (error) {status.textContent = error.message;}
+}
+document.querySelector('#recording-chat-form').addEventListener('submit', event => {
+  event.preventDefault(); askRecordingChat(document.querySelector('#recording-chat-input').value);
+});
+document.querySelectorAll('[data-live-question]').forEach(button => button.addEventListener('click', () =>
+  askRecordingChat(button.dataset.liveQuestion)));
+async function loadSavedRecordingChat(conversationId) {
+  const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(conversationId)}/recording-chat`));
+  if (conversationId !== activeConversationId) return;
+  const container = document.querySelector('#saved-recording-chat'); container.replaceChildren();
+  if (!runs.length) return;
+  const heading = document.createElement('h3'); heading.textContent = 'During recording'; container.append(heading);
+  const messages = document.createElement('div'); renderRecordingChat(runs, messages, true); container.append(messages);
+  if (runs.some(run => run.state === 'queued' || run.state === 'running'))
+    setTimeout(() => loadSavedRecordingChat(conversationId).catch(() => {}), 2000);
+}
 function captureControls() {
   const active = Boolean(capture?.recorder && capture.recorder.state !== 'inactive');
   document.querySelector('#start-recording').hidden = active;
@@ -1856,19 +1950,26 @@ function captureControls() {
   recordingTimer.textContent = time(captureElapsedMs() / 1000);
 }
 function showRecordingView(view) {
+  if (view !== 'chat') recordingPrimaryView = view;
   const notes = view === 'notes';
+  const transcript = view === 'transcript';
   document.querySelector('#recording-notes-panel').hidden = !notes;
-  document.querySelector('#recording-transcript-panel').hidden = notes;
+  document.querySelector('#recording-transcript-panel').hidden = !transcript;
   document.querySelector('#recording-notes-tab').setAttribute('aria-selected', String(notes));
-  document.querySelector('#recording-transcript-tab').setAttribute('aria-selected', String(!notes));
+  document.querySelector('#recording-transcript-tab').setAttribute('aria-selected', String(transcript));
+  document.querySelector('#recording-chat-toggle').setAttribute('aria-expanded', String(view === 'chat'));
+  document.querySelector('.recording-workspace-grid').classList.toggle('recording-chat-open', view === 'chat');
 }
 document.querySelector('#recording-notes-tab').addEventListener('click', () => showRecordingView('notes'));
 document.querySelector('#recording-transcript-tab').addEventListener('click', () => showRecordingView('transcript'));
+document.querySelector('#recording-chat-toggle').addEventListener('click', () =>
+  showRecordingView(document.querySelector('#recording-chat-toggle').getAttribute('aria-expanded') === 'true' ? recordingPrimaryView : 'chat'));
 function showRecordingWorkspace() {
   document.body.classList.remove('profile-page', 'conversation-page');
   document.body.classList.add('recording-page');
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(cleanRunTimer);
+  clearTimeout(recordingChatTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null;
@@ -1882,6 +1983,8 @@ function showRecordingWorkspace() {
   if (!capture) {
     document.querySelector('#recording-transcript-state').textContent = 'Listening…';
     document.querySelector('#recording-transcript-preview').replaceChildren();
+    document.querySelector('#recording-chat-messages').replaceChildren();
+    document.querySelector('#recording-chat-status').textContent = '';
   }
   captureControls();
 }
@@ -1929,6 +2032,7 @@ async function loadRecoveries() {
         history.pushState({}, '', '/recording'); showRecordingWorkspace();
         document.querySelector('#recording-title').value = session.title;
         await loadNotes('recording', session.id);
+        await loadRecordingChat(session.id);
         notesEditors.recording.focus();
       } catch (error) {message.textContent = error.message;}
     });
@@ -1985,6 +2089,8 @@ async function startCapture() {
   recordingState.textContent = 'Requesting microphone access…';
   captureRequesting = true; captureControls();
   let stream;
+  let waveformContext = null;
+  try {waveformContext = new AudioContext(); waveformContext.resume().catch(() => {});} catch {}
   try {
     stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
     document.querySelector('#recording-source-label').textContent = `${stream.getAudioTracks()[0]?.label || 'Microphone'} · English`;
@@ -2023,12 +2129,16 @@ async function startCapture() {
       }
     }));
     recorder.start(1000);
+    try {capture.stopWaveform = drawRecordingWaveform(capture, waveformContext);} catch {
+      waveformContext?.close().catch(() => {}); capture.stopWaveform = () => {};}
     capture.timer = setInterval(captureControls, 250);
     recordingState.textContent = 'Recording'; recordingDetail.textContent = 'Saving locally';
     loadNotes('recording', session.id).catch(error => {notesElements('recording').status.textContent = error.message;});
+    loadRecordingChat(session.id).catch(error => {document.querySelector('#recording-chat-status').textContent = error.message;});
     captureControls(); await loadRecoveries();
   } catch (error) {
     stream?.getTracks().forEach(track => track.stop());
+    waveformContext?.close().catch(() => {});
     if (capture?.recorder?.state === 'inactive') capture = null;
     captureControls();
     recordingState.textContent = 'Could not start recording';
@@ -2044,6 +2154,7 @@ async function finishCapture() {
   current.stopping = true;
   captureFinalizing = true; captureControls();
   clearInterval(current.timer);
+  current.stopWaveform?.();
   current.stream.getTracks().forEach(track => track.stop());
   recordingState.textContent = 'Saving recording…';
   await current.pending;
