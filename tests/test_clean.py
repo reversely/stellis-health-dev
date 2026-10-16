@@ -154,7 +154,7 @@ class CleanWorkflowTest(unittest.TestCase):
         run = self._start()
         source = storage.get_display_transcript(self.conversation_id)['segments']
         result = {'segments': [{**item, 'source_text': item['text'],
-                                'text': 'Avery discussed.' if index == 0 else item['text'],
+                                'text': 'Avery discussed.' if index == 0 else 'They will send 3 drafts today.',
                                 'needs_review': False, 'review_reason': None}
                                for index, item in enumerate(source)]}
         storage.update_clean_run(run['id'], state='succeeded', stage='complete', result_json=json.dumps(result))
@@ -164,3 +164,6 @@ class CleanWorkflowTest(unittest.TestCase):
         displayed = self.client.get(f"/api/v1/clean-runs/{run['id']}").json()['result']['segments'][0]
         self.assertEqual(displayed['text'], 'Avery discussed satellites.')
         self.assertTrue(displayed['needs_review'])
+        second = self.client.get(f"/api/v1/clean-runs/{run['id']}").json()['result']['segments'][1]
+        self.assertEqual(second['text'], 'They will send 3 drafts today.')
+        self.assertTrue(second['needs_review'])
