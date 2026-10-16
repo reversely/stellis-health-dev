@@ -228,6 +228,22 @@ def _chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
     return result
 
 
+def _summary_chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
+    chunks = _chunks(segments)
+    if len(chunks) < 2:
+        return chunks
+    tail = chunks[-1]
+    prior_ids = {str(segment["id"]) for segment in chunks[-2]}
+    fresh = [segment for segment in tail if str(segment["id"]) not in prior_ids]
+    fresh_terms = sum(len(_anchor_terms(str(segment["text"]))) for segment in fresh)
+    tail_duration = int(tail[-1]["end_ms"]) - int(tail[0]["start_ms"])
+    # A short overlap after the last full part adds no useful chronological
+    # point; forcing one made the closing pleasantries fail citation checks.
+    if len(fresh) < len(tail) and tail_duration <= 30_000 and fresh_terms <= 15:
+        return chunks[:-1]
+    return chunks
+
+
 def _focus_window(chunk: list[dict[str, object]]) -> list[dict[str, object]]:
     """Prefer three informative adjacent passages over one long isolated fragment."""
     if len(chunk) <= 3:
@@ -267,6 +283,7 @@ def _supported_terms(text: str, sources: str) -> tuple[float, list[str]]:
 def _validate_items(payload: object, allowed_ids: set[str], *, require_overview: bool,
                     source_texts: dict[str, str] | None = None,
                     min_coverage: float = 0.75,
+                    min_source_terms: int = 0,
                     allow_period_repair: bool = False) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise AIError("invalid_json", "The model returned an invalid result shape")
@@ -301,6 +318,8 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
                 raise AIError("incomplete_sentence", "The model returned an unfinished overview point")
             if field == "overview" and source_texts is not None:
                 cited = " ".join(source_texts.get(source_id, "") for source_id in source_ids)
+                if len(set(_anchor_terms(cited))) < min_source_terms:
+                    raise AIError("weak_citation", "The overview cites too little concrete source text")
                 coverage, missing = _supported_terms(text, cited)
                 if coverage < min_coverage:
                     raise AIError("weak_citation", f"The overview cites passages missing these claim terms: {', '.join(dict.fromkeys(missing[:8]))}")
@@ -396,6 +415,7 @@ def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int
               metadata: dict[str, object], *, kind: str, require_overview: bool = False,
               source_texts: dict[str, str] | None = None,
               min_coverage: float = 0.75,
+              min_source_terms: int = 0,
               allow_period_repair: bool = False) -> dict[str, object]:
     for attempt in range(2):
         try:
@@ -403,6 +423,7 @@ def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int
             return (_validate_answer(payload, allowed) if kind == "answer"
                     else _validate_items(payload, allowed, require_overview=require_overview,
                                          source_texts=source_texts, min_coverage=min_coverage,
+                                         min_source_terms=min_source_terms,
                                          allow_period_repair=allow_period_repair))
         except AIError as exc:
             if attempt or exc.code not in {"invalid_json", "invalid_source", "output_limit", "incomplete_sentence", "weak_citation"}:
@@ -447,7 +468,7 @@ _SUMMARY_SYSTEM = ("You summarize an interview using only the supplied transcrip
 
 
 def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run_id: str) -> dict[str, object]:
-    chunks = _chunks(segments)
+    chunks = _summary_chunks(segments)
     prior = storage.get_ai_run(run_id)
     extracted = json.loads(str(prior["checkpoint_json"])) if prior else []
     for index in range(len(extracted), len(chunks)):
@@ -460,7 +481,8 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
                     {"role": "user", "content": f"Analyze this transcript part. JSON only.\n{evidence}"}]
         try:
             candidate = _complete(messages, set(aliases), 1200, metadata,
-                                  kind="summary", require_overview=True, source_texts=source_texts)
+                                  kind="summary", require_overview=True, source_texts=source_texts,
+                                  min_source_terms=10 if len(chunk) > 10 else 0)
         except AIError as exc:
             if exc.code != "weak_citation":
                 raise
@@ -476,7 +498,8 @@ def _summary(segments: list[dict[str, object]], metadata: dict[str, object], run
                                 {"role": "user", "content": f"Summarize only these cited lines. JSON only.\n{focus_evidence}"}]
             candidate = _complete(focused_messages, set(aliases), 1200, metadata,
                                   kind="summary", require_overview=True, source_texts=focus_texts,
-                                  min_coverage=0.60, allow_period_repair=True)
+                                  min_coverage=0.60, min_source_terms=10 if len(chunk) > 10 else 0,
+                                  allow_period_repair=True)
             # The focused claim can draw on the neighboring context even when
             # the provider names just one line. Show all three audio links.
             for item in candidate["overview"]:

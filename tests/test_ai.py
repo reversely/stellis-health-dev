@@ -241,6 +241,16 @@ class AIWorkflowTest(unittest.TestCase):
                 source_texts=source, min_coverage=.6, allow_period_repair=True)
         self.assertEqual(partial.exception.code, "incomplete_sentence")
 
+    def test_long_part_rejects_thin_source_even_when_claim_words_overlap(self) -> None:
+        payload = {"overview":[{"text":"A participant is building a 3.9 meter structure.",
+                                "source_segment_ids":["s1"]}],
+                   "topics":[],"decisions":[],"action_items":[]}
+        source = {"s1":"Speaker 4 Chef on um is working on building a 3.9 meter"}
+        with self.assertRaises(ai.AIError) as thin:
+            ai._validate_items(payload, {"s1"}, require_overview=True,
+                               source_texts=source, min_source_terms=10)
+        self.assertEqual(thin.exception.code, "weak_citation")
+
     def test_answer_uses_evidence_or_marks_insufficient(self) -> None:
         run = self._create("answer", "What did Avery discuss?")
         payload = {"answer":"Satellites.","source_segment_ids":["s1"],"insufficient_evidence":False}
@@ -257,6 +267,21 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual([len(chunk) for chunk in ai._chunks(segments)], [2])
         self.assertEqual(ai._canonical_sources(["[s1]", "s1"], {"s1"}), ["s1"])
         self.assertEqual(ai._canonical_sources(["s1-s3"], {"s1", "s2", "s3"}), ["s1", "s2", "s3"])
+
+    def test_short_overlapping_tail_does_not_force_an_unsupported_point(self) -> None:
+        segments = storage.get_display_transcript(self.conversation_id)["segments"]
+        closing = {**segments[-1], "id":"closing", "start_ms":3000, "end_ms":5000,
+                   "text":"Thanks. We can follow up."}
+        run = self._create("summary")
+        payload = {"overview":[{"text":"Avery discussed satellites.","source_segment_ids":["s1"]}],
+                   "topics":[],"decisions":[],"action_items":[]}
+        with patch.object(ai, "_chunks", return_value=[segments, [segments[-1], closing]]), \
+             patch.object(ai, "_request", return_value=payload) as provider:
+            ai._run(run["id"])
+        self.assertEqual(provider.call_count, 1)
+        result = self.client.get(f"/api/v1/ai-runs/{run['id']}").json()["result"]
+        self.assertEqual(result["overview"], [{"text":"Avery discussed satellites.",
+                                                "source_segment_ids":["seg-1"]}])
 
     def test_provider_failures_have_public_codes_without_response_body(self) -> None:
         original_client = httpx.Client
@@ -287,7 +312,7 @@ class AIWorkflowTest(unittest.TestCase):
             run = self._create("summary")
             calls = 0
             def respond(messages, allowed, max_tokens, metadata, *, kind, require_overview=False,
-                        source_texts=None):
+                        source_texts=None, min_source_terms=0):
                 nonlocal calls
                 calls += 1
                 label = "s1"
