@@ -16,6 +16,12 @@ MAX_CHUNK_SEGMENTS = 20
 MAX_CHUNK_CHARS = 3200
 MAX_CHUNKS = 64
 _LOCK = threading.Lock()
+_SUSPECT_WORD = re.compile(r"\b[A-Za-z]-[A-Za-z]{3,}\b")
+
+
+def _recognition_artifact(value: str) -> bool:
+    """Flag short letter-hyphen words that commonly hide acronym recognition errors."""
+    return bool(_SUSPECT_WORD.search(value))
 
 
 def public_run(record: dict[str, object]) -> dict[str, object]:
@@ -25,6 +31,9 @@ def public_run(record: dict[str, object]) -> dict[str, object]:
         edits = storage.clean_run_edits(str(record["id"]))
         reviews = storage.clean_run_reviews(str(record["id"]))
         for segment in result["segments"]:
+            if _recognition_artifact(segment["text"]) and not segment["needs_review"]:
+                segment["needs_review"] = True
+                segment["review_reason"] = "Unusual word; check audio"
             if record["prompt_version"] != PROMPT_VERSION and segment["text"] != segment["source_text"]:
                 source = {**segment, "text": segment["source_text"]}
                 checked = _validate_chunk({"segments": [{"source_segment_id": "s1", "text": segment["text"],
@@ -170,8 +179,9 @@ def _validate_chunk(payload: object, chunk: list[dict[str, object]]) -> list[dic
                        "speaker_uncertain": source["speaker_uncertain"],
                        "speaker_label_source": source["speaker_label_source"],
                        "speaker_display_name": source["speaker_display_name"],
-                       "needs_review": bool(item["needs_review"] or changed_numbers or overlap < 0.8 or replacements or too_much_change),
-                       "review_reason": "Name, number, or wording needs audio review" if changed_numbers or too_much_change else None})
+                       "needs_review": bool(item["needs_review"] or changed_numbers or overlap < 0.8 or replacements or too_much_change or _recognition_artifact(cleaned)),
+                       "review_reason": "Name, number, or wording needs audio review" if changed_numbers or too_much_change else
+                                        "Unusual word; check audio" if _recognition_artifact(cleaned) else None})
     return result
 
 
