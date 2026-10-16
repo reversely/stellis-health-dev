@@ -240,6 +240,17 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS meeting_notes (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT UNIQUE REFERENCES conversations(id),
+            recording_id TEXT UNIQUE REFERENCES recording_sessions(id),
+            markdown TEXT NOT NULL DEFAULT '',
+            revision INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            CHECK (conversation_id IS NOT NULL OR recording_id IS NOT NULL)
+        )"""
+    )
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS ai_runs (
             id TEXT PRIMARY KEY,
             conversation_id TEXT NOT NULL REFERENCES conversations(id),

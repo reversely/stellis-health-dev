@@ -99,6 +99,115 @@ async function json(response) {
   if (!response.ok) throw new Error(data.detail || 'The request failed.');
   return data;
 }
+const notesStates = {recording:null, conversation:null};
+const notesEditors = {recording:null, conversation:null};
+let notesModulePromise = null;
+function notesEndpoint(scope, id) {
+  return `${API}/${scope === 'recording' ? 'recordings' : 'conversations'}/${encodeURIComponent(id)}/notes`;
+}
+function notesDraftKey(scope, id) { return `stellis-notes-${scope}-${id}`; }
+function notesElements(scope) {
+  return {root:document.querySelector(`#${scope}-notes-editor`),
+    toolbar:document.querySelector(`#${scope}-notes-toolbar`),
+    status:document.querySelector(`#${scope}-notes-status`),
+    retry:document.querySelector(`#${scope}-notes-retry`)};
+}
+async function ensureNotesEditor(scope) {
+  if (notesEditors[scope]) return notesEditors[scope];
+  notesModulePromise ||= import('/static/notes-editor.bundle.js');
+  const {createNotesEditor} = await notesModulePromise;
+  const elements = notesElements(scope);
+  const editor = createNotesEditor(elements.root, elements.toolbar, markdown => {
+    const state = notesStates[scope];
+    if (!state) return;
+    state.pendingMarkdown = markdown;
+    try { localStorage.setItem(notesDraftKey(scope, state.id), JSON.stringify({markdown, revision:state.revision})); } catch {}
+    elements.status.textContent = 'Unsaved'; elements.retry.hidden = true;
+    clearTimeout(state.timer);
+    state.timer = setTimeout(() => flushNotes(state), 600);
+  }, error => {elements.status.textContent = error.message;});
+  notesEditors[scope] = editor;
+  elements.retry.addEventListener('click', () => retryNotes(scope));
+  return editor;
+}
+async function loadNotes(scope, id) {
+  const editor = await ensureNotesEditor(scope);
+  const remote = await json(await fetch(notesEndpoint(scope, id)));
+  let markdown = remote.markdown;
+  let recovered = false;
+  try {
+    const draft = JSON.parse(localStorage.getItem(notesDraftKey(scope, id)) || 'null');
+    if (draft?.markdown !== undefined && draft.markdown !== remote.markdown) {
+      markdown = draft.revision === remote.revision || draft.markdown.includes(remote.markdown) ? draft.markdown :
+        `${remote.markdown}\n\n---\n\n${draft.markdown}`;
+      recovered = true;
+    }
+  } catch {}
+  const state = {scope,id,revision:remote.revision,savedMarkdown:remote.markdown,
+    pendingMarkdown:markdown,timer:null,savePromise:null};
+  notesStates[scope] = state;
+  editor.setMarkdown(markdown);
+  const elements = notesElements(scope);
+  elements.status.textContent = recovered ? 'Recovered draft' : '';
+  elements.retry.hidden = true;
+  if (recovered) state.timer = setTimeout(() => flushNotes(state), 500);
+  return state;
+}
+async function flushNotes(state) {
+  if (!state || state.savePromise) return state?.savePromise || true;
+  clearTimeout(state.timer);
+  if (state.pendingMarkdown === state.savedMarkdown) return true;
+  const elements = notesElements(state.scope);
+  state.savePromise = (async () => {
+    while (state.pendingMarkdown !== state.savedMarkdown) {
+      const markdown = state.pendingMarkdown;
+      elements.status.textContent = 'Saving…';
+      try {
+        const saved = await json(await fetch(notesEndpoint(state.scope, state.id), {
+          method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({markdown,expected_revision:state.revision}),
+        }));
+        state.revision = saved.revision; state.savedMarkdown = saved.markdown;
+        if (state.pendingMarkdown === state.savedMarkdown) {
+          try {localStorage.removeItem(notesDraftKey(state.scope, state.id));} catch {}
+          elements.status.textContent = 'Saved'; elements.retry.hidden = true;
+        }
+      } catch (error) {
+        elements.status.textContent = error.message; elements.retry.hidden = false;
+        return false;
+      }
+    }
+    return true;
+  })().finally(() => {state.savePromise = null;});
+  return state.savePromise;
+}
+async function retryNotes(scope) {
+  const state = notesStates[scope];
+  if (!state) return;
+  try {
+    const remote = await json(await fetch(notesEndpoint(scope, state.id)));
+    if (remote.revision !== state.revision) {
+      const local = state.pendingMarkdown;
+      state.pendingMarkdown = local.includes(remote.markdown) ? local : `${remote.markdown}\n\n---\n\n${local}`;
+      notesEditors[scope].setMarkdown(state.pendingMarkdown);
+      state.revision = remote.revision; state.savedMarkdown = remote.markdown;
+    }
+    await flushNotes(state);
+  } catch (error) {notesElements(scope).status.textContent = error.message;}
+}
+async function recoverNotesDraft(recordingId) {
+  const key = notesDraftKey('recording', recordingId);
+  let draft;
+  try {draft = JSON.parse(localStorage.getItem(key) || 'null');} catch {return;}
+  if (typeof draft?.markdown !== 'string') return;
+  const remote = await json(await fetch(notesEndpoint('recording', recordingId)));
+  if (remote.markdown === draft.markdown) {localStorage.removeItem(key); return;}
+  const markdown = draft.markdown.includes(remote.markdown) ? draft.markdown :
+    `${remote.markdown}\n\n---\n\n${draft.markdown}`;
+  await json(await fetch(notesEndpoint('recording', recordingId), {method:'PUT',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({markdown,expected_revision:remote.revision})}));
+  localStorage.removeItem(key);
+}
 fetch(`${API}/auth/status`).then(json).then(session => {
   document.querySelector('#logout-button').hidden = !session.required;
 }).catch(error => setStatus(error.message));
@@ -386,6 +495,7 @@ async function showPerson(id) {
   document.querySelector('#person-delete').hidden = person.total_link_count > 0;
 }
 async function showDetail(id) {
+  await flushNotes(notesStates.conversation);
   document.body.classList.remove('profile-page', 'recording-page');
   recordingPanel.hidden = true;
   document.querySelector('#vocabulary-panel').hidden = false;
@@ -437,12 +547,14 @@ async function showDetail(id) {
   syncPlayerControls();
   if (skipSilenceCheckbox.checked) startSilenceScan(id).catch(error => { skipSilenceStatus.textContent = error.message; });
   await loadSpeech(id);
-  showConversationTab('transcript');
+  await loadNotes('conversation', id);
+  showConversationTab('summary');
   await loadAIRuns(id);
   await loadCleanRuns(id);
   const query = new URLSearchParams(location.search);
   const targetSegmentId = query.get('at');
   if (targetSegmentId) {
+    showConversationTab('transcript');
     const target = transcriptSegments.find(segment => segment.id === targetSegmentId);
     if (target) {
       const seek = () => { player.pause(); player.currentTime = target.start_ms / 1000; };
@@ -1582,6 +1694,15 @@ function captureControls() {
   document.querySelector('#back-from-recording').disabled = active || captureRequesting || captureFinalizing;
   recordingTimer.textContent = time(captureElapsedMs() / 1000);
 }
+function showRecordingView(view) {
+  const notes = view === 'notes';
+  document.querySelector('#recording-notes-panel').hidden = !notes;
+  document.querySelector('#recording-transcript-panel').hidden = notes;
+  document.querySelector('#recording-notes-tab').setAttribute('aria-selected', String(notes));
+  document.querySelector('#recording-transcript-tab').setAttribute('aria-selected', String(!notes));
+}
+document.querySelector('#recording-notes-tab').addEventListener('click', () => showRecordingView('notes'));
+document.querySelector('#recording-transcript-tab').addEventListener('click', () => showRecordingView('transcript'));
 function showRecordingWorkspace() {
   document.body.classList.remove('profile-page', 'conversation-page');
   document.body.classList.add('recording-page');
@@ -1596,6 +1717,7 @@ function showRecordingWorkspace() {
   document.querySelector('#vocabulary-panel').hidden = true;
   recordingPanel.hidden = false;
   document.querySelector('#page-title').textContent = 'New recording';
+  showRecordingView('notes');
   if (!capture) {
     document.querySelector('#recording-transcript-state').textContent = 'Listening…';
     document.querySelector('#recording-transcript-preview').replaceChildren();
@@ -1640,11 +1762,23 @@ async function loadRecoveries() {
     const row = document.createElement('div'); row.className = 'recovery-row';
     const message = document.createElement('span');
     message.textContent = `${session.title} · ${session.chunk_count} saved chunks · interrupted recording`;
+    const review = document.createElement('button'); review.type = 'button'; review.textContent = 'Review notes';
+    review.addEventListener('click', async () => {
+      try {
+        history.pushState({}, '', '/recording'); showRecordingWorkspace();
+        document.querySelector('#recording-title').value = session.title;
+        await loadNotes('recording', session.id);
+        notesEditors.recording.focus();
+      } catch (error) {message.textContent = error.message;}
+    });
     const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Recover and save';
     button.disabled = session.chunk_count === 0;
     button.addEventListener('click', async () => {
       button.disabled = true; message.textContent = 'Checking and importing saved audio…';
       try {
+        if (notesStates.recording?.id === session.id && !(await flushNotes(notesStates.recording)))
+          throw new Error('Save your notes before recovery.');
+        await recoverNotesDraft(session.id);
         const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}/finalize`, {method:'POST'}));
         await loadRecoveries(); history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
         await showDetail(result.conversation.id); setStatus('Recovered recording saved.', true);
@@ -1654,10 +1788,13 @@ async function loadRecoveries() {
     discard.setAttribute('aria-label', `Discard unfinished recording ${session.title}`);
     discard.addEventListener('click', async () => {
       if (!window.confirm(`Discard unfinished recording “${session.title}”? Saved audio chunks will be deleted.`)) return;
-      try {await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}`, {method:'DELETE'})); await loadRecoveries();}
+      try {await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}`, {method:'DELETE'}));
+        try {localStorage.removeItem(notesDraftKey('recording', session.id));} catch {}
+        if (notesStates.recording?.id === session.id) {notesStates.recording = null; notesEditors.recording?.setMarkdown('');}
+        await loadRecoveries();}
       catch (error) {message.textContent = `Could not discard recording: ${error.message}`;}
     });
-    const actions = document.createElement('div'); actions.className = 'recovery-actions'; actions.append(button, discard);
+    const actions = document.createElement('div'); actions.className = 'recovery-actions'; actions.append(review, button, discard);
     row.append(message, actions); container.append(row);
   }
 }
@@ -1727,6 +1864,7 @@ async function startCapture() {
     recorder.start(1000);
     capture.timer = setInterval(captureControls, 250);
     recordingState.textContent = 'Recording'; recordingDetail.textContent = 'Saving locally';
+    loadNotes('recording', session.id).catch(error => {notesElements('recording').status.textContent = error.message;});
     captureControls(); await loadRecoveries();
   } catch (error) {
     stream?.getTracks().forEach(track => track.stop());
@@ -1749,6 +1887,11 @@ async function finishCapture() {
   recordingState.textContent = 'Saving recording…';
   await current.pending;
   capture = null; captureControls();
+  if (notesStates.recording?.id === current.session.id && !(await flushNotes(notesStates.recording))) {
+    recordingState.textContent = 'Recording needs recovery';
+    recordingDetail.textContent = 'Save your notes, then recover the recording below.';
+    await loadRecoveries(); captureFinalizing = false; captureControls(); return;
+  }
   if (current.uploadError) {
     recordingState.textContent = 'Recording interrupted';
     recordingDetail.textContent = 'Some audio could not be stored. Recover the chunks that were saved below.';

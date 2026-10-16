@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, clean, generation_review, library, people, processing, recording, recording_preview, search, storage
+from stellis import ai, auth, clean, generation_review, library, notes, people, processing, recording, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -198,6 +198,11 @@ class RecordingRename(BaseModel):
 class RecordingEvent(BaseModel):
     kind: str
     media_position_ms: int = Field(ge=0)
+
+
+class NotesWrite(BaseModel):
+    markdown: str = Field(max_length=200_000)
+    expected_revision: int = Field(ge=0)
 
 
 class AIRunRequest(BaseModel):
@@ -610,6 +615,44 @@ def recording_preview_generate(recording_id: str) -> dict[str, object]:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Local preview transcription failed") from exc
+
+
+def _read_notes(scope: str, item_id: str) -> dict[str, object]:
+    try:
+        return notes.get(scope, item_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _write_notes(scope: str, item_id: str, request: NotesWrite) -> dict[str, object]:
+    try:
+        return notes.save(scope, item_id, request.markdown, request.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.get("/recordings/{recording_id}/notes")
+def recording_notes(recording_id: str) -> dict[str, object]:
+    return _read_notes("recording", recording_id)
+
+
+@api.put("/recordings/{recording_id}/notes")
+def save_recording_notes(recording_id: str, request: NotesWrite) -> dict[str, object]:
+    return _write_notes("recording", recording_id, request)
+
+
+@api.get("/conversations/{conversation_id}/notes")
+def conversation_notes(conversation_id: str) -> dict[str, object]:
+    return _read_notes("conversation", conversation_id)
+
+
+@api.put("/conversations/{conversation_id}/notes")
+def save_conversation_notes(conversation_id: str, request: NotesWrite) -> dict[str, object]:
+    return _write_notes("conversation", conversation_id, request)
 
 
 @api.get("/conversations/{conversation_id}")
