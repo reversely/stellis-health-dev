@@ -34,6 +34,10 @@ let savingTranscriptEdits = false;
 let transcriptEditError = null;
 const pendingTranscriptEdits = new Map();
 let selectedExcerpt = null;
+let activeWordElement = null;
+let lastIntentionalScroll = 0;
+let lastAutoFollow = 0;
+for (const name of ['wheel', 'touchstart', 'keydown']) window.addEventListener(name, () => { lastIntentionalScroll = Date.now(); }, {passive:true});
 const recordingPanel = document.querySelector('#recording-panel');
 const recordingState = document.querySelector('#recording-state');
 const recordingDetail = document.querySelector('#recording-detail');
@@ -622,7 +626,7 @@ async function showTranscript(id) {
     const words = document.createElement('div');
     words.className = 'segment-text';
     words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight or click to play.`);
-    renderHighlightedText(words, segment.text, highlights);
+    renderHighlightedText(words, segment.text, highlights, segment.words || []);
     words.addEventListener('input', () => {
       if (!transcriptEditMode) return;
       const value = words.innerText.replace(/\u00a0/g, ' ');
@@ -635,7 +639,9 @@ async function showTranscript(id) {
     row.addEventListener('click', event => {
       if (transcriptEditMode) return;
       if (event.target.closest('button,input,textarea,select') || window.getSelection()?.toString().trim()) return;
-      seek();
+      const timed = event.target.closest('.timed-word');
+      if (timed && row.contains(timed)) { player.currentTime = Number(timed.dataset.startMs) / 1000; player.play().catch(() => {}); }
+      else seek();
     });
     row.append(stamp, speaker, words);
     body.append(row);
@@ -644,21 +650,36 @@ async function showTranscript(id) {
     transcriptView.append(turn);
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
-  processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a passage to play; drag across words to highlight.`;
+  processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a word or passage to play; drag across words to highlight.`;
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
   window.scrollTo(0, previousScroll);
 }
-function renderHighlightedText(container, value, highlights) {
+function renderHighlightedText(container, value, highlights, timedWords = []) {
   const valid = highlights.filter(item => value.slice(item.start_offset, item.end_offset) === item.quote);
-  const edges = [...new Set([0, value.length, ...valid.flatMap(item => [item.start_offset, item.end_offset])])].sort((a, b) => a - b);
+  const measured = timedWords.map((word, index) => ({...word, index})).filter(word => value.slice(word.start_offset, word.end_offset) === word.text && word.end_ms > word.start_ms);
+  const edges = [...new Set([0, value.length, ...valid.flatMap(item => [item.start_offset, item.end_offset]),
+    ...measured.flatMap(word => [word.start_offset, word.end_offset])])].sort((a, b) => a - b);
+  let currentWord = null;
+  let currentWordIndex = -1;
   for (let i = 0; i < edges.length - 1; i++) {
     const start = edges[i], end = edges[i + 1];
     const content = value.slice(start, end);
     const marked = valid.some(item => item.start_offset <= start && item.end_offset >= end);
+    const wordIndex = measured.findIndex(word => word.start_offset <= start && word.end_offset >= end);
+    if (wordIndex !== currentWordIndex) {
+      currentWordIndex = wordIndex; currentWord = null;
+      if (wordIndex >= 0) {
+        const word = measured[wordIndex]; currentWord = document.createElement('span');
+        currentWord.className = 'timed-word'; currentWord.dataset.wordIndex = String(word.index);
+        currentWord.dataset.startMs = String(word.start_ms); currentWord.dataset.endMs = String(word.end_ms);
+        currentWord.title = `Play from ${time(word.start_ms / 1000)} · measured on this device`;
+        container.append(currentWord);
+      }
+    }
     const node = marked ? document.createElement('mark') : document.createTextNode(content);
     if (marked) { node.textContent = content; node.title = 'Highlighted excerpt'; }
-    container.append(node);
+    (currentWord || container).append(node);
   }
   if (highlights.length) {
     const list = document.createElement('div'); list.className = 'segment-highlights';
@@ -1030,6 +1051,20 @@ player.addEventListener('timeupdate', () => {
   const active = transcriptSegments.find(segment => segment.start_ms <= ms && ms < segment.end_ms);
   for (const row of transcriptView.querySelectorAll('.segment.active')) row.classList.remove('active');
   if (active) transcriptView.querySelector(`[data-segment-id="${active.id}"]`)?.classList.add('active');
+  activeWordElement?.classList.remove('active-word'); activeWordElement = null;
+  const activeWord = active?.words?.find(word => word.start_ms <= ms && ms < word.end_ms);
+  if (activeWord) {
+    const index = active.words.indexOf(activeWord);
+    activeWordElement = transcriptView.querySelector(`[data-segment-id="${active.id}"] [data-word-index="${index}"]`);
+    activeWordElement?.classList.add('active-word');
+    if (activeWordElement && !document.querySelector('#transcript-card').hidden && !player.paused &&
+        Date.now() - lastIntentionalScroll > 2500 && Date.now() - lastAutoFollow > 700) {
+      const rect = activeWordElement.getBoundingClientRect();
+      if (rect.top < 90 || rect.bottom > window.innerHeight - 130) {
+        lastAutoFollow = Date.now(); activeWordElement.scrollIntoView({block:'center',behavior:'smooth'});
+      }
+    }
+  }
   const edited = document.querySelector('#edited-transcript');
   for (const row of edited.querySelectorAll('.segment.active')) row.classList.remove('active');
   if (active) edited.querySelector(`[data-segment-id="${active.id}"]`)?.classList.add('active');

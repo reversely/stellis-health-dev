@@ -82,6 +82,23 @@ class ProcessingWorkflowTest(unittest.TestCase):
         self.assertIn("--prompt", observed)
         self.assertIn("Vocabulary: CIFAR", observed)
 
+    def test_native_token_times_form_words_without_invented_offsets(self) -> None:
+        item = {"offsets": {"from": 1000, "to": 2000}, "text": " Space flight, now.", "tokens": [
+            {"text": " Space", "offsets": {"from": 1050, "to": 1300}, "p": .9},
+            {"text": " flight", "offsets": {"from": 1310, "to": 1620}, "p": .8},
+            {"text": ",", "offsets": {"from": 1620, "to": 1660}, "p": .7},
+            {"text": " now", "offsets": {"from": 1700, "to": 1900}, "p": .95},
+            {"text": ".", "offsets": {"from": 1900, "to": 1950}, "p": .9},
+        ]}
+        words = processing._measured_words(item)
+        self.assertEqual([(word["text"], word["start_ms"], word["end_ms"]) for word in words],
+                         [("Space", 1050, 1300), ("flight,", 1310, 1660), ("now.", 1700, 1950)])
+        self.assertEqual([(word["start_offset"], word["end_offset"]) for word in words],
+                         [(0, 5), (6, 13), (14, 18)])
+        self.assertEqual(words[1]["confidence"], .7)
+        item["text"] = "Different words."
+        self.assertEqual(processing._measured_words(item), [])
+
     def test_failed_job_can_be_requeued_without_losing_audio(self) -> None:
         job = processing.request_processing(self.conversation_id)
         environment = {**os.environ,

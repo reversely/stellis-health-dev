@@ -6,6 +6,7 @@ import json
 import hashlib
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -20,7 +21,7 @@ import soundfile as sf
 
 from stellis import storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-v1"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v1"
 REMATCH_VERSION = "speaker-embedding-v1"
 _QUEUE: queue.Queue[str] = queue.Queue()
 _WORKER_LOCK = threading.Lock()
@@ -195,10 +196,48 @@ def _transcribe(audio_path: Path, model: Path, output_base: Path,
         start = int(item["offsets"]["from"])
         end = int(item["offsets"]["to"])
         if end > start and str(item["text"]).strip():
-            segments.append({"start_ms": start, "end_ms": end, "text": str(item["text"]).strip()})
+            segments.append({"start_ms": start, "end_ms": end, "text": str(item["text"]).strip(),
+                             "words": _measured_words(item)})
     if not segments:
         raise RuntimeError("The on-device model returned no speech segments")
     return segments
+
+
+def _measured_words(item: dict[str, object]) -> list[dict[str, object]]:
+    """Join native timed tokens into words only when they reproduce ASR text exactly."""
+    tokens = [token for token in item.get("tokens", [])
+              if isinstance(token, dict) and isinstance(token.get("text"), str)
+              and not token["text"].startswith("[_")]
+    raw = "".join(str(token["text"]) for token in tokens)
+    displayed = str(item["text"]).strip()
+    if not displayed or raw.strip() != displayed:
+        return []
+    shift = raw.find(displayed)
+    if shift < 0:
+        return []
+    ownership: list[int] = []
+    for index, token in enumerate(tokens):
+        ownership.extend([index] * len(str(token["text"])))
+    segment_start = int(item["offsets"]["from"])
+    segment_end = int(item["offsets"]["to"])
+    words: list[dict[str, object]] = []
+    for match in re.finditer(r"\S+", displayed):
+        first = ownership[shift + match.start()]
+        last = ownership[shift + match.end() - 1]
+        contributing = tokens[first:last + 1]
+        try:
+            start = max(segment_start, int(contributing[0]["offsets"]["from"]))
+            end = min(segment_end, int(contributing[-1]["offsets"]["to"]))
+            confidence = min(float(token["p"]) for token in contributing)
+        except (KeyError, ValueError, TypeError):
+            return []
+        if end <= start or (words and start < int(words[-1]["start_ms"])):
+            continue
+        words.append({"text": match.group(), "start_offset": match.start(),
+                      "end_offset": match.end(), "start_ms": start, "end_ms": end,
+                      "confidence": round(max(0.0, min(confidence, 1.0)), 3),
+                      "provenance": "whisper_cpp_token_v1"})
+    return words
 
 
 def _diarize(audio_path: Path, segmentation: Path, embedding: Path, job_id: str) -> list[dict[str, object]]:
@@ -265,7 +304,7 @@ def align_segments(conversation_id: str, segments: list[dict[str, object]],
             "speaker_cluster_id": best[0] if best else None,
             "speaker_uncertain": bool(uncertain),
             "speaker_coverage": round(ratio, 3),
-            "provenance": "on_device_asr", "words": [],
+            "provenance": "on_device_asr", "words": segment.get("words", []),
         })
     return aligned, confident / len(aligned) if aligned else 0
 
