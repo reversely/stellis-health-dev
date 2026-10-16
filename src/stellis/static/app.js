@@ -1202,16 +1202,25 @@ async function showTranscript(id) {
   if (changesButton.hidden) rematchChangesOnly = false;
   changesButton.setAttribute('aria-pressed', String(rematchChangesOnly));
   document.querySelector('#rematch-change-count').textContent = changesButton.hidden ? '' : `${changed} changed`;
-  const counts = new Map();
-  for (const segment of data.segments) if (segment.speaker_cluster_id) counts.set(segment.speaker_cluster_id, (counts.get(segment.speaker_cluster_id) || 0) + 1);
-  const clusterRank = new Map([...new Set(data.segments.map(segment => segment.speaker_cluster_id).filter(Boolean))].map((id, index) => [id, index + 1]));
+  // Use the same persisted effective labels as the turns. Raw acoustic clusters
+  // omit passage and confirmed-Person labels, so they cannot drive this index.
+  const speakerDurations = new Map();
+  for (const segment of data.segments) {
+    const name = segment.speaker_display_name;
+    if (!name || name === 'Unknown speaker') continue;
+    const duration = Math.max(0, segment.end_ms - segment.start_ms);
+    speakerDurations.set(name, (speakerDurations.get(name) || 0) + duration);
+  }
+  const totalSpeakerDuration = [...speakerDurations.values()].reduce((sum, duration) => sum + duration, 0);
   const summary = document.createElement('div');
   summary.className = 'speaker-summary';
-  for (const [cluster, count] of [...counts].sort((a, b) => b[1] - a[1])) {
+  summary.setAttribute('role', 'list');
+  summary.setAttribute('aria-label', 'Speakers');
+  for (const [name, duration] of [...speakerDurations].sort((a, b) => b[1] - a[1])) {
     const pill = document.createElement('span');
     pill.className = 'speaker-pill';
-    const manual = data.speaker_labels.find(label => label.scope === 'cluster' && label.target_id === cluster);
-    pill.textContent = `${manual ? manual.name : `Speaker ${clusterRank.get(cluster)}`} · ${count}`;
+    pill.setAttribute('role', 'listitem');
+    pill.textContent = `${name} (${totalSpeakerDuration ? Math.round(duration * 100 / totalSpeakerDuration) : 0}%)`;
     summary.append(pill);
   }
   transcriptView.append(summary);
@@ -1282,7 +1291,7 @@ async function showTranscript(id) {
     transcriptView.append(turn);
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
-  processingStatus.textContent = `${data.segments.length} passages · ${turns.length} turns · ${counts.size} speakers${unresolved ? ` · ${unresolved} unresolved` : ''}`;
+  processingStatus.textContent = `${data.segments.length} passages · ${turns.length} turns · ${speakerDurations.size} speakers${unresolved ? ` · ${unresolved} unresolved` : ''}`;
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
   refreshTranscriptSearch();
