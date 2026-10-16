@@ -1479,7 +1479,8 @@ async function showTranscript(id) {
     const pill = document.createElement('span');
     pill.className = 'speaker-pill';
     pill.setAttribute('role', 'listitem');
-    pill.textContent = `${name} (${totalSpeakerDuration ? Math.round(duration * 100 / totalSpeakerDuration) : 0}%)`;
+    const share = totalSpeakerDuration ? duration * 100 / totalSpeakerDuration : 0;
+    pill.textContent = `${name} (${share > 0 && share < 0.5 ? '<1' : Math.round(share)}%)`;
     summary.append(pill);
   }
   transcriptView.append(summary);
@@ -1776,7 +1777,11 @@ function showSpeakerPicker(anchor, row, segment) {
   const close = event => { if (!picker.contains(event.target) && event.target !== anchor) { picker.remove(); document.removeEventListener('pointerdown', close); } };
   document.addEventListener('pointerdown', close);
   picker.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); picker.remove(); anchor.focus(); } });
-  const manualNames = (currentTranscript?.speaker_labels || []).map(label => label.name).filter(Boolean);
+  const manualNames = [...new Map((currentTranscript?.segments || [])
+    .filter(item => !item.person_id && item.speaker_label_source?.startsWith('manual_'))
+    .map(item => item.speaker_display_name)
+    .filter(Boolean)
+    .map(name => [name.trim().replace(/\s+/g, ' ').toLocaleLowerCase(), name])).values()];
   let people = [];
   async function apply(name, personId) {
     tag.disabled = true;
@@ -1786,7 +1791,9 @@ function showSpeakerPicker(anchor, row, segment) {
         people.find(item => item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
       const result = await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links`, {
         method:'PUT',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({person_id:person?.id || null,name:person ? null : name,segment_id:segment.id,scope:segment.speaker_cluster_id ? 'cluster' : 'segment',expected_revision:currentTranscript.revision}),
+        body:JSON.stringify({person_id:person?.id || null,name:person ? null : name,segment_id:segment.id,
+          scope:segment.speaker_label_source === 'manual_segment' ? 'segment' : segment.speaker_cluster_id ? 'cluster' : 'segment',
+          expected_revision:currentTranscript.revision}),
       }));
       picker.remove(); document.removeEventListener('pointerdown', close);
       await showTranscript(activeConversationId);
@@ -1900,7 +1907,10 @@ async function showManageSpeakers(row, segment) {
         label.scope === 'cluster' ? item.speaker_cluster_id === label.target_id : item.id === label.target_id);
       return matches.some(item => !item.person_id) && label.name.toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase());
     });
-    for (const label of manual) {
+    const distinctManual = [...new Map(manual.map(label => [label.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase(), label])).values()]
+      .filter(label => !people.some(person => person.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase() ===
+        label.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase()));
+    for (const label of distinctManual) {
       const item = document.createElement('div'); item.className = 'manage-speaker-row';
       const identity = document.createElement('span'); identity.textContent = label.name;
       const local = document.createElement('small'); local.textContent = 'This recording'; identity.append(local);

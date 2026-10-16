@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 
@@ -14,10 +15,16 @@ def _now() -> str:
 
 
 def _name(value: str) -> str:
-    name = value.strip()
+    name = " ".join(value.split())
     if not name or len(name) > 100:
         raise ValueError("Enter a person name of at most 100 characters")
     return name
+
+
+def _matching_person(conn: sqlite3.Connection, name: str) -> sqlite3.Row | None:
+    key = name.casefold()
+    return next((row for row in conn.execute("SELECT id, name FROM persons")
+                 if " ".join(str(row["name"]).split()).casefold() == key), None)
 
 
 def list_people() -> list[dict[str, object]]:
@@ -34,6 +41,11 @@ def create_person(name: str) -> dict[str, object]:
     value = _name(name)
     person = {"id": str(uuid.uuid4()), "name": value, "created_at": _now()}
     with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = _matching_person(conn, value)
+        if existing:
+            row = conn.execute("SELECT id, name, created_at FROM persons WHERE id = ?", (existing["id"],)).fetchone()
+            return dict(row)
         conn.execute("INSERT INTO persons (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
                      (person["id"], value, person["created_at"], person["created_at"]))
     return person
@@ -42,6 +54,10 @@ def create_person(name: str) -> dict[str, object]:
 def rename_person(person_id: str, name: str) -> dict[str, object]:
     value = _name(name)
     with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = _matching_person(conn, value)
+        if existing and str(existing["id"]) != person_id:
+            raise ValueError("A speaker with that name already exists")
         changed = conn.execute("UPDATE persons SET name = ?, updated_at = ? WHERE id = ?",
                                (value, _now(), person_id)).rowcount
     if not changed:
@@ -128,31 +144,59 @@ def confirm_person(conversation_id: str, segment_id: str, person_id: str | None,
         if not conn.execute("SELECT 1 FROM conversations WHERE id = ? AND trashed_at IS NULL", (conversation_id,)).fetchone():
             raise LookupError("Conversation not found")
         if cleaned_name is not None:
-            found = conn.execute("SELECT id FROM persons WHERE name = ? COLLATE NOCASE LIMIT 1",
-                                 (cleaned_name,)).fetchone()
+            found = _matching_person(conn, cleaned_name)
             if found:
                 person_id = str(found["id"])
             else:
                 person_id = str(uuid.uuid4())
                 conn.execute("INSERT INTO persons (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
                              (person_id, cleaned_name, stamp, stamp))
-        elif not conn.execute("SELECT 1 FROM persons WHERE id = ?", (person_id,)).fetchone():
-            raise LookupError("Person not found")
+        else:
+            found = conn.execute("SELECT id, name FROM persons WHERE id = ?", (person_id,)).fetchone()
+            if not found:
+                raise LookupError("Person not found")
+            cleaned_name = str(found["name"])
         existing = {row["segment_id"]: row["person_id"] for row in conn.execute(
             "SELECT segment_id, person_id FROM person_links WHERE conversation_id = ?",
             (conversation_id,)).fetchall()}
         selected_person = existing.get(segment_id)
         skipped = 0
-        for item in matches:
+        labels = conn.execute(
+            "SELECT scope, target_id, name FROM speaker_labels WHERE conversation_id = ?", (conversation_id,)).fetchall()
+        normalized_name = cleaned_name.casefold()
+        manual_labels = [row for row in labels
+                         if " ".join(str(row["name"]).split()).casefold() == normalized_name]
+        passage_labels = {str(row["target_id"]): str(row["name"]) for row in labels if row["scope"] == "segment"}
+        cluster_labels = {str(row["target_id"]): str(row["name"]) for row in labels if row["scope"] == "cluster"}
+        manual_ids = {str(item["id"]) for item in segments
+                      if " ".join((passage_labels.get(str(item["id"])) or
+                                   cluster_labels.get(str(item.get("speaker_cluster_id"))) or "").split()).casefold()
+                      == normalized_name}
+        targets = {str(item["id"]): item for item in matches}
+        targets.update({str(item["id"]): item for item in segments if str(item["id"]) in manual_ids})
+        confirmed = 0
+        for item in targets.values():
             if scope == "cluster" and existing.get(item["id"]) not in (None, person_id, selected_person):
+                skipped += 1
+                continue
+            if item["id"] in manual_ids and existing.get(item["id"]) not in (None, person_id):
                 skipped += 1
                 continue
             conn.execute("""INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at)
                 VALUES (?, ?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
                 person_id = excluded.person_id, start_ms = excluded.start_ms, confirmed_at = excluded.confirmed_at""",
                 (conversation_id, item["id"], person_id, item["start_ms"], stamp))
-    return {"person_id": person_id, "confirmed_passages": len(matches) - skipped,
-            "preserved_other_people": skipped}
+            confirmed += 1
+        promoted = 0
+        for label in manual_labels:
+            if label["scope"] == "segment" and label["target_id"] not in manual_ids:
+                continue
+            if label["scope"] == "cluster" and not any(item.get("speaker_cluster_id") == label["target_id"] for item in segments):
+                continue
+            promoted += conn.execute("DELETE FROM speaker_labels WHERE conversation_id = ? AND scope = ? AND target_id = ?",
+                                     (conversation_id, label["scope"], label["target_id"])).rowcount
+    return {"person_id": person_id, "confirmed_passages": confirmed,
+            "preserved_other_people": skipped, "promoted_labels": promoted}
 
 
 def remove_person(conversation_id: str, segment_id: str, scope: str, expected_revision: int) -> dict[str, object]:

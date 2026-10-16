@@ -125,6 +125,65 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual([item['speaker_display_name'] for item in
                           self.client.get(f'{self.base}/transcript').json()['segments']], ['Jay', 'Jay'])
 
+    def test_repeated_legacy_labels_become_one_saved_person(self) -> None:
+        segments = [{"id": f"jay-{i}", "start_ms": i * 1000, "end_ms": (i + 1) * 1000,
+                     "text": "Hello.", "speaker_cluster_id": f"cluster-{i}", "words": []}
+                    for i in range(74)]
+        segments.append({"id": "other", "start_ms": 74000, "end_ms": 75000,
+                         "text": "Other.", "speaker_cluster_id": "other", "words": []})
+        storage.save_transcript({"conversation_id": self.conversation_id, "revision": 2,
+                                 "language": "en", "segments_json": json.dumps(segments),
+                                 "turns_json": "[]", "updated_at": datetime.now(timezone.utc).isoformat()})
+        shereen = self.client.post('/api/v1/persons', json={'name': 'Shereen'}).json()
+        self.assertEqual(self.client.put(f'{self.base}/person-links', json={
+            'person_id': shereen['id'], 'segment_id': 'other', 'scope': 'segment',
+            'expected_revision': 2}).status_code, 200)
+        with storage.connect() as conn:
+            conn.executemany('''INSERT INTO speaker_labels (conversation_id, scope, target_id, name, updated_at)
+                VALUES (?, 'segment', ?, 'Jay Matlock', ?)''',
+                [(self.conversation_id, f'jay-{i}', datetime.now(timezone.utc).isoformat()) for i in range(74)])
+        response = self.client.put(f'{self.base}/person-links', json={
+            'name': '  Jay   Matlock ', 'segment_id': 'jay-0', 'scope': 'segment',
+            'expected_revision': 2})
+        self.assertEqual(response.status_code, 200, response.text)
+        person_id = response.json()['person_id']
+        self.assertEqual(response.json()['promoted_labels'], 74)
+        again = self.client.put(f'{self.base}/person-links', json={
+            'name': 'jay matlock', 'segment_id': 'jay-1', 'scope': 'segment',
+            'expected_revision': 2})
+        self.assertEqual(again.json()['person_id'], person_id)
+        self.assertEqual(self.client.post('/api/v1/persons', json={'name': 'JAY MATLOCK'}).json()['id'], person_id)
+        with storage.connect() as conn:
+            people = conn.execute('SELECT id, name FROM persons ORDER BY name').fetchall()
+            links = conn.execute('SELECT person_id, COUNT(*) AS n FROM person_links WHERE conversation_id = ? GROUP BY person_id',
+                                 (self.conversation_id,)).fetchall()
+            labels = conn.execute('SELECT * FROM speaker_labels WHERE conversation_id = ?',
+                                  (self.conversation_id,)).fetchall()
+        self.assertEqual(len(people), 2)
+        self.assertEqual({row['person_id']: row['n'] for row in links}, {person_id: 74, shereen['id']: 1})
+        self.assertEqual(labels, [])
+        with TestClient(app) as reloaded:
+            transcript = reloaded.get(f'{self.base}/transcript').json()
+            self.assertEqual({item['person_id'] for item in transcript['segments'][:74]}, {person_id})
+            self.assertEqual({item['speaker_display_name'] for item in transcript['segments'][:74]}, {'Jay Matlock'})
+            self.assertEqual(transcript['segments'][-1]['person_id'], shereen['id'])
+        conflict = self.client.patch(f'/api/v1/persons/{shereen["id"]}', json={'name': ' Jay Matlock '})
+        self.assertEqual(conflict.status_code, 400)
+
+    def test_promoting_cluster_name_respects_passage_override(self) -> None:
+        labels = f'{self.base}/speakers/label'
+        self.client.put(labels, json={'scope':'cluster', 'target_id':'speaker-1',
+                                      'name':'Jay', 'expected_revision':1})
+        self.client.put(labels, json={'scope':'segment', 'target_id':'segment-2',
+                                      'name':'Sam', 'expected_revision':2})
+        result = self.client.put(f'{self.base}/person-links', json={
+            'name':'Jay', 'segment_id':'segment-1', 'scope':'segment', 'expected_revision':3})
+        self.assertEqual(result.status_code, 200, result.text)
+        display = self.client.get(f'{self.base}/transcript').json()['segments']
+        self.assertEqual([item['speaker_display_name'] for item in display], ['Jay', 'Sam'])
+        self.assertIsNotNone(display[0]['person_id'])
+        self.assertIsNone(display[1].get('person_id'))
+
     def test_hiding_person_only_changes_tag_suggestions(self) -> None:
         person = self.client.post('/api/v1/persons', json={'name':'Jay'}).json()
         self.client.put(f'{self.base}/person-links', json={
