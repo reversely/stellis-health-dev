@@ -84,9 +84,17 @@ function setStatus(message, success = false) {
 }
 async function json(response) {
   const data = await response.json();
+  if (response.status === 401) { location.replace('/auth'); throw new Error('Login required'); }
   if (!response.ok) throw new Error(data.detail || 'The request failed.');
   return data;
 }
+fetch(`${API}/auth/status`).then(json).then(session => {
+  document.querySelector('#logout-button').hidden = !session.required;
+}).catch(error => setStatus(error.message));
+document.querySelector('#logout-button').addEventListener('click', async () => {
+  try { await json(await fetch(`${API}/auth/logout`, {method:'POST'})); location.replace('/auth'); }
+  catch (error) { setStatus(error.message); }
+});
 function appendSearchExcerpt(container, value, query) {
   const position = value.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
   if (position < 0) { container.textContent = value; return; }

@@ -10,17 +10,92 @@ import sqlite3
 import threading
 
 from fastapi import APIRouter, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, clean, generation_review, library, people, processing, recording, search, storage
+from stellis import ai, auth, clean, generation_review, library, people, processing, recording, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
 api = APIRouter()
 _retention_stop = threading.Event()
 _retention_thread: threading.Thread | None = None
+
+
+@app.middleware("http")
+async def session_gate(request: Request, call_next):
+    """Gate all workspace and API routes in explicit local login mode."""
+    if not auth.enabled():
+        return await call_next(request)
+    path = request.url.path
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        origin = request.headers.get("origin")
+        if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
+            return JSONResponse({"detail": "Origin rejected"}, status_code=403)
+    if path.startswith("/static/") or path in {"/auth", "/api/health", "/api/v1/health"} or path.startswith("/api/v1/auth/"):
+        return await call_next(request)
+    if auth.current_account(request.cookies.get(auth.COOKIE_NAME)) is None:
+        if path.startswith("/api/"):
+            return JSONResponse({"detail": "Login required"}, status_code=401)
+        return RedirectResponse("/auth", status_code=303)
+    return await call_next(request)
+
+
+class Credentials(BaseModel):
+    username: str = Field(min_length=3, max_length=80)
+    password: str = Field(min_length=12, max_length=1024)
+
+
+def _session_response(token: str, username: str) -> JSONResponse:
+    response = JSONResponse({"username": username})
+    response.set_cookie(auth.COOKIE_NAME, token, max_age=auth.SESSION_DAYS * 86400,
+                        httponly=True, samesite="strict", secure=False, path="/")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/auth", include_in_schema=False)
+def auth_page() -> FileResponse:
+    return FileResponse(_STATIC / "auth.html")
+
+
+@app.get("/api/v1/auth/status")
+def auth_status(request: Request) -> dict[str, object]:
+    return {"required": auth.enabled(), "registration_open": auth.enabled() and not auth.has_account(),
+            "username": auth.current_account(request.cookies.get(auth.COOKIE_NAME)) if auth.enabled() else None}
+
+
+@app.post("/api/v1/auth/register")
+def auth_register(credentials: Credentials) -> JSONResponse:
+    if not auth.enabled():
+        raise HTTPException(status_code=404, detail="Login is disabled")
+    try:
+        username = auth.register(credentials.username, credentials.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _session_response(auth.create_session(), username)
+
+
+@app.post("/api/v1/auth/login")
+def auth_login(credentials: Credentials) -> JSONResponse:
+    if not auth.enabled():
+        raise HTTPException(status_code=404, detail="Login is disabled")
+    token = auth.login(credentials.username, credentials.password)
+    if token is None:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    return _session_response(token, credentials.username)
+
+
+@app.post("/api/v1/auth/logout")
+def auth_logout(request: Request) -> JSONResponse:
+    auth.revoke(request.cookies.get(auth.COOKIE_NAME))
+    response = JSONResponse({"logged_out": True})
+    response.delete_cookie(auth.COOKIE_NAME, path="/")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def _retention_loop() -> None:

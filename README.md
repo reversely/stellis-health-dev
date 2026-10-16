@@ -10,7 +10,7 @@ The local browser app imports audio or an Otter ZIP, records from the microphone
 
 ## Setup and run
 
-Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. On a Mac with Homebrew, the native tools can be installed with `brew install ffmpeg whisper.cpp`. The application binds to loopback only until authentication is implemented.
+Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. On a Mac with Homebrew, the native tools can be installed with `brew install ffmpeg whisper.cpp`. The application binds to loopback only.
 
 ```sh
 uv sync --locked
@@ -19,6 +19,8 @@ uv run --locked stellis serve
 ```
 
 Open <http://127.0.0.1:8765/>. `GET /api/health` should return `{"status":"ok","mode":"local","version":"0.1.0"}`. Use `--port` to select another loopback port.
+
+For a local login, start with `STELLIS_AUTH_MODE=required uv run --locked stellis serve`. The first browser visit creates one account with a password of at least 12 characters; later visits sign in. Sessions expire after seven days. Log out from the top bar. The account gate covers this one local data directory and is not a multi-user deployment; leave the service on loopback. Keep `STELLIS_DATA_DIR` pointed at the same folder on restart to retain the account and conversations.
 
 Use **Import recording** or drag a file onto the home page. MP3, WAV, M4A, OGG, WebM, FLAC, and Otter ZIP exports containing one audio file are supported up to 1 GB. Imports are stored under `~/Library/Application Support/Stellis`; set `STELLIS_DATA_DIR` to use a different private local folder. Reimporting the same audio opens its existing conversation.
 
