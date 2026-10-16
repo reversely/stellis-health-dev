@@ -21,6 +21,7 @@ Apply this skill only to `/Users/slee/Repos/stellis` or `reversely/stellis`. Rea
 ## Delivery and evidence
 
 - File scoped GitHub issues, implement and browser-test complete workflows, close tickets through merged PRs to `main`, and continue while authorized work remains.
+- As soon as a feature passes its required validation, rebase its branch onto current `main`, rerun checks affected by the rebase, and merge its PR immediately. Do not leave validated work waiting in a draft PR. Clear any concrete merge gate before considering the feature delivered.
 - Keep `docs/current-architecture.md` exact once the product is live. Include a Mermaid diagram and commit every architecture-document change in its own commit. Record consequential architecture forks in ADRs.
 - Maintain `docs/otter-ui-reference.md` as an observation ledger. Record every distinct user feedback item and the actual states inspected, then file focused tickets for gaps. Separate observations, inferences, and unknowns.
 - Persist each feedback item in project documentation or a focused issue with its status (open, implemented, verified). Recheck earlier feedback affecting the same workflow before editing and before delivery; only mark UI feedback verified after checking the relevant desktop and narrow browser states against its actual reference. Keep project-specific rules here rather than in global skills.
