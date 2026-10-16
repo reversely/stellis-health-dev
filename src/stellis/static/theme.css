@@ -706,12 +706,12 @@ html[data-theme='light'] {
   --ink: #2A252F;
   --muted: #635B65;
   --quiet: #605465;
-  --accent: #4E4357;
-  --accent-strong: #42374D;
+  --accent: #335C63;
+  --accent-strong: #274C53;
   --accent-ink: #ffffff;
-  --selected: #eee4f2;
-  --selection: #E2D7DE;
-  --focus: #4E4357;
+  --selected: #E3EEEE;
+  --selection: #D7E5E6;
+  --focus: #335C63;
   --shadow: 0 16px 38px #2A252F1c;
   --waveform: #335C63;
   color-scheme: light;
@@ -726,12 +726,12 @@ html[data-theme='dark'] {
   --ink: #fff8ff;
   --muted: #DED5DE;
   --quiet: #C4B6C6;
-  --accent: #BAA18B;
-  --accent-strong: #DED0DA;
+  --accent: #9EC2C8;
+  --accent-strong: #B5D0D4;
   --accent-ink: #27222B;
-  --selected: #38303D;
+  --selected: #29444A;
   --selection: #86798E;
-  --focus: #DED0DA;
+  --focus: #9EC2C8;
   --shadow: 0 16px 38px #2B2630A0;
   --waveform: #335C63;
   color-scheme: dark;
@@ -793,10 +793,10 @@ html[data-theme='dark'] body::before { display: none; }
     --line-soft: #5A4F60;
     --raised: #37303D;
     --input: #302A35;
-    --accent: #BAA18B;
-    --accent-strong: #CDBBA7;
+    --accent: #9EC2C8;
+    --accent-strong: #B5D0D4;
     --accent-ink: #27222B;
-    --focus: #BAA18B;
+    --focus: #9EC2C8;
     color: var(--ink);
   }
   body:has(#list-view:not([hidden])) .heading {
@@ -817,14 +817,18 @@ html[data-theme='dark'] body::before { display: none; }
   }
   body:has(#list-view:not([hidden])) .heading-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
   body:has(#list-view:not([hidden])) .heading-actions button { min-height: 47px; }
-  body:has(#list-view:not([hidden])) .heading-actions #record-button,
   body:has(#list-view:not([hidden])) .heading-actions #import-button {
     border: 1px solid #605465;
     background: #37303D;
     color: #F7F5F6;
   }
-  body:has(#list-view:not([hidden])) .heading-actions #record-button:hover,
   body:has(#list-view:not([hidden])) .heading-actions #import-button:hover { background: #38303D; }
+  body:has(#list-view:not([hidden])) .heading-actions #record-button {
+    border: 1px solid #4F8D99;
+    background: #335C63;
+    color: #ffffff;
+  }
+  body:has(#list-view:not([hidden])) .heading-actions #record-button:hover { background: #3C6B73; }
   body:has(#list-view:not([hidden])) #status:not(:empty) { grid-column: 1; grid-row: 2; margin: 0 24px 15px; }
   body:has(#list-view:not([hidden])) #vocabulary-panel {
     grid-column: 1;
@@ -876,10 +880,10 @@ html[data-theme='dark'] body::before { display: none; }
     min-width: 110px;
     min-height: 42px;
     padding: 8px 14px;
-    border: 1px solid var(--line);
+    border: 1px solid #4F8D99;
     border-radius: 10px;
-    background: var(--raised);
-    color: var(--ink);
+    background: #335C63;
+    color: #ffffff;
     cursor: pointer;
   }
   body.recording-page .recording-bar {
@@ -952,14 +956,15 @@ html[data-theme='dark'] body::before { display: none; }
   body:has(#list-view:not([hidden])) .heading h1 { color: #F7F5F6; font-size: 36px; }
   body:has(#list-view:not([hidden])) .heading-actions { display: flex; }
   body:has(#list-view:not([hidden])) .heading-actions button { width: auto; min-width: 115px; border-color: #605465; background: #37303D; color: #F7F5F6; }
+  body:has(#list-view:not([hidden])) .heading-actions #record-button { border-color: #4F8D99; background: #335C63; color: #ffffff; }
   body:has(#list-view:not([hidden])) #status:not(:empty) { margin: 0; padding: 12px 20px; }
   body:has(#list-view:not([hidden])) #list-view { padding: 28px 20px 45px; }
   body:has(#list-view:not([hidden])) #vocabulary-panel { margin: 0 20px 30px; }
   body.recording-page .recording-panel { display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; border-radius: 0; }
   body.recording-page .recording-workspace-head { order: 0; display: grid; gap: 14px; margin: 0; padding: 25px 20px 18px; background: #27222B; }
-  body.recording-page .recording-workspace-head #back-from-recording { justify-self: start; color: #BAA18B; }
+  body.recording-page .recording-workspace-head #back-from-recording { justify-self: start; color: #9EC2C8; }
   body.recording-page .recording-workspace-head input { width: 100%; color: #F7F5F6; border-color: #605465; }
-  body.recording-page #recording-import { justify-self: start; border: 1px solid #605465; border-radius: 9px; padding: 9px 16px; background: #37303D; color: #F7F5F6; }
+  body.recording-page #recording-import { justify-self: start; border: 1px solid #4F8D99; border-radius: 9px; padding: 9px 16px; background: #335C63; color: #ffffff; }
   body.recording-page .recording-workspace-grid { order: 2; display: flex; flex-direction: column; gap: 0; }
   body.recording-page .recording-workspace-main { order: 0; min-height: 55vh; padding: 28px 20px 70px; border: 0; border-radius: 0; background: var(--field); }
   body.recording-page .recording-workspace-main .notes-editor { min-height: 42vh; }
@@ -1028,12 +1033,12 @@ body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) .
   transform: translateY(6px);
   transition: transform 150ms ease, background-color 150ms ease;
 }
-.recording-view-tabs button:nth-child(2), .conversation-tabs button:nth-child(2) { --tab: #38303D; }
+.recording-view-tabs button:nth-child(2), .conversation-tabs button:nth-child(2) { --tab: #29444A; }
 .conversation-tabs button:nth-child(3) { --tab: #41313D; }
 .recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'] {
-  --tab: #413A48;
+  --tab: #335C63;
   z-index: 2;
-  box-shadow: inset 0 3px #CDBBA7;
+  box-shadow: inset 0 3px #CEB195;
   font-weight: 750;
   transform: translateY(0);
 }
@@ -1080,15 +1085,15 @@ body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) .
   border-top: 0;
   border-radius: 0;
 }
-#detail-view .conversation-tabs { border-bottom-color: #413A48; }
+#detail-view .conversation-tabs { border-bottom-color: #335C63; }
 #detail-view .player-card { border-radius: 6px; }
 #list-view .conversation-row, #list-view .live-recording-card,
 #list-view .recovery-row, #list-view .library-management-content > details,
 #list-view .library-management-content > button { border-radius: 6px; }
 .recording-live-peek { border-radius: 6px; }
 .conversation-page .heading-actions #import-button {
-  border-color: #413A48;
-  background: #413A48;
+  border-color: #335C63;
+  background: #335C63;
   color: #ffffff;
 }
 .conversation-page #vocabulary-panel { border-radius: 6px; }
