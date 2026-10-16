@@ -11,16 +11,16 @@
     <script src="/static/app.js" defer></script>
   </head>
   <body>
-    <header><a class="brand" href="/">stellis</a><div class="header-side"><span class="header-note">Private, local interview workspace</span><button id="theme-toggle" type="button" aria-label="Switch to light mode">Light mode</button></div></header>
+    <header><a class="brand" href="/">stellis</a><div class="header-side"><button id="theme-toggle" type="button" aria-label="Switch to light mode">Light mode</button></div></header>
     <main>
       <section class="heading">
-        <div><h1 id="page-title">Your conversations</h1><p id="page-subtitle">Listen, review, and return to what matters.</p></div>
-        <div class="heading-actions"><button id="record-button" type="button">Record</button><label class="upload-button" for="audio-file">Import recording</label></div>
+        <div><h1 id="page-title">Your conversations</h1></div>
+        <div class="heading-actions"><button id="record-button" type="button">Record</button><label class="upload-button" for="audio-file">Import recording</label><details id="conversation-more" class="more-menu" hidden><summary aria-label="More options" title="More options">⋯</summary><div class="more-menu-items"><button id="regenerate-summary" type="button" hidden>Regenerate summary</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="align-words-button" type="button" hidden>Sync text to audio</button><button id="process-button" type="button" hidden>Reprocess transcript</button><button id="trash-conversation" type="button">Delete</button></div></details></div>
         <input id="audio-file" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.zip,audio/*,application/zip" />
       </section>
       <div id="status" role="status" aria-live="polite"></div>
       <section id="recording-panel" class="recording-panel" hidden aria-label="Microphone recording">
-        <div class="recording-top"><div><strong id="recording-state">Ready to record</strong><p id="recording-detail">Your microphone audio is saved locally as it arrives.</p></div><span id="recording-timer">0:00</span></div>
+        <div class="recording-top"><div><strong id="recording-state">Ready to record</strong><p id="recording-detail"></p></div><span id="recording-timer">0:00</span></div>
         <label for="recording-title">Recording title</label><input id="recording-title" value="New recording" maxlength="180" />
         <div class="recording-actions"><button id="start-recording" type="button">Start recording</button><button id="pause-recording" type="button" hidden>Pause</button><button id="stop-recording" type="button" hidden>Stop and save</button></div>
       </section>
@@ -34,7 +34,7 @@
       <section id="list-view">
         <section class="library-tools" aria-label="Organize conversations"><div class="library-toolbar"><label for="category-filter">Category</label><select id="category-filter"><option value="">All conversations</option><option value="uncategorized">Uncategorized</option></select><button id="show-trash" type="button">Recently Deleted</button></div><details id="manage-categories"><summary>Manage categories</summary><form id="create-category-form"><label for="new-category-name">New category</label><div class="search-row"><input id="new-category-name" maxlength="80" required /><button type="submit">Create</button></div></form><div id="category-list"></div><p id="category-status" role="status" aria-live="polite"></p></details></section>
         <section class="search-card" aria-label="Search conversations">
-          <form id="library-search-form"><label for="library-search-input">Search conversations, words, and speakers</label><div class="search-row"><input id="library-search-input" type="search" minlength="2" maxlength="120" autocomplete="off" placeholder="Search your library" /><button type="submit">Search</button></div></form>
+          <form id="library-search-form"><label for="library-search-input">Search library</label><div class="search-row"><input id="library-search-input" type="search" minlength="2" maxlength="120" autocomplete="off" /><button type="submit">Search</button></div></form>
           <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option><option value="person">People</option></select></div>
           <p id="library-search-status" role="status" aria-live="polite"></p><div id="library-search-results" aria-label="Search results"></div>
         </section>
@@ -47,11 +47,11 @@
         </div>
         <div id="conversation-list" class="conversation-list" aria-label="Conversations"></div>
       </section>
-      <section id="trash-view" hidden><button id="back-from-trash" type="button">← All conversations</button><h2>Recently Deleted</h2><p>Restore a conversation within 30 days. After that, its audio and transcript are deleted automatically.</p><p id="trash-status" role="status" aria-live="polite"></p><div id="trash-list" class="conversation-list"></div></section>
-      <section id="person-view" hidden><a class="back-link" href="/">← All conversations</a><form id="person-rename-form"><label for="person-rename-input">Name</label><div class="search-row"><input id="person-rename-input" maxlength="100" required /><button type="submit">Save name</button></div></form><p id="person-status" role="status" aria-live="polite"></p><h2>Conversations</h2><div id="person-conversations" class="conversation-list"></div><details id="person-merge-panel"><summary>Merge duplicate person</summary><label for="person-merge-source">Move another person's confirmations here</label><div class="search-row"><select id="person-merge-source"></select><button id="person-merge-button" type="button">Merge</button></div></details><button id="person-delete" type="button">Delete empty profile</button></section>
+      <section id="trash-view" hidden><button id="back-from-trash" type="button">← All conversations</button><h2>Recently Deleted</h2><p>Automatically deleted after 30 days.</p><p id="trash-status" role="status" aria-live="polite"></p><div id="trash-list" class="conversation-list"></div></section>
+      <section id="person-view" hidden><a class="back-link" href="/">← All conversations</a><form id="person-rename-form"><label for="person-rename-input">Name</label><div class="search-row"><input id="person-rename-input" maxlength="100" required /><button type="submit">Save name</button></div></form><p id="person-status" role="status" aria-live="polite"></p><h2>Conversations</h2><div id="person-conversations" class="conversation-list"></div><details id="person-merge-panel"><summary>Merge people</summary><label for="person-merge-source">Merge with</label><div class="search-row"><select id="person-merge-source"></select><button id="person-merge-button" type="button">Merge</button></div></details><button id="person-delete" type="button">Delete profile</button></section>
       <section id="detail-view" hidden>
         <a class="back-link" href="/">← All conversations</a>
-        <div class="conversation-organize"><details id="conversation-categories"><summary>Categories</summary><div id="conversation-category-list"></div></details><button id="trash-conversation" type="button">Move to Recently Deleted</button></div>
+        <div class="conversation-organize"><details id="conversation-categories"><summary>Categories</summary><div id="conversation-category-list"></div></details></div>
         <div class="player-card">
           <div class="player-heading"><span id="audio-duration"></span></div>
           <audio id="audio-player" preload="metadata" controls></audio>
@@ -60,7 +60,7 @@
         <div class="conversation-tabs" role="tablist" aria-label="Conversation view"><button id="summary-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-card">Summary &amp; AI</button><button id="transcript-tab" type="button" role="tab" aria-selected="true" aria-controls="transcript-card">Transcript</button><button id="edited-tab" type="button" role="tab" aria-selected="false" aria-controls="edited-card" hidden>Edited Transcript</button></div>
         <section id="ai-card" class="ai-card" role="tabpanel" hidden>
           <div class="ai-heading"><div><h2>Conversation insights</h2></div><div class="transcript-actions"><button id="clean-button" type="button">Clean transcript</button><button id="generate-summary" type="button">Generate summary</button></div></div>
-          <p class="ai-privacy">Generating insights sends this conversation's displayed transcript text to Nebius. Audio and voiceprints stay on this device.</p>
+          <p class="ai-privacy">Transcript text is sent to Nebius. Audio stays on this device.</p>
           <p id="ai-status" role="status" aria-live="polite"></p>
           <div id="summary-results"></div>
           <div class="ai-question"><h3>Ask about this conversation</h3><form id="ai-question-form"><label for="ai-question-input">Question</label><div><input id="ai-question-input" maxlength="500" required placeholder="Ask something about the interview" /><button type="submit">Ask Nemotron</button></div></form><div id="ai-answers"></div></div>
@@ -68,15 +68,15 @@
         <section id="edited-card" class="transcript-card" role="tabpanel" hidden>
           <div class="transcript-heading"><h2>Edited Transcript</h2><div class="transcript-actions"><button id="clean-discard-button" type="button" hidden>Discard edits</button><button id="clean-edit-button" type="button">Edit transcript</button><select id="clean-version" aria-label="Edited transcript version"></select></div></div>
           <p id="clean-status" role="status" aria-live="polite"></p>
-          <p class="ai-privacy">Review generated wording against the recording before quoting. Click a passage to play from its source timestamp.</p>
+          <p class="ai-privacy">Check against audio before quoting.</p>
           <div id="clean-compare" hidden></div>
           <div id="edited-transcript" class="transcript" aria-label="Edited Transcript"></div>
         </section>
         <div id="transcript-card" class="transcript-card" role="tabpanel">
           <section id="generation-review" class="generation-review" hidden aria-label="Review retranscription"><h2>Review new transcription</h2><p id="generation-review-status" role="status" aria-live="polite"></p><div id="generation-review-items"></div><div class="editor-actions"><button id="generation-keep-source" type="button">Keep current transcript</button><button id="generation-activate" type="button">Use new transcript</button></div></section>
-          <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="restore-passage-button" type="button" hidden>Restore passage</button><button id="discard-edits-button" type="button" hidden>Discard edits</button><button id="edit-transcript-button" type="button" hidden>Edit transcript</button><button id="align-words-button" type="button" hidden>Measure word timing</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="process-button" type="button" hidden>Process recording</button></div></div>
+          <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="restore-passage-button" type="button" hidden>Restore passage</button><button id="discard-edits-button" type="button" hidden>Discard edits</button><button id="edit-transcript-button" type="button" hidden>Edit transcript</button></div></div>
           <p id="edit-status" role="status" aria-live="polite" hidden></p>
-          <p id="processing-status" role="status" aria-live="polite">Checking local speech models…</p>
+          <p id="processing-status" role="status" aria-live="polite">Loading transcript…</p>
           <div id="transcript-search" class="transcript-search"><label for="transcript-search-input">Find in transcript</label><div class="search-row"><input id="transcript-search-input" type="search" placeholder="Find words or a phrase" autocomplete="off" /><select id="transcript-search-speaker" aria-label="Filter by speaker"><option value="">All speakers</option></select><button id="transcript-search-previous" type="button" aria-label="Previous match">↑</button><button id="transcript-search-next" type="button" aria-label="Next match">↓</button><button id="transcript-search-clear" type="button">Clear</button></div><p id="transcript-search-status" role="status" aria-live="polite"></p></div>
           <div class="highlight-controls"><div class="filter-option"><button id="show-highlights" type="button" aria-pressed="false">Show only highlights</button><span id="highlight-count"></span></div><div class="filter-option"><button id="show-rematch-changes" type="button" aria-pressed="false" hidden>Show speaker changes</button><span id="rematch-change-count"></span></div></div>
           <div id="transcript" class="transcript" aria-label="Transcript"></div>

@@ -116,6 +116,7 @@ class RecordingEvent(BaseModel):
 class AIRunRequest(BaseModel):
     kind: str
     question: str | None = Field(default=None, max_length=500)
+    force: bool = False
 
 
 class CleanSegmentEdit(BaseModel):
@@ -500,7 +501,7 @@ def start_ai_run(conversation_id: str, request: AIRunRequest) -> dict[str, objec
     if storage.get_conversation(conversation_id) is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     try:
-        return ai.public_run(ai.request_run(conversation_id, request.kind, request.question))
+        return ai.public_run(ai.request_run(conversation_id, request.kind, request.question, request.force))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except LookupError as exc:
