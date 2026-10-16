@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from stellis import categorization, library, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class LibraryWorkflowTest(unittest.TestCase):
@@ -23,12 +23,12 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
         self.env.start()
         self.client = TestClient(app)
-        self.audio = wav_bytes()
+        self.audio = mp3_bytes()
         self.first = self.client.post('/api/v1/conversations/import',
-                                      files={'file': ('first.wav', self.audio, 'audio/wav')}).json()['conversation']['id']
-        self.second_audio = self.audio[:-2] + b'\x01\x00'
+                                      files={'file': ('first.mp3', self.audio, 'audio/mpeg')}).json()['conversation']['id']
+        self.second_audio = mp3_bytes(wav_bytes()[:-2] + b'\x01\x00')
         self.second = self.client.post('/api/v1/conversations/import',
-                                       files={'file': ('second.wav', self.second_audio, 'audio/wav')}).json()['conversation']['id']
+                                       files={'file': ('second.mp3', self.second_audio, 'audio/mpeg')}).json()['conversation']['id']
         now = datetime.now(timezone.utc).isoformat()
         storage.save_transcript({'conversation_id': self.first, 'revision': 1, 'language': 'en',
                                  'segments_json': json.dumps([{'id': 's1', 'start_ms': 0, 'end_ms': 500,
@@ -64,7 +64,7 @@ class LibraryWorkflowTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
         self.assertEqual(len(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids']), 2)
         duplicate = self.client.post('/api/v1/conversations/import',
-                                     files={'file': ('same.wav', self.audio, 'audio/wav')}).json()
+                                     files={'file': ('same.mp3', self.audio, 'audio/mpeg')}).json()
         self.assertTrue(duplicate['duplicate'])
         self.assertEqual(len(duplicate['conversation']['category_ids']), 2)
         self.assertEqual(self.client.get('/api/v1/search', params={'q':'Asteroid',
@@ -84,7 +84,7 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertEqual(len(self.client.get('/api/v1/conversations').json()), 1)
         self.assertEqual(len(self.client.get('/api/v1/trash').json()), 1)
         self.assertEqual(self.client.post('/api/v1/conversations/import',
-            files={'file':('same.wav', self.audio, 'audio/wav')}).status_code, 400)
+            files={'file':('same.mp3', self.audio, 'audio/mpeg')}).status_code, 400)
         self.assertEqual(self.client.post(f'/api/v1/trash/{self.first}/restore').status_code, 200)
         restored = self.client.get(f'/api/v1/conversations/{self.first}/transcript').json()
         self.assertEqual(restored['segments'][0]['text'], 'Asteroid corrected.')

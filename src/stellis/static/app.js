@@ -44,6 +44,11 @@ const restorePassageButton = document.querySelector('#restore-passage-button');
 const editStatus = document.querySelector('#edit-status');
 const processingStatus = document.querySelector('#processing-status');
 const transcriptView = document.querySelector('#transcript');
+function setTranscriptLoading(loading) {
+  processingStatus.classList.toggle('is-loading', loading);
+  document.querySelector('#transcript-tab').classList.toggle('is-loading', loading);
+  transcriptView.setAttribute('aria-busy', String(loading));
+}
 let activeConversationId = null;
 let jobTimer = null;
 let aiRunTimer = null;
@@ -1019,6 +1024,11 @@ async function showDetail(id) {
   syncTranscriptEditControls();
   transcriptView.replaceChildren();
   processingStatus.textContent = 'Loading transcript…';
+  setTranscriptLoading(true);
+  const importReference = document.querySelector('#import-reference');
+  importReference.hidden = true;
+  importReference.open = false;
+  document.querySelector('#import-reference-text').textContent = '';
   processButton.hidden = true;
   rematchButton.hidden = true;
   const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}`));
@@ -1037,6 +1047,12 @@ async function showDetail(id) {
   if (skipSilenceCheckbox.checked) startSilenceScan(id).catch(error => { skipSilenceStatus.textContent = error.message; });
   await loadImages('conversation', id);
   await loadSpeech(id);
+  const referenceResponse = await fetch(`${API}/conversations/${encodeURIComponent(id)}/import-reference`);
+  if (referenceResponse.ok && id === activeConversationId) {
+    const reference = await referenceResponse.json();
+    document.querySelector('#import-reference-text').textContent = reference.transcript_text;
+    importReference.hidden = false;
+  }
   await loadNotes('conversation', id);
   showConversationTab('summary');
   showNotesChoice('my');
@@ -1381,10 +1397,12 @@ async function loadSpeech(id) {
     watchJob(existing); return;
   }
   if (!capabilities.features.transcribe || !capabilities.features.diarize) {
+    setTranscriptLoading(false);
     processingStatus.textContent = 'Local speech models are unavailable. Install them to transcribe this recording on this device.';
     return;
   }
   if (existing?.state === 'failed') {
+    setTranscriptLoading(false);
     if (existing.kind === 'rematch') { await showTranscript(id); rematchButton.hidden = false; rematchButton.textContent = 'Retry speaker rematch'; }
     else if (existing.kind === 'word_alignment') { await showTranscript(id); alignWordsButton.hidden = false; alignWordsButton.textContent = 'Retry word timing'; }
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
@@ -1395,11 +1413,13 @@ async function loadSpeech(id) {
 }
 async function beginProcessing(id) {
   processButton.hidden = true;
+  setTranscriptLoading(true);
   processingStatus.textContent = 'Transcribing…';
   try {
     const job = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/processing-jobs`, {method:'POST'}));
     watchJob(job);
   } catch (error) {
+    setTranscriptLoading(false);
     processingStatus.textContent = error.message;
     processButton.hidden = false;
     processButton.textContent = 'Retry processing';
@@ -1408,18 +1428,22 @@ async function beginProcessing(id) {
 function watchJob(job) {
   if (job.conversation_id !== activeConversationId) return;
   clearTimeout(jobTimer);
-  if (job.state === 'succeeded') { showTranscript(job.conversation_id).catch(error => processingStatus.textContent = error.message); return; }
+  if (job.state === 'succeeded') { showTranscript(job.conversation_id).catch(error => {
+    setTranscriptLoading(false); processingStatus.textContent = error.message;
+  }); return; }
   if (job.state === 'failed') {
+    setTranscriptLoading(false);
     processingStatus.textContent = `${job.kind === 'rematch' ? 'Speaker rematch' : job.kind === 'word_alignment' ? 'Word timing' : 'Processing'} stopped: ${job.error || 'Unknown error'}`;
     if (job.kind === 'rematch') { rematchButton.hidden = false; rematchButton.disabled = false; rematchButton.textContent = 'Retry speaker rematch'; }
     else if (job.kind === 'word_alignment') { alignWordsButton.hidden = false; alignWordsButton.disabled = false; alignWordsButton.textContent = 'Retry word timing'; }
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
     return;
   }
+  setTranscriptLoading(true);
   processingStatus.textContent = `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)}: ${Math.round(job.progress * 100)}%`;
   jobTimer = setTimeout(async () => {
     try { watchJob(await json(await fetch(`${API}/jobs/${encodeURIComponent(job.id)}`))); }
-    catch (error) { processingStatus.textContent = error.message; }
+    catch (error) { setTranscriptLoading(false); processingStatus.textContent = error.message; }
   }, 1500);
 }
 function groupTranscriptSegments(segments) {
@@ -1628,6 +1652,7 @@ async function showTranscript(id) {
     transcriptView.append(turn);
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
+  setTranscriptLoading(false);
   processingStatus.textContent = `${data.segments.length} passages, ${turns.length} turns, ${speakerDurations.size} speakers${unresolved ? `, ${unresolved} unresolved` : ''}`;
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
@@ -2341,6 +2366,10 @@ async function route() {
 }
 async function importFile(file) {
   if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.mp3')) {
+    importStatus.textContent = 'Choose an MP3 file.';
+    return;
+  }
   if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && !window.confirm('Discard unsaved transcript changes and import another recording?')) return;
   importStatus.textContent = `Importing ${file.name}…`;
   setStatus(`Importing ${file.name}…`);
@@ -2352,6 +2381,7 @@ async function importFile(file) {
     const result = await json(await fetch(`${API}/conversations/import`, {method: 'POST', body}));
     history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
     await showDetail(result.conversation.id);
+    showConversationTab('transcript');
     importDialog.close();
     importStatus.textContent = '';
     setStatus(result.duplicate ? 'Already imported. Opening your recording.' : 'Recording imported.', true);

@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from stellis import processing, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class ProcessingWorkflowTest(unittest.TestCase):
@@ -26,7 +26,7 @@ class ProcessingWorkflowTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
         self.env.start()
         self.client = TestClient(app)
-        response = self.client.post("/api/v1/conversations/import", files={"file": ("talk.wav", wav_bytes(), "audio/wav")})
+        response = self.client.post("/api/v1/conversations/import", files={"file": ("talk.mp3", mp3_bytes(), "audio/mpeg")})
         self.conversation_id = response.json()["conversation"]["id"]
 
     def tearDown(self) -> None:
@@ -259,7 +259,7 @@ class ProcessingWorkflowTest(unittest.TestCase):
         retried = processing.request_processing(self.conversation_id)
         self.assertEqual(retried["id"], job["id"])
         self.assertEqual(retried["state"], "queued")
-        media = storage.data_dir() / "media" / f"{self.conversation_id}.wav"
+        media = storage.data_dir() / "media" / f"{self.conversation_id}.mp3"
         self.assertTrue(media.is_file())
 
 

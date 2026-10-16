@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from stellis import ai, clean, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class CleanWorkflowTest(unittest.TestCase):
@@ -22,7 +22,7 @@ class CleanWorkflowTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
         self.env.start()
         self.client = TestClient(app)
-        imported = self.client.post('/api/v1/conversations/import', files={'file': ('talk.wav', wav_bytes(), 'audio/wav')})
+        imported = self.client.post('/api/v1/conversations/import', files={'file': ('talk.mp3', mp3_bytes(), 'audio/mpeg')})
         self.conversation_id = imported.json()['conversation']['id']
         self.base = f'/api/v1/conversations/{self.conversation_id}'
         segments = [

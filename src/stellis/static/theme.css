@@ -327,6 +327,36 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .vocabulary-card label { color: var(--ink); }
 .segment-editor p, #processing-status, #edit-status,
 #clean-status, #ai-status, #vocabulary-status { color: var(--muted); }
+#import-reference { margin: 0 0 16px; }
+#import-reference summary { cursor: pointer; }
+#import-reference pre { max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+#processing-status.is-loading::before {
+  content: '';
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.65em;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  vertical-align: -0.12em;
+  animation: transcript-loading 0.8s linear infinite;
+}
+#transcript-tab.is-loading::after {
+  content: '';
+  display: inline-block;
+  width: 0.65em;
+  height: 0.65em;
+  margin-left: 0.55em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: transcript-loading 0.8s linear infinite;
+}
+@keyframes transcript-loading { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #processing-status.is-loading::before, #transcript-tab.is-loading::after { animation: none; }
+}
 #status { color: var(--failure); }
 #status.success { color: var(--success); }
 .ai-stale, .recovery-row { color: var(--warning); background: var(--warning-bg); }

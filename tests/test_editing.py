@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from stellis import processing, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class EditingWorkflowTest(unittest.TestCase):
@@ -23,7 +23,7 @@ class EditingWorkflowTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
         self.env.start()
         self.client = TestClient(app)
-        imported = self.client.post("/api/v1/conversations/import", files={"file": ("talk.wav", wav_bytes(), "audio/wav")})
+        imported = self.client.post("/api/v1/conversations/import", files={"file": ("talk.mp3", mp3_bytes(), "audio/mpeg")})
         self.conversation_id = imported.json()["conversation"]["id"]
         self.base = f"/api/v1/conversations/{self.conversation_id}"
         stamp = datetime.now(timezone.utc).isoformat()
@@ -327,9 +327,9 @@ class EditingWorkflowTest(unittest.TestCase):
         speaker = self.client.get('/api/v1/search', params={'q': 'Ari'}).json()
         self.assertEqual([(item['kind'], item['speaker']) for item in speaker['results']], [('speaker', 'Ari')])
         self.assertEqual(speaker['results'][0]['revision'], 3)
-        second_audio = wav_bytes()[:-2] + b'\x01\x00'
+        second_audio = mp3_bytes(wav_bytes()[:-2] + b'\x01\x00')
         imported = self.client.post('/api/v1/conversations/import',
-                                    files={'file': ('second.wav', second_audio, 'audio/wav')})
+                                    files={'file': ('second.mp3', second_audio, 'audio/mpeg')})
         second_id = imported.json()['conversation']['id']
         stamp = datetime.now(timezone.utc).isoformat()
         storage.save_transcript({'conversation_id': second_id, 'revision': 1, 'language': 'en',

@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from stellis import ai, enhanced_notes, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class EnhancedNotesWorkflowTest(unittest.TestCase):
@@ -29,7 +29,7 @@ class EnhancedNotesWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
             client = TestClient(app)
             imported = client.post("/api/v1/conversations/import",
-                                   files={"file": ("talk.wav", wav_bytes(), "audio/wav")}).json()
+                                   files={"file": ("talk.mp3", mp3_bytes(), "audio/mpeg")}).json()
             conversation_id = imported["conversation"]["id"]
             segment = {"id":"seg-1", "start_ms":250, "end_ms":900, "text":"Avery will send the CubeSat draft.",
                        "speaker_cluster_id":"speaker-1", "speaker_uncertain":False, "words":[]}

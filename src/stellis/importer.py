@@ -1,4 +1,4 @@
-"""Validated local audio and Otter ZIP import."""
+"""Validated local MP3 import."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import sqlite3
 import subprocess
 import tempfile
 import uuid
-import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,14 +20,8 @@ from stellis import storage
 
 MAX_UPLOAD_BYTES = 1_000_000_000
 MAX_AUDIO_BYTES = 1_000_000_000
-MEDIA_TYPES = {
-    ".mp3": "audio/mpeg",
-    ".wav": "audio/wav",
-    ".m4a": "audio/mp4",
-    ".ogg": "audio/ogg",
-    ".webm": "audio/webm",
-    ".flac": "audio/flac",
-}
+MEDIA_TYPES = {".mp3": "audio/mpeg", ".webm": "audio/webm",
+               ".ogg": "audio/ogg", ".m4a": "audio/mp4"}
 
 
 class ImportFailure(ValueError):
@@ -39,48 +32,6 @@ def _new_temp(root: Path) -> Path:
     descriptor, name = tempfile.mkstemp(prefix=".import-", dir=root)
     os.close(descriptor)
     return Path(name)
-
-
-def _copy_limited(source, destination: Path, limit: int) -> str:
-    """Copy a stream while enforcing a size limit and calculating SHA-256."""
-    digest = hashlib.sha256()
-    total = 0
-    with destination.open("wb") as output:
-        while chunk := source.read(1024 * 1024):
-            total += len(chunk)
-            if total > limit:
-                raise ImportFailure("The file is larger than the 1 GB import limit.")
-            digest.update(chunk)
-            output.write(chunk)
-    if total == 0:
-        raise ImportFailure("The file is empty.")
-    return digest.hexdigest()
-
-
-def _audio_from_zip(archive_path: Path, root: Path) -> tuple[Path, str, str]:
-    try:
-        with zipfile.ZipFile(archive_path) as archive:
-            candidates = [
-                item for item in archive.infolist()
-                if not item.is_dir()
-                and not item.filename.startswith("__MACOSX/")
-                and Path(item.filename).suffix.lower() in MEDIA_TYPES
-            ]
-            if len(candidates) != 1:
-                raise ImportFailure("The ZIP must contain exactly one supported audio file.")
-            item = candidates[0]
-            if item.file_size > MAX_AUDIO_BYTES:
-                raise ImportFailure("The audio file is larger than the 1 GB import limit.")
-            audio_path = _new_temp(root)
-            try:
-                with archive.open(item) as audio:
-                    digest = _copy_limited(audio, audio_path, MAX_AUDIO_BYTES)
-            except Exception:
-                audio_path.unlink(missing_ok=True)
-                raise
-            return audio_path, Path(item.filename).name, digest
-    except (zipfile.BadZipFile, RuntimeError, OSError) as exc:
-        raise ImportFailure("The ZIP could not be read.") from exc
 
 
 def _duration_ms(path: Path) -> int:
@@ -114,8 +65,8 @@ def _title(filename: str) -> str:
     return cleaned[:180] or "Untitled recording"
 
 
-async def import_upload(upload: UploadFile) -> tuple[dict[str, object], bool]:
-    """Import one audio file from a browser upload, or return its existing record."""
+async def import_upload(upload: UploadFile, *, browser_recording: bool = False) -> tuple[dict[str, object], bool]:
+    """Import public MP3 audio or a finalized in-app browser recording."""
     root = storage.data_dir()
     incoming = _new_temp(root)
     audio_path: Path | None = None
@@ -132,16 +83,13 @@ async def import_upload(upload: UploadFile) -> tuple[dict[str, object], bool]:
 
         original_name = Path(upload.filename or "").name
         suffix = Path(original_name).suffix.lower()
-        if suffix == ".zip":
-            audio_path, audio_name, digest = _audio_from_zip(incoming, root)
-            suffix = Path(audio_name).suffix.lower()
-        elif suffix in MEDIA_TYPES:
+        if suffix == ".mp3" or (browser_recording and suffix in MEDIA_TYPES):
             audio_path = incoming
             audio_name = original_name
             with incoming.open("rb") as source:
                 digest = hashlib.file_digest(source, "sha256").hexdigest()
         else:
-            raise ImportFailure("Choose MP3, WAV, M4A, OGG, WebM, FLAC, or an Otter ZIP.")
+            raise ImportFailure("Choose an MP3 file.")
 
         existing = storage.find_by_hash(digest)
         if existing:

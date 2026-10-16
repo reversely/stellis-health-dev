@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from stellis import auth, storage
 from stellis import cli
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class LocalAuthTest(unittest.TestCase):
@@ -37,7 +37,7 @@ class LocalAuthTest(unittest.TestCase):
         self.assertEqual(self.client.get('/api/v1/sync-config').status_code, 401)
         self.assertEqual(self.client.get('/api/v1/ai-runs/test').status_code, 401)
         self.assertEqual(self.client.post('/api/v1/conversations/import', files={
-            'file': ('talk.wav', wav_bytes(), 'audio/wav')}).status_code, 401)
+            'file': ('talk.mp3', mp3_bytes(), 'audio/mpeg')}).status_code, 401)
         self.assertTrue(self.client.get('/api/v1/auth/status').json()['registration_open'])
         registered = self.client.post('/api/v1/auth/register', json=self.credentials)
         self.assertEqual(registered.status_code, 200)
@@ -45,7 +45,7 @@ class LocalAuthTest(unittest.TestCase):
         self.assertIn('samesite=strict', registered.headers['set-cookie'].lower())
         self.assertEqual(self.client.post('/api/v1/auth/register', json=self.credentials).status_code, 409)
         imported = self.client.post('/api/v1/conversations/import', files={
-            'file': ('talk.wav', wav_bytes(), 'audio/wav')})
+            'file': ('talk.mp3', mp3_bytes(), 'audio/mpeg')})
         self.assertEqual(imported.status_code, 200)
         conversation_id = imported.json()['conversation']['id']
         self.assertEqual(self.client.get(f'/api/v1/conversations/{conversation_id}/audio').status_code, 200)

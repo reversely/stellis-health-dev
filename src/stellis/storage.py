@@ -161,6 +161,15 @@ def connect() -> Iterator[sqlite3.Connection]:
             updated_at TEXT NOT NULL
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS import_references (
+            conversation_id TEXT PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+            transcript_text TEXT NOT NULL,
+            summary_text TEXT NOT NULL,
+            source_filename TEXT NOT NULL,
+            imported_at TEXT NOT NULL
+        )"""
+    )
     transcript_columns = {row["name"] for row in conn.execute("PRAGMA table_info(transcripts)")}
     if "generation_version" not in transcript_columns:
         conn.execute("ALTER TABLE transcripts ADD COLUMN generation_version TEXT NOT NULL DEFAULT 'legacy'")
@@ -635,6 +644,31 @@ def get_transcript(conversation_id: str) -> dict[str, object] | None:
     """Return stored transcript data without exposing the database layout."""
     with connect() as conn:
         row = conn.execute("SELECT * FROM transcripts WHERE conversation_id = ?", (conversation_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def save_import_reference(conversation_id: str, transcript_text: str,
+                          summary_text: str, source_filename: str) -> None:
+    """Keep exported wording beside the independently generated transcript."""
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO import_references
+               (conversation_id, transcript_text, summary_text, source_filename, imported_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(conversation_id) DO UPDATE SET
+                 transcript_text=excluded.transcript_text,
+                 summary_text=excluded.summary_text,
+                 source_filename=excluded.source_filename,
+                 imported_at=excluded.imported_at""",
+            (conversation_id, transcript_text, summary_text, source_filename,
+             datetime.now(timezone.utc).isoformat()),
+        )
+
+
+def get_import_reference(conversation_id: str) -> dict[str, object] | None:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM import_references WHERE conversation_id = ?",
+                           (conversation_id,)).fetchone()
     return dict(row) if row else None
 
 

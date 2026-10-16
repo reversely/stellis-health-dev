@@ -17,7 +17,7 @@ from PIL import Image, PngImagePlugin
 
 from stellis import storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 def png_bytes() -> bytes:
@@ -35,7 +35,7 @@ class ImageWorkflowTest(unittest.TestCase):
         self.env.start()
         self.client = TestClient(app)
         response = self.client.post("/api/v1/conversations/import",
-                                    files={"file": ("meeting.wav", wav_bytes(), "audio/wav")})
+                                    files={"file": ("meeting.mp3", mp3_bytes(), "audio/mpeg")})
         self.conversation_id = response.json()["conversation"]["id"]
 
     def tearDown(self) -> None:

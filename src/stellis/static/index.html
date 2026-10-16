@@ -76,6 +76,7 @@
           <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="add-conversation-image" type="button">Add image</button><button id="restore-passage-button" type="button" hidden>Restore passage</button><button id="discard-edits-button" type="button" hidden>Discard edits</button><button id="edit-transcript-button" type="button" hidden>Edit transcript</button></div></div>
           <p id="edit-status" role="status" aria-live="polite" hidden></p>
           <p id="processing-status" role="status" aria-live="polite">Loading transcript…</p>
+          <details id="import-reference" hidden><summary>Imported transcript reference</summary><pre id="import-reference-text"></pre></details>
           <div id="transcript-search" class="transcript-search"><label for="transcript-search-input">Find in transcript</label><div class="search-row"><input id="transcript-search-input" type="search" placeholder="Find words or a phrase" autocomplete="off" /><select id="transcript-search-speaker" aria-label="Filter by speaker"><option value="">All speakers</option></select><button id="transcript-search-previous" type="button" aria-label="Previous match">↑</button><button id="transcript-search-next" type="button" aria-label="Next match">↓</button><button id="transcript-search-clear" type="button">Clear</button></div><p id="transcript-search-status" role="status" aria-live="polite"></p></div>
           <div class="highlight-controls"><div class="filter-option"><button id="show-highlights" type="button" aria-pressed="false">Show only highlights</button><span id="highlight-count"></span></div><div class="filter-option"><button id="show-rematch-changes" type="button" aria-pressed="false" hidden>Show speaker changes</button><span id="rematch-change-count"></span></div></div>
           <section id="transcript-comments" class="transcript-comments"><button id="comments-toggle" type="button" aria-expanded="false">Comments <span id="comment-count">0</span></button><div id="comments-list" hidden></div></section>
@@ -89,14 +90,14 @@
       <div class="import-header"><h2 id="import-title">Import recording</h2><button id="import-close" type="button" aria-label="Close">×</button></div>
       <label for="import-language">Transcript language</label><select id="import-language"><option value="en">English</option></select>
       <p class="import-language-note">English only.</p>
-      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Browse files or drop audio or ZIP">
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Browse files or drop an MP3">
         <div class="drop-icon" aria-hidden="true">↥</div>
-        <strong>Drop audio or ZIP here</strong>
+        <strong>Drop an MP3 here</strong>
         <span>Browse files</span>
       </div>
-      <p class="import-formats">MP3, WAV, M4A, OGG, WebM, FLAC, ZIP</p>
+      <p class="import-formats">MP3</p>
       <p id="import-status" role="status" aria-live="polite"></p>
-      <input id="audio-file" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.zip" />
+      <input id="audio-file" type="file" accept=".mp3,audio/mpeg" />
     </dialog>
     <dialog id="conversation-categories-dialog" aria-labelledby="conversation-categories-title"><div class="category-dialog-header"><h2 id="conversation-categories-title">Categories</h2><button id="close-conversation-categories" type="button" aria-label="Close categories">×</button></div><div id="conversation-category-list"></div><p id="categorization-status" role="status" aria-live="polite"></p><button id="retry-categorization" type="button" hidden>Retry categorization</button></dialog>
     <dialog id="rename-conversation-dialog" aria-labelledby="rename-conversation-title">

@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from stellis import ai, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class AIWorkflowTest(unittest.TestCase):
@@ -23,7 +23,7 @@ class AIWorkflowTest(unittest.TestCase):
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
         self.env.start()
         self.client = TestClient(app)
-        imported = self.client.post("/api/v1/conversations/import", files={"file": ("talk.wav", wav_bytes(), "audio/wav")})
+        imported = self.client.post("/api/v1/conversations/import", files={"file": ("talk.mp3", mp3_bytes(), "audio/mpeg")})
         self.conversation_id = imported.json()["conversation"]["id"]
         self.base = f"/api/v1/conversations/{self.conversation_id}"
         segments = [{"id": "seg-1", "start_ms": 0, "end_ms": 1500, "text": "Avery discussed satellites.",
@@ -87,7 +87,7 @@ class AIWorkflowTest(unittest.TestCase):
         other_audio = bytearray(wav_bytes())
         other_audio[-1] = 1
         imported = self.client.post('/api/v1/conversations/import',
-                                    files={'file': ('other.wav', bytes(other_audio), 'audio/wav')})
+                                    files={'file': ('other.mp3', mp3_bytes(bytes(other_audio)), 'audio/mpeg')})
         other_id = imported.json()['conversation']['id']
         storage.save_transcript({'conversation_id': other_id, 'revision': 1, 'language': 'en',
                                  'segments_json': json.dumps([{'id':'other-seg', 'start_ms':0, 'end_ms':1000,

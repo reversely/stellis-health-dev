@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from stellis import processing, rematch, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 
 
 class RematchTest(unittest.TestCase):
@@ -47,7 +47,7 @@ class RematchTest(unittest.TestCase):
     def test_browser_rematch_request_is_persisted_and_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
             with TestClient(app) as client:
-                imported = client.post("/api/v1/conversations/import", files={"file": ("talk.wav", wav_bytes(), "audio/wav")})
+                imported = client.post("/api/v1/conversations/import", files={"file": ("talk.mp3", mp3_bytes(), "audio/mpeg")})
                 conversation_id = imported.json()["conversation"]["id"]
                 segments = [{"id": "seg-1", "start_ms": 0, "end_ms": 1500, "text": "Hello",
                              "speaker_cluster_id": "speaker-1", "speaker_coverage": .9, "words": []}]

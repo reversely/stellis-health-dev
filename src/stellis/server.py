@@ -589,7 +589,16 @@ async def import_conversation(file: UploadFile = File(...)) -> dict[str, object]
         record, duplicate = await import_upload(file)
     except ImportFailure as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"conversation": _public(record), "duplicate": duplicate}
+    job = storage.get_latest_job_for_conversation(str(record["id"]))
+    if storage.get_transcript(str(record["id"])) is None:
+        ready = processing.capabilities()["features"]
+        if ready["transcribe"] and ready["diarize"]:
+            job = processing.request_processing(str(record["id"]))
+    return {
+        "conversation": _public(record),
+        "duplicate": duplicate,
+        "processing_job": processing.public_job(job) if job else None,
+    }
 
 
 @api.get("/recordings")
@@ -1101,6 +1110,16 @@ def transcript(conversation_id: str) -> dict[str, object]:
     if result is None:
         raise HTTPException(status_code=404, detail="Transcript is not ready")
     return result
+
+
+@api.get("/conversations/{conversation_id}/import-reference")
+def import_reference(conversation_id: str) -> dict[str, object]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    reference = storage.get_import_reference(conversation_id)
+    if reference is None:
+        raise HTTPException(status_code=404, detail="No imported transcript reference")
+    return reference
 
 
 @api.post("/conversations/{conversation_id}/highlights")

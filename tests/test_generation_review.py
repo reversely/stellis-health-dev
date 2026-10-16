@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from stellis import generation_review, storage
 from stellis.server import app
-from test_import import wav_bytes
+from test_import import wav_bytes, mp3_bytes
 from test_images import png_bytes
 
 
@@ -22,7 +22,7 @@ class GenerationReviewTest(unittest.TestCase):
         self.env.start()
         self.client = TestClient(app)
         self.id = self.client.post('/api/v1/conversations/import',
-                                   files={'file':('review.wav',wav_bytes(),'audio/wav')}).json()['conversation']['id']
+                                   files={'file':('review.mp3',mp3_bytes(),'audio/mpeg')}).json()['conversation']['id']
         stamp = datetime.now(timezone.utc).isoformat()
         self.source = [
             {'id':'s1','start_ms':0,'end_ms':600,'text':'Hello orbit.',

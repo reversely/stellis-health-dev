@@ -228,7 +228,7 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
             raise ImportFailure("The saved browser audio could not be assembled") from exc
         with remuxed.open("rb") as source:
             upload = UploadFile(file=source, filename=f"{session['title']}{suffix}")
-            conversation, duplicate = await import_upload(upload)
+            conversation, duplicate = await import_upload(upload, browser_recording=True)
         from stellis import notes
         notes.attach_to_conversation(recording_id, str(conversation["id"]))
         from stellis import images
