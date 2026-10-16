@@ -55,7 +55,7 @@
         await send(user,key,partIds[index],parts[index]);
       }
       await send(user,key,crypto.randomUUID(),{kind:'conversation_manifest',snapshot_id:snapshot,
-        source_conversation_id:id,title:conversation.title,duration_ms:conversation.duration_ms,
+        source_conversation_id:id,source_origin:location.origin,title:conversation.title,duration_ms:conversation.duration_ms,
         source_revision:transcript.revision,generation_version:transcript.generation_version,
         segment_count:transcript.segments.length,part_ids:partIds,created_at:new Date().toISOString()});
       status.textContent='Transcript synced. Audio stays on this device.';

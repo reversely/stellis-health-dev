@@ -2,9 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-const context = {window: {}, TextEncoder};
+const context = {window: {}, TextEncoder, URL};
 vm.runInNewContext(fs.readFileSync('src/stellis/shared/snapshot-format.js', 'utf8'), context);
-const {partsFor, assemble} = context.window.StellisSnapshot;
+const {partsFor, assemble, sourceUrl} = context.window.StellisSnapshot;
 const source = Array.from({length: 23}, (_, index) => ({
   id: `passage-${index}`, start_ms: index * 1000, end_ms: index * 1000 + 900,
   text: `Words ${index}`, speaker_display_name: 'Speaker A', speaker_uncertain: false,
@@ -25,4 +25,12 @@ assert.equal(assemble(manifest, new Map([...entries].map(([id, part]) =>
   [id, id === 'part-1' ? {...part, snapshot_id: 'other'} : part]))), null);
 assert.equal(assemble(manifest, new Map([...entries].map(([id, part]) =>
   [id, id === 'part-1' ? {...part, segments: [{...part.segments[0], id: 'passage-0'}, ...part.segments.slice(1)]} : part]))), null);
+assert.equal(sourceUrl({...manifest, source_conversation_id:'conversation', source_origin:'http://127.0.0.1:8767'},
+  source[0]),'http://127.0.0.1:8767/conversation/conversation?at=passage-0');
+assert.equal(sourceUrl({...manifest, source_conversation_id:'conversation'},source[0]),
+  'http://127.0.0.1:8765/conversation/conversation?at=passage-0');
+for(const source_origin of ['https://example.com:8765','http://127.0.0.1:8767/path','http://127.0.0.1',
+  'http://127.0.0.1:8767@evil.example:8767','']){
+  assert.equal(sourceUrl({...manifest, source_conversation_id:'conversation',source_origin},source[0]),null);
+}
 console.log('Snapshot format checks passed');

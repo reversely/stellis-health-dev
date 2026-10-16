@@ -28,5 +28,17 @@ window.StellisSnapshot = (() => {
         typeof item.id!=='string'||typeof item.text!=='string'))return null;
     return segments;
   }
-  return {partsFor,assemble};
+  function sourceUrl(manifest,segment) {
+    const origin=manifest.source_origin===undefined?'http://127.0.0.1:8765':manifest.source_origin;
+    if(typeof origin!=='string'||typeof manifest.source_conversation_id!=='string'||typeof segment.id!=='string')return null;
+    try {
+      const parsed=new URL(origin);
+      if(!['http:','https:'].includes(parsed.protocol)||!['127.0.0.1','localhost'].includes(parsed.hostname)||
+          !parsed.port||parsed.origin!==origin||parsed.username||parsed.password)return null;
+      const link=new URL(`/conversation/${encodeURIComponent(manifest.source_conversation_id)}`,parsed);
+      link.searchParams.set('at',segment.id);
+      return link.href;
+    }catch{return null;}
+  }
+  return {partsFor,assemble,sourceUrl};
 })();

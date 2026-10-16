@@ -35,8 +35,9 @@ const VaultUI = (() => {
       details.append(heading);
       for (const segment of segments) {
         const passage=document.createElement('p');
-        const seek=document.createElement('a');seek.href=`http://127.0.0.1:8765/conversation/${encodeURIComponent(manifest.source_conversation_id)}?at=${encodeURIComponent(segment.id)}`;
-        seek.target='_blank';seek.rel='noopener';seek.title='Open on recording device';
+        const source=window.StellisSnapshot.sourceUrl(manifest,segment);
+        const seek=document.createElement(source?'a':'span');
+        if(source){seek.href=source;seek.target='_blank';seek.rel='noopener';seek.title='Open on recording device';}
         const seconds=Math.floor(segment.start_ms/1000);seek.textContent=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
         passage.append(seek,document.createTextNode(` · ${segment.speaker||'Speaker'} · ${segment.text}`));details.append(passage);
       }
