@@ -6,6 +6,12 @@ const listView = document.querySelector('#list-view');
 const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
 const API = '/api/v1';
+const conversationMore = document.querySelector('#conversation-more');
+conversationMore.addEventListener('click', event => { if (event.target.closest('button')) conversationMore.open = false; });
+document.addEventListener('pointerdown', event => { if (!conversationMore.contains(event.target)) conversationMore.open = false; });
+conversationMore.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { conversationMore.open = false; conversationMore.querySelector('summary').focus(); }
+});
 const themeButton = document.querySelector('#theme-toggle');
 function syncThemeButton() {
   const light = document.documentElement.dataset.theme === 'light';
@@ -171,7 +177,8 @@ function updateTranscriptSearch() {
   } else refreshTranscriptSearch();
 }
 async function showList() {
-  document.body.classList.remove('profile-page');
+  document.body.classList.remove('profile-page', 'conversation-page');
+  conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(cleanRunTimer);
@@ -182,7 +189,6 @@ async function showList() {
   document.querySelector('#trash-view').hidden = true;
   document.querySelector('#person-view').hidden = true;
   document.querySelector('#page-title').textContent = 'Your conversations';
-  document.querySelector('#page-subtitle').textContent = 'Listen, review, and return to what matters.';
   const [conversations, categories] = await Promise.all([
     json(await fetch(`${API}/conversations`)), json(await fetch(`${API}/categories`)),
   ]);
@@ -292,14 +298,14 @@ async function showTrash() {
       catch (error) { document.querySelector('#trash-status').textContent = error.message; }
     });
     const expiry = document.createElement('span'); expiry.className = 'trash-expiry';
-    expiry.textContent = `Deletes automatically ${new Date(item.expires_at).toLocaleString()}`;
+    expiry.textContent = `Deletes ${new Date(item.expires_at).toLocaleString()}`;
     row.append(title, expiry, restore, remove); container.append(row);
   }
 }
 async function loadPeoplePanel() {
   const people = await json(await fetch(`${API}/persons`));
   const container = document.querySelector('#people-list'); container.replaceChildren();
-  if (!people.length) { const empty = document.createElement('p'); empty.textContent = 'Confirmed speakers will appear here.'; container.append(empty); }
+  if (!people.length) { const empty = document.createElement('p'); empty.textContent = 'No people yet.'; container.append(empty); }
   for (const person of people) {
     const link = document.createElement('a'); link.className = 'person-list-row';
     link.href = `/person/${encodeURIComponent(person.id)}`;
@@ -308,7 +314,9 @@ async function loadPeoplePanel() {
   }
 }
 async function showPerson(id) {
+  document.body.classList.remove('conversation-page');
   document.body.classList.add('profile-page');
+  conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null; activePersonId = id;
@@ -318,7 +326,6 @@ async function showPerson(id) {
   listView.hidden = true; detailView.hidden = true; document.querySelector('#trash-view').hidden = true;
   document.querySelector('#person-view').hidden = false;
   document.querySelector('#page-title').textContent = person.name;
-  document.querySelector('#page-subtitle').textContent = 'Confirmed speaker history.';
   document.querySelector('#person-rename-input').value = person.name;
   document.querySelector('#person-status').textContent = '';
   const container = document.querySelector('#person-conversations'); container.replaceChildren();
@@ -354,6 +361,8 @@ async function showPerson(id) {
 }
 async function showDetail(id) {
   document.body.classList.remove('profile-page');
+  document.body.classList.add('conversation-page');
+  conversationMore.open = false; conversationMore.hidden = false;
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(cleanRunTimer);
@@ -380,7 +389,7 @@ async function showDetail(id) {
   transcriptSearchIndex = -1;
   syncTranscriptEditControls();
   transcriptView.replaceChildren();
-  processingStatus.textContent = 'Checking local speech models…';
+  processingStatus.textContent = 'Loading transcript…';
   processButton.hidden = true;
   rematchButton.hidden = true;
   const item = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}`));
@@ -389,7 +398,6 @@ async function showDetail(id) {
   detailView.hidden = false;
   document.querySelector('#person-view').hidden = true;
   document.querySelector('#page-title').textContent = item.title;
-  document.querySelector('#page-subtitle').textContent = 'Replay and scrub through your recording.';
   document.querySelector('#audio-duration').textContent = time(item.duration_ms / 1000);
   player.src = `${API}/conversations/${encodeURIComponent(id)}/audio`;
   player.load();
@@ -461,18 +469,21 @@ function renderAIRuns(runs) {
   const latest = summaries[0];
   const summaryResults = document.querySelector('#summary-results'); summaryResults.replaceChildren();
   const button = document.querySelector('#generate-summary');
+  const regenerate = document.querySelector('#regenerate-summary');
   button.disabled = latest?.state === 'running' || latest?.state === 'queued';
-  button.textContent = latest?.state === 'failed' ? 'Retry summary' : latest?.stale ? 'Regenerate summary' : latest?.state === 'succeeded' ? 'Summary current' : 'Generate summary';
+  button.hidden = latest?.state === 'succeeded';
+  button.textContent = latest?.state === 'failed' ? 'Retry summary' : 'Generate summary';
+  regenerate.hidden = latest?.state !== 'succeeded';
   if (latest?.state === 'succeeded') {
-    if (latest.stale) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = 'Transcript changed since this result. Regenerate to include corrections.'; summaryResults.append(stale);}
+    if (latest.stale) {const stale = document.createElement('p'); stale.className = 'ai-stale'; stale.textContent = 'Summary is outdated.'; summaryResults.append(stale);}
     for (const [field, title] of [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']])
       renderAIItems(title, latest.result[field], summaryResults);
   }
   const status = document.querySelector('#ai-status');
   status.textContent = latest?.state === 'failed' ? `Summary stopped: ${latest.error_message}` :
     latest?.state === 'running' || latest?.state === 'queued' ? `Generating summary · ${latest.stage}` :
-    latest?.state === 'succeeded' ? `Source-backed summary · ${latest.model_id} · ${latest.usage.total_tokens || 0} tokens` :
-    'Generate a summary after the on-device transcript is ready.';
+    latest?.state === 'succeeded' ? '' :
+    currentTranscript ? '' : 'Transcribe before generating a summary.';
   const answers = document.querySelector('#ai-answers'); answers.replaceChildren();
   for (const run of runs.filter(item => item.kind === 'answer')) {
     const card = document.createElement('article'); card.className = 'ai-answer';
@@ -498,12 +509,12 @@ async function loadAIRuns(id) {
   if (runs.some(run => run.state === 'queued' || run.state === 'running'))
     aiRunTimer = setTimeout(() => loadAIRuns(id).catch(error => document.querySelector('#ai-status').textContent = error.message), 2000);
 }
-async function startAIRun(kind, question = null) {
+async function startAIRun(kind, question = null, force = false) {
   const id = activeConversationId;
-  const status = document.querySelector('#ai-status'); status.textContent = 'Starting Nemotron request…';
+  const status = document.querySelector('#ai-status'); status.textContent = kind === 'summary' ? 'Generating summary…' : 'Answering…';
   try {
     await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/ai-runs`, {method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind,question})}));
+      body:JSON.stringify({kind,question,force})}));
     await loadAIRuns(id);
   } catch (error) { status.textContent = error.message; }
 }
@@ -514,6 +525,7 @@ document.querySelector('#summary-tab').addEventListener('click', () => {
 document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
 document.querySelector('#edited-tab').addEventListener('click', () => showConversationTab('edited'));
 document.querySelector('#generate-summary').addEventListener('click', () => startAIRun('summary'));
+document.querySelector('#regenerate-summary').addEventListener('click', () => startAIRun('summary', null, true));
 document.querySelector('#clean-button').addEventListener('click', async () => {
   const id = activeConversationId;
   const status = document.querySelector('#clean-status');
@@ -730,7 +742,7 @@ async function loadSpeech(id) {
 }
 async function beginProcessing(id) {
   processButton.hidden = true;
-  processingStatus.textContent = 'Starting on-device transcription…';
+  processingStatus.textContent = 'Transcribing…';
   try {
     const job = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/processing-jobs`, {method:'POST'}));
     watchJob(job);
@@ -751,7 +763,7 @@ function watchJob(job) {
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
     return;
   }
-  processingStatus.textContent = `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)} on this device · ${Math.round(job.progress * 100)}%`;
+  processingStatus.textContent = `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)} · ${Math.round(job.progress * 100)}%`;
   jobTimer = setTimeout(async () => {
     try { watchJob(await json(await fetch(`${API}/jobs/${encodeURIComponent(job.id)}`))); }
     catch (error) { processingStatus.textContent = error.message; }
@@ -953,7 +965,7 @@ async function showTranscript(id) {
     transcriptView.append(turn);
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
-  processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a word or passage to play; drag across words to highlight.`;
+  processingStatus.textContent = `${data.segments.length} passages · ${turns.length} turns · ${counts.size} speakers${unresolved ? ` · ${unresolved} unresolved` : ''}`;
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
   refreshTranscriptSearch();
@@ -1029,7 +1041,7 @@ function inspectSelection() {
         method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(excerpt)}));
       selection.removeAllRanges();
       await showTranscript(activeConversationId);
-      processingStatus.textContent = 'Highlight saved. Use Show only highlights to review excerpts.';
+      processingStatus.textContent = 'Highlight saved.';
     } catch (error) { processingStatus.textContent = error.message; }
   });
   const copy = document.createElement('button'); copy.type = 'button'; copy.textContent = 'Copy';
@@ -1081,7 +1093,7 @@ function showWordEditor(row, segment) {
         body: JSON.stringify({text:input.value, expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = 'Transcript words saved. The original model text is available to restore.';
+      processingStatus.textContent = 'Transcript saved.';
     } catch (error) { message.textContent = error.message; save.disabled = false; }
   });
   row.append(form); form.scrollIntoView({block:'start'}); input.focus(); input.select();
@@ -1137,7 +1149,7 @@ function showSpeakerEditor(row, segment) {
         body:JSON.stringify({person_id:person.id,segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = 'Person confirmed from this recording.';
+      processingStatus.textContent = 'Speaker confirmed.';
     } catch (error) { message.textContent = error.message; confirm.disabled = false; }
   });
   newPerson.addEventListener('keydown', event => { if (event.key === 'Enter') {event.preventDefault();confirm.click();} });
@@ -1149,7 +1161,7 @@ function showSpeakerEditor(row, segment) {
         body:JSON.stringify({segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = 'Person confirmation removed.';
+      processingStatus.textContent = 'Confirmation removed.';
     } catch (error) { message.textContent = error.message; unlink.disabled = false; }
   });
   async function submitLabel(value) {
@@ -1160,7 +1172,7 @@ function showSpeakerEditor(row, segment) {
         body:JSON.stringify({scope:scope.value,target_id:targetId,name:value,expected_revision:currentTranscript.revision}),
       }));
       await showTranscript(activeConversationId);
-      processingStatus.textContent = value ? `Speaker label saved for ${scope.value === 'cluster' ? 'all matching turns' : 'this passage'}.` : 'Manual speaker label cleared.';
+      processingStatus.textContent = value ? 'Speaker saved.' : 'Speaker label cleared.';
     } catch (error) { message.textContent = error.message; }
   }
   form.addEventListener('submit', event => {event.preventDefault(); submitLabel(name.value.trim() || null);});
@@ -1306,7 +1318,7 @@ async function startCapture() {
         const response = await fetch(`${API}/recordings/${encodeURIComponent(session.id)}/chunks/${sequence}`,
           {method:'PUT',headers:{'Content-Type':session.media_type},body:event.data});
         await json(response);
-        recordingDetail.textContent = `${sequence + 1} audio chunks saved on this device.`;
+        recordingDetail.textContent = 'Saved locally';
       }).catch(error => {
         current.uploadError = error;
         recordingState.textContent = 'Saving stopped';
@@ -1326,7 +1338,7 @@ async function startCapture() {
     }));
     recorder.start(1000);
     capture.timer = setInterval(captureControls, 250);
-    recordingState.textContent = 'Recording'; recordingDetail.textContent = 'Microphone audio is saved locally every second.';
+    recordingState.textContent = 'Recording'; recordingDetail.textContent = 'Saving locally';
     captureControls(); await loadRecoveries();
   } catch (error) {
     stream?.getTracks().forEach(track => track.stop());
@@ -1353,7 +1365,7 @@ async function finishCapture() {
   }
   try {
     const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/finalize`, {method:'POST'}));
-    recordingState.textContent = 'Recording saved'; recordingDetail.textContent = 'Ready for on-device transcription.';
+    recordingState.textContent = 'Recording saved'; recordingDetail.textContent = '';
     await loadRecoveries();
     history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
     await showDetail(result.conversation.id); setStatus('Recording saved.', true);
@@ -1498,7 +1510,7 @@ document.querySelector('#person-delete').addEventListener('click', async () => {
   catch (error) { document.querySelector('#person-status').textContent = error.message; }
 });
 document.querySelector('#trash-conversation').addEventListener('click', async () => {
-  if (!activeConversationId || !window.confirm('Move this conversation to Recently Deleted? You can restore it within 30 days.')) return;
+  if (!activeConversationId || !window.confirm('Delete this conversation? You can restore it from Recently Deleted for 30 days.')) return;
   try {
     await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/trash`, {method:'POST'}));
     player.pause(); player.removeAttribute('src'); player.load();
