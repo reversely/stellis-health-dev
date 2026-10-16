@@ -63,6 +63,7 @@ let librarySearchTotal = 0;
 let librarySearchLimited = false;
 let libraryCategories = [];
 let libraryConversations = [];
+let activePersonId = null;
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
 
@@ -97,14 +98,22 @@ function renderLibrarySearch() {
     (kind === 'all' ? 'No results.' : 'No results in this category.');
   for (const item of visible) {
     const row = document.createElement('a'); row.className = 'search-result';
-    row.href = `/conversation/${encodeURIComponent(item.conversation_id)}${item.segment_id ? `?at=${encodeURIComponent(item.segment_id)}` : ''}`;
+    row.href = item.kind === 'person' ? `/person/${encodeURIComponent(item.person_id)}` :
+      `/conversation/${encodeURIComponent(item.conversation_id)}${item.segment_id ? `?at=${encodeURIComponent(item.segment_id)}` : ''}`;
     const heading = document.createElement('strong'); heading.textContent = item.conversation_title;
     const detail = document.createElement('span');
     detail.textContent = item.kind === 'conversation' ? 'Conversation' :
+      item.kind === 'person' ? 'Confirmed person profile' :
       `${item.kind === 'speaker' ? 'Speaker' : 'Passage'} · ${item.speaker} · ${time(item.start_ms / 1000)}${item.speaker_uncertain ? ' · Uncertain speaker match' : ''}`;
     const excerpt = document.createElement('span'); excerpt.className = 'search-excerpt';
     appendSearchExcerpt(excerpt, item.excerpt, query);
     row.append(heading, detail, excerpt); container.append(row);
+    if (item.person_id && item.kind === 'speaker') {
+      const profile = document.createElement('a'); profile.className = 'search-profile-link';
+      profile.href = `/person/${encodeURIComponent(item.person_id)}`;
+      profile.textContent = `Open ${item.speaker}'s profile`;
+      container.append(profile);
+    }
   }
 }
 async function submitLibrarySearch(event) {
@@ -162,13 +171,16 @@ function updateTranscriptSearch() {
   } else refreshTranscriptSearch();
 }
 async function showList() {
+  document.body.classList.remove('profile-page');
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(cleanRunTimer);
   activeConversationId = null;
+  activePersonId = null;
   listView.hidden = false;
   detailView.hidden = true;
   document.querySelector('#trash-view').hidden = true;
+  document.querySelector('#person-view').hidden = true;
   document.querySelector('#page-title').textContent = 'Your conversations';
   document.querySelector('#page-subtitle').textContent = 'Listen, review, and return to what matters.';
   const [conversations, categories] = await Promise.all([
@@ -179,6 +191,7 @@ async function showList() {
   document.querySelector('#category-status').textContent = '';
   renderCategoryControls();
   renderConversationList();
+  await loadPeoplePanel();
   if (document.querySelector('#library-search-input').value.trim().length >= 2)
     await submitLibrarySearch(new Event('submit'));
 }
@@ -260,7 +273,8 @@ async function renderConversationCategories(ids) {
 async function showTrash() {
   const items = await json(await fetch(`${API}/trash`));
   document.querySelector('#trash-status').textContent = '';
-  listView.hidden = true; detailView.hidden = true; document.querySelector('#trash-view').hidden = false;
+  listView.hidden = true; detailView.hidden = true; document.querySelector('#person-view').hidden = true;
+  document.querySelector('#trash-view').hidden = false;
   const container = document.querySelector('#trash-list'); container.replaceChildren();
   if (!items.length) { const empty = document.createElement('p'); empty.textContent = 'Trash is empty.'; container.append(empty); }
   for (const item of items) {
@@ -280,7 +294,64 @@ async function showTrash() {
     row.append(title, restore, remove); container.append(row);
   }
 }
+async function loadPeoplePanel() {
+  const people = await json(await fetch(`${API}/persons`));
+  const container = document.querySelector('#people-list'); container.replaceChildren();
+  if (!people.length) { const empty = document.createElement('p'); empty.textContent = 'Confirmed speakers will appear here.'; container.append(empty); }
+  for (const person of people) {
+    const link = document.createElement('a'); link.className = 'person-list-row';
+    link.href = `/person/${encodeURIComponent(person.id)}`;
+    link.textContent = `${person.name} · ${person.conversation_count} conversations`;
+    container.append(link);
+  }
+}
+async function showPerson(id) {
+  document.body.classList.add('profile-page');
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
+  player.pause(); player.removeAttribute('src'); player.load();
+  activeConversationId = null; activePersonId = id;
+  const [person, all] = await Promise.all([
+    json(await fetch(`${API}/persons/${encodeURIComponent(id)}`)), json(await fetch(`${API}/persons`)),
+  ]);
+  listView.hidden = true; detailView.hidden = true; document.querySelector('#trash-view').hidden = true;
+  document.querySelector('#person-view').hidden = false;
+  document.querySelector('#page-title').textContent = person.name;
+  document.querySelector('#page-subtitle').textContent = 'Confirmed speaker history.';
+  document.querySelector('#person-rename-input').value = person.name;
+  document.querySelector('#person-status').textContent = '';
+  const container = document.querySelector('#person-conversations'); container.replaceChildren();
+  if (!person.conversations.length) { const empty = document.createElement('p'); empty.textContent = 'No active conversations confirmed for this person.'; container.append(empty); }
+  for (const item of person.conversations) {
+    const row = document.createElement('div'); row.className = 'person-conversation-row';
+    const link = document.createElement('a'); link.href = `/conversation/${encodeURIComponent(item.conversation_id)}?at=${encodeURIComponent(item.segment_id)}&t=${item.start_ms}`;
+    link.textContent = `${item.title} · ${new Date(item.created_at).toLocaleDateString()} · ${time(item.start_ms / 1000)}`;
+    const note = document.createElement('small');
+    note.textContent = `${item.confirmed_passages} confirmed passages${item.current_generation ? '' : ' · prior transcript generation'}`;
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove association';
+    remove.addEventListener('click', async () => {
+      if (!window.confirm(`Remove ${person.name}'s confirmation from “${item.title}”?`)) return;
+      try { await json(await fetch(`${API}/persons/${encodeURIComponent(id)}/conversations/${encodeURIComponent(item.conversation_id)}`, {method:'DELETE'})); await showPerson(id); }
+      catch (error) { document.querySelector('#person-status').textContent = error.message; }
+    });
+    const separate = document.createElement('button'); separate.type = 'button'; separate.textContent = 'Move to new person';
+    separate.addEventListener('click', async () => {
+      const name = window.prompt('Name for the separate person'); if (!name?.trim()) return;
+      try {
+        const created = await json(await fetch(`${API}/persons`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}));
+        await json(await fetch(`${API}/persons/${encodeURIComponent(id)}/move-conversation`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:item.conversation_id,target_id:created.id})}));
+        history.pushState({}, '', `/person/${encodeURIComponent(created.id)}`);
+        await showPerson(created.id);
+      } catch (error) { document.querySelector('#person-status').textContent = error.message; }
+    });
+    row.append(link, note, remove, separate); container.append(row);
+  }
+  const picker = document.querySelector('#person-merge-source');
+  picker.replaceChildren(new Option('Choose a person', ''),
+    ...all.filter(item => item.id !== id).map(item => new Option(`${item.name} · ${item.conversation_count}`, item.id)));
+  document.querySelector('#person-delete').hidden = person.total_link_count > 0;
+}
 async function showDetail(id) {
+  document.body.classList.remove('profile-page');
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(cleanRunTimer);
@@ -293,6 +364,7 @@ async function showDetail(id) {
   document.querySelector('#edited-tab').hidden = true;
   document.querySelector('#edited-transcript').replaceChildren();
   activeConversationId = id;
+  activePersonId = null;
   rematchChangesOnly = false;
   transcriptEditMode = false;
   pendingTranscriptEdits.clear();
@@ -313,6 +385,7 @@ async function showDetail(id) {
   await renderConversationCategories(item.category_ids);
   listView.hidden = true;
   detailView.hidden = false;
+  document.querySelector('#person-view').hidden = true;
   document.querySelector('#page-title').textContent = item.title;
   document.querySelector('#page-subtitle').textContent = 'Replay and scrub through your recording.';
   document.querySelector('#audio-duration').textContent = time(item.duration_ms / 1000);
@@ -322,13 +395,21 @@ async function showDetail(id) {
   showConversationTab('transcript');
   await loadAIRuns(id);
   await loadCleanRuns(id);
-  const targetSegmentId = new URLSearchParams(location.search).get('at');
+  const query = new URLSearchParams(location.search);
+  const targetSegmentId = query.get('at');
   if (targetSegmentId) {
     const target = transcriptSegments.find(segment => segment.id === targetSegmentId);
     if (target) {
       const seek = () => { player.pause(); player.currentTime = target.start_ms / 1000; };
       if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
       transcriptView.querySelector(`[data-segment-id="${CSS.escape(target.id)}"]`)?.scrollIntoView({block: 'center'});
+    }
+  }
+  if (targetSegmentId && !transcriptSegments.some(segment => segment.id === targetSegmentId) && query.has('t')) {
+    const timestamp = Number(query.get('t'));
+    if (Number.isFinite(timestamp) && timestamp >= 0 && timestamp <= item.duration_ms) {
+      const seek = () => { player.pause(); player.currentTime = timestamp / 1000; };
+      if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
     }
   }
 }
@@ -679,9 +760,10 @@ function groupTranscriptSegments(segments) {
   for (const segment of segments) {
     const current = turns.at(-1);
     const previous = current?.at(-1);
-    const resolved = item => item.speaker_label_source?.startsWith('manual') || (item.speaker_cluster_id && !item.speaker_uncertain);
+    const resolved = item => item.person_id || item.speaker_label_source?.startsWith('manual') || (item.speaker_cluster_id && !item.speaker_uncertain);
     const sameTurn = previous && resolved(previous) && resolved(segment) &&
       previous.speaker_display_name === segment.speaker_display_name &&
+      (previous.person_id || segment.person_id ? previous.person_id === segment.person_id : true) &&
       segment.start_ms - previous.end_ms <= 1500;
     if (sameTurn) current.push(segment);
     else turns.push([segment]);
@@ -805,15 +887,19 @@ async function showTranscript(id) {
     turn.className = 'speaker-turn';
     turn.classList.toggle('editing', transcriptEditMode);
     const heading = document.createElement('div'); heading.className = 'turn-heading';
-    const turnSpeaker = document.createElement('button'); turnSpeaker.type = 'button';
-    turnSpeaker.textContent = visible[0].speaker_display_name;
-    turnSpeaker.setAttribute('aria-label', `Edit speaker label for turn at ${time(visible[0].start_ms / 1000)}`);
     const firstSegment = visible[0];
-    turnSpeaker.addEventListener('click', () => {
-      if (pendingTranscriptEdits.size) { editStatus.textContent = 'Press Done to save word changes before changing a speaker.'; return; }
-      if (!transcriptEditMode) setTranscriptEditMode(true);
-      showSpeakerEditor(turn.querySelector('.segment'), firstSegment);
-    });
+    const turnSpeaker = document.createElement(firstSegment.person_id ? 'a' : 'button');
+    if (firstSegment.person_id) turnSpeaker.href = `/person/${encodeURIComponent(firstSegment.person_id)}`;
+    else turnSpeaker.type = 'button';
+    turnSpeaker.textContent = visible[0].speaker_display_name;
+    if (!firstSegment.person_id) {
+      turnSpeaker.setAttribute('aria-label', `Edit speaker label for turn at ${time(visible[0].start_ms / 1000)}`);
+      turnSpeaker.addEventListener('click', () => {
+        if (pendingTranscriptEdits.size) { editStatus.textContent = 'Press Done to save word changes before changing a speaker.'; return; }
+        if (!transcriptEditMode) setTranscriptEditMode(true);
+        showSpeakerEditor(turn.querySelector('.segment'), firstSegment);
+      });
+    }
     const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? `–${time(visible.at(-1).end_ms / 1000)}` : ''}`;
     heading.append(turnSpeaker, range);
     turn.append(heading);
@@ -1004,7 +1090,7 @@ function showSpeakerEditor(row, segment) {
   const nameLabel = document.createElement('label'); nameLabel.textContent = 'Speaker name';
   const name = document.createElement('input'); name.type = 'text'; name.maxLength = 100;
   name.placeholder = 'Name this speaker';
-  name.value = segment.speaker_label_source === 'automatic' ? '' : segment.speaker_display_name;
+  name.value = segment.speaker_label_source === 'automatic' || segment.person_id ? '' : segment.speaker_display_name;
   nameLabel.append(name);
   const scopeLabel = document.createElement('label'); scopeLabel.textContent = 'Apply to';
   const scope = document.createElement('select');
@@ -1019,7 +1105,51 @@ function showSpeakerEditor(row, segment) {
   const clear = document.createElement('button'); clear.type = 'button'; clear.textContent = 'Clear manual label';
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', () => form.remove());
   actions.append(save, clear, cancel);
+  if (segment.person_id) { nameLabel.hidden = true; save.hidden = true; clear.hidden = true; }
   const message = document.createElement('p'); message.setAttribute('role', 'status');
+  const personSection = document.createElement('div'); personSection.className = 'person-confirmation';
+  const personTitle = document.createElement('strong'); personTitle.textContent = segment.person_id ?
+    `Confirmed as ${segment.speaker_display_name}` : 'Confirm a person';
+  const personSelectLabel = document.createElement('label'); personSelectLabel.textContent = 'Existing person';
+  const personSelect = document.createElement('select'); personSelect.append(new Option('Choose a person', ''));
+  personSelectLabel.append(personSelect);
+  const newPersonLabel = document.createElement('label'); newPersonLabel.textContent = 'Or create a person';
+  const newPerson = document.createElement('input'); newPerson.type = 'text'; newPerson.maxLength = 100;
+  newPerson.placeholder = 'Person name'; newPersonLabel.append(newPerson);
+  const personActions = document.createElement('div'); personActions.className = 'editor-actions';
+  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.textContent = segment.person_id ? 'Update confirmation' : 'Confirm speaker';
+  const unlink = document.createElement('button'); unlink.type = 'button'; unlink.textContent = 'Remove confirmation'; unlink.hidden = !segment.person_id;
+  personActions.append(confirm, unlink);
+  personSection.append(personTitle, personSelectLabel, newPersonLabel, personActions);
+  fetch(`${API}/persons`).then(json).then(people => {
+    personSelect.replaceChildren(new Option('Choose a person', ''), ...people.map(person => new Option(person.name, person.id)));
+    if (segment.person_id) personSelect.value = segment.person_id;
+  }).catch(error => { message.textContent = error.message; });
+  confirm.addEventListener('click', async () => {
+    confirm.disabled = true;
+    try {
+      const person = newPerson.value.trim() ? await json(await fetch(`${API}/persons`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newPerson.value})})) : {id:personSelect.value};
+      if (!person.id) throw new Error('Choose or create a person.');
+      await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links`, {
+        method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({person_id:person.id,segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
+      }));
+      await showTranscript(activeConversationId);
+      processingStatus.textContent = 'Person confirmed from this recording.';
+    } catch (error) { message.textContent = error.message; confirm.disabled = false; }
+  });
+  newPerson.addEventListener('keydown', event => { if (event.key === 'Enter') {event.preventDefault();confirm.click();} });
+  unlink.addEventListener('click', async () => {
+    unlink.disabled = true;
+    try {
+      await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links/remove`, {
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({segment_id:segment.id,scope:scope.value,expected_revision:currentTranscript.revision}),
+      }));
+      await showTranscript(activeConversationId);
+      processingStatus.textContent = 'Person confirmation removed.';
+    } catch (error) { message.textContent = error.message; unlink.disabled = false; }
+  });
   async function submitLabel(value) {
     const targetId = scope.value === 'cluster' ? segment.speaker_cluster_id : segment.id;
     try {
@@ -1033,7 +1163,7 @@ function showSpeakerEditor(row, segment) {
   }
   form.addEventListener('submit', event => {event.preventDefault(); submitLabel(name.value.trim() || null);});
   clear.addEventListener('click', () => submitLabel(null));
-  form.append(nameLabel, scopeLabel, actions, message);
+  form.append(nameLabel, scopeLabel, actions, personSection, message);
   row.append(form); form.scrollIntoView({block:'start'}); name.focus();
 }
 async function loadVocabulary() {
@@ -1074,6 +1204,8 @@ async function route() {
     }
   }
   if (match) await showDetail(decodeURIComponent(match[1]));
+  else if (location.pathname.match(/^\/person\/([^/]+)$/))
+    await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
 }
 async function importFile(file) {
@@ -1318,6 +1450,12 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
   if (activeConversationId && currentTranscript) showTranscript(activeConversationId).catch(error => processingStatus.textContent = error.message);
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[href^="/person/"]');
+  if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
+  route().catch(error => setStatus(error.message));
+});
 document.querySelector('#library-search-form').addEventListener('submit', submitLibrarySearch);
 document.querySelector('#library-search-input').addEventListener('input', () => {
   librarySearchResults = []; librarySearchTotal = 0;
@@ -1340,6 +1478,23 @@ document.querySelector('#create-category-form').addEventListener('submit', async
 });
 document.querySelector('#show-trash').addEventListener('click', () => showTrash().catch(error => document.querySelector('#trash-status').textContent = error.message));
 document.querySelector('#back-from-trash').addEventListener('click', () => showList().catch(error => setStatus(error.message)));
+document.querySelector('#person-rename-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  try { await json(await fetch(`${API}/persons/${encodeURIComponent(activePersonId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.querySelector('#person-rename-input').value})})); await showPerson(activePersonId); }
+  catch (error) { document.querySelector('#person-status').textContent = error.message; }
+});
+document.querySelector('#person-merge-button').addEventListener('click', async () => {
+  const source = document.querySelector('#person-merge-source').value;
+  if (!source || !window.confirm('Merge this person into the open profile? Confirmed conversation links will move here.')) return;
+  try { await json(await fetch(`${API}/persons/${encodeURIComponent(activePersonId)}/merge`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_id:source})})); await showPerson(activePersonId); }
+  catch (error) { document.querySelector('#person-status').textContent = error.message; }
+});
+document.querySelector('#person-delete').addEventListener('click', async () => {
+  if (!activePersonId || !window.confirm('Delete this empty person profile?')) return;
+  try { await json(await fetch(`${API}/persons/${encodeURIComponent(activePersonId)}`, {method:'DELETE'}));
+    history.pushState({}, '', '/'); await showList(); }
+  catch (error) { document.querySelector('#person-status').textContent = error.message; }
+});
 document.querySelector('#trash-conversation').addEventListener('click', async () => {
   if (!activeConversationId || !window.confirm('Move this conversation to Trash? You can restore it later.')) return;
   try {

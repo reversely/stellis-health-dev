@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from stellis import library, storage
+from stellis import library, people, storage
 
 
 def _excerpt(value: str, query: str, width: int = 120) -> str:
@@ -30,6 +30,23 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
         else:
             conversations = [item for item in conversations
                              if category_id in assigned.get(str(item["id"]), [])]
+    for person in people.list_people():
+        if needle not in str(person["name"]).casefold():
+            continue
+        if category_id is not None:
+            profile = people.get_person(str(person["id"]))
+            if not profile or not any(
+                (not assigned.get(str(item["conversation_id"])) if category_id == "uncategorized"
+                 else category_id in assigned.get(str(item["conversation_id"]), []))
+                for item in profile["conversations"]
+            ):
+                continue
+        total += 1
+        if len(results) < limit:
+            results.append({"kind": "person", "person_id": person["id"], "conversation_id": None,
+                            "conversation_title": person["name"], "revision": None,
+                            "segment_id": None, "start_ms": 0, "speaker": person["name"],
+                            "speaker_uncertain": False, "excerpt": person["name"]})
     for conversation in conversations:
         conversation_id = str(conversation["id"])
         title = str(conversation["title"])
@@ -48,7 +65,8 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
             common = {"conversation_id": conversation_id, "conversation_title": title,
                       "revision": display["revision"], "segment_id": segment["id"],
                       "start_ms": segment["start_ms"], "speaker": speaker,
-                      "speaker_uncertain": bool(segment.get("speaker_uncertain", False))}
+                      "speaker_uncertain": bool(segment.get("speaker_uncertain", False)),
+                      "person_id": segment.get("person_id")}
             if needle in speaker.casefold() and speaker not in seen_speakers:
                 seen_speakers.add(speaker)
                 total += 1

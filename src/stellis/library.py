@@ -169,7 +169,7 @@ def delete_permanently(conversation_id: str) -> dict[str, object]:
                 for table in ("recording_sessions", "clean_runs", "ai_runs", "transcript_highlights",
                               "speaker_label_events", "speaker_labels", "transcript_edit_events",
                               "transcript_edits", "transcript_generations", "transcripts", "processing_jobs",
-                              "conversation_categories"):
+                              "conversation_categories", "person_links"):
                     conn.execute(f"DELETE FROM {table} WHERE conversation_id = ?", (conversation_id,))
                 conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
                 conn.commit()
