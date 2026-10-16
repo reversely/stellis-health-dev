@@ -207,6 +207,17 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual(finished["state"], "succeeded")
         self.assertEqual(finished["result"]["overview"][0]["source_segment_ids"], ["seg-1"])
 
+    def test_overview_rejects_hidden_source_span_and_generalizes_speaker_number(self) -> None:
+        base = {"topics":[],"decisions":[],"action_items":[]}
+        with self.assertRaises(ai.AIError) as excessive:
+            ai._validate_items({**base,"overview":[{"text":"A detailed claim.",
+                "source_segment_ids":["s1-s5"]}]}, {f"s{i}" for i in range(1, 6)},
+                require_overview=True, source_texts={f"s{i}": "A detailed claim." for i in range(1, 6)})
+        self.assertEqual(excessive.exception.code, "weak_citation")
+        result = ai._validate_items({**base,"overview":[{"text":"Speaker 2 founded the organization.",
+            "source_segment_ids":["s1"]}]}, {"s1"}, require_overview=True)
+        self.assertEqual(result["overview"][0]["text"], "A participant founded the organization.")
+
     def test_answer_uses_evidence_or_marks_insufficient(self) -> None:
         run = self._create("answer", "What did Avery discuss?")
         payload = {"answer":"Satellites.","source_segment_ids":["s1"],"insufficient_evidence":False}

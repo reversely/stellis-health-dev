@@ -17,7 +17,7 @@ from stellis import storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
-PROMPT_VERSION = "cited-conversation-v11"
+PROMPT_VERSION = "cited-conversation-v12"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
@@ -230,7 +230,7 @@ def _chunks(segments: list[dict[str, object]]) -> list[list[dict[str, object]]]:
 
 _ANCHOR_STOPWORDS = set("""about after again also because been before being between both could
     described describes discussing discusses during every from having including into itself
-    project projects speaker their there these those through under using where which while with
+    project projects speaker participant their there these those through under using where which while with
     would interview team group people began says said""".split())
 
 
@@ -269,7 +269,15 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
             source_ids = _canonical_sources(item.get("source_segment_ids"), allowed_ids)
             if not source_ids:
                 raise AIError("invalid_source", "The model did not cite its evidence")
+            if field == "overview" and source_texts is not None and len(source_ids) > 4:
+                raise AIError("weak_citation", "The overview cites too many passages to inspect directly")
             text = item["text"].strip()
+            if field == "overview":
+                # A passage can contain two voices even when it has one acoustic
+                # label; do not present a provisional number as a person claim.
+                text = re.sub(r"\bSpeaker\s+\d+\b",
+                              lambda match: "A participant" if match.start() == 0 else "a participant",
+                              text, flags=re.I)
             if not text or len(text) > 1000:
                 raise AIError("invalid_json", f"The model returned invalid {field} text")
             if field == "overview" and (len(text) > 400 or not re.search(r"[.!?][\"'’”)]*$", text)):
@@ -277,7 +285,7 @@ def _validate_items(payload: object, allowed_ids: set[str], *, require_overview:
             if field == "overview" and source_texts is not None:
                 cited = " ".join(source_texts.get(source_id, "") for source_id in source_ids)
                 coverage, missing = _supported_terms(text, cited)
-                if coverage < 0.45:
+                if coverage < 0.75:
                     raise AIError("weak_citation", f"The overview cites passages missing these claim terms: {', '.join(dict.fromkeys(missing[:8]))}")
             validated.append({"text": text, "source_segment_ids": _display_sources(source_ids)})
         result[field] = validated
@@ -393,6 +401,7 @@ def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int
                           f"The prior claim had terms absent from its citations: {exc}. "
                           f"These were its cited passages:{cited_lines}\n"
                           "You may choose different passage labels from the supplied transcript if they better support the claim. "
+                          "Do not mention generic speaker numbers; a passage may mix voices. "
                           "Return the required JSON object."
                           if exc.code == "weak_citation" else
                           "Rewrite every overview point as one complete sentence under 400 characters, "
@@ -412,6 +421,7 @@ _SUMMARY_SYSTEM = ("You summarize an interview using only the supplied transcrip
                    "Make each overview point one complete sentence under 400 characters and end it with punctuation; "
                    "never cut off a phrase to meet a length limit. Each claim must be supported by its cited passages; "
                    "choose a concrete claim from at most three nearby passages instead of summarizing an entire part; "
+                   "do not mention generic speaker numbers, which may misattribute mixed voices; "
                    "split claims with different evidence into separate items. "
                    "Omit unsupported decisions or actions by returning an empty array. Keep each item concise.")
 
