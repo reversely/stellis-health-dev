@@ -91,6 +91,9 @@ class GenerationReviewTest(unittest.TestCase):
         self.assertEqual(history[0]['target_version'],'target-v2')
         with storage.connect() as conn:
             self.assertEqual(conn.execute('SELECT COUNT(*) FROM transcript_edits WHERE conversation_id=?',(self.id,)).fetchone()[0],2)
+        self.client.post(f'/api/v1/conversations/{self.id}/trash')
+        self.assertEqual(self.client.delete(f'/api/v1/trash/{self.id}').status_code,200)
+        self.assertEqual(self.client.get(f'/api/v1/persons/{self.person["id"]}').json()['total_link_count'],0)
 
     def test_keep_source_does_not_activate_candidate(self):
         self.assertTrue(generation_review.stage(self.record))
