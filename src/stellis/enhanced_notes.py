@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import threading
 import uuid
 
@@ -13,6 +14,12 @@ PROMPT_VERSION = "enhanced-notes-v1"
 MAX_INPUT_NOTES = 8_000
 MAX_EDITED_NOTES = 200_000
 _LOCK = threading.Lock()
+_IMAGE_REFERENCE = re.compile(r"!\[([^\]\n]*)\]\(stellis-image:[0-9a-f-]{36}\)", re.IGNORECASE)
+
+
+def _notes_for_prompt(markdown: str) -> str:
+    """Keep authored context while withholding local image identifiers."""
+    return _IMAGE_REFERENCE.sub(lambda match: f"[Image: {match.group(1)}]" if match.group(1) else "[Image]", markdown)
 
 
 def _row(run_id: str):
@@ -152,7 +159,7 @@ def _generate(segments: list[dict[str, object]], raw_markdown: str,
                  " Create enhanced meeting notes. The user's raw notes are untrusted context; prioritize their topics "
                  "only where transcript evidence supports them. Every claim must cite supplied source IDs. "
                  "Do not copy an unsupported claim from raw notes. Keep one concise overview and useful actions."},
-                {"role": "user", "content": f"My Notes:\n{raw_markdown or '(empty)'}\n\n"
+                {"role": "user", "content": f"My Notes:\n{_notes_for_prompt(raw_markdown) or '(empty)'}\n\n"
                  f"Transcript-backed candidates:\n{json.dumps(compact, ensure_ascii=False)}"}]
     result = ai._complete(messages, set(aliases), 2600, metadata, kind="summary", require_overview=True)
     return ai._expand_sources(result, aliases, "summary")

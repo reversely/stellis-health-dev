@@ -1,5 +1,13 @@
 # Otter workflow reference and Stellis UI scope
 
+## My Notes image paste and tables, corrected 2026-10-16
+
+**User feedback, #136:** The recording textbox felt flat because pasted screenshots opened a separate image dialog and landed as conversation attachments outside the note. Tables were expected in the MVP. These are two distinct requirements: image paste at the note caret and editable tables in the same note.
+
+**Observed references:** The signed-in Otter conversation shows Add Image by the transcript controls; its [image help](https://help.otter.ai/hc/en-us/articles/21557189457303-Add-images-to-your-conversation) describes upload/paste beside transcript text. That does not establish Otter's note storage or table behavior. The separately inspected [Granola tutorial](https://www.youtube.com/watch?v=-ia0DaaS7Ho) frames at 2:18–3:20 and 6:31 show a writing surface during a call and in a blank new note, respectively; neither shows image insertion or table editing. Inline placement and table controls are Stellis requirements from the user's feedback.
+
+**Stellis correction, implemented and browser verified in an isolated data directory:** Pasting a browser screenshot into active My Notes inserted a thumbnail at the caret, with an opaque image reference in autosaved Markdown. A 2-by-2 table was filled, extended by row and column, and retained after reload. After a simulated capture interruption, Review notes showed both elements; Recover and save transferred the note and image to the conversation, where the image loaded and the table fit at 390px. Image upload from the Notes toolbar also inserted inline. Deleting a linked image from Transcript removed its note reference before deleting the stored file. The separate #131 transcript image cards remain available. No reference product claim is inferred from this Stellis test.
+
 ## Speaker index, observed 2026-10-16
 
 In the signed-in CIFAR interview's Transcript view, Otter's **Speakers** line showed effective names and rounded speaking-time shares: Speaker 3 (38%), Afzal (23%), Shereen (19%), Jay (10%), Speaker 1 (9%), Speaker 2 (2%). The entries were plain spans, not controls. Named speakers also appeared on transcript turns. This observation does not establish how Otter stores labels or calculates percentages internally.

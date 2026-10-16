@@ -1,7 +1,9 @@
 import {
-  $createParagraphNode, $getSelection, $isRangeSelection, createEditor,
+  $createParagraphNode, $createTextNode, $getSelection,
+  $isRangeSelection, $setSelection, createEditor, DecoratorNode,
   COMMAND_PRIORITY_EDITOR, FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND,
 } from 'lexical';
+import {$insertNodeToNearestRoot} from '@lexical/utils';
 import {$createHeadingNode, HeadingNode, QuoteNode, registerRichText} from '@lexical/rich-text';
 import {
   INSERT_CHECK_LIST_COMMAND, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND,
@@ -11,40 +13,133 @@ import {$toggleLink, AutoLinkNode, LinkNode, TOGGLE_LINK_COMMAND} from '@lexical
 import {createEmptyHistoryState, registerHistory} from '@lexical/history';
 import {$setBlocksType} from '@lexical/selection';
 import {
+  $createTableNodeWithDimensions, $deleteTableColumnAtSelection, $deleteTableRowAtSelection,
+  $insertTableColumnAtSelection, $insertTableRowAtSelection, $isTableNode,
+  INSERT_TABLE_COMMAND, TableCellNode, TableNode, TableRowNode,
+  registerTablePlugin, registerTableSelectionObserver,
+} from '@lexical/table';
+import {
   $convertFromMarkdownString, $convertToMarkdownString,
   BOLD_ITALIC_STAR, BOLD_STAR, CHECK_LIST, HEADING, ITALIC_STAR, LINK,
   ORDERED_LIST, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
 
-const MARKDOWN = [HEADING, UNORDERED_LIST, ORDERED_LIST, CHECK_LIST,
-  BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, LINK];
+const IMAGE_MARKDOWN = /^!\[([^\]\n]*)\]\(stellis-image:([0-9a-f-]{36})\)$/i;
 
-export function createNotesEditor(root, toolbar, onChange, onError) {
+class MeetingImageNode extends DecoratorNode {
+  __imageId; __caption; __src; __onOpen;
+  static getType() {return 'meeting-image';}
+  static clone(node) {return new MeetingImageNode(node.__imageId, node.__caption, node.__src, node.__onOpen, node.__key);}
+  constructor(imageId, caption, src, onOpen, key) {
+    super(key); this.__imageId = imageId; this.__caption = caption; this.__src = src; this.__onOpen = onOpen;
+  }
+  isInline() {return false;}
+  createDOM() {
+    const figure = document.createElement('figure'); figure.className = 'note-image';
+    const button = document.createElement('button'); button.type = 'button'; button.contentEditable = 'false';
+    button.setAttribute('aria-label', `Expand image${this.__caption ? `: ${this.__caption}` : ''}`);
+    const image = document.createElement('img'); image.src = this.__src; image.alt = this.__caption || 'Meeting screenshot';
+    button.append(image); button.addEventListener('click', () => this.__onOpen?.(this.__src, image.alt));
+    figure.append(button);
+    if (this.__caption) {const caption = document.createElement('figcaption'); caption.textContent = this.__caption; figure.append(caption);}
+    return figure;
+  }
+  updateDOM() {return false;}
+  getTextContent() {return this.__caption || 'Meeting screenshot';}
+  exportJSON() {return {...super.exportJSON(), type:'meeting-image', version:1,
+    imageId:this.__imageId, caption:this.__caption, src:this.__src};}
+  static importJSON(data) {return new MeetingImageNode(data.imageId, data.caption, data.src, null);}
+}
+
+function parseTableRow(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return null;
+  const cells = []; let cell = ''; let escape = false;
+  for (const character of trimmed.slice(1, -1)) {
+    if (escape) {cell += character; escape = false;}
+    else if (character === '\\') escape = true;
+    else if (character === '|') {cells.push(cell.trim()); cell = '';}
+    else cell += character;
+  }
+  cells.push(cell.trim());
+  return cells;
+}
+function tableMarkdown(node) {
+  if (!$isTableNode(node)) return null;
+  const rows = node.getChildren().map(row => row.getChildren().map(cell =>
+    cell.getTextContent().replace(/\r?\n/g, ' ').replace(/\\/g, '\\\\').replace(/\|/g, '\\|')));
+  if (!rows.length || !rows[0].length) return '';
+  const width = rows[0].length;
+  const render = cells => `| ${cells.map(value => value || ' ').join(' | ')} |`;
+  return [render(rows[0]), render(Array(width).fill('---')),
+    ...rows.slice(1).map(row => render(Array.from({length:width}, (_, i) => row[i] || '')))].join('\n');
+}
+
+export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
+  const imageUrlForId = options.imageUrlForId || (() => '');
+  const onOpenImage = options.onOpenImage || (() => {});
+  const markdown = [
+    {dependencies:[MeetingImageNode], export:node => node instanceof MeetingImageNode ?
+      `![${node.__caption.replace(/[\]\\]/g, '')}](stellis-image:${node.__imageId})` : null,
+      regExp:IMAGE_MARKDOWN, type:'element', replace(parent, children, match) {
+        parent.replace(new MeetingImageNode(match[2], match[1], imageUrlForId(match[2]), onOpenImage));
+      }},
+    {dependencies:[TableNode, TableRowNode, TableCellNode], export:tableMarkdown,
+      regExpStart:/^\|.+\|\s*$/, type:'multiline-element', replace() {},
+      handleImportAfterStartMatch({lines, rootNode, startLineIndex}) {
+        const header = parseTableRow(lines[startLineIndex]);
+        const divider = parseTableRow(lines[startLineIndex + 1] || '');
+        if (!header || !divider || header.length !== divider.length || !header.length || header.length > 32 ||
+          !divider.every(cell => /^:?-{3,}:?$/.test(cell))) return null;
+        const rows = [header]; let line = startLineIndex + 2;
+        while (line < lines.length && rows.length < 256) {
+          const cells = parseTableRow(lines[line]);
+          if (!cells || cells.length !== header.length) break;
+          rows.push(cells); line++;
+        }
+        const table = $createTableNodeWithDimensions(rows.length, header.length, true);
+        table.getChildren().forEach((row, rowIndex) => row.getChildren().forEach((cell, colIndex) => {
+          const paragraph = cell.getFirstChild(); paragraph.clear();
+          paragraph.append($createTextNode(rows[rowIndex][colIndex]));
+        }));
+        rootNode.append(table);
+        return [true, line - 1];
+      }},
+    HEADING, UNORDERED_LIST, ORDERED_LIST, CHECK_LIST,
+    BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, LINK,
+  ];
   const editor = createEditor({
-    namespace: 'StellisNotes',
-    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, AutoLinkNode],
-    theme: {heading: {h1: 'note-heading-one', h2: 'note-heading-two'},
-      list: {ul: 'note-bullets', ol: 'note-numbers', listitem: 'note-list-item',
-        listitemChecked: 'note-check-done', listitemUnchecked: 'note-check-open'},
-      text: {bold: 'note-bold', italic: 'note-italic'}},
-    onError(error) { onError(error); },
+    namespace:'StellisNotes',
+    nodes:[HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
+      TableNode, TableRowNode, TableCellNode, MeetingImageNode],
+    theme:{heading:{h1:'note-heading-one',h2:'note-heading-two'},
+      list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
+        listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
+      text:{bold:'note-bold',italic:'note-italic'}, table:'note-table',
+      tableCell:'note-table-cell', tableCellHeader:'note-table-header'},
+    onError(error){onError(error);},
   });
   const unregister = [registerRichText(editor), registerList(editor), registerCheckList(editor),
+    registerTablePlugin(editor), registerTableSelectionObserver(editor),
     editor.registerCommand(TOGGLE_LINK_COMMAND, payload => {$toggleLink(payload); return true;}, COMMAND_PRIORITY_EDITOR),
-    registerHistory(editor, createEmptyHistoryState(), 300),
-    registerMarkdownShortcuts(editor, MARKDOWN)];
-  root.contentEditable = 'true';
-  root.setAttribute('role', 'textbox');
-  root.setAttribute('aria-multiline', 'true');
+    registerHistory(editor, createEmptyHistoryState(), 300), registerMarkdownShortcuts(editor, markdown)];
+  root.contentEditable = 'true'; root.setAttribute('role','textbox'); root.setAttribute('aria-multiline','true');
   editor.setRootElement(root);
   unregister.push(editor.registerUpdateListener(({editorState, dirtyElements, dirtyLeaves, tags}) => {
     if (tags.has('notes-load') || (!dirtyElements.size && !dirtyLeaves.size)) return;
-    editorState.read(() => onChange($convertToMarkdownString(MARKDOWN)));
+    editorState.read(() => onChange($convertToMarkdownString(markdown)));
   }));
-
-  toolbar.addEventListener('mousedown', event => {
-    if (event.target.closest('button')) event.preventDefault();
-  });
+  const captureSelection = () => {
+    let snapshot = null;
+    editor.getEditorState().read(() => {const selected = $getSelection(); if ($isRangeSelection(selected)) snapshot = selected.clone();});
+    return snapshot;
+  };
+  const inTable = () => {
+    const selected = $getSelection(); let node = selected?.anchor?.getNode();
+    while (node && !$isTableNode(node)) node = node.getParent();
+    return node && $isTableNode(node) ? node : null;
+  };
+  toolbar.addEventListener('mousedown', event => {if (event.target.closest('button')) event.preventDefault();});
   toolbar.addEventListener('click', event => {
     const action = event.target.closest('button')?.dataset.noteAction;
     if (!action) return;
@@ -54,33 +149,51 @@ export function createNotesEditor(root, toolbar, onChange, onError) {
     else if (action === 'checklist') editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined);
     else if (action === 'undo') editor.dispatchCommand(UNDO_COMMAND, undefined);
     else if (action === 'redo') editor.dispatchCommand(REDO_COMMAND, undefined);
+    else if (action === 'table') editor.dispatchCommand(INSERT_TABLE_COMMAND, {rows:'2',columns:'2',includeHeaders:{rows:true,columns:false}});
+    else if (action === 'image') options.onPickImage?.(captureSelection());
+    else if (['add-row','add-column','delete-row','delete-column','delete-table'].includes(action)) editor.update(() => {
+      const table = inTable();
+      if (!table) {onError(new Error('Place the cursor in a table.')); return;}
+      if (action === 'add-row') {
+        if (table.getChildrenSize() >= 256) onError(new Error('Table has reached 256 rows.'));
+        else $insertTableRowAtSelection();
+      } else if (action === 'add-column') {
+        if (table.getFirstChild()?.getChildrenSize() >= 32) onError(new Error('Table has reached 32 columns.'));
+        else $insertTableColumnAtSelection();
+      }
+      else if (action === 'delete-row') $deleteTableRowAtSelection();
+      else if (action === 'delete-column') $deleteTableColumnAtSelection();
+      else {const paragraph = $createParagraphNode(); table.insertAfter(paragraph); table.remove(); paragraph.select();}
+    });
     else if (action === 'heading' || action === 'paragraph') editor.update(() => {
       const selection = $getSelection();
-      if ($isRangeSelection(selection))
-        $setBlocksType(selection, () => action === 'heading' ? $createHeadingNode('h2') : $createParagraphNode());
+      if ($isRangeSelection(selection)) $setBlocksType(selection, () =>
+        action === 'heading' ? $createHeadingNode('h2') : $createParagraphNode());
     });
     else if (action === 'link') {
       const answer = window.prompt('Link URL');
       if (!answer) return;
-      try {
-        const url = new URL(answer);
-        if (!['https:', 'http:', 'mailto:'].includes(url.protocol)) throw new Error('Unsupported link');
+      try {const url = new URL(answer);
+        if (!['https:','http:','mailto:'].includes(url.protocol)) throw new Error('Unsupported link');
         editor.dispatchCommand(TOGGLE_LINK_COMMAND, url.href);
       } catch {onError(new Error('Enter a valid link URL.'));}
     }
-    editor.focus();
+    if (action !== 'image') editor.focus();
+    event.target.closest('.notes-table-actions')?.removeAttribute('open');
   });
-
   return {
-    setMarkdown(markdown) {
-      editor.update(() => $convertFromMarkdownString(markdown || '', MARKDOWN), {tag: 'notes-load'});
+    setMarkdown(value) {editor.update(() => $convertFromMarkdownString(value || '', markdown), {tag:'notes-load'});},
+    getMarkdown() {let value=''; editor.getEditorState().read(() => {value=$convertToMarkdownString(markdown);}); return value;},
+    captureSelection,
+    insertImage(imageId, caption = '', snapshot = null) {
+      editor.update(() => {
+        if (snapshot) $setSelection(snapshot);
+        const image = new MeetingImageNode(imageId, caption, imageUrlForId(imageId), onOpenImage);
+        $insertNodeToNearestRoot(image);
+        const next = $createParagraphNode(); image.insertAfter(next); next.select();
+      });
     },
-    getMarkdown() {
-      let markdown = '';
-      editor.getEditorState().read(() => { markdown = $convertToMarkdownString(MARKDOWN); });
-      return markdown;
-    },
-    focus() { editor.focus(); },
-    destroy() { for (const release of unregister) release(); editor.setRootElement(null); },
+    focus(){editor.focus();},
+    destroy(){for(const release of unregister) release(); editor.setRootElement(null);},
   };
 }
