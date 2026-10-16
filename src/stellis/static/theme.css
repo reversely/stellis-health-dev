@@ -376,6 +376,32 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 #manage-speakers-dialog > p:empty { display: none; }
 @media(max-width:600px) { #manage-speakers-dialog > input { width: calc(100% - 40px); } .manage-speakers-body { grid-template-columns: 1fr; } .manage-speakers-detail { border-left: 0; border-top: 1px solid var(--line-soft); min-height: 90px; } }
 
+/* The media element owns playback; these controls expose the interview timeline. */
+.player-card #audio-player { display: none; }
+.seek-timeline { position: relative; height: 24px; margin: 0 2px 4px; }
+.seek-timeline::before { content: ''; position: absolute; top: 10px; left: 0; right: 0; height: 5px; border-radius: 4px; background: linear-gradient(to right, var(--accent) 0 var(--seek-progress, 0%), var(--line) var(--seek-progress, 0%) 100%); }
+#seek-segments { position: absolute; inset: 10px 0 auto; height: 5px; pointer-events: none; }
+#seek-segments span { position: absolute; top: 0; height: 5px; min-width: 2px; border-right: 2px solid var(--surface); background: color-mix(in srgb, var(--accent) 46%, transparent); }
+#seek-slider { position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; cursor: pointer; appearance: none; background: transparent; }
+#seek-slider::-webkit-slider-runnable-track { height: 24px; background: transparent; }
+#seek-slider::-moz-range-track { height: 24px; background: transparent; }
+#seek-slider::-webkit-slider-thumb { appearance: none; width: 13px; height: 13px; margin-top: 5px; border: 2px solid var(--surface); border-radius: 50%; background: var(--accent-strong); box-shadow: 0 0 0 1px var(--line); }
+#seek-slider::-moz-range-thumb { width: 11px; height: 11px; border: 2px solid var(--surface); border-radius: 50%; background: var(--accent-strong); box-shadow: 0 0 0 1px var(--line); }
+.player-transport { display: flex; align-items: center; gap: 12px; min-height: 34px; }
+.player-transport button, .player-transport summary { border: 0; padding: 4px 7px; background: transparent; color: var(--ink); cursor: pointer; font-size: 15px; }
+.player-transport button:hover, .player-transport summary:hover { color: var(--accent-strong); }
+.player-transport button small { font-size: 10px; margin-left: 1px; }
+#play-pause { min-width: 32px; font-size: 19px; }
+#playback-speed-menu { position: relative; }
+#playback-speed-menu summary { list-style: none; font-size: 13px; }
+#playback-speed-menu summary::-webkit-details-marker { display: none; }
+.speed-options { position: absolute; z-index: 25; bottom: calc(100% + 12px); left: 0; display: grid; min-width: 100px; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow); }
+.speed-options strong { font-size: 12px; color: var(--muted); padding: 5px 7px; }
+.speed-options button { text-align: left; font-size: 13px; border-radius: 6px; }
+.speed-options button[aria-pressed='true'] { color: var(--accent-strong); background: var(--raised); }
+.player-time { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media(max-width:600px) { .player-transport { gap: 7px; } .player-transport button, .player-transport summary { padding: 4px; } .player-time { font-size: 11px; } }
+
 html[data-theme='light'] body { background: var(--field); }
 html[data-theme='light'] .upload-button:hover,
 html[data-theme='light'] .ai-heading button:hover { color: #ffffff; }
