@@ -17,3 +17,9 @@ Observed from the user's Otter account and Otter's public [conversation page](ht
 | Highlights, comments, reactions, labels, sharing, channels | Evaluate after core single-user acceptance; file focused tickets if needed | Later |
 
 Design notes: Preserve a large readable conversation title, compact metadata, clear Summary/Transcript tabs, and a persistent playback control near the transcript. The user's preference is for Otter's import/record button prominence, font sizes, hierarchy, speaker rematch, and labels. Language choice must reflect models actually installed on the device; an English-only whisper model must not claim multilingual support. AI outputs need transcript citations and must reflect edits and corrected speakers when regenerated.
+
+## Transcript navigation and edit mode, observed 2026-10-16
+
+In the signed-in CIFAR interview, Otter displays speaker turns as text bubbles with a speaker label and timestamp. Normal transcript words are individual `transcript-word` spans carrying timing attributes; clicking a bubble/word navigates playback, while a fixed bottom player provides seeking and transport. The transcript header has one **Edit transcript** action. Activating it changes that control to **Done**, exposes undo/redo, and makes the transcript editable. The same page was observed via REA CDP target evidence `ev_6a786392add5fdad9aa4c1d8d8ca7523ecec36aa3c7248853f266d92fbe27238`; the edit-mode screenshot was inspected in the signed-in Chromium session. These are observed browser behaviors, not a claim about Otter’s internal storage model.
+
+Stellis implements the global mode and segment-start seeking in #45. Exact measured word timing and word-level seeking remain #39.

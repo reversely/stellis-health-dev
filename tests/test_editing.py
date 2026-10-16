@@ -61,6 +61,30 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(events[0]["old_text"], "Asteriod launch.")
         self.assertEqual(events[1]["new_text"], "Asteriod launch.")
 
+    def test_batch_word_edits_are_atomic_and_keep_source_text(self) -> None:
+        endpoint = f"{self.base}/transcript/segments"
+        changed = self.client.patch(endpoint, json={"expected_revision": 1, "edits": [
+            {"segment_id": "segment-1", "text": "Asteroid launch."},
+            {"segment_id": "segment-2", "text": "It was ready to go."},
+        ]})
+        self.assertEqual(changed.status_code, 200)
+        self.assertEqual(changed.json()["revision"], 2)
+        result = self.client.get(f"{self.base}/transcript").json()
+        self.assertEqual([item["text"] for item in result["segments"]], ["Asteroid launch.", "It was ready to go."])
+        self.assertEqual([item["original_text"] for item in result["segments"]], ["Asteriod launch.", "It was ready."])
+        with storage.connect() as conn:
+            events = conn.execute("SELECT revision FROM transcript_edit_events").fetchall()
+        self.assertEqual([item["revision"] for item in events], [2, 2])
+        conflict = self.client.patch(endpoint, json={"expected_revision": 1, "edits": [
+            {"segment_id": "segment-1", "text": "Uncommitted"}]})
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(self.client.get(f"{self.base}/transcript").json()["segments"][0]["text"], "Asteroid launch.")
+        invalid = self.client.patch(endpoint, json={"expected_revision": 2, "edits": [
+            {"segment_id": "segment-1", "text": "Another edit"},
+            {"segment_id": "missing", "text": "No source"}]})
+        self.assertEqual(invalid.status_code, 404)
+        self.assertEqual(self.client.get(f"{self.base}/transcript").json()["revision"], 2)
+
     def test_cluster_label_and_segment_override_are_reversible(self) -> None:
         endpoint = f"{self.base}/speakers/label"
         cluster = self.client.put(endpoint, json={"scope":"cluster","target_id":"speaker-1","name":"Ari","expected_revision":1})

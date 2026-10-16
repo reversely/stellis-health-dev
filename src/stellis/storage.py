@@ -511,6 +511,51 @@ def edit_transcript_segment(conversation_id: str, segment_id: str, text: str,
     return revision
 
 
+def edit_transcript_segments(conversation_id: str, edits: list[dict[str, str]], expected_revision: int) -> int:
+    """Commit multiple visible passage corrections in one optimistic revision."""
+    if len({item["segment_id"] for item in edits}) != len(edits):
+        raise ValueError("Each passage may appear only once")
+    stamp = datetime.now(timezone.utc).isoformat()
+    with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT revision, segments_json FROM transcripts WHERE conversation_id = ?",
+                           (conversation_id,)).fetchone()
+        if row is None:
+            raise LookupError("Transcript not found")
+        if int(row["revision"]) != expected_revision:
+            raise RuntimeError("Transcript changed. Your edits are still in the browser; resolve the conflict before retrying.")
+        sources = {str(item["id"]): str(item["text"]) for item in json.loads(str(row["segments_json"]))}
+        if any(item["segment_id"] not in sources for item in edits):
+            raise LookupError("Segment not found")
+        existing = {str(item["segment_id"]): str(item["text"]) for item in conn.execute(
+            "SELECT segment_id, text FROM transcript_edits WHERE conversation_id = ?", (conversation_id,))}
+        changed = [(item["segment_id"], item["text"], existing.get(item["segment_id"], sources[item["segment_id"]]))
+                   for item in edits if item["text"] != existing.get(item["segment_id"], sources[item["segment_id"]])]
+        if not changed:
+            return expected_revision
+        revision = expected_revision + 1
+        for segment_id, text, old_text in changed:
+            if text == sources[segment_id]:
+                conn.execute("DELETE FROM transcript_edits WHERE conversation_id = ? AND segment_id = ?",
+                             (conversation_id, segment_id))
+            else:
+                conn.execute(
+                    """INSERT INTO transcript_edits (conversation_id, segment_id, text, updated_at)
+                       VALUES (?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
+                       text = excluded.text, updated_at = excluded.updated_at""",
+                    (conversation_id, segment_id, text, stamp),
+                )
+            conn.execute(
+                """INSERT INTO transcript_edit_events
+                   (id, conversation_id, segment_id, revision, old_text, new_text, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), conversation_id, segment_id, revision, old_text, text, stamp),
+            )
+        conn.execute("UPDATE transcripts SET revision = ?, updated_at = ? WHERE conversation_id = ?",
+                     (revision, stamp, conversation_id))
+    return revision
+
+
 def set_speaker_label(conversation_id: str, scope: str, target_id: str,
                       name: str | None, expected_revision: int) -> int:
     """Set or clear a manual speaker label without touching acoustic clusters."""

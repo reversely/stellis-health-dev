@@ -8,6 +8,10 @@ const player = document.querySelector('#audio-player');
 const API = '/api/v1';
 const processButton = document.querySelector('#process-button');
 const rematchButton = document.querySelector('#rematch-button');
+const editTranscriptButton = document.querySelector('#edit-transcript-button');
+const discardEditsButton = document.querySelector('#discard-edits-button');
+const restorePassageButton = document.querySelector('#restore-passage-button');
+const editStatus = document.querySelector('#edit-status');
 const processingStatus = document.querySelector('#processing-status');
 const transcriptView = document.querySelector('#transcript');
 let activeConversationId = null;
@@ -17,7 +21,11 @@ let transcriptSegments = [];
 let currentTranscript = null;
 let highlightsOnly = false;
 let rematchChangesOnly = false;
-const editingTurns = new Set();
+let transcriptEditMode = false;
+let focusedEditSegmentId = null;
+let savingTranscriptEdits = false;
+let transcriptEditError = null;
+const pendingTranscriptEdits = new Map();
 let selectedExcerpt = null;
 const recordingPanel = document.querySelector('#recording-panel');
 const recordingState = document.querySelector('#recording-state');
@@ -71,9 +79,13 @@ async function showDetail(id) {
   clearTimeout(aiRunTimer);
   activeConversationId = id;
   rematchChangesOnly = false;
-  editingTurns.clear();
+  transcriptEditMode = false;
+  pendingTranscriptEdits.clear();
+  focusedEditSegmentId = null;
+  transcriptEditError = null;
   transcriptSegments = [];
   currentTranscript = null;
+  syncTranscriptEditControls();
   transcriptView.replaceChildren();
   processingStatus.textContent = 'Checking local speech models…';
   processButton.hidden = true;
@@ -254,11 +266,83 @@ function groupTranscriptSegments(segments) {
   }
   return turns;
 }
+function syncTranscriptEditControls() {
+  editTranscriptButton.hidden = !currentTranscript;
+  editTranscriptButton.disabled = savingTranscriptEdits;
+  editTranscriptButton.textContent = transcriptEditMode ? 'Done' : 'Edit transcript';
+  discardEditsButton.hidden = !transcriptEditMode;
+  discardEditsButton.disabled = savingTranscriptEdits;
+  restorePassageButton.hidden = !transcriptEditMode || !focusedEditSegmentId;
+  editStatus.hidden = !transcriptEditMode;
+  if (transcriptEditMode && !savingTranscriptEdits)
+    editStatus.textContent = transcriptEditError || (pendingTranscriptEdits.size ? `${pendingTranscriptEdits.size} passage${pendingTranscriptEdits.size === 1 ? '' : 's'} pending · Press Done to save` : 'Edit words in place. Press Done to finish.');
+}
+function setTranscriptEditMode(enabled) {
+  transcriptEditMode = enabled;
+  transcriptEditError = null;
+  focusedEditSegmentId = null;
+  for (const turn of transcriptView.querySelectorAll('.speaker-turn')) turn.classList.toggle('editing', enabled);
+  for (const row of transcriptView.querySelectorAll('.segment')) {
+    const words = row.querySelector('.segment-text');
+    const segment = transcriptSegments.find(item => item.id === row.dataset.segmentId);
+    if (!words || !segment) continue;
+    if (enabled) {
+      words.replaceChildren(document.createTextNode(segment.text));
+      words.contentEditable = 'true'; words.spellcheck = true;
+      words.setAttribute('role', 'textbox'); words.setAttribute('aria-multiline', 'true');
+      words.setAttribute('aria-label', `Edit transcript at ${time(segment.start_ms / 1000)}`);
+    } else {
+      words.contentEditable = 'false'; words.removeAttribute('role'); words.removeAttribute('aria-multiline');
+    }
+  }
+  syncTranscriptEditControls();
+}
+async function finishTranscriptEdit() {
+  if (savingTranscriptEdits) return;
+  if (!pendingTranscriptEdits.size) { setTranscriptEditMode(false); await showTranscript(activeConversationId); return; }
+  const edits = [...pendingTranscriptEdits].map(([segment_id,text]) => ({segment_id,text:text.trim()}));
+  if (edits.some(item => !item.text)) { editStatus.textContent = 'A passage is empty. Restore or enter words before saving.'; return; }
+  savingTranscriptEdits = true; syncTranscriptEditControls(); editStatus.textContent = `Saving ${edits.length} passages…`;
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/transcript/segments`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({edits,expected_revision:currentTranscript.revision}),
+    }));
+    pendingTranscriptEdits.clear();
+    transcriptEditMode = false;
+    await showTranscript(activeConversationId);
+    processingStatus.textContent = `${edits.length} transcript passage${edits.length === 1 ? '' : 's'} saved.`;
+  } catch (error) { transcriptEditError = `${error.message} Your unsaved wording remains here.`; }
+  finally { savingTranscriptEdits = false; syncTranscriptEditControls(); }
+}
+editTranscriptButton.addEventListener('click', () => {
+  if (transcriptEditMode) finishTranscriptEdit();
+  else setTranscriptEditMode(true);
+});
+discardEditsButton.addEventListener('click', async () => {
+  if (pendingTranscriptEdits.size && !window.confirm('Discard unsaved transcript changes?')) return;
+  pendingTranscriptEdits.clear(); setTranscriptEditMode(false); await showTranscript(activeConversationId);
+});
+restorePassageButton.addEventListener('click', () => {
+  const segment = transcriptSegments.find(item => item.id === focusedEditSegmentId);
+  const words = transcriptView.querySelector(`[data-segment-id="${focusedEditSegmentId}"] .segment-text`);
+  if (!segment || !words) return;
+  words.textContent = segment.original_text || segment.text;
+  words.dispatchEvent(new Event('input', {bubbles:true})); words.focus();
+});
+window.addEventListener('beforeunload', event => {
+  if (!pendingTranscriptEdits.size) return;
+  event.preventDefault(); event.returnValue = '';
+});
 async function showTranscript(id) {
+  if (transcriptEditMode && pendingTranscriptEdits.size) {
+    editStatus.textContent = 'Unsaved wording remains here. Press Done before refreshing the transcript.';
+    return;
+  }
   const data = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/transcript`));
   if (id !== activeConversationId) return;
   const previousScroll = window.scrollY;
   currentTranscript = data;
+  syncTranscriptEditControls();
   rematchButton.hidden = false;
   rematchButton.disabled = data.generation_version.includes('-speaker-embedding-v1');
   rematchButton.textContent = rematchButton.disabled ? 'Speakers rematched' : 'Rematch speakers';
@@ -294,27 +378,19 @@ async function showTranscript(id) {
     if (!visible.length) continue;
     const turn = document.createElement('article');
     turn.className = 'speaker-turn';
-    const turnKey = group[0].id;
-    turn.classList.toggle('editing', editingTurns.has(turnKey));
+    turn.classList.toggle('editing', transcriptEditMode);
     const heading = document.createElement('div'); heading.className = 'turn-heading';
     const turnSpeaker = document.createElement('button'); turnSpeaker.type = 'button';
     turnSpeaker.textContent = visible[0].speaker_display_name;
     turnSpeaker.setAttribute('aria-label', `Edit speaker label for turn at ${time(visible[0].start_ms / 1000)}`);
     const firstSegment = visible[0];
     turnSpeaker.addEventListener('click', () => {
-      turn.classList.add('editing'); editingTurns.add(turnKey);
-      editTurn.textContent = 'Done editing';
+      if (pendingTranscriptEdits.size) { editStatus.textContent = 'Press Done to save word changes before changing a speaker.'; return; }
+      if (!transcriptEditMode) setTranscriptEditMode(true);
       showSpeakerEditor(turn.querySelector('.segment'), firstSegment);
     });
     const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? `–${time(visible.at(-1).end_ms / 1000)}` : ''}`;
-    const editTurn = document.createElement('button'); editTurn.type = 'button'; editTurn.className = 'turn-edit';
-    editTurn.textContent = turn.classList.contains('editing') ? 'Done editing' : 'Edit turn';
-    editTurn.addEventListener('click', () => {
-      const editing = turn.classList.toggle('editing');
-      if (editing) editingTurns.add(turnKey); else editingTurns.delete(turnKey);
-      editTurn.textContent = editing ? 'Done editing' : 'Edit turn';
-    });
-    heading.append(turnSpeaker, range, editTurn);
+    heading.append(turnSpeaker, range);
     turn.append(heading);
     const body = document.createElement('div'); body.className = 'turn-body';
     for (const segment of visible) {
@@ -339,19 +415,23 @@ async function showTranscript(id) {
     speaker.addEventListener('click', () => showSpeakerEditor(row, segment));
     const words = document.createElement('div');
     words.className = 'segment-text';
-    words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight, or click to play.`);
+    words.setAttribute('aria-label', `Transcript at ${time(segment.start_ms / 1000)}: ${segment.text}. Select text to highlight or click to play.`);
     renderHighlightedText(words, segment.text, highlights);
+    words.addEventListener('input', () => {
+      if (!transcriptEditMode) return;
+      const value = words.innerText.replace(/\u00a0/g, ' ');
+      if (value === segment.text) pendingTranscriptEdits.delete(segment.id);
+      else pendingTranscriptEdits.set(segment.id, value);
+      transcriptEditError = null;
+      syncTranscriptEditControls();
+    });
+    words.addEventListener('focus', () => { focusedEditSegmentId = segment.id; syncTranscriptEditControls(); });
     row.addEventListener('click', event => {
+      if (transcriptEditMode) return;
       if (event.target.closest('button,input,textarea,select') || window.getSelection()?.toString().trim()) return;
       seek();
     });
-    const edit = document.createElement('button');
-    edit.type = 'button';
-    edit.className = 'segment-action';
-    edit.textContent = segment.text_provenance === 'user_edit' ? 'Edit · changed' : 'Edit words';
-    edit.setAttribute('aria-label', `Edit words at ${time(segment.start_ms / 1000)}`);
-    edit.addEventListener('click', () => showWordEditor(row, segment));
-    row.append(stamp, speaker, words, edit);
+    row.append(stamp, speaker, words);
     body.append(row);
     }
     turn.append(body);
@@ -359,6 +439,7 @@ async function showTranscript(id) {
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
   processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a passage to play; drag across words to highlight.`;
+  if (transcriptEditMode) setTranscriptEditMode(true);
   window.scrollTo(0, previousScroll);
 }
 function renderHighlightedText(container, value, highlights) {
@@ -389,6 +470,7 @@ function hideSelectionToolbar() {
 }
 function inspectSelection() {
   hideSelectionToolbar();
+  if (transcriptEditMode) return;
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || !selection.toString().trim()) return;
   const range = selection.getRangeAt(0);
@@ -541,11 +623,18 @@ async function loadVocabulary() {
 }
 async function route() {
   const match = location.pathname.match(/^\/conversation\/([^/]+)$/);
+  if (pendingTranscriptEdits.size && (!match || decodeURIComponent(match[1]) !== activeConversationId)) {
+    if (!window.confirm('Discard unsaved transcript changes and leave this conversation?')) {
+      history.pushState({}, '', `/conversation/${encodeURIComponent(activeConversationId)}`);
+      return;
+    }
+  }
   if (match) await showDetail(decodeURIComponent(match[1]));
   else await showList();
 }
 async function importFile(file) {
   if (!file) return;
+  if (pendingTranscriptEdits.size && !window.confirm('Discard unsaved transcript changes and import another recording?')) return;
   setStatus(`Importing ${file.name}…`);
   fileInput.disabled = true;
   const body = new FormData();
