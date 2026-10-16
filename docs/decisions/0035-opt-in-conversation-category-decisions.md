@@ -8,7 +8,7 @@ Ticket #120 asks for Meeting, Event, Interview, and Conversation to be seeded an
 
 ## Decision
 
-Seed the four category names once. Default automatic categorization off. The user can enable it in Manage categories, beside notice that bounded transcript excerpts and title go to Nebius while audio remains local. After a successful final transcript or accepted replacement generation, run four rotated five-choice GLM-5.3-Flash logprob reads. The fifth choice is Unclear. Short, low-coverage, or low-margin results remain uncategorized. Store the model, transcript revision, confidence, state, and any automatic assignment in local SQLite. Never overwrite a manual category change or pre-existing assignment. Failures are retryable without failing transcription. Disabling automation prevents an in-flight result from being applied.
+Seed the four category names once. Default automatic categorization off. The user can enable it in Manage categories, beside notice that bounded transcript excerpts and title go to Nebius while audio remains local. After a successful final transcript or accepted replacement generation, run four rotated five-choice GLM-5.3-Flash logprob reads. The fifth choice is Unclear. Short, low-coverage, or low-margin results remain uncategorized. Store the model, prompt version, transcript revision, confidence, state, and any automatic assignment in local SQLite. Never overwrite a manual category change or pre-existing assignment. Failures are retryable without failing transcription. Disabling automation prevents an in-flight result from being applied.
 
 ## Consequences
 

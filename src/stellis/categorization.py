@@ -12,6 +12,7 @@ import httpx
 from stellis import ai, storage
 
 MODEL_ID = "zai-org/GLM-5.3-Flash"
+PROMPT_VERSION = "five-choice-v1"
 LABELS = ("Meeting", "Event", "Interview", "Conversation", "Unclear")
 _LOCK = threading.Lock()
 _RUNNING: set[str] = set()
@@ -40,7 +41,8 @@ def status(conversation_id: str) -> dict[str, object]:
     with storage.connect() as conn:
         if not conn.execute("SELECT 1 FROM conversations WHERE id = ? AND trashed_at IS NULL", (conversation_id,)).fetchone():
             raise LookupError("Conversation not found")
-        row = conn.execute("SELECT state, confidence, error, manual_override FROM category_decisions WHERE conversation_id = ?",
+        row = conn.execute("""SELECT state, confidence, error, manual_override, model_id, prompt_version,
+            transcript_revision FROM category_decisions WHERE conversation_id = ?""",
                            (conversation_id,)).fetchone()
         ready = bool(conn.execute("SELECT 1 FROM transcripts WHERE conversation_id = ?", (conversation_id,)).fetchone())
     return {**(dict(row) if row else {"state": "idle", "confidence": None, "error": None,
@@ -120,7 +122,7 @@ def request(conversation_id: str, *, retry: bool = False) -> dict[str, object]:
     revision = int(display["revision"])
     with storage.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        row = conn.execute("SELECT manual_override, state, transcript_revision FROM category_decisions WHERE conversation_id = ?",
+        row = conn.execute("SELECT manual_override, state, transcript_revision, prompt_version FROM category_decisions WHERE conversation_id = ?",
                            (conversation_id,)).fetchone()
         if row is None and conn.execute("SELECT 1 FROM conversation_categories WHERE conversation_id = ? LIMIT 1",
                                         (conversation_id,)).fetchone():
@@ -129,13 +131,16 @@ def request(conversation_id: str, *, retry: bool = False) -> dict[str, object]:
             skip = True
         else:
             skip = bool(row and (row["manual_override"] or (not retry and row["transcript_revision"] == revision
+                                                      and row["prompt_version"] == PROMPT_VERSION
                                                       and row["state"] in ("queued", "running", "assigned", "unclear"))))
         if not skip:
             conn.execute("""INSERT INTO category_decisions
-            (conversation_id, state, model_id, transcript_revision, updated_at) VALUES (?, 'queued', ?, ?, ?)
+            (conversation_id, state, model_id, prompt_version, transcript_revision, updated_at)
+            VALUES (?, 'queued', ?, ?, ?, ?)
             ON CONFLICT(conversation_id) DO UPDATE SET state = 'queued', model_id = excluded.model_id,
-            transcript_revision = excluded.transcript_revision, confidence = NULL, error = NULL,
-            updated_at = excluded.updated_at""", (conversation_id, MODEL_ID, revision, _now()))
+            prompt_version = excluded.prompt_version, transcript_revision = excluded.transcript_revision,
+            confidence = NULL, error = NULL, updated_at = excluded.updated_at""",
+                         (conversation_id, MODEL_ID, PROMPT_VERSION, revision, _now()))
     if skip:
         return status(conversation_id)
     key = ai._key()

@@ -81,9 +81,11 @@ def connect() -> Iterator[sqlite3.Connection]:
         manual_override INTEGER NOT NULL DEFAULT 0,
         auto_category_id TEXT,
         state TEXT NOT NULL DEFAULT 'idle',
-        model_id TEXT, transcript_revision INTEGER,
+        model_id TEXT, prompt_version TEXT, transcript_revision INTEGER,
         confidence REAL, error TEXT, updated_at TEXT NOT NULL
     )""")
+    if "prompt_version" not in {row["name"] for row in conn.execute("PRAGMA table_info(category_decisions)")}:
+        conn.execute("ALTER TABLE category_decisions ADD COLUMN prompt_version TEXT")
     conn.execute("""CREATE TABLE IF NOT EXISTS persons (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL
