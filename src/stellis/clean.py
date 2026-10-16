@@ -29,6 +29,9 @@ def public_run(record: dict[str, object]) -> dict[str, object]:
                 source = {**segment, "text": segment["source_text"]}
                 checked = _validate_chunk({"segments": [{"source_segment_id": "s1", "text": segment["text"],
                                                         "needs_review": segment["needs_review"]}]}, [source])[0]
+                if checked["needs_review"] and not segment["needs_review"]:
+                    segment["needs_review"] = True
+                    segment["review_reason"] = "Older cleanup needs a fresh audio check"
                 if checked["text"] != segment["text"]:
                     segment["text"] = checked["text"]
                     segment["needs_review"] = True
