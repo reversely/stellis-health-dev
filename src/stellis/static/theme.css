@@ -255,6 +255,28 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .player-card { background: var(--raised); box-shadow: var(--shadow); }
 .player-card audio { color-scheme: inherit; }
 
+.search-card { margin: 0 0 20px; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.search-card label, .transcript-search label { display: block; margin-bottom: 10px; color: var(--ink); font-weight: 650; }
+.search-row { display: flex; align-items: center; gap: 8px; }
+.search-row input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; }
+.search-row select, .search-row button, #library-search-controls select {
+  color: var(--ink); background: var(--raised); border: 1px solid var(--line);
+  border-radius: 9px; padding: 10px 12px; cursor: pointer;
+}
+.search-row button:hover, .search-result:hover { background: var(--selected); border-color: var(--accent); }
+#library-search-controls { margin-top: 14px; }
+#library-search-controls label { display: inline; margin-right: 8px; }
+#library-search-status, #transcript-search-status { min-height: 22px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+#library-search-results { display: grid; gap: 8px; }
+.search-result { display: grid; gap: 5px; padding: 12px; color: var(--ink); text-decoration: none; border: 1px solid var(--line-soft); border-radius: 10px; }
+.search-result > span { color: var(--muted); font-size: 13px; }
+.search-result .search-excerpt { color: var(--ink); font-size: 14px; }
+.search-excerpt mark { color: var(--accent-ink); background: var(--accent); border-radius: 2px; }
+.transcript-search { margin-top: 15px; }
+.transcript-search .search-row select { max-width: 180px; }
+.segment.search-match { box-shadow: inset 3px 0 var(--accent); }
+.segment.search-current { background: var(--selected); outline: 2px solid var(--accent); outline-offset: -2px; }
+
 html[data-theme='light'] body { background: var(--field); }
 html[data-theme='light'] .upload-button:hover,
 html[data-theme='light'] .ai-heading button:hover { color: #ffffff; }
@@ -269,6 +291,10 @@ html[data-theme='light'] .timed-word mark { background: #f4dd84; }
   .transcript-heading h2, .ai-heading h2 { font-size: 25px; }
   .transcript-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .transcript-actions button, .transcript-actions select { min-width: 0; max-width: none; white-space: normal; text-align: center; }
+  .search-card { padding: 17px; }
+  .transcript-search .search-row { flex-wrap: wrap; }
+  .transcript-search .search-row input { flex-basis: 100%; }
+  .transcript-search .search-row select { max-width: none; flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }

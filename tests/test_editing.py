@@ -156,6 +156,44 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(removed.status_code, 200)
         self.assertEqual(self.client.get(f"{self.base}/transcript").json()["highlights"], [])
 
+    def test_search_uses_current_edits_labels_and_multiple_conversations(self) -> None:
+        first = self.client.get('/api/v1/search', params={'q': 'Asteriod'}).json()
+        self.assertEqual(first['total'], 1)
+        self.assertEqual(first['results'][0]['segment_id'], 'segment-1')
+        self.client.patch(f'{self.base}/transcript/segments/segment-1',
+                          json={'text': 'Asteroid launch.', 'expected_revision': 1})
+        self.assertEqual(self.client.get('/api/v1/search', params={'q': 'Asteriod'}).json()['total'], 0)
+        self.assertEqual(self.client.get('/api/v1/search', params={'q': 'Asteroid'}).json()['results'][0]['revision'], 2)
+        self.client.put(f'{self.base}/speakers/label', json={
+            'scope': 'cluster', 'target_id': 'speaker-1', 'name': 'Ari', 'expected_revision': 2})
+        speaker = self.client.get('/api/v1/search', params={'q': 'Ari'}).json()
+        self.assertEqual([(item['kind'], item['speaker']) for item in speaker['results']], [('speaker', 'Ari')])
+        self.assertEqual(speaker['results'][0]['revision'], 3)
+        second_audio = wav_bytes()[:-2] + b'\x01\x00'
+        imported = self.client.post('/api/v1/conversations/import',
+                                    files={'file': ('second.wav', second_audio, 'audio/wav')})
+        second_id = imported.json()['conversation']['id']
+        stamp = datetime.now(timezone.utc).isoformat()
+        storage.save_transcript({'conversation_id': second_id, 'revision': 1, 'language': 'en',
+                                 'segments_json': json.dumps([{'id': 'second-segment', 'start_ms': 0,
+                                     'end_ms': 500, 'text': 'Asteroid ready.', 'speaker_cluster_id': None,
+                                     'speaker_uncertain': True, 'words': []}]),
+                                 'turns_json': '[]', 'updated_at': stamp})
+        results = self.client.get('/api/v1/search', params={'q': 'Asteroid'}).json()['results']
+        self.assertEqual({item['conversation_id'] for item in results}, {self.conversation_id, second_id})
+        self.assertTrue(next(item for item in results if item['conversation_id'] == second_id)['speaker_uncertain'])
+        replacement = [{'id': 'second-new', 'start_ms': 0, 'end_ms': 500,
+                        'text': 'Orbit ready.', 'speaker_cluster_id': None,
+                        'speaker_uncertain': True, 'words': []}]
+        storage.save_transcript({'conversation_id': second_id, 'revision': 1,
+                                 'pipeline_version': 'replacement-generation', 'language': 'en',
+                                 'segments_json': json.dumps(replacement), 'turns_json': '[]',
+                                 'updated_at': stamp})
+        refreshed = self.client.get('/api/v1/search', params={'q': 'Asteroid'}).json()['results']
+        self.assertEqual({item['conversation_id'] for item in refreshed}, {self.conversation_id})
+        self.assertEqual(self.client.get('/api/v1/search', params={'q': 'Orbit'}).json()['results'][0]['segment_id'],
+                         'second-new')
+
 
 if __name__ == "__main__":
     unittest.main()

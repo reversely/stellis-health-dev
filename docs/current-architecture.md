@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, ticket #23. This page describes the running development code. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, ticket #41. This page describes the running development code. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -15,6 +15,8 @@ flowchart LR
   C -->|/api/v1 JSON + multipart| A[FastAPI device API]
   C -->|HTTP byte ranges| A
   C -->|transcript-wide edit batch, vocabulary, selected highlights| A
+  C -->|library search query| A
+  A -->|current effective transcript and labels| D
   A --> I[Import validator]
   I -->|ffprobe| P[ffprobe]
   I --> D[(SQLite: conversations, jobs, transcript generations)]
@@ -65,7 +67,7 @@ flowchart LR
 
 | Component | Current implementation | Owns |
 | --- | --- | --- |
-| Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/`; local Inter/Piazzolla WOFF2 assets, OFL notices, and `theme.css` are served by FastAPI without a build step | Dark-default cosmos theme, light preference in browser localStorage, semantic colors and reduced-motion styling; file selection/drop, microphone permission and MediaRecorder capture, chunk upload/recovery, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript with view-only speaker-turn grouping, per-fragment and measured word seeking with playback tracking, highlight filter, transcript-wide Edit/Done mode with in-place passage editing and atomic save in both source and Edited Transcript tabs, contextual speaker editing, vocabulary panel, speaker rematch and change filter, summary and question controls with linked evidence. |
+| Browser UI | Plain HTML, CSS, and JavaScript in `src/stellis/static/`; local Inter/Piazzolla WOFF2 assets, OFL notices, and `theme.css` are served by FastAPI without a build step | Dark-default cosmos theme, light preference in browser localStorage, semantic colors and reduced-motion styling; library search results and local in-conversation phrase/speaker navigation; file selection/drop, microphone permission and MediaRecorder capture, chunk upload/recovery, conversation list, fixed player with scrub/seek, automatic processing request, job status, selectable transcript with view-only speaker-turn grouping, per-fragment and measured word seeking with playback tracking, highlight filter, transcript-wide Edit/Done mode with in-place passage editing and atomic save in both source and Edited Transcript tabs, contextual speaker editing, vocabulary panel, speaker rematch and change filter, summary and question controls with linked evidence. |
 | Device service | FastAPI in `src/stellis/server.py`, started by `uv run stellis serve` | Loopback HTTP (`127.0.0.1:8765`), API routes, static UI, audio range responses, worker startup. |
 | Importer | `src/stellis/importer.py` | Bounded multipart/ZIP extraction, SHA-256 deduplication, `ffprobe` duration/stream validation. |
 | Recorder | `src/stellis/recording.py` | Private bounded chunk files with fsync/digest, interrupted-session listing, pause/device events, verified join, ffmpeg stream-copy remux, import handoff, explicit discard. |
@@ -73,11 +75,13 @@ flowchart LR
 | Speech worker | `src/stellis/processing.py`, `src/stellis/rematch.py`, and `src/stellis/worker.py` | One queue, isolated child process with per-job file lock, restart requeue, ffmpeg decode, whisper.cpp segment ASR with a vocabulary snapshot prompt and validated native token timing grouped into words, source-preserving alignment of retained passages, sherpa-onnx acoustic turns, overlap alignment, TitaNet segment embeddings and conservative speaker rematch, aggregate metrics. |
 | Model distribution | `scripts/setup_models.sh` | Downloads pinned model files to private local storage and verifies SHA-256; models do not enter Git. |
 | AI adapter | `src/stellis/ai.py` | Explicit Nebius Nemotron calls, bounded chunk extraction and synthesis, lexical question evidence, strict schema and source-ID validation, persisted result and failure metadata; `src/stellis/clean.py` validates one-to-one clean passages, preserves source timing, and saves separate clean versions and user wording overlays. |
+| Local search | `src/stellis/search.py` | On-demand scan of current displayed transcript text, titles, and speaker labels; bounded result delivery with total count. Search is not sent to Nebius. |
 | Hosted service | Nebius Token Factory | Receives bounded displayed transcript excerpts and speaker labels only when the user starts an AI run; returns generated JSON, provider IDs, and usage. It does not receive audio. |
 
 ## Implemented connections
 
 - `GET /` and `GET /conversation/{id}` serve the same browser shell.
+- `GET /api/v1/search?q=…` searches current titles, displayed passage wording, and speaker names locally. The browser shows up to 150 results and links each passage or speaker hit to its stable segment ID. Direct links resolve that ID against the active transcript, seek the original audio, and leave playback paused. In-conversation search uses the loaded segments for phrase and speaker filtering, match counts, and next/previous navigation.
 - `/api/v1/health`, `/api/v1/conversations`, `/api/v1/conversations/import`, `/api/v1/conversations/{id}`, and `/api/v1/conversations/{id}/audio` provide import and replay. Legacy `/api` aliases remain.
 - `/api/v1/capabilities` reports actual local English ASR and diarization readiness. `POST /api/v1/conversations/{id}/processing-jobs` starts or returns an idempotent job. `GET /api/v1/conversations/{id}/processing-job` and `/api/v1/jobs/{id}` support browser reload and polling.
 - `GET /api/v1/conversations/{id}/transcript` overlays reversible word edits, segment/cluster speaker labels, and selected highlights on the current model generation. The browser enters one transcript-wide Edit/Done mode, keeps changes pending locally, and sends changed passages through `PATCH /transcript/segments` for one atomic revision. Failed or conflicting saves retain pending wording and navigation with pending changes warns the user. `PATCH /transcript/segments/{segment_id}` and `PUT /speakers/label` require the current revision. `GET /transcript/generations` and `GET /transcript/generations/{version}` expose retained machine output.
@@ -107,3 +111,5 @@ A fresh conservative-clean-v3 run on the same 789-passage interview succeeded in
 The versioned native-word pipeline produced 29 timed words on a 10.8-second browser-recorded sample. A source-preserving alignment job attached 7,612 measured words to the original 789 interview passages while retaining all 789 IDs, texts, speaker assignments, and segment times. Twelve passages remained untimed. Five comparison windows showed 0.16–0.25-second median absolute difference from independently timed Otter words; see [aggregate timing validation](validation/real-interview-word-timing.md). Chromium checks covered clicking a word at 500.04 seconds, scrub-to-active-word tracking, selection/highlight/removal across word spans, the fixed player, and 390-pixel layout. A second 50-second browser conversation ran Measure word timing through the UI, produced 122 timed words, and retained them after completion.
 
 The cosmos theme was checked in Chromium at 1440 and 390 pixels across home, transcript, Edited Transcript, AI, and light mobile states. Theme persistence, locally served fonts, import/record entry, vocabulary, transcript Edit/Done, speaker editor, tabs, audio seeking, reduced motion, and mobile width passed. All browser resource requests stayed on the loopback origin. Text, muted/status, and accent control color pairs measured above 4.5:1 in both themes; [ADR 0013](decisions/0013-cosmos-browser-theme.md) records the measured ratios and design choice.
+
+Local library search over the real interview returned a 12-hit CubeSat query in about 37 ms. Chromium opened a passage result at 2:13 with audio paused, moved through phrase matches, combined a speaker filter, and cleared search without changing the current playback time. At 390 pixels the search controls did not overflow. A second browser conversation was given a temporary manual speaker name, found from library search, and cleared; the old result disappeared. Thirty-five tests now include search freshness after edits, speaker rename, and a replacement transcript generation. Search results are computed on request; the future conversation deletion flow in #43 still needs an end-to-end check.
