@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, through ticket #143 and the real summary retry for ticket #128. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-16, through ticket #144 and the real summary retry for ticket #128. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -61,7 +61,7 @@ flowchart LR
   X -->|changed ASR boundaries with user overlays| GR[(SQLite: candidate generations, review items and decisions)]
   C -->|listen, map or keep unresolved, activate or keep source| A
   A -->|review and atomic activation| GR
-  GR -->|explicitly mapped edits, labels, highlights, people| O
+  GR -->|explicitly mapped edits, labels, highlights, people, comments, selected images| O
   X -->|reads source| M
   A -->|atomic optimistic edit batch, display overlays| O[(SQLite: edits, speaker labels, highlights)]
   A -->|vocabulary CRUD| V[(SQLite: vocabulary)]
@@ -73,8 +73,8 @@ flowchart LR
   C -->|Lexical notes: image references, pipe tables, local draft, autosave| L
   C -->|recording and conversation notes, expected revision| A
   A --> NT[(SQLite: meeting_notes Markdown, revision)]
-  C -->|screenshot paste or PNG/JPEG/WebP upload, audio time, caption| A
-  A --> IM[(SQLite: conversation_images, owner and time)]
+  C -->|screenshot paste or PNG/JPEG/WebP upload; selected quote, offsets, audio time, caption| A
+  A --> IM[(SQLite: conversation_images, owner, time, optional quote and offsets)]
   A --> IF[(Private normalized WebP images)]
   IM -->|finalize ownership, transcript-time placement, trash/restore/delete| A
   C -->|first Notes visit or Refresh, version selection and edits| A
@@ -131,7 +131,7 @@ flowchart LR
 | Importer | `src/stellis/importer.py` | Bounded multipart/ZIP extraction, SHA-256 deduplication, `ffprobe` duration/stream validation. |
 | Recorder | `src/stellis/recording.py` | Private bounded chunk files with fsync/digest, interrupted-session listing and title updates, pause/device events, verified join, ffmpeg stream-copy remux, import handoff, explicit discard. |
 | Notes | `src/stellis/notes.py`, `meeting_notes` in device SQLite, and the committed Lexical bundle in `src/stellis/static/` with MIT `@lexical/table` and `@lexical/utils` | Revisioned local Markdown owned by an active recording or saved conversation; expected-revision writes, capture-to-conversation transfer, append on deduplicated media, autosave and browser draft recovery, toolbar formatting, editable pipe tables, opaque inline image references, and discard/permanent-delete cleanup. The local login gate applies to both note API scopes. |
-| Meeting images | `src/stellis/images.py`, `conversation_images` in device SQLite, Pillow 12.3.0, and browser image controls | Screenshot clipboard paste directly into My Notes or local PNG/JPEG/WebP upload from the Notes toolbar; bounded decoded image normalized to metadata-free WebP in a private directory, optional caption and passage hint, durable original audio time, recording finalization transfer, time-based fallback after passage IDs change, authenticated owner-scoped file/download routes, and discard/trash/restore/permanent-delete lifecycle. Notes contain only opaque image references; no image bytes enter notes, transcript sync, or AI prompts. |
+| Meeting images | `src/stellis/images.py`, `conversation_images` in device SQLite, Pillow 12.3.0, and browser image controls | Screenshot clipboard paste directly into My Notes or local PNG/JPEG/WebP upload; selected transcript text opens a native multi-file chooser and a shared preview/caption dialog. Each image stores owner, original audio time, optional source passage ID, exact quote and offsets validated against the displayed transcript revision. Bytes become metadata-free WebP in a private directory. A changed quote shows Source changed; changed passage IDs require explicit unique-quote generation review mapping or retain the earlier time. Recording finalization transfers ownership; authenticated owner-scoped file/download routes and discard/trash/restore/permanent-delete lifecycle apply. Notes contain only opaque image references; no image bytes or quote metadata enter transcript sync or AI prompts. |
 | Enhanced Notes | `src/stellis/enhanced_notes.py` and `enhanced_notes_runs` in device SQLite | Auto first-run generation when a ready conversation opens Notes; bounded transcript evidence plus My Notes context sent through the existing Nebius adapter; strict source-ID validation, separate immutable versions and user edit revisions, original audio start times, input staleness from transcript/speaker/raw-note changes, retryable interruption/failure, and preservation of older results. |
 | Recording AI Chat | `src/stellis/recording_ai.py`, the existing bounded Nebius answer adapter, and `recording_ai_runs` in device SQLite | Questions against a frozen saved provisional transcript; live prompt marks ASR uncertainty, source-ID validation, provider metadata, retryable interruption, preserved answer and audio times after finalization, cleanup on discard and permanent deletion. No audio leaves the device. |
 | Recording preview | `src/stellis/recording_preview.py` | One local preview at a time from a verified first WebM chunk plus up to twenty recent chunks; ffprobe source timestamps, ffmpeg mono decode capped to a thirty-second model window, local whisper.cpp provisional passages, media-duration clamping, and a private merged preview snapshot removed on finalization. |
@@ -258,3 +258,5 @@ At #106, pipeline v2 guards vocabulary-prompt failures for recordings up to 60 s
 At #128, a real Nemotron summary of the 57:49 interview resumed eleven checkpointed parts and completed with eleven overview points after omitting a 14.8-second overlapping closing part. The claim audit found one point about a “chef role” that its garbled single passage did not support. The long-part source-depth guard rejects that thin evidence. A fresh browser-triggered regeneration failed after three checkpoints, then **Retry summary** resumed that failed run and completed eleven overview points with 33 source buttons. Chromium rendered the result at desktop and 390 pixels without overflow; a source button sought and played audio at 21:06. Eighty tests passed, one skipped, before the retry-path fix; 81 passed, one skipped, after it. The full point review found plausible completions at ASR cutoffs that cited local text alone cannot prove; #135 tracks claim-level semantic review. The saved prior summary stayed available during replacement.
 
 At #143, 93 tests pass with one skip. API tests cover comment revision conflicts, exact quote and source time, durable edit/delete, changed source wording, explicit ASR remap, ambiguous quote rejection, permanent deletion, and exclusion of comment body text from a captured Nemotron request. In Chromium on the real interview, a selected excerpt opened the Comment composer, saved to SQLite, reloaded with an underlined range, and survived edit before deletion. A temporary comment at 2:02 sought and played audio at 122 seconds. The 390-pixel Comments panel fit without horizontal overflow, and all temporary comments were removed.
+
+At #144, 95 tests pass with one skip. API tests cover stale selected-image revisions, exact displayed quote, invalid range cleanup, explicit ASR remap, and ambiguous quote rejection. Chromium selected words, chose an image, previewed, saved, and reloaded the quote card in an isolated fixture; a second fixture action saved two images from one chooser. On the real 57:49 interview, Chromium saved an image at the selected opening quote and reloaded its inline card at 390 pixels without horizontal overflow. Direct API inspection found the same quote, offsets, source passage, and 0:00 audio time. All temporary images were deleted.
