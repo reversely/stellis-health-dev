@@ -175,7 +175,8 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
                 for table in ("recording_sessions", "clean_runs", "ai_runs", "transcript_highlights",
                               "speaker_label_events", "speaker_labels", "transcript_edit_events",
                               "transcript_edits", "transcript_generations", "transcripts", "processing_jobs",
-                              "conversation_categories", "person_links"):
+                              "conversation_categories", "person_links", "transcript_reviews",
+                              "transcript_review_history"):
                     conn.execute(f"DELETE FROM {table} WHERE conversation_id = ?", (conversation_id,))
                 conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
                 conn.commit()

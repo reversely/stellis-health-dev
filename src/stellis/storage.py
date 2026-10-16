@@ -115,6 +115,28 @@ def connect() -> Iterator[sqlite3.Connection]:
             PRIMARY KEY(conversation_id, pipeline_version)
         )"""
     )
+    conn.execute("""CREATE TABLE IF NOT EXISTS transcript_reviews (
+        conversation_id TEXT PRIMARY KEY REFERENCES conversations(id),
+        source_version TEXT NOT NULL,
+        target_version TEXT NOT NULL,
+        source_revision INTEGER NOT NULL,
+        items_json TEXT NOT NULL,
+        decisions_json TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('pending', 'accepted')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS transcript_review_history (
+        conversation_id TEXT NOT NULL REFERENCES conversations(id),
+        target_version TEXT NOT NULL,
+        source_version TEXT NOT NULL,
+        source_revision INTEGER NOT NULL,
+        items_json TEXT NOT NULL,
+        decisions_json TEXT NOT NULL,
+        outcome TEXT NOT NULL CHECK (outcome IN ('accepted', 'kept_source')),
+        decided_at TEXT NOT NULL,
+        PRIMARY KEY(conversation_id, target_version)
+    )""")
     if conn.execute("SELECT 1 FROM transcript_generations LIMIT 1").fetchone() is None:
         conn.execute(
             """INSERT OR IGNORE INTO transcript_generations
