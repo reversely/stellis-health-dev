@@ -17,6 +17,14 @@ from test_import import wav_bytes
 
 
 class EnhancedNotesWorkflowTest(unittest.TestCase):
+    def test_image_references_do_not_expose_local_ids_to_provider(self) -> None:
+        image_id = "12345678-1234-1234-1234-123456789abc"
+        markdown = f"Agenda\n\n![Shared screen](stellis-image:{image_id})\n\n| Topic | Owner |"
+        cleaned = enhanced_notes._notes_for_prompt(markdown)
+        self.assertIn("[Image: Shared screen]", cleaned)
+        self.assertIn("| Topic | Owner |", cleaned)
+        self.assertNotIn(image_id, cleaned)
+
     def test_generate_edit_refresh_and_note_staleness(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
             client = TestClient(app)

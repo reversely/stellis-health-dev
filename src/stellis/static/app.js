@@ -122,6 +122,18 @@ function imageEndpoint(scope, id) {
 function imageFileUrl(scope, id, imageId, download = false) {
   return `${imageEndpoint(scope, id)}/${encodeURIComponent(imageId)}/file${download ? '?download=true' : ''}`;
 }
+async function removeImageFromNotes(scope, ownerId, imageId) {
+  const state = notesStates[scope];
+  if (state?.id !== ownerId) return true;
+  const previous = state.pendingMarkdown;
+  const next = previous.replace(new RegExp(`!\\[[^\\]\\n]*\\]\\(stellis-image:${imageId}\\)`, 'g'), '')
+    .replace(/\n{3,}/g, '\n\n');
+  if (next === previous) return true;
+  state.pendingMarkdown = next;
+  if (!await flushNotes(state)) {state.pendingMarkdown = previous; return false;}
+  notesEditors[scope]?.setMarkdown(next);
+  return true;
+}
 function imageSegmentFromSelection() {
   const selection = window.getSelection();
   if (!selection?.toString().trim()) return null;
@@ -166,6 +178,7 @@ function makeImageCard(item, scope, ownerId) {
   remove.addEventListener('click', async () => {
     if (!window.confirm('Delete this image permanently?')) return;
     try {
+      if (!await removeImageFromNotes(scope, ownerId, item.id)) return;
       await json(await fetch(`${imageEndpoint(scope, ownerId)}/${encodeURIComponent(item.id)}`, {method:'DELETE'}));
       await loadImages(scope, ownerId);
     } catch (error) {setStatus(error.message);}
@@ -198,7 +211,10 @@ function renderConversationImages() {
 function renderRecordingImages() {
   const list = document.querySelector('#recording-image-list'); list.replaceChildren();
   const recordingId = capture?.session.id || notesStates.recording?.id;
-  if (recordingId) for (const item of recordingImages) list.append(makeImageCard(item, 'recording', recordingId));
+  const markdown = notesStates.recording?.pendingMarkdown || '';
+  if (recordingId) for (const item of recordingImages) {
+    if (!markdown.includes(`stellis-image:${item.id}`)) list.append(makeImageCard(item, 'recording', recordingId));
+  }
 }
 async function loadImages(scope, id) {
   const items = await json(await fetch(imageEndpoint(scope, id)));
@@ -240,6 +256,37 @@ function openImageDialog(scope, id, file = null, segmentId = null) {
 function clipboardImage(event) {
   return [...(event.clipboardData?.items || [])].find(item => item.type.startsWith('image/'))?.getAsFile() || null;
 }
+let notesImageChoice = null;
+function chooseNotesImage(scope, selection) {
+  const state = notesStates[scope];
+  if (!state) return;
+  notesImageChoice = {scope, id:state.id, selection};
+  const input = document.querySelector('#notes-image-file');
+  input.value = ''; input.click();
+}
+async function saveNotesImage(scope, id, file, selection) {
+  if (!file || notesStates[scope]?.id !== id) return;
+  const status = notesElements(scope).status;
+  const form = new FormData();
+  form.append('file', file, file.name || 'screenshot.png');
+  form.append('media_position_ms', String(scope === 'recording' ? Math.round(captureElapsedMs()) :
+    Math.round(player.currentTime * 1000)));
+  status.textContent = 'Adding image…';
+  try {
+    const image = await json(await fetch(imageEndpoint(scope, id), {method:'POST', body:form}));
+    if (notesStates[scope]?.id !== id) return;
+    const editor = await ensureNotesEditor(scope);
+    editor.insertImage(image.id, image.caption, selection);
+    await loadImages(scope, id);
+  } catch (error) {status.textContent = error.message;}
+}
+function pasteNotesImage(event, scope) {
+  const file = clipboardImage(event);
+  const state = notesStates[scope];
+  if (!file || !state) return;
+  event.preventDefault(); event.stopPropagation();
+  saveNotesImage(scope, state.id, file, notesEditors[scope]?.captureSelection());
+}
 function pasteImage(event, scope) {
   const file = clipboardImage(event);
   if (!file) return;
@@ -250,11 +297,17 @@ function pasteImage(event, scope) {
   } else chooseImageFile(file);
 }
 document.querySelector('#recording-notes-editor').addEventListener('paste', event => {
-  if (capture?.session.id) pasteImage(event, 'recording');
+  pasteNotesImage(event, 'recording');
 }, true);
 document.querySelector('#conversation-notes-editor').addEventListener('paste', event => {
-  if (activeConversationId) pasteImage(event, 'conversation');
+  pasteNotesImage(event, 'conversation');
 }, true);
+document.querySelector('#notes-image-file').addEventListener('change', event => {
+  if (!notesImageChoice) return;
+  const {scope, id, selection} = notesImageChoice;
+  notesImageChoice = null;
+  saveNotesImage(scope, id, event.target.files?.[0], selection);
+});
 transcriptView.addEventListener('paste', event => {
   if (activeConversationId) pasteImage(event, 'conversation');
 }, true);
@@ -269,7 +322,8 @@ document.querySelector('#image-paste-target').addEventListener('drop', event => 
 });
 document.querySelector('#choose-image').addEventListener('click', () => document.querySelector('#image-file').click());
 document.querySelector('#image-file').addEventListener('change', event => chooseImageFile(event.target.files?.[0]));
-document.querySelector('#add-recording-image').addEventListener('click', () => openImageDialog('recording', capture?.session.id));
+document.querySelector('#add-recording-image').addEventListener('click', () =>
+  chooseNotesImage('recording', notesEditors.recording?.captureSelection()));
 document.querySelector('#add-conversation-image').addEventListener('pointerdown', () => {
   selectedImageSegmentId = imageSegmentFromSelection();
 });
@@ -314,11 +368,20 @@ async function ensureNotesEditor(scope) {
     const state = notesStates[scope];
     if (!state) return;
     state.pendingMarkdown = markdown;
+    if (scope === 'recording') renderRecordingImages();
     try { localStorage.setItem(notesDraftKey(scope, state.id), JSON.stringify({markdown, revision:state.revision})); } catch {}
     elements.status.textContent = 'Unsaved'; elements.retry.hidden = true;
     clearTimeout(state.timer);
     state.timer = setTimeout(() => flushNotes(state), 600);
-  }, error => {elements.status.textContent = error.message;});
+  }, error => {elements.status.textContent = error.message;}, {
+    imageUrlForId:imageId => imageFileUrl(scope, notesStates[scope]?.id, imageId),
+    onOpenImage:(src, alt) => {
+      const viewer = document.querySelector('#image-viewer');
+      const expanded = document.querySelector('#expanded-image');
+      expanded.src = src; expanded.alt = alt; viewer.showModal();
+    },
+    onPickImage:selection => chooseNotesImage(scope, selection),
+  });
   notesEditors[scope] = editor;
   elements.retry.addEventListener('click', () => retryNotes(scope));
   return editor;
@@ -340,6 +403,7 @@ async function loadNotes(scope, id) {
     pendingMarkdown:markdown,timer:null,savePromise:null};
   notesStates[scope] = state;
   editor.setMarkdown(markdown);
+  if (scope === 'recording') renderRecordingImages();
   const elements = notesElements(scope);
   elements.status.textContent = recovered ? 'Recovered draft' : '';
   elements.retry.hidden = true;
@@ -417,6 +481,7 @@ async function ensureEnhancedEditor() {
   if (enhancedEditor) return enhancedEditor;
   notesModulePromise ||= import('/static/notes-editor.bundle.js');
   document.querySelector('#enhanced-notes-toolbar').innerHTML = document.querySelector('#conversation-notes-toolbar').innerHTML;
+  document.querySelector('#enhanced-notes-toolbar [data-note-action="image"]').remove();
   const {createNotesEditor} = await notesModulePromise;
   enhancedEditor = createNotesEditor(document.querySelector('#enhanced-notes-editor'),
     document.querySelector('#enhanced-notes-toolbar'), markdown => {
@@ -2157,7 +2222,7 @@ function captureControls() {
   document.querySelector('#pause-recording').textContent = capture?.recorder?.state === 'paused' ? 'Resume' : 'Pause';
   document.querySelector('#back-from-recording').disabled = active || captureRequesting || captureFinalizing;
   recordingTimer.textContent = time(captureElapsedMs() / 1000);
-  document.querySelector('#add-recording-image').disabled = !active;
+  document.querySelector('#add-recording-image').disabled = !(capture?.session.id || notesStates.recording?.id);
 }
 function showRecordingView(view) {
   if (view !== 'chat') recordingPrimaryView = view;
