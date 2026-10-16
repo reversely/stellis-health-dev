@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, clean, library, people, processing, recording, search, storage
+from stellis import ai, clean, generation_review, library, people, processing, recording, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -89,6 +89,11 @@ class PersonMerge(BaseModel):
 class PersonMove(BaseModel):
     conversation_id: str
     target_id: str
+
+
+class GenerationReviewDecision(BaseModel):
+    item_id: str
+    target_segment_id: str | None = None
 
 
 class HighlightSelection(BaseModel):
@@ -528,7 +533,10 @@ def process_conversation(conversation_id: str) -> dict[str, object]:
     ready = processing.capabilities()["features"]
     if not ready["transcribe"] or not ready["diarize"]:
         raise HTTPException(status_code=409, detail="Install the local speech models before processing")
-    return processing.public_job(processing.request_processing(conversation_id))
+    try:
+        return processing.public_job(processing.request_processing(conversation_id))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api.post("/conversations/{conversation_id}/speaker-rematch")
@@ -560,6 +568,48 @@ def job(job_id: str) -> dict[str, object]:
     if record is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return processing.public_job(record)
+
+
+@api.get("/conversations/{conversation_id}/transcript/review")
+def transcript_review(conversation_id: str) -> dict[str, object] | None:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return generation_review.get_review(conversation_id)
+
+
+@api.get("/conversations/{conversation_id}/transcript/review/history")
+def transcript_review_history(conversation_id: str) -> list[dict[str, object]]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return generation_review.list_history(conversation_id)
+
+
+@api.put("/conversations/{conversation_id}/transcript/review/decisions")
+def decide_transcript_review(conversation_id: str, request: GenerationReviewDecision) -> dict[str, object]:
+    try:
+        return generation_review.decide(conversation_id, request.item_id, request.target_segment_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/conversations/{conversation_id}/transcript/review/activate")
+def activate_transcript_review(conversation_id: str) -> dict[str, object]:
+    try:
+        return generation_review.activate(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.post("/conversations/{conversation_id}/transcript/review/keep-source")
+def keep_review_source(conversation_id: str) -> dict[str, object]:
+    try:
+        return generation_review.keep_source(conversation_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @api.get("/conversations/{conversation_id}/transcript")

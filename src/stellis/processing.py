@@ -99,6 +99,10 @@ def start_worker() -> None:
 def request_processing(conversation_id: str) -> dict[str, object]:
     """Queue one job per conversation and pipeline version."""
     with _REQUEST_LOCK:
+        from stellis import generation_review
+        review = generation_review.get_review(conversation_id)
+        if review and review["state"] == "pending":
+            raise RuntimeError("Review or keep the current transcript before starting another transcription")
         terms = vocabulary_snapshot()
         version = pipeline_version(terms)
         existing = storage.get_job_for_conversation(conversation_id, version)
@@ -485,13 +489,17 @@ def run_job(job_id: str) -> None:
                 "cluster_count": len({turn["speaker_cluster_id"] for turn in turns}),
                 "confident_segment_fraction": round(coverage, 3),
             }
-            storage.save_transcript({
+            record = {
                 "conversation_id": conversation["id"], "revision": 1,
                 "pipeline_version": job["pipeline_version"], "language": "en",
                 "segments_json": json.dumps(aligned), "turns_json": json.dumps(turns),
                 "updated_at": now(),
-            })
-            storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
+            }
+            from stellis import generation_review
+            staged = generation_review.stage(record)
+            if not staged:
+                storage.save_transcript(record)
+            storage.update_job(job_id, state="succeeded", stage="review ready" if staged else "complete", progress=1.0,
                                metrics_json=json.dumps(metrics), error=None, updated_at=now())
     except Exception as exc:
         storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())

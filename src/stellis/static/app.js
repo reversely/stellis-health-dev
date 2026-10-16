@@ -47,6 +47,7 @@ let cleanEditError = null;
 const pendingCleanEdits = new Map();
 let transcriptSegments = [];
 let currentTranscript = null;
+let generationReview = null;
 let highlightsOnly = false;
 let rematchChangesOnly = false;
 let transcriptEditMode = false;
@@ -860,6 +861,7 @@ async function showTranscript(id) {
   if (id !== activeConversationId) return;
   const previousScroll = window.scrollY;
   currentTranscript = data;
+  await loadGenerationReview(id);
   syncTranscriptEditControls();
   document.querySelector('#clean-button').disabled = cleanRuns[0]?.state === 'queued' || cleanRuns[0]?.state === 'running';
   rematchButton.hidden = false;
@@ -971,6 +973,78 @@ async function showTranscript(id) {
   refreshTranscriptSearch();
   window.scrollTo(0, previousScroll);
 }
+
+async function loadGenerationReview(id) {
+  generationReview = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/transcript/review`));
+  if (id !== activeConversationId) return;
+  const panel = document.querySelector('#generation-review');
+  panel.hidden = !generationReview;
+  if (!generationReview) return;
+  const pending = generationReview.state === 'pending';
+  const items = generationReview.items;
+  const decisions = generationReview.decisions;
+  const resolved = items.filter(item => Object.hasOwn(decisions, item.id) && decisions[item.id] !== null).length;
+  const reviewed = items.filter(item => Object.hasOwn(decisions, item.id)).length;
+  panel.hidden = !pending && resolved === items.length;
+  document.querySelector('#generation-review-status').textContent = pending ?
+    `${reviewed} of ${items.length} reviewed. Listen before assigning.` :
+    `${items.length - resolved} unresolved changes. Prior wording remains in history.`;
+  const container = document.querySelector('#generation-review-items'); container.replaceChildren();
+  for (const item of items) {
+    if (!pending && decisions[item.id] !== null) continue;
+    const row = document.createElement('article'); row.className = 'generation-review-row';
+    const title = document.createElement('strong'); title.textContent = `${item.kind} · ${time(item.source_start_ms / 1000)} · ${item.boundary_change}`;
+    const source = document.createElement('p'); source.textContent = `Before: ${item.source_text}`;
+    const value = document.createElement('p'); value.textContent = `Saved ${item.kind}: ${item.kind === 'person' ? item.source_speaker : item.value}`;
+    const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Play source';
+    play.addEventListener('click', () => { player.pause(); player.currentTime = item.source_start_ms / 1000; player.play().catch(() => {}); });
+    row.append(title, source, value, play);
+    for (const candidate of item.candidates) {
+      const result = document.createElement('div'); result.className = 'generation-review-candidate';
+      const wording = document.createElement('p'); wording.textContent = `After · ${time(candidate.start_ms / 1000)}: ${candidate.text}`;
+      const listen = document.createElement('button'); listen.type = 'button'; listen.textContent = 'Play new passage';
+      listen.addEventListener('click', () => { player.pause(); player.currentTime = candidate.start_ms / 1000; player.play().catch(() => {}); });
+      result.append(wording, listen); row.append(result);
+    }
+    if (pending) {
+      const choice = document.createElement('select'); choice.setAttribute('aria-label', `Target for ${item.kind} at ${time(item.source_start_ms / 1000)}`);
+      choice.append(new Option('Choose a result', ''), new Option('Keep unresolved', 'unresolved'));
+      for (const candidate of item.candidates) choice.append(new Option(
+        `${time(candidate.start_ms / 1000)} · ${candidate.text.slice(0, 120)} (${Math.round(candidate.score * 100)}% match)`, candidate.segment_id));
+      if (Object.hasOwn(decisions, item.id)) choice.value = decisions[item.id] ?? 'unresolved';
+      const suggestion = document.createElement('small'); suggestion.textContent = item.suggestion ?
+        'Check the recording before assigning.' : 'Listen to both passages.';
+      choice.addEventListener('change', async () => {
+        if (!choice.value) return;
+        try {
+          await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/transcript/review/decisions`, {
+            method:'PUT', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({item_id:item.id,target_segment_id:choice.value === 'unresolved' ? null : choice.value}),
+          }));
+          await loadGenerationReview(id);
+        } catch (error) { document.querySelector('#generation-review-status').textContent = error.message; }
+      });
+      row.append(choice, suggestion);
+    }
+    container.append(row);
+  }
+  document.querySelector('#generation-keep-source').hidden = !pending;
+  document.querySelector('#generation-activate').hidden = !pending;
+  document.querySelector('#generation-activate').disabled = reviewed !== items.length;
+}
+
+document.querySelector('#generation-keep-source').addEventListener('click', async () => {
+  if (!activeConversationId || !window.confirm('Keep the current transcript? The new candidate will remain in generation history.')) return;
+  try { await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/transcript/review/keep-source`, {method:'POST'}));
+    await loadGenerationReview(activeConversationId); }
+  catch (error) { document.querySelector('#generation-review-status').textContent = error.message; }
+});
+document.querySelector('#generation-activate').addEventListener('click', async () => {
+  if (!activeConversationId || !window.confirm('Use the new transcription with only the mappings you reviewed?')) return;
+  try { await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/transcript/review/activate`, {method:'POST'}));
+    await showTranscript(activeConversationId); }
+  catch (error) { document.querySelector('#generation-review-status').textContent = error.message; }
+});
 function renderHighlightedText(container, value, highlights, timedWords = []) {
   const valid = highlights.filter(item => value.slice(item.start_offset, item.end_offset) === item.quote);
   const measured = timedWords.map((word, index) => ({...word, index})).filter(word => value.slice(word.start_offset, word.end_offset) === word.text && word.end_ms > word.start_ms);
