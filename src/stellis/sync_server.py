@@ -4,19 +4,37 @@ from __future__ import annotations
 
 import base64
 import binascii
+import os
 import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.cors import CORSMiddleware
 
 from stellis import sync_identity as identity
 
 app = FastAPI(title="Stellis Sync Identity Dev", docs_url=None, redoc_url=None)
 _STATIC = Path(__file__).parent / "sync_static"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+
+
+def _device_origin() -> str | None:
+    value = os.environ.get("STELLIS_DEVICE_ORIGIN", "").strip()
+    if not value:
+        return None
+    parsed = urlsplit(value)
+    if (parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost"}
+            or parsed.port is None or parsed.path or parsed.query or parsed.fragment
+            or parsed.username is not None or parsed.password is not None):
+        raise RuntimeError("STELLIS_DEVICE_ORIGIN must be a loopback origin with a port")
+    return value
+
+
+DEVICE_ORIGIN = _device_origin()
 
 
 @app.middleware("http")
@@ -26,7 +44,7 @@ async def identity_gate(request: Request, call_next):
         return JSONResponse({"detail": "Loopback only"}, status_code=403)
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
-        if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
+        if origin and origin not in {f"{request.url.scheme}://{request.headers.get('host')}", DEVICE_ORIGIN}:
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
     path = request.url.path
     if path == "/" or path.startswith("/static/") or path in {"/sync/v1/health", "/sync/v1/auth/register", "/sync/v1/auth/login", "/sync/v1/auth/logout"}:
@@ -36,6 +54,11 @@ async def identity_gate(request: Request, call_next):
         return JSONResponse({"detail": "Login required"}, status_code=401)
     request.state.user = user
     return await call_next(request)
+
+
+app.add_middleware(CORSMiddleware, allow_origins=[DEVICE_ORIGIN] if DEVICE_ORIGIN else [],
+                   allow_credentials=True, allow_methods=["GET", "POST", "DELETE"],
+                   allow_headers=["content-type"])
 
 
 class Credentials(BaseModel):
