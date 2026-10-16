@@ -1,4 +1,4 @@
-# ADR 0038: Keep meeting images as private time-anchored records
+# ADR 0039: Keep meeting images as private time-anchored records
 
 Status: accepted for development, 2026-10-16.
 
