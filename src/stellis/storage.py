@@ -251,6 +251,32 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS enhanced_notes_runs (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversations(id),
+            input_hash TEXT NOT NULL,
+            transcript_revision INTEGER NOT NULL,
+            source_identity_hash TEXT NOT NULL,
+            notes_revision INTEGER NOT NULL,
+            notes_hash TEXT NOT NULL,
+            model_id TEXT NOT NULL,
+            prompt_version TEXT NOT NULL,
+            state TEXT NOT NULL,
+            stage TEXT NOT NULL,
+            result_json TEXT,
+            edited_markdown TEXT,
+            edit_revision INTEGER NOT NULL DEFAULT 0,
+            source_starts_json TEXT NOT NULL,
+            usage_json TEXT NOT NULL DEFAULT '{}',
+            provider_request_ids_json TEXT NOT NULL DEFAULT '[]',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            error_code TEXT,
+            error_message TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )"""
+    )
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS ai_runs (
             id TEXT PRIMARY KEY,
             conversation_id TEXT NOT NULL REFERENCES conversations(id),

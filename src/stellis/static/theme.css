@@ -190,6 +190,15 @@ main { max-width: 1100px; }
 .notes-save-line button { border: 0; background: transparent; color: var(--accent-strong); cursor: pointer; }
 .conversation-notes { border-bottom: 1px solid var(--line); margin-bottom: 24px; padding-bottom: 14px; }
 .conversation-notes h2 { margin-top: 0; }
+.notes-choice { display: flex; gap: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
+.notes-choice button { padding: 9px 1px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.notes-choice button[aria-selected='true'] { border-color: var(--accent-strong); color: var(--ink); font-weight: 700; }
+.enhanced-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.enhanced-heading > div { display: flex; gap: 8px; }
+.enhanced-heading select { max-width: 190px; }
+.enhanced-heading button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; cursor: pointer; }
+.enhanced-sources { margin-top: 16px; }
+.enhanced-sources summary { cursor: pointer; font-weight: 650; }
 .recording-preview { display: grid; gap: 14px; }
 .recording-preview p { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 12px; margin: 0; color: var(--ink); line-height: 1.55; }
 .recording-preview time { color: var(--quiet); font-size: 13px; font-variant-numeric: tabular-nums; }

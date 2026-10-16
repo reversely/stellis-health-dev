@@ -208,6 +208,160 @@ async function recoverNotesDraft(recordingId) {
     headers:{'Content-Type':'application/json'},body:JSON.stringify({markdown,expected_revision:remote.revision})}));
   localStorage.removeItem(key);
 }
+const enhancedFields = [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']];
+let enhancedRuns = [];
+let enhancedSelectedId = null;
+let enhancedEditor = null;
+let enhancedState = null;
+let enhancedSaveTimer = null;
+let enhancedPollTimer = null;
+function enhancedMarkdown(result) {
+  return enhancedFields.filter(([field]) => result[field]?.length)
+    .map(([field,title]) => `## ${title}\n\n${result[field].map(item => `- ${item.text}`).join('\n')}`)
+    .join('\n\n');
+}
+async function ensureEnhancedEditor() {
+  if (enhancedEditor) return enhancedEditor;
+  notesModulePromise ||= import('/static/notes-editor.bundle.js');
+  document.querySelector('#enhanced-notes-toolbar').innerHTML = document.querySelector('#conversation-notes-toolbar').innerHTML;
+  const {createNotesEditor} = await notesModulePromise;
+  enhancedEditor = createNotesEditor(document.querySelector('#enhanced-notes-editor'),
+    document.querySelector('#enhanced-notes-toolbar'), markdown => {
+      if (!enhancedState) return;
+      enhancedState.pending = markdown;
+      try {localStorage.setItem(`stellis-enhanced-${enhancedState.id}`,
+        JSON.stringify({markdown,revision:enhancedState.revision}));} catch {}
+      document.querySelector('#enhanced-save-status').textContent = 'Unsaved';
+      clearTimeout(enhancedSaveTimer); enhancedSaveTimer = setTimeout(() => flushEnhanced(), 600);
+    }, error => {document.querySelector('#enhanced-save-status').textContent = error.message;});
+  document.querySelector('#enhanced-retry').addEventListener('click', () => retryEnhanced());
+  return enhancedEditor;
+}
+async function flushEnhanced() {
+  if (!enhancedState || enhancedState.saving) return enhancedState?.saving || true;
+  clearTimeout(enhancedSaveTimer);
+  if (enhancedState.pending === enhancedState.saved) return true;
+  const state = enhancedState;
+  state.saving = (async () => {
+    while (state.pending !== state.saved) {
+      const markdown = state.pending;
+      document.querySelector('#enhanced-save-status').textContent = 'Saving…';
+      try {
+        const saved = await json(await fetch(`${API}/enhanced-notes/${encodeURIComponent(state.id)}`, {
+          method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({markdown,expected_revision:state.revision})}));
+        state.revision = saved.edit_revision; state.saved = saved.edited_markdown;
+        if (state.pending === state.saved) {
+          try {localStorage.removeItem(`stellis-enhanced-${state.id}`);} catch {}
+          document.querySelector('#enhanced-save-status').textContent = 'Saved';
+          document.querySelector('#enhanced-retry').hidden = true;
+        }
+      } catch (error) {
+        document.querySelector('#enhanced-save-status').textContent = error.message;
+        document.querySelector('#enhanced-retry').hidden = false;
+        return false;
+      }
+    }
+    return true;
+  })().finally(() => {state.saving = null;});
+  return state.saving;
+}
+async function retryEnhanced() {
+  if (!enhancedState) return;
+  try {
+    const remote = await json(await fetch(`${API}/enhanced-notes/${encodeURIComponent(enhancedState.id)}`));
+    if (remote.edit_revision !== enhancedState.revision) {
+      const original = remote.edited_markdown ?? enhancedMarkdown(remote.result);
+      enhancedState.pending = enhancedState.pending.includes(original) ? enhancedState.pending :
+        `${original}\n\n---\n\n${enhancedState.pending}`;
+      enhancedState.saved = original; enhancedState.revision = remote.edit_revision;
+      enhancedEditor.setMarkdown(enhancedState.pending);
+    }
+    await flushEnhanced();
+  } catch (error) {document.querySelector('#enhanced-save-status').textContent = error.message;}
+}
+async function selectEnhanced(run) {
+  if (enhancedState?.id !== run.id && !(await flushEnhanced())) return;
+  enhancedSelectedId = run.id;
+  const status = document.querySelector('#enhanced-status');
+  status.textContent = run.state === 'failed' ? run.error_message :
+    run.state === 'running' || run.state === 'queued' ? `Generating · ${run.stage}` :
+    run.stale ? 'Sources changed. Refresh to update.' : '';
+  const sources = document.querySelector('#enhanced-sources'); sources.replaceChildren();
+  if (run.state !== 'succeeded') {
+    enhancedState = null;
+    if (enhancedEditor) enhancedEditor.setMarkdown('');
+    document.querySelector('#enhanced-notes-editor').contentEditable = 'false';
+    document.querySelector('#enhanced-notes-toolbar').hidden = true;
+    return;
+  }
+  await ensureEnhancedEditor();
+  document.querySelector('#enhanced-notes-editor').contentEditable = 'true';
+  document.querySelector('#enhanced-notes-toolbar').hidden = false;
+  const saved = run.edited_markdown ?? enhancedMarkdown(run.result);
+  let pending = saved;
+  try {
+    const draft = JSON.parse(localStorage.getItem(`stellis-enhanced-${run.id}`) || 'null');
+    if (typeof draft?.markdown === 'string' && draft.markdown !== saved)
+      pending = draft.revision === run.edit_revision || draft.markdown.includes(saved) ? draft.markdown :
+        `${saved}\n\n---\n\n${draft.markdown}`;
+  } catch {}
+  enhancedState = {id:run.id,revision:run.edit_revision,saved,pending,saving:null};
+  enhancedEditor.setMarkdown(pending);
+  document.querySelector('#enhanced-save-status').textContent = pending !== saved ? 'Recovered draft' : '';
+  document.querySelector('#enhanced-retry').hidden = true;
+  if (pending !== saved) {clearTimeout(enhancedSaveTimer); enhancedSaveTimer = setTimeout(() => flushEnhanced(), 600);}
+  for (const [field,title] of enhancedFields) renderAIItems(title, run.result[field], sources, run.source_starts);
+}
+async function loadEnhancedRuns(id, autoStart = false) {
+  const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/enhanced-notes`));
+  if (id !== activeConversationId) return;
+  enhancedRuns = runs;
+  if (!runs.length && autoStart && currentTranscript?.segments?.length) {
+    await startEnhanced(false);
+    return;
+  }
+  const picker = document.querySelector('#enhanced-version'); picker.replaceChildren();
+  for (const run of runs) {
+    const option = document.createElement('option'); option.value = run.id;
+    option.textContent = new Date(run.created_at).toLocaleString(); picker.append(option);
+  }
+  const chosen = runs.find(run => run.id === enhancedSelectedId) || runs[0];
+  picker.hidden = runs.length < 2;
+  if (chosen) {
+    picker.value = chosen.id;
+    if (enhancedState?.id !== chosen.id || chosen.state !== 'succeeded') await selectEnhanced(chosen);
+  }
+  else {document.querySelector('#enhanced-status').textContent = currentTranscript ? 'No Enhanced Notes yet.' : 'Transcribe before generating notes.';}
+  clearTimeout(enhancedPollTimer);
+  if (runs.some(run => run.state === 'queued' || run.state === 'running'))
+    enhancedPollTimer = setTimeout(() => loadEnhancedRuns(id).catch(error => {
+      document.querySelector('#enhanced-status').textContent = error.message;}), 2000);
+}
+async function startEnhanced(force) {
+  const id = activeConversationId;
+  document.querySelector('#enhanced-status').textContent = 'Generating…';
+  try {
+    const run = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/enhanced-notes`, {
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force})}));
+    enhancedSelectedId = run.id;
+    await loadEnhancedRuns(id);
+  } catch (error) {document.querySelector('#enhanced-status').textContent = error.message;}
+}
+function showNotesChoice(choice) {
+  const enhanced = choice === 'enhanced';
+  document.querySelector('#my-notes-panel').hidden = enhanced;
+  document.querySelector('#enhanced-notes-panel').hidden = !enhanced;
+  document.querySelector('#my-notes-tab').setAttribute('aria-selected', String(!enhanced));
+  document.querySelector('#enhanced-notes-tab').setAttribute('aria-selected', String(enhanced));
+}
+document.querySelector('#my-notes-tab').addEventListener('click', () => showNotesChoice('my'));
+document.querySelector('#enhanced-notes-tab').addEventListener('click', () => showNotesChoice('enhanced'));
+document.querySelector('#refresh-enhanced').addEventListener('click', () => startEnhanced(true));
+document.querySelector('#enhanced-version').addEventListener('change', async event => {
+  const run = enhancedRuns.find(item => item.id === event.target.value);
+  if (run) await selectEnhanced(run);
+});
 fetch(`${API}/auth/status`).then(json).then(session => {
   document.querySelector('#logout-button').hidden = !session.required;
 }).catch(error => setStatus(error.message));
@@ -312,6 +466,7 @@ async function showList() {
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
+  clearTimeout(enhancedPollTimer);
   clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   activeConversationId = null;
@@ -451,7 +606,7 @@ async function showPerson(id) {
   document.querySelector('#vocabulary-panel').hidden = false;
   document.body.classList.add('profile-page');
   conversationMore.open = false; conversationMore.hidden = true;
-  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null; activePersonId = id;
@@ -496,6 +651,7 @@ async function showPerson(id) {
 }
 async function showDetail(id) {
   await flushNotes(notesStates.conversation);
+  await flushEnhanced();
   document.body.classList.remove('profile-page', 'recording-page');
   recordingPanel.hidden = true;
   document.querySelector('#vocabulary-panel').hidden = false;
@@ -503,6 +659,8 @@ async function showDetail(id) {
   conversationMore.open = false; conversationMore.hidden = false;
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
+  clearTimeout(enhancedPollTimer);
+  enhancedRuns = []; enhancedSelectedId = null; enhancedState = null;
   clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   cleanRuns = [];
@@ -549,6 +707,7 @@ async function showDetail(id) {
   await loadSpeech(id);
   await loadNotes('conversation', id);
   showConversationTab('summary');
+  showNotesChoice('my');
   await loadAIRuns(id);
   await loadCleanRuns(id);
   const query = new URLSearchParams(location.search);
@@ -569,6 +728,7 @@ async function showDetail(id) {
       if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
     }
   }
+  await loadEnhancedRuns(id, !targetSegmentId);
 }
 function showConversationTab(tab) {
   const summary = tab === 'summary';
@@ -671,6 +831,7 @@ async function startAIRun(kind, question = null, force = false) {
 document.querySelector('#summary-tab').addEventListener('click', () => {
   showConversationTab('summary');
   if (activeConversationId) loadAIRuns(activeConversationId).catch(error => document.querySelector('#ai-status').textContent = error.message);
+  if (activeConversationId) loadEnhancedRuns(activeConversationId, true).catch(error => document.querySelector('#enhanced-status').textContent = error.message);
 });
 document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
 document.querySelector('#edited-tab').addEventListener('click', () => showConversationTab('edited'));
@@ -1707,7 +1868,7 @@ function showRecordingWorkspace() {
   document.body.classList.remove('profile-page', 'conversation-page');
   document.body.classList.add('recording-page');
   conversationMore.open = false; conversationMore.hidden = true;
-  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(cleanRunTimer);
   clearTimeout(silenceScanTimer); silenceSpans = [];
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null;
