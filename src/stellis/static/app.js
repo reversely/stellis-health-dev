@@ -17,6 +17,13 @@ const transcriptView = document.querySelector('#transcript');
 let activeConversationId = null;
 let jobTimer = null;
 let aiRunTimer = null;
+let cleanRunTimer = null;
+let cleanRuns = [];
+let currentCleanRun = null;
+let awaitingCleanRun = false;
+let cleanEditMode = false;
+let cleanEditError = null;
+const pendingCleanEdits = new Map();
 let transcriptSegments = [];
 let currentTranscript = null;
 let highlightsOnly = false;
@@ -49,6 +56,7 @@ async function json(response) {
 async function showList() {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
+  clearTimeout(cleanRunTimer);
   activeConversationId = null;
   listView.hidden = false;
   detailView.hidden = true;
@@ -77,6 +85,15 @@ async function showList() {
 async function showDetail(id) {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
+  clearTimeout(cleanRunTimer);
+  cleanRuns = [];
+  currentCleanRun = null;
+  awaitingCleanRun = false;
+  cleanEditMode = false;
+  cleanEditError = null;
+  pendingCleanEdits.clear();
+  document.querySelector('#edited-tab').hidden = true;
+  document.querySelector('#edited-transcript').replaceChildren();
   activeConversationId = id;
   rematchChangesOnly = false;
   transcriptEditMode = false;
@@ -101,13 +118,17 @@ async function showDetail(id) {
   await loadSpeech(id);
   showConversationTab('transcript');
   await loadAIRuns(id);
+  await loadCleanRuns(id);
 }
 function showConversationTab(tab) {
   const summary = tab === 'summary';
+  const edited = tab === 'edited';
   document.querySelector('#ai-card').hidden = !summary;
-  document.querySelector('#transcript-card').hidden = summary;
+  document.querySelector('#transcript-card').hidden = summary || edited;
+  document.querySelector('#edited-card').hidden = !edited;
   document.querySelector('#summary-tab').setAttribute('aria-selected', String(summary));
-  document.querySelector('#transcript-tab').setAttribute('aria-selected', String(!summary));
+  document.querySelector('#transcript-tab').setAttribute('aria-selected', String(!summary && !edited));
+  document.querySelector('#edited-tab').setAttribute('aria-selected', String(edited));
 }
 function sourceButtons(ids) {
   const holder = document.createElement('span'); holder.className = 'ai-sources';
@@ -196,7 +217,191 @@ document.querySelector('#summary-tab').addEventListener('click', () => {
   if (activeConversationId) loadAIRuns(activeConversationId).catch(error => document.querySelector('#ai-status').textContent = error.message);
 });
 document.querySelector('#transcript-tab').addEventListener('click', () => showConversationTab('transcript'));
+document.querySelector('#edited-tab').addEventListener('click', () => showConversationTab('edited'));
 document.querySelector('#generate-summary').addEventListener('click', () => startAIRun('summary'));
+document.querySelector('#clean-button').addEventListener('click', async () => {
+  const id = activeConversationId;
+  const status = document.querySelector('#clean-status');
+  status.textContent = 'Starting transcript cleanup…';
+  awaitingCleanRun = true;
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/clean-runs`, {method:'POST'}));
+    await loadCleanRuns(id);
+  } catch (error) { awaitingCleanRun = false; status.textContent = error.message; }
+});
+document.querySelector('#clean-version').addEventListener('change', event => {
+  if (pendingCleanEdits.size && !window.confirm('Discard unsaved edited transcript changes and switch versions?')) {
+    event.target.value = currentCleanRun.id; return;
+  }
+  pendingCleanEdits.clear(); cleanEditMode = false; cleanEditError = null;
+  currentCleanRun = cleanRuns.find(run => run.id === event.target.value) || null;
+  renderCleanRun();
+});
+async function loadCleanRuns(id) {
+  clearTimeout(cleanRunTimer);
+  const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/clean-runs`));
+  if (id !== activeConversationId) return;
+  cleanRuns = runs;
+  if (cleanEditMode && pendingCleanEdits.size) return;
+  const previous = currentCleanRun?.id;
+  currentCleanRun = runs.find(run => run.id === previous) || runs.find(run => run.state === 'succeeded') || runs[0] || null;
+  const button = document.querySelector('#clean-button');
+  const latest = runs[0];
+  button.disabled = latest?.state === 'queued' || latest?.state === 'running' || !currentTranscript;
+  button.textContent = latest?.state === 'failed' ? 'Retry cleanup' : latest?.state === 'succeeded' && !latest.stale ? 'Transcript cleaned' : 'Clean transcript';
+  document.querySelector('#edited-tab').hidden = !runs.some(run => run.state === 'succeeded');
+  const version = document.querySelector('#clean-version');
+  version.replaceChildren();
+  for (const run of runs.filter(item => item.state === 'succeeded')) {
+    const option = document.createElement('option');
+    option.value = run.id;
+    option.textContent = `${new Date(run.created_at).toLocaleString()}${run.stale ? ' · source changed' : ''}`;
+    version.append(option);
+  }
+  if (currentCleanRun?.state === 'succeeded') version.value = currentCleanRun.id;
+  renderCleanRun();
+  if (awaitingCleanRun && latest?.state === 'succeeded') {
+    awaitingCleanRun = false; currentCleanRun = latest; version.value = latest.id; renderCleanRun(); showConversationTab('edited');
+  }
+  if (awaitingCleanRun && latest?.state === 'failed') awaitingCleanRun = false;
+  if ((latest?.state === 'running' || latest?.state === 'queued') && currentCleanRun?.id !== latest.id)
+    document.querySelector('#clean-status').textContent = `Cleaning new version · ${latest.stage}. An earlier version remains available.`;
+  if (runs.some(run => run.state === 'queued' || run.state === 'running'))
+    cleanRunTimer = setTimeout(() => loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message), 2000);
+}
+function syncCleanEditControls() {
+  document.querySelector('#clean-edit-button').textContent = cleanEditMode ? 'Done' : 'Edit transcript';
+  document.querySelector('#clean-discard-button').hidden = !cleanEditMode;
+  if (cleanEditMode) document.querySelector('#clean-status').textContent = cleanEditError ||
+    (pendingCleanEdits.size ? `${pendingCleanEdits.size} passage${pendingCleanEdits.size === 1 ? '' : 's'} pending · Press Done to save` : 'Edit wording in place. Press Done to finish.');
+}
+function setCleanEditMode(enabled) {
+  cleanEditMode = enabled; cleanEditError = null;
+  const segments = new Map((currentCleanRun?.result?.segments || []).map(item => [item.id, item]));
+  for (const turn of document.querySelectorAll('#edited-transcript .clean-turn')) turn.classList.toggle('editing', enabled);
+  for (const row of document.querySelectorAll('#edited-transcript .clean-segment')) {
+    const words = row.querySelector('.segment-text');
+    if (enabled) {
+      words.contentEditable = 'true'; words.spellcheck = true;
+      words.setAttribute('role', 'textbox'); words.setAttribute('aria-label', `Edit cleaned passage at ${time(segments.get(row.dataset.segmentId).start_ms / 1000)}`);
+    } else { words.contentEditable = 'false'; words.removeAttribute('role'); }
+  }
+  document.querySelector('#clean-compare').hidden = true;
+  syncCleanEditControls();
+}
+async function finishCleanEdit() {
+  if (!pendingCleanEdits.size) { setCleanEditMode(false); renderCleanRun(); return; }
+  const edits = [...pendingCleanEdits].map(([segment_id,text]) => ({segment_id,text:text.trim()}));
+  if (edits.some(item => !item.text)) { cleanEditError = 'A passage is empty. Restore or enter words before saving.'; syncCleanEditControls(); return; }
+  const button = document.querySelector('#clean-edit-button'); button.disabled = true;
+  document.querySelector('#clean-status').textContent = `Saving ${edits.length} passages…`;
+  try {
+    await json(await fetch(`${API}/clean-runs/${encodeURIComponent(currentCleanRun.id)}/segments`, {
+      method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({edits,expected_revision:currentCleanRun.edit_revision}),
+    }));
+    pendingCleanEdits.clear(); cleanEditMode = false;
+    await loadCleanRuns(activeConversationId);
+    document.querySelector('#clean-status').textContent = `${edits.length} edited passage${edits.length === 1 ? '' : 's'} saved.`;
+  } catch (error) { cleanEditError = `${error.message}. Your unsaved wording remains here.`; syncCleanEditControls(); }
+  finally { button.disabled = false; }
+}
+document.querySelector('#clean-edit-button').addEventListener('click', () => {
+  if (cleanEditMode) finishCleanEdit(); else setCleanEditMode(true);
+});
+document.querySelector('#clean-discard-button').addEventListener('click', async () => {
+  if (pendingCleanEdits.size && !window.confirm('Discard unsaved edited transcript changes?')) return;
+  pendingCleanEdits.clear(); cleanEditMode = false; cleanEditError = null; renderCleanRun();
+});
+function renderCleanRun() {
+  const run = currentCleanRun;
+  const status = document.querySelector('#clean-status');
+  const view = document.querySelector('#edited-transcript');
+  view.replaceChildren();
+  if (!run) { status.textContent = 'Use Clean transcript in Summary & AI to create an edited version.'; return; }
+  if (run.state !== 'succeeded') { status.textContent = run.state === 'failed' ? `Cleanup stopped: ${run.error_message}` : `Cleaning transcript · ${run.stage}`; return; }
+  const segments = run.result.segments;
+  const review = segments.filter(segment => segment.needs_review && !segment.reviewed).length;
+  status.textContent = `${segments.length} passages · ${review} awaiting audio review${run.stale ? ' · Source transcript has changed' : ''}`;
+  for (const group of groupTranscriptSegments(segments)) {
+    const turn = document.createElement('article'); turn.className = 'speaker-turn clean-turn';
+    const heading = document.createElement('div'); heading.className = 'turn-heading';
+    const speaker = document.createElement('strong'); speaker.textContent = group[0].speaker_display_name;
+    const range = document.createElement('span');
+    range.textContent = `${time(group[0].start_ms / 1000)}${group.length > 1 ? `–${time(group.at(-1).end_ms / 1000)}` : ''}`;
+    heading.append(speaker, range); turn.append(heading);
+    const body = document.createElement('div'); body.className = 'turn-body';
+    for (const segment of group) {
+      const row = document.createElement('span'); row.className = 'segment clean-segment'; row.dataset.segmentId = segment.id;
+      row.title = `Play from ${time(segment.start_ms / 1000)}${segment.needs_review ? ' · Check wording against audio' : ''}`;
+      const words = document.createElement('span'); words.className = 'segment-text'; words.textContent = segment.text;
+      row.append(words);
+      if (segment.needs_review) { const reviewBadge = document.createElement('span'); reviewBadge.className = 'clean-review'; reviewBadge.textContent = segment.reviewed ? 'Reviewed' : 'Review'; row.append(reviewBadge); }
+      const compare = document.createElement('button'); compare.type = 'button'; compare.className = 'clean-compare-button'; compare.textContent = 'Compare';
+      compare.setAttribute('aria-label', `Compare edited and original passage at ${time(segment.start_ms / 1000)}`);
+      compare.addEventListener('click', () => showCleanCompare(segment)); row.append(compare);
+      words.addEventListener('input', () => {
+        if (!cleanEditMode) return;
+        const value = words.innerText.replace(/\u00a0/g, ' ');
+        if (value === segment.text) pendingCleanEdits.delete(segment.id);
+        else pendingCleanEdits.set(segment.id, value);
+        cleanEditError = null; syncCleanEditControls();
+      });
+      row.addEventListener('click', event => {
+        if (cleanEditMode || event.target.closest('button,textarea') || window.getSelection()?.toString().trim()) return;
+        player.currentTime = segment.start_ms / 1000;
+        player.play().catch(() => {});
+      });
+      body.append(row);
+    }
+    turn.append(body); view.append(turn);
+  }
+  if (cleanEditMode) setCleanEditMode(true);
+  else syncCleanEditControls();
+}
+function showCleanCompare(segment) {
+  const panel = document.querySelector('#clean-compare'); panel.replaceChildren(); panel.hidden = false;
+  const title = document.createElement('h3'); title.textContent = `Passage at ${time(segment.start_ms / 1000)} · ${segment.speaker_display_name}`;
+  const source = document.createElement('p'); source.textContent = `Original: ${segment.source_text}`;
+  const edited = document.createElement('p'); edited.textContent = `Edited: ${segment.text}`;
+  const actions = document.createElement('div'); actions.className = 'editor-actions';
+  const play = document.createElement('button'); play.type = 'button'; play.textContent = 'Play source';
+  play.addEventListener('click', () => { player.currentTime = segment.start_ms / 1000; player.play().catch(() => {}); });
+  const copy = document.createElement('button'); copy.type = 'button'; copy.textContent = 'Copy edited';
+  copy.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(segment.text); document.querySelector('#clean-status').textContent = `Copied passage at ${time(segment.start_ms / 1000)}. Check it against audio before quoting.`; }
+    catch { document.querySelector('#clean-status').textContent = 'Clipboard is unavailable in this browser.'; }
+  });
+  const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = 'Use exact source';
+  restore.addEventListener('click', () => {
+    setCleanEditMode(true);
+    const words = document.querySelector(`#edited-transcript [data-segment-id="${segment.id}"] .segment-text`);
+    words.textContent = segment.source_text; words.dispatchEvent(new Event('input', {bubbles:true}));
+    words.scrollIntoView({block:'center'}); words.focus();
+  });
+  actions.append(play, copy, restore);
+  if (segment.user_edited) {
+    const generated = document.createElement('button'); generated.type = 'button'; generated.textContent = 'Use generated wording';
+    generated.addEventListener('click', () => {
+      setCleanEditMode(true);
+      const words = document.querySelector(`#edited-transcript [data-segment-id="${segment.id}"] .segment-text`);
+      words.textContent = segment.model_text; words.dispatchEvent(new Event('input', {bubbles:true}));
+      words.scrollIntoView({block:'center'}); words.focus();
+    }); actions.append(generated);
+  }
+  if (segment.needs_review && !segment.reviewed) {
+    const checked = document.createElement('button'); checked.type = 'button'; checked.textContent = 'Mark checked';
+    checked.addEventListener('click', async () => {
+      checked.disabled = true;
+      try {
+        await json(await fetch(`${API}/clean-runs/${encodeURIComponent(currentCleanRun.id)}/segments/${encodeURIComponent(segment.id)}/review`, {
+          method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({expected_revision:currentCleanRun.edit_revision})}));
+        panel.hidden = true; await loadCleanRuns(activeConversationId);
+      } catch (error) { checked.disabled = false; document.querySelector('#clean-status').textContent = error.message; }
+    }); actions.append(checked);
+  }
+  const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Close'; close.addEventListener('click', () => { panel.hidden = true; }); actions.append(close);
+  panel.append(title, source, edited, actions); panel.scrollIntoView({block:'start'});
+}
 document.querySelector('#ai-question-form').addEventListener('submit', event => {
   event.preventDefault(); const input = document.querySelector('#ai-question-input');
   const question = input.value.trim(); if (!question) return;
@@ -330,7 +535,7 @@ restorePassageButton.addEventListener('click', () => {
   words.dispatchEvent(new Event('input', {bubbles:true})); words.focus();
 });
 window.addEventListener('beforeunload', event => {
-  if (!pendingTranscriptEdits.size) return;
+  if (!pendingTranscriptEdits.size && !pendingCleanEdits.size) return;
   event.preventDefault(); event.returnValue = '';
 });
 async function showTranscript(id) {
@@ -343,6 +548,7 @@ async function showTranscript(id) {
   const previousScroll = window.scrollY;
   currentTranscript = data;
   syncTranscriptEditControls();
+  document.querySelector('#clean-button').disabled = cleanRuns[0]?.state === 'queued' || cleanRuns[0]?.state === 'running';
   rematchButton.hidden = false;
   rematchButton.disabled = data.generation_version.includes('-speaker-embedding-v1');
   rematchButton.textContent = rematchButton.disabled ? 'Speakers rematched' : 'Rematch speakers';
@@ -440,6 +646,7 @@ async function showTranscript(id) {
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
   processingStatus.textContent = `${data.segments.length} on-device segments in ${turns.length} turns · ${counts.size} acoustic speaker groups${unresolved ? ` · ${unresolved} unresolved` : ''}. Click a passage to play; drag across words to highlight.`;
   if (transcriptEditMode) setTranscriptEditMode(true);
+  if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
   window.scrollTo(0, previousScroll);
 }
 function renderHighlightedText(container, value, highlights) {
@@ -623,7 +830,7 @@ async function loadVocabulary() {
 }
 async function route() {
   const match = location.pathname.match(/^\/conversation\/([^/]+)$/);
-  if (pendingTranscriptEdits.size && (!match || decodeURIComponent(match[1]) !== activeConversationId)) {
+  if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && (!match || decodeURIComponent(match[1]) !== activeConversationId)) {
     if (!window.confirm('Discard unsaved transcript changes and leave this conversation?')) {
       history.pushState({}, '', `/conversation/${encodeURIComponent(activeConversationId)}`);
       return;
@@ -634,7 +841,7 @@ async function route() {
 }
 async function importFile(file) {
   if (!file) return;
-  if (pendingTranscriptEdits.size && !window.confirm('Discard unsaved transcript changes and import another recording?')) return;
+  if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && !window.confirm('Discard unsaved transcript changes and import another recording?')) return;
   setStatus(`Importing ${file.name}…`);
   fileInput.disabled = true;
   const body = new FormData();
@@ -823,6 +1030,9 @@ player.addEventListener('timeupdate', () => {
   const active = transcriptSegments.find(segment => segment.start_ms <= ms && ms < segment.end_ms);
   for (const row of transcriptView.querySelectorAll('.segment.active')) row.classList.remove('active');
   if (active) transcriptView.querySelector(`[data-segment-id="${active.id}"]`)?.classList.add('active');
+  const edited = document.querySelector('#edited-transcript');
+  for (const row of edited.querySelectorAll('.segment.active')) row.classList.remove('active');
+  if (active) edited.querySelector(`[data-segment-id="${active.id}"]`)?.classList.add('active');
 });
 processButton.addEventListener('click', () => beginProcessing(activeConversationId));
 rematchButton.addEventListener('click', async () => {

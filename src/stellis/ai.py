@@ -36,6 +36,13 @@ ANSWER_SCHEMA = {"type": "object", "properties": {
     "insufficient_evidence": {"type": "boolean"}},
     "required": ["answer", "source_segment_ids", "insufficient_evidence"],
     "additionalProperties": False}
+CLEAN_SCHEMA = {"type": "object", "properties": {
+    "segments": {"type": "array", "maxItems": 22, "items": {"type": "object", "properties": {
+        "source_segment_id": {"type": "string"},
+        "text": {"type": "string", "maxLength": 1000},
+        "needs_review": {"type": "boolean"}},
+        "required": ["source_segment_id", "text", "needs_review"], "additionalProperties": False}}},
+    "required": ["segments"], "additionalProperties": False}
 
 
 class AIError(Exception):
@@ -232,7 +239,7 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
     key = _key()
     if not key:
         raise AIError("not_configured", "Nebius API key is unavailable")
-    schema = ANSWER_SCHEMA if kind == "answer" else SUMMARY_SCHEMA
+    schema = ANSWER_SCHEMA if kind == "answer" else CLEAN_SCHEMA if kind == "clean" else SUMMARY_SCHEMA
     body = {"model": MODEL_ID, "messages": messages,
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": f"stellis_{kind}", "schema": schema, "strict": True}},

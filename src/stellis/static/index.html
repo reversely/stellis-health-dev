@@ -45,13 +45,20 @@
           <audio id="audio-player" preload="metadata" controls></audio>
           <div class="seek-controls"><button id="back-ten" type="button" aria-label="Go back 10 seconds">−10s</button><button id="forward-ten" type="button" aria-label="Go forward 10 seconds">+10s</button><span id="current-time">0:00</span></div>
         </div>
-        <div class="conversation-tabs" role="tablist" aria-label="Conversation view"><button id="summary-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-card">Summary &amp; AI</button><button id="transcript-tab" type="button" role="tab" aria-selected="true" aria-controls="transcript-card">Transcript</button></div>
+        <div class="conversation-tabs" role="tablist" aria-label="Conversation view"><button id="summary-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-card">Summary &amp; AI</button><button id="transcript-tab" type="button" role="tab" aria-selected="true" aria-controls="transcript-card">Transcript</button><button id="edited-tab" type="button" role="tab" aria-selected="false" aria-controls="edited-card" hidden>Edited Transcript</button></div>
         <section id="ai-card" class="ai-card" role="tabpanel" hidden>
-          <div class="ai-heading"><div><h2>Conversation insights</h2></div><button id="generate-summary" type="button">Generate summary</button></div>
+          <div class="ai-heading"><div><h2>Conversation insights</h2></div><div class="transcript-actions"><button id="clean-button" type="button">Clean transcript</button><button id="generate-summary" type="button">Generate summary</button></div></div>
           <p class="ai-privacy">Generating insights sends this conversation's displayed transcript text to Nebius. Audio and voiceprints stay on this device.</p>
           <p id="ai-status" role="status" aria-live="polite"></p>
           <div id="summary-results"></div>
           <div class="ai-question"><h3>Ask about this conversation</h3><form id="ai-question-form"><label for="ai-question-input">Question</label><div><input id="ai-question-input" maxlength="500" required placeholder="Ask something about the interview" /><button type="submit">Ask Nemotron</button></div></form><div id="ai-answers"></div></div>
+        </section>
+        <section id="edited-card" class="transcript-card" role="tabpanel" hidden>
+          <div class="transcript-heading"><h2>Edited Transcript</h2><div class="transcript-actions"><button id="clean-discard-button" type="button" hidden>Discard edits</button><button id="clean-edit-button" type="button">Edit transcript</button><select id="clean-version" aria-label="Edited transcript version"></select></div></div>
+          <p id="clean-status" role="status" aria-live="polite"></p>
+          <p class="ai-privacy">Review generated wording against the recording before quoting. Click a passage to play from its source timestamp.</p>
+          <div id="clean-compare" hidden></div>
+          <div id="edited-transcript" class="transcript" aria-label="Edited Transcript"></div>
         </section>
         <div id="transcript-card" class="transcript-card" role="tabpanel">
           <div class="transcript-heading"><div><h2>Conversation</h2></div><div class="transcript-actions"><button id="restore-passage-button" type="button" hidden>Restore passage</button><button id="discard-edits-button" type="button" hidden>Discard edits</button><button id="edit-transcript-button" type="button" hidden>Edit transcript</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="process-button" type="button" hidden>Process recording</button></div></div>

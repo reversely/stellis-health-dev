@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, processing, recording, storage
+from stellis import ai, clean, processing, recording, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -67,6 +67,20 @@ class AIRunRequest(BaseModel):
     question: str | None = Field(default=None, max_length=500)
 
 
+class CleanSegmentEdit(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    expected_revision: int = Field(ge=0)
+
+
+class CleanBatchEdit(BaseModel):
+    edits: list[SegmentChange] = Field(min_length=1, max_length=500)
+    expected_revision: int = Field(ge=0)
+
+
+class CleanReview(BaseModel):
+    expected_revision: int = Field(ge=0)
+
+
 def _check_vocabulary_budget(terms: list[str]) -> None:
     if len("Vocabulary: " + ", ".join(terms)) > 400:
         raise HTTPException(status_code=400, detail="Vocabulary is too long for the local model prompt")
@@ -77,6 +91,7 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 @app.on_event("startup")
 def start_speech_worker() -> None:
     storage.fail_interrupted_ai_runs()
+    storage.fail_interrupted_clean_runs()
     processing.start_worker()
 
 
@@ -422,6 +437,74 @@ def delete_vocabulary(term_id: str) -> dict[str, bool]:
     if not storage.delete_vocabulary(term_id):
         raise HTTPException(status_code=404, detail="Vocabulary term not found")
     return {"deleted": True}
+
+
+@api.get("/conversations/{conversation_id}/clean-runs")
+def clean_runs(conversation_id: str) -> list[dict[str, object]]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return [clean.public_run(item) for item in storage.list_clean_runs(conversation_id)]
+
+
+@api.post("/conversations/{conversation_id}/clean-runs")
+def start_clean_run(conversation_id: str) -> dict[str, object]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    try:
+        return clean.public_run(clean.request_run(conversation_id))
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ai.AIError as exc:
+        raise HTTPException(status_code=503 if exc.code == "not_configured" else 400, detail=str(exc)) from exc
+
+
+@api.get("/clean-runs/{run_id}")
+def clean_run(run_id: str) -> dict[str, object]:
+    record = storage.get_clean_run(run_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Edited transcript not found")
+    return clean.public_run(record)
+
+
+@api.patch("/clean-runs/{run_id}/segments")
+def edit_clean_segments(run_id: str, edit: CleanBatchEdit) -> dict[str, int]:
+    edits = [{"segment_id": item.segment_id, "text": item.text.strip()} for item in edit.edits]
+    if any(not item["text"] for item in edits):
+        raise HTTPException(status_code=400, detail="Enter transcript words")
+    try:
+        revision = storage.set_clean_run_edits(run_id, edits, edit.expected_revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"edit_revision": revision}
+
+
+@api.put("/clean-runs/{run_id}/segments/{segment_id}/review")
+def review_clean_segment(run_id: str, segment_id: str, review: CleanReview) -> dict[str, int]:
+    try:
+        revision = storage.set_clean_run_review(run_id, segment_id, review.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"edit_revision": revision}
+
+
+@api.patch("/clean-runs/{run_id}/segments/{segment_id}")
+def edit_clean_segment(run_id: str, segment_id: str, edit: CleanSegmentEdit) -> dict[str, object]:
+    value = edit.text.strip()
+    if not value:
+        raise HTTPException(status_code=400, detail="Enter transcript words")
+    try:
+        revision = storage.set_clean_run_edit(run_id, segment_id, value, edit.expected_revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"edit_revision": revision}
 
 
 app.include_router(api, prefix="/api/v1")
