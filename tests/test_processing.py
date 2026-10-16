@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import sys
 import tempfile
@@ -64,6 +65,22 @@ class ProcessingWorkflowTest(unittest.TestCase):
         result, fraction = processing.align_segments(self.conversation_id, segments, turns)
         self.assertTrue(result[0]["speaker_uncertain"])
         self.assertEqual(fraction, 0)
+
+    def test_vocabulary_reaches_whisper_initial_prompt(self) -> None:
+        output = Path(self.temp.name, "transcript")
+        observed: list[str] = []
+
+        def native_command(command: list[str], timeout: int) -> None:
+            observed.extend(command)
+            output.with_suffix(".json").write_text(json.dumps({"transcription": [
+                {"offsets": {"from": 0, "to": 1000}, "text": "CIFAR"}
+            ]}))
+
+        with patch.object(processing, "_command", side_effect=native_command):
+            result = processing._transcribe(Path("/audio.wav"), Path("/model.bin"), output, ["CIFAR"])
+        self.assertEqual(result[0]["text"], "CIFAR")
+        self.assertIn("--prompt", observed)
+        self.assertIn("Vocabulary: CIFAR", observed)
 
     def test_failed_job_can_be_requeued_without_losing_audio(self) -> None:
         job = processing.request_processing(self.conversation_id)
