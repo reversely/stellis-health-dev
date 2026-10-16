@@ -147,6 +147,17 @@ main { max-width: 1100px; }
 .drop-icon, .drop-zone span { color: var(--accent); }
 .drop-zone { min-height: 220px; background: color-mix(in srgb, var(--surface) 90%, transparent); }
 .drop-zone strong, .conversation-row strong { color: var(--ink); }
+#import-dialog { width: min(540px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-sizing: border-box; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+#import-dialog::backdrop { background: #02050eb8; }
+.import-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.import-header h2 { margin: 0; font-size: 24px; }
+.import-header button { border: 0; background: transparent; color: var(--ink); font-size: 27px; cursor: pointer; }
+#import-dialog label { display: block; margin-bottom: 7px; font-weight: 650; }
+#import-language { width: 100%; }
+.import-language-note, .import-formats { margin: 8px 0 18px; color: var(--quiet); font-size: 13px; }
+#import-dialog .drop-zone { min-height: 200px; }
+.import-formats { margin: 12px 0 0; text-align: center; }
+#import-status { min-height: 20px; margin-top: 12px; color: var(--failure); }
 .speaker-turn, .ai-result-section, .ai-question, .ai-result-section li,
 .segment, .conversation-tabs { border-color: var(--line-soft); }
 .turn-heading button, .turn-heading strong, .segment .segment-text,

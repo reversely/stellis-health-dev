@@ -18,8 +18,7 @@
     <main>
       <section class="heading">
         <div><h1 id="page-title">Your conversations</h1></div>
-        <div class="heading-actions"><button id="record-button" type="button">Record</button><label class="upload-button" for="audio-file">Import recording</label><details id="conversation-more" class="more-menu" hidden><summary aria-label="More options" title="More options">⋯</summary><div class="more-menu-items"><button id="copy-transcript" type="button" hidden>Copy transcript</button><button id="regenerate-summary" type="button" hidden>Regenerate summary</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="align-words-button" type="button" hidden>Sync text to audio</button><button id="process-button" type="button" hidden>Reprocess transcript</button><button id="sync-transcript" type="button" hidden>Sync transcript</button><button id="trash-conversation" type="button">Delete</button></div></details></div>
-        <input id="audio-file" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.zip,audio/*,application/zip" />
+        <div class="heading-actions"><button id="record-button" type="button">Record</button><button id="import-button" class="upload-button" type="button">Import</button><details id="conversation-more" class="more-menu" hidden><summary aria-label="More options" title="More options">⋯</summary><div class="more-menu-items"><button id="copy-transcript" type="button" hidden>Copy transcript</button><button id="regenerate-summary" type="button" hidden>Regenerate summary</button><button id="rematch-button" type="button" hidden>Rematch speakers</button><button id="align-words-button" type="button" hidden>Sync text to audio</button><button id="process-button" type="button" hidden>Reprocess transcript</button><button id="sync-transcript" type="button" hidden>Sync transcript</button><button id="trash-conversation" type="button">Delete</button></div></details></div>
       </section>
       <div id="status" role="status" aria-live="polite"></div>
       <section id="recording-panel" class="recording-panel" hidden aria-label="Microphone recording">
@@ -42,12 +41,6 @@
           <p id="library-search-status" role="status" aria-live="polite"></p><div id="library-search-results" aria-label="Search results"></div>
         </section>
         <details id="people-panel" class="library-tools"><summary>People</summary><div id="people-list"></div></details>
-        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Import a recording or ZIP">
-          <div class="drop-icon" aria-hidden="true">↥</div>
-          <strong>Drop audio or ZIP here</strong>
-          <p>MP3, WAV, M4A, OGG, WebM, FLAC, ZIP</p>
-          <span>Choose a file</span>
-        </div>
         <div id="conversation-list" class="conversation-list" aria-label="Conversations"></div>
       </section>
       <section id="trash-view" hidden><button id="back-from-trash" type="button">← All conversations</button><h2>Recently Deleted</h2><p>Automatically deleted after 30 days.</p><p id="trash-status" role="status" aria-live="polite"></p><div id="trash-list" class="conversation-list"></div></section>
@@ -86,6 +79,19 @@
         </div>
       </section>
     </main>
+    <dialog id="import-dialog" aria-labelledby="import-title">
+      <div class="import-header"><h2 id="import-title">Import recording</h2><button id="import-close" type="button" aria-label="Close">×</button></div>
+      <label for="import-language">Transcript language</label><select id="import-language"><option value="en">English</option></select>
+      <p class="import-language-note">English only.</p>
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Browse files or drop audio or ZIP">
+        <div class="drop-icon" aria-hidden="true">↥</div>
+        <strong>Drop audio or ZIP here</strong>
+        <span>Browse files</span>
+      </div>
+      <p class="import-formats">MP3, WAV, M4A, OGG, WebM, FLAC, ZIP</p>
+      <p id="import-status" role="status" aria-live="polite"></p>
+      <input id="audio-file" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac,.zip" />
+    </dialog>
     <dialog id="sync-dialog" aria-labelledby="sync-title"><h2 id="sync-title">Sync transcript</h2><form id="sync-form"><label for="sync-passphrase">Vault passphrase</label><input id="sync-passphrase" type="password" autocomplete="off" minlength="12" required /><div class="sync-actions"><button id="sync-cancel" type="button">Cancel</button><button id="sync-submit" type="submit">Sync</button></div></form><p id="sync-status" role="status"></p><a id="sync-account-link" target="_blank" rel="noopener" hidden>Open account</a></dialog>
   </body>
 </html>
