@@ -9,6 +9,11 @@ const detailView = document.querySelector('#detail-view');
 const player = document.querySelector('#audio-player');
 const seekSlider = document.querySelector('#seek-slider');
 const playPauseButton = document.querySelector('#play-pause');
+const skipSilenceCheckbox = document.querySelector('#skip-silence');
+const skipSilenceStatus = document.querySelector('#skip-silence-status');
+let silenceSpans = [];
+let silenceScanTimer = null;
+let manualSeekUntil = 0;
 const API = '/api/v1';
 const conversationMore = document.querySelector('#conversation-more');
 conversationMore.addEventListener('click', event => { if (event.target.closest('button')) conversationMore.open = false; });
@@ -199,6 +204,7 @@ async function showList() {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(cleanRunTimer);
+  clearTimeout(silenceScanTimer); silenceSpans = [];
   activeConversationId = null;
   activePersonId = null;
   listView.hidden = false;
@@ -337,6 +343,7 @@ async function showPerson(id) {
   document.body.classList.add('profile-page');
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
+  clearTimeout(silenceScanTimer); silenceSpans = [];
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null; activePersonId = id;
   const [person, all] = await Promise.all([
@@ -387,6 +394,7 @@ async function showDetail(id) {
   clearTimeout(jobTimer);
   clearTimeout(aiRunTimer);
   clearTimeout(cleanRunTimer);
+  clearTimeout(silenceScanTimer); silenceSpans = [];
   cleanRuns = [];
   currentCleanRun = null;
   awaitingCleanRun = false;
@@ -427,6 +435,7 @@ async function showDetail(id) {
   player.src = `${API}/conversations/${encodeURIComponent(id)}/audio`;
   player.load();
   syncPlayerControls();
+  if (skipSilenceCheckbox.checked) startSilenceScan(id).catch(error => { skipSilenceStatus.textContent = error.message; });
   await loadSpeech(id);
   showConversationTab('transcript');
   await loadAIRuns(id);
@@ -1578,6 +1587,7 @@ function showRecordingWorkspace() {
   document.body.classList.add('recording-page');
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(cleanRunTimer);
+  clearTimeout(silenceScanTimer); silenceSpans = [];
   player.pause(); player.removeAttribute('src'); player.load();
   activeConversationId = null;
   listView.hidden = true; detailView.hidden = true;
@@ -1825,6 +1835,35 @@ seekSlider.addEventListener('keydown', event => {
   syncPlayerControls();
 });
 const speedMenu = document.querySelector('#playback-speed-menu');
+async function startSilenceScan(id) {
+  if (!skipSilenceCheckbox.checked || id !== activeConversationId) return;
+  skipSilenceStatus.textContent = 'Measuring silence…';
+  const job = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/silence-scan`, {method:'POST'}));
+  async function accept(current) {
+    if (!skipSilenceCheckbox.checked || id !== activeConversationId) return;
+    if (current.state === 'succeeded') {
+      silenceSpans = (current.metrics?.spans || []).filter(span =>
+        Number.isFinite(span.start_ms) && Number.isFinite(span.end_ms) && span.end_ms > span.start_ms);
+      skipSilenceStatus.textContent = silenceSpans.length ? `${silenceSpans.length} ${silenceSpans.length === 1 ? 'gap' : 'gaps'}` : 'No long pauses';
+    } else if (current.state === 'failed') {
+      silenceSpans = [];
+      skipSilenceStatus.textContent = current.error || 'Silence scan failed.';
+    } else {
+      silenceScanTimer = setTimeout(async () => {
+        try { await accept(await json(await fetch(`${API}/jobs/${encodeURIComponent(current.id)}`))); }
+        catch (error) { skipSilenceStatus.textContent = error.message; }
+      }, 1200);
+    }
+  }
+  await accept(job);
+}
+skipSilenceCheckbox.addEventListener('change', () => {
+  clearTimeout(silenceScanTimer);
+  silenceSpans = [];
+  skipSilenceStatus.textContent = '';
+  if (skipSilenceCheckbox.checked && activeConversationId)
+    startSilenceScan(activeConversationId).catch(error => { skipSilenceStatus.textContent = error.message; });
+});
 for (const button of speedMenu.querySelectorAll('[data-speed]')) button.addEventListener('click', () => {
   player.playbackRate = Number(button.dataset.speed);
   speedMenu.open = false;
@@ -1835,9 +1874,15 @@ function syncSpeed() {
   for (const button of speedMenu.querySelectorAll('[data-speed]')) button.setAttribute('aria-pressed', String(Number(button.dataset.speed) === player.playbackRate));
 }
 player.addEventListener('ratechange', syncSpeed);
+player.addEventListener('seeked', () => { manualSeekUntil = performance.now() + 450; });
 for (const name of ['loadedmetadata', 'timeupdate', 'durationchange', 'play', 'pause', 'ended']) player.addEventListener(name, syncPlayerControls);
 syncSpeed();
 player.addEventListener('timeupdate', () => {
+  if (skipSilenceCheckbox.checked && !player.paused && performance.now() >= manualSeekUntil) {
+    const position = player.currentTime * 1000;
+    const gap = silenceSpans.find(span => span.start_ms <= position && position < span.end_ms);
+    if (gap) { player.currentTime = gap.end_ms / 1000; return; }
+  }
   const ms = player.currentTime * 1000;
   const active = transcriptSegments.find(segment => segment.start_ms <= ms && ms < segment.end_ms);
   for (const row of transcriptView.querySelectorAll('.segment.active')) row.classList.remove('active');

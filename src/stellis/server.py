@@ -688,6 +688,16 @@ def align_conversation_words(conversation_id: str, request: WordAlignmentRequest
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+@api.post("/conversations/{conversation_id}/silence-scan")
+def scan_conversation_silence(conversation_id: str) -> dict[str, object]:
+    if storage.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    try:
+        return processing.public_job(processing.request_silence_scan(conversation_id))
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @api.get("/jobs/{job_id}")
 def job(job_id: str) -> dict[str, object]:
     record = storage.get_job(job_id)
