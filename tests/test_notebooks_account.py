@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import auth, storage
+from stellis import auth, calendar, storage
 from stellis.server import app
 from test_import import mp3_bytes
 
@@ -147,6 +147,8 @@ class NotebookAccountTest(unittest.TestCase):
         self.client.post("/api/v1/notebooks", json={"name": "Project"})
         conversation = self._import("talk.mp3", 6)
         self.client.post("/api/v1/vocabulary", json={"term": "CubeSat", "kind": "other"})
+        with calendar._connect() as conn:
+            conn.execute("INSERT INTO connections (provider, client_id, access_token, refresh_token, expires_at) VALUES ('google', 'c', 'a', 'r', 0)")
         media = Path(self.temp.name, "media")
         self.assertTrue(any(media.iterdir()))
         self.assertEqual(self.client.request("DELETE", "/api/v1/account",
@@ -165,6 +167,7 @@ class NotebookAccountTest(unittest.TestCase):
         self.assertEqual(self.client.get("/api/v1/conversations").status_code, 401)
         self.assertTrue(self.client.get("/api/v1/auth/status").json()["registration_open"])
         self.assertIsNone(storage.get_conversation(conversation["id"], include_trashed=True))
+        self.assertFalse(any(item["connected"] for item in calendar.connections()))
 
 
 if __name__ == "__main__":

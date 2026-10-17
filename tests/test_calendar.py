@@ -129,6 +129,12 @@ class CalendarRouteTest(unittest.TestCase):
         self.assertEqual(response.status_code, 303)
         self.assertEqual(response.headers["location"], "http://127.0.0.1:8765/?calendar=failed")
         self.assertEqual(self.client.get("/api/v1/calendar/meetings").json()["meetings"], [])
+        from_settings = self.client.get("/api/v1/calendar/google/authorize", params={"return_to": "/settings"})
+        state = parse_qs(urlparse(from_settings.json()["url"]).query)["state"][0]
+        response = self.client.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
+        self.assertEqual(response.headers["location"], "http://127.0.0.1:8765/settings?calendar=failed")
+        self.assertEqual(self.client.get("/api/v1/calendar/google/authorize",
+                                         params={"return_to": "https://evil.example"}).status_code, 422)
 
     def test_calendar_routes_keep_local_login_boundary(self):
         with patch.dict(os.environ, {"STELLIS_AUTH_MODE":"required", "STELLIS_DEV_ACCOUNT":"0"}):

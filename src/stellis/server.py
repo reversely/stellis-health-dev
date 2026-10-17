@@ -196,6 +196,8 @@ def account_delete(request: Request, deletion: AccountDeletion) -> JSONResponse:
         erased = library.erase_all()
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    for provider in calendar.PROVIDERS:
+        calendar.disconnect(provider)
     auth.delete_account()
     response = JSONResponse({"deleted": True, **erased})
     response.delete_cookie(auth.COOKIE_NAME, path="/")
@@ -448,11 +450,12 @@ def calendar_connections() -> list[dict[str, object]]:
 
 
 @api.get("/calendar/{provider}/authorize")
-def calendar_authorize(provider: str, request: Request) -> dict[str, str]:
+def calendar_authorize(provider: str, request: Request,
+                       return_to: Literal["/", "/settings"] = "/") -> dict[str, str]:
     if request.url.hostname not in {"127.0.0.1", "localhost"} or request.url.port is None:
         raise HTTPException(status_code=400, detail="Open Stellis on its local address to connect a calendar")
     try:
-        return {"url": calendar.authorize(provider, request.url.port, str(request.base_url).rstrip("/"))}
+        return {"url": calendar.authorize(provider, request.url.port, str(request.base_url).rstrip("/") + return_to)}
     except calendar.CalendarError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -468,7 +471,8 @@ async def calendar_callback(provider: str, state: str = "", code: str = "", erro
         result = "connected"
     except calendar.CalendarError:
         result = "failed"
-    response = RedirectResponse(f"{return_origin}/?calendar={result}", status_code=303)
+    # return_origin carries the page that started the connection, home or Settings.
+    response = RedirectResponse(f"{return_origin or '/'}?calendar={result}", status_code=303)
     response.headers["Cache-Control"] = "no-store"
     return response
 
