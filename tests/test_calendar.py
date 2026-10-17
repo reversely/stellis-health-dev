@@ -143,3 +143,44 @@ class CalendarRouteTest(unittest.TestCase):
             self.assertEqual(self.client.get("/api/v1/calendar/meetings").status_code, 401)
             self.assertEqual(self.client.post("/api/v1/calendar/google/disconnect").status_code, 401)
             self.assertEqual(self.client.get("/api/v1/calendar/google/callback").status_code, 303)
+
+
+class EventNotesTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name, "STELLIS_AUTH_MODE": "off"})
+        self.env.start()
+        self.client = TestClient(app)
+
+    def tearDown(self):
+        self.client.close()
+        self.env.stop()
+        self.temp.cleanup()
+
+    def test_notes_before_a_meeting_start_its_recording_notes(self):
+        event = {"provider": "microsoft", "event_id": "AAMk/abc+="}
+        self.assertEqual(self.client.get("/api/v1/calendar/notes", params=event).json()["revision"], 0)
+        saved = self.client.put("/api/v1/calendar/notes", json={**event, "markdown": "- Ask about budget", "expected_revision": 0})
+        self.assertEqual(saved.json()["revision"], 1)
+        stale = self.client.put("/api/v1/calendar/notes", json={**event, "markdown": "older", "expected_revision": 0})
+        self.assertEqual(stale.status_code, 409)
+        self.assertEqual(self.client.get("/api/v1/calendar/notes", params={"provider": "yahoo", "event_id": "x"}).status_code, 400)
+
+        connected = [{"provider": "microsoft", "connected": True}, {"provider": "google", "connected": False}]
+        meeting = {"id": event["event_id"], "provider": "microsoft", "title": "Budget", "start": "2026-10-18T10:00:00+00:00",
+                   "end": "2026-10-18T11:00:00+00:00", "all_day": False}
+        other = {**meeting, "id": "other"}
+
+        async def events(provider):
+            return [meeting, other]
+        with patch.object(calendar, "connections", return_value=connected), patch.object(calendar, "events", side_effect=events):
+            flags = {item["id"]: item["has_notes"] for item in self.client.get("/api/v1/calendar/meetings").json()["meetings"]}
+        self.assertEqual(flags, {event["event_id"]: True, "other": False})
+
+        session = self.client.post("/api/v1/recordings", json={"title": "Budget", "media_type": "audio/webm",
+                                                                "calendar_provider": "microsoft",
+                                                                "calendar_event_id": event["event_id"]}).json()
+        notes = self.client.get(f"/api/v1/recordings/{session['id']}/notes").json()
+        self.assertEqual(notes["markdown"], "- Ask about budget")
+        # The notes moved: the meeting starts empty again and is no longer marked.
+        self.assertEqual(self.client.get("/api/v1/calendar/notes", params=event).json()["markdown"], "")

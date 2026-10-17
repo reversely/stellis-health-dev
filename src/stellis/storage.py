@@ -387,6 +387,17 @@ def connect() -> Iterator[sqlite3.Connection]:
             CHECK (conversation_id IS NOT NULL OR recording_id IS NOT NULL)
         )"""
     )
+    # Notes written for a calendar meeting before it is recorded; keyed by the provider's event ID only.
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS event_notes (
+            provider TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            markdown TEXT NOT NULL DEFAULT '',
+            revision INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(provider, event_id)
+        )"""
+    )
     conn.execute(
         """CREATE TABLE IF NOT EXISTS enhanced_notes_runs (
             id TEXT PRIMARY KEY,

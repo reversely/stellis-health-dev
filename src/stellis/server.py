@@ -327,6 +327,8 @@ class RecordingStart(BaseModel):
     title: str = Field(min_length=1, max_length=180)
     media_type: str
     notebook_id: str | None = None
+    calendar_provider: str | None = None
+    calendar_event_id: str | None = Field(default=None, max_length=1024)
 
 
 class RecordingRename(BaseModel):
@@ -497,7 +499,35 @@ async def calendar_meetings() -> dict[str, object]:
         else:
             meetings.extend(result)
     meetings.sort(key=lambda event: event["start"])
+    noted = notes.events_with_notes()
+    for event in meetings:
+        event["has_notes"] = (event["provider"], event["id"]) in noted
     return {"meetings": meetings[:100], "errors": errors}
+
+
+class EventNotesSave(BaseModel):
+    provider: str
+    event_id: str = Field(min_length=1, max_length=1024)
+    markdown: str
+    expected_revision: int = Field(ge=0)
+
+
+@api.get("/calendar/notes")
+def calendar_event_notes(provider: str, event_id: str) -> dict[str, object]:
+    try:
+        return notes.get_event(provider, event_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.put("/calendar/notes")
+def save_calendar_event_notes(request: EventNotesSave) -> dict[str, object]:
+    try:
+        return notes.save_event(request.provider, request.event_id, request.markdown, request.expected_revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @app.get("/", include_in_schema=False)
@@ -920,7 +950,8 @@ def start_recording(request: RecordingStart) -> dict[str, object]:
     try:
         if request.notebook_id and not notebooks.exists(request.notebook_id):
             raise ValueError("Notebook not found")
-        return recording.create_session(request.title, request.media_type, request.notebook_id)
+        event = (request.calendar_provider, request.calendar_event_id) if request.calendar_provider and request.calendar_event_id else None
+        return recording.create_session(request.title, request.media_type, request.notebook_id, event)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except OSError as exc:
