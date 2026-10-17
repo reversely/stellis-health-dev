@@ -627,6 +627,11 @@ def categories() -> list[dict[str, object]]:
     return library.categories()
 
 
+@api.get("/category-groups")
+def category_groups() -> list[dict[str, object]]:
+    return notebooks.category_groups()
+
+
 @api.get("/persons")
 def persons() -> list[dict[str, object]]:
     return people.list_people()

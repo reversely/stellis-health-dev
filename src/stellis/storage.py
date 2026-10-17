@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
-INITIAL_CATEGORIES = ("Meeting", "Event", "Interview", "Conversation")
+INITIAL_CATEGORIES = ("Meetings", "Interviews", "Workshops", "Briefings", "Calls")
 
 
 def normalized_person_name(value: str) -> str:

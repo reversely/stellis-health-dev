@@ -12,8 +12,8 @@ import httpx
 from stellis import ai, storage
 
 MODEL_ID = "zai-org/GLM-5.3-Flash"
-PROMPT_VERSION = "five-choice-v1"
-LABELS = ("Meeting", "Event", "Interview", "Conversation", "Unclear")
+PROMPT_VERSION = "six-choice-v1"
+LABELS = ("Meetings", "Interviews", "Workshops", "Briefings", "Calls", "Unclear")
 _LOCK = threading.Lock()
 _RUNNING: set[str] = set()
 
@@ -72,9 +72,11 @@ def _sample(display: dict[str, object], title: str) -> str:
 
 def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, float]:
     options = "\n".join(f"{chr(65 + index)}. {name}" for index, name in enumerate(labels))
-    prompt = ("Choose the single best conversation type. Meeting is a work or group discussion; "
-              "Event is a talk, presentation, ceremony, or gathering; Interview has sustained questions "
-              "and answers; Conversation is an informal exchange. If the transcript is only greetings, "
+    prompt = ("Choose the single best conversation type. Meetings are group discussions that coordinate "
+              "or decide work; Interviews have sustained questions and answers; Workshops are hands-on "
+              "collaborative sessions such as brainstorming, design, or training exercises; Briefings are "
+              "one person presenting or explaining to others, such as a talk, lecture, or demo; Calls are "
+              "short or informal one-to-one conversations. If the transcript is only greetings, "
               "setup, noise, or too little evidence, choose Unclear. Reply with one letter.\n"
               f"{options}\n\n{source}\nAnswer:")
     body = {"model": MODEL_ID, "prompt": f"[gMASK]<sop><|user|>\n{prompt}\n<|assistant|>\n</think>",
@@ -103,10 +105,11 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
 
 def classify(source: str, key: str) -> tuple[str, float]:
     scores = {name: 0.0 for name in LABELS}
-    for shift in range(4):
+    rotations = len(LABELS) - 1
+    for shift in range(rotations):
         order = LABELS[shift:] + LABELS[:shift]
         for name, value in _score_once(source, order, key).items():
-            scores[name] += value / 4
+            scores[name] += value / rotations
     ranked = sorted(scores, key=scores.get, reverse=True)
     top, second = ranked[:2]
     confidence = scores[top]

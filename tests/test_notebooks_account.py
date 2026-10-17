@@ -167,7 +167,7 @@ class NotebookAccountTest(unittest.TestCase):
         with storage.connect() as conn:
             for table in ("conversations", "notebooks", "vocabulary", "persons"):
                 self.assertEqual(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0], 0, table)
-            self.assertEqual(conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0], 4)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0], len(storage.INITIAL_CATEGORIES))
         self.assertEqual(self.client.get("/api/v1/conversations").status_code, 401)
         self.assertTrue(self.client.get("/api/v1/auth/status").json()["registration_open"])
         self.assertIsNone(storage.get_conversation(conversation["id"], include_trashed=True))
