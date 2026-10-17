@@ -16,11 +16,13 @@ let silenceScanTimer = null;
 let manualSeekUntil = 0;
 const API = '/api/v1';
 const conversationMore = document.querySelector('#conversation-more');
-conversationMore.addEventListener('click', event => { if (event.target.closest('button')) conversationMore.open = false; });
-document.addEventListener('pointerdown', event => { if (!conversationMore.contains(event.target)) conversationMore.open = false; });
-conversationMore.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { conversationMore.open = false; conversationMore.querySelector('summary').focus(); }
-});
+for (const menu of [conversationMore, document.querySelector('#library-more')]) {
+  menu.addEventListener('click', event => { if (event.target.closest('button, a')) menu.open = false; });
+  document.addEventListener('pointerdown', event => { if (!menu.contains(event.target)) menu.open = false; });
+  menu.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { menu.open = false; menu.querySelector('summary').focus(); }
+  });
+}
 const themeButton = document.querySelector('#theme-toggle');
 function syncThemeButton() {
   const light = document.documentElement.dataset.theme === 'light';
@@ -99,7 +101,7 @@ let librarySearchLimited = false;
 let libraryCategories = [];
 let libraryConversations = [];
 let libraryJobTimer;
-let libraryCategoryGroups = [];
+let railTags = new Set();
 let activePersonId = null;
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
@@ -521,7 +523,7 @@ function setCategoryStatus(unavailable, message = '') {
   if (!unavailable) { status.textContent = message; return; }
   const link = document.createElement('a'); link.href = '/settings'; link.dataset.addKey = '';
   link.textContent = 'Add a key in Account settings';
-  status.replaceChildren('Automatic categories need a Nebius API key. ', link);
+  status.replaceChildren('Automatic tags need a Nebius API key. ', link);
 }
 let enhancedRuns = [];
 let enhancedSelectedId = null;
@@ -741,8 +743,7 @@ async function submitLibrarySearch(event) {
   status.textContent = 'Searching local transcripts…';
   document.querySelector('#library-search-results').replaceChildren();
   try {
-    const category = document.querySelector('#category-filter').value;
-    const data = await json(await fetch(`${API}/search?q=${encodeURIComponent(query)}${category ? `&category_id=${encodeURIComponent(category)}` : ''}`));
+    const data = await json(await fetch(`${API}/search?q=${encodeURIComponent(query)}`));
     if (document.querySelector('#library-search-input').value.trim() !== query) return;
     librarySearchResults = data.results;
     librarySearchTotal = data.total;
@@ -808,13 +809,11 @@ async function showList() {
   document.querySelector('#person-view').hidden = true;
   hideAppPages();
   document.querySelector('#page-title').textContent = 'Recent conversations';
-  const [conversations, categories, books, groups] = await Promise.all([
+  const [conversations, categories, books] = await Promise.all([
     fetch(`${API}/conversations`).then(json), fetch(`${API}/categories`).then(json), fetch(`${API}/notebooks`).then(json),
-    fetch(`${API}/category-groups`).then(json),
   ]);
   libraryConversations = conversations;
   libraryCategories = categories;
-  libraryCategoryGroups = groups;
   libraryNotebooks = books.notebooks; notebookPalette = books.palette;
   renderNotebooks();
   renderCategoryGroups();
@@ -827,49 +826,32 @@ async function showList() {
   renderCategoryControls();
   renderConversationList();
   captureControls();
-  await loadPeoplePanel();
   if (document.querySelector('#library-search-input').value.trim().length >= 2)
     await submitLibrarySearch(new Event('submit'));
   window.StellisCalendar?.refresh();
 }
 function renderConversationList() {
-  const category = document.querySelector('#category-filter').value;
-  const conversations = libraryConversations.filter(item => !category ||
-    (category === 'uncategorized' ? !item.category_ids.length : item.category_ids.includes(category)));
+  // Selected tag pills keep conversations carrying any of them; Untagged keeps those with none.
+  const conversations = libraryConversations.filter(item => !railTags.size ||
+    item.category_ids.some(id => railTags.has(id)) || (railTags.has('untagged') && !item.category_ids.length));
   list.replaceChildren();
   if (!conversations.length) {
     const empty = document.createElement('p'); empty.className = 'recent-empty';
-    empty.textContent = category ? 'No conversations in this category' : 'Record or import your first conversation';
+    empty.textContent = railTags.size ? 'No conversations with these tags' : 'Record or import your first conversation';
     list.append(empty);
   }
-  for (const item of conversations) {
-    const row = document.createElement('a');
-    row.className = 'recent-row';
-    row.href = `/conversation/${encodeURIComponent(item.id)}`;
-    const notebook = libraryNotebooks.find(book => book.id === item.notebook_id);
+  // Grouped by notebook in notebook order; conversations outside any notebook come last.
+  const groups = [...libraryNotebooks, null].map(notebook => ({notebook,
+    items: conversations.filter(item => notebook ? item.notebook_id === notebook.id :
+      !libraryNotebooks.some(book => book.id === item.notebook_id))})).filter(group => group.items.length);
+  for (const {notebook, items} of groups) {
+    const heading = document.createElement('h3'); heading.className = 'recent-group';
     const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
     if (notebook) dot.style.setProperty('--dot', notebook.color);
-    const title = document.createElement('strong'); title.textContent = item.title;
-    const date = document.createElement('time'); date.dateTime = capturedAt(item); date.textContent = shortDate(capturedAt(item));
-    const job = item.processing_job;
-    const progress = job && (job.state === 'queued' ? 'Queued' : job.state === 'running' ?
-      `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)}: ${Math.round(job.progress * 100)}%` :
-      job.state === 'failed' ? 'Processing stopped' : '');
-    // The date leads the preview line so the title keeps the full rail width.
-    const line = document.createElement('small'); line.append(date);
-    if (progress) {
-      const state = document.createElement('span'); state.className = 'recent-processing'; state.textContent = progress;
-      line.append(' ', state);
-    } else if (item.topic_line) line.append(` ${item.topic_line}`);
-    row.append(dot, title, line);
-    row.draggable = true;
-    row.addEventListener('dragstart', event => {
-      event.dataTransfer.setData(CONVERSATION_DRAG, item.id);
-      event.dataTransfer.effectAllowed = 'copyMove';
-      row.classList.add('dragging');
-    });
-    row.addEventListener('dragend', () => row.classList.remove('dragging'));
-    list.append(row);
+    const name = document.createElement('span'); name.textContent = notebook ? notebook.name : 'No notebook';
+    const count = document.createElement('small'); count.textContent = items.length;
+    heading.append(dot, name, count); list.append(heading);
+    for (const item of items) list.append(recentRow(item));
   }
   clearTimeout(libraryJobTimer);
   if (conversations.some(item => ['queued', 'running'].includes(item.processing_job?.state)))
@@ -880,28 +862,49 @@ async function refreshLibraryJobs() {
   try { libraryConversations = await json(await fetch(`${API}/conversations`)); renderConversationList(); }
   catch { libraryJobTimer = setTimeout(refreshLibraryJobs, 10000); }
 }
+function recentRow(item) {
+  const row = document.createElement('a');
+  row.className = 'recent-row';
+  row.href = `/conversation/${encodeURIComponent(item.id)}`;
+  const title = document.createElement('strong'); title.textContent = item.title;
+  const date = document.createElement('time'); date.dateTime = capturedAt(item); date.textContent = shortDate(capturedAt(item));
+  const job = item.processing_job;
+  const progress = job && (job.state === 'queued' ? 'Queued' : job.state === 'running' ?
+    `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)}: ${Math.round(job.progress * 100)}%` :
+    job.state === 'failed' ? 'Processing stopped' : '');
+  // The date leads the preview line so the title keeps the full rail width.
+  const line = document.createElement('small'); line.append(date);
+  if (progress) {
+    const state = document.createElement('span'); state.className = 'recent-processing'; state.textContent = progress;
+    line.append(' ', state);
+  } else if (item.topic_line) line.append(` ${item.topic_line}`);
+  row.append(title, line);
+  row.draggable = true;
+  row.addEventListener('dragstart', event => {
+    event.dataTransfer.setData(CONVERSATION_DRAG, item.id);
+    event.dataTransfer.effectAllowed = 'copyMove';
+    row.classList.add('dragging');
+  });
+  row.addEventListener('dragend', () => row.classList.remove('dragging'));
+  return row;
+}
 function renderCategoryControls() {
-  const picker = document.querySelector('#category-filter');
-  const selected = picker.value;
-  picker.replaceChildren(new Option('All', ''),
-    new Option(`Uncategorized (${libraryConversations.filter(item => !item.category_ids.length).length})`, 'uncategorized'),
-    ...libraryCategories.map(item => new Option(`${item.name} (${item.conversation_count})`, item.id)));
-  picker.value = selected === 'uncategorized' || libraryCategories.some(item => item.id === selected) ? selected : '';
-  renderRailFilter();
+  for (const id of railTags) if (id !== 'untagged' && !libraryCategories.some(item => item.id === id)) railTags.delete(id);
+  renderRailTags();
   const container = document.querySelector('#category-list'); container.replaceChildren();
   for (const category of libraryCategories) {
     const row = document.createElement('div'); row.className = 'category-row';
     const name = document.createElement('span'); name.textContent = `${category.name} (${category.conversation_count})`;
     const rename = document.createElement('button'); rename.type = 'button'; rename.textContent = 'Rename';
     rename.addEventListener('click', async () => {
-      const next = window.prompt('Category name', category.name);
+      const next = window.prompt('Tag name', category.name);
       if (next === null || !next.trim()) return;
       try { await json(await fetch(`${API}/categories/${encodeURIComponent(category.id)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:next})})); await showList(); }
       catch (error) { document.querySelector('#category-status').textContent = error.message; }
     });
-    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete category';
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete';
     remove.addEventListener('click', async () => {
-      if (!window.confirm(`Delete the category “${category.name}”? Its conversations will stay in the library.`)) return;
+      if (!window.confirm(`Delete the tag “${category.name}”? Its conversations stay in the library.`)) return;
       try { await json(await fetch(`${API}/categories/${encodeURIComponent(category.id)}`, {method:'DELETE'})); await showList(); }
       catch (error) { document.querySelector('#category-status').textContent = error.message; }
     });
@@ -911,7 +914,7 @@ function renderCategoryControls() {
 async function renderConversationCategories(ids) {
   const categories = await json(await fetch(`${API}/categories`));
   const container = document.querySelector('#conversation-category-list'); container.replaceChildren();
-  if (!categories.length) { const empty = document.createElement('p'); empty.textContent = 'Create categories from All conversations.'; container.append(empty); }
+  if (!categories.length) { const empty = document.createElement('p'); empty.textContent = 'Create tags from the ⋯ menu on Home.'; container.append(empty); }
   for (const category of categories) {
     const label = document.createElement('label'); label.className = 'category-checkbox';
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = ids.includes(category.id);
@@ -937,8 +940,8 @@ async function refreshCategorizationStatus() {
   const status = document.querySelector('#categorization-status');
   const retry = document.querySelector('#retry-categorization');
   status.textContent = result.state === 'failed' ? result.error :
-    result.state === 'running' || result.state === 'queued' ? 'Categorizing…' :
-    result.state === 'unclear' ? 'Category unclear. Choose one above.' : '';
+    result.state === 'running' || result.state === 'queued' ? 'Tagging…' :
+    result.state === 'unclear' ? 'Tag unclear. Choose one above.' : '';
   retry.hidden = !setting.enabled || !result.ready || result.manual_override || !['failed', 'unclear', 'idle'].includes(result.state);
   if (result.state === 'running' || result.state === 'queued') {
     const conversationId = activeConversationId;
@@ -3145,11 +3148,6 @@ document.querySelector('#library-search-input').addEventListener('input', () => 
   document.querySelector('#library-search-status').textContent = '';
 });
 document.querySelector('#library-search-kind').addEventListener('change', renderLibrarySearch);
-document.querySelector('#category-filter').addEventListener('change', () => {
-  renderConversationList();
-  if (document.querySelector('#library-search-input').value.trim().length >= 2)
-    submitLibrarySearch(new Event('submit'));
-});
 document.querySelector('#auto-categories').addEventListener('change', async event => {
   const checkbox = event.target;
   checkbox.disabled = true;
@@ -3176,6 +3174,17 @@ document.querySelector('#create-category-form').addEventListener('submit', async
     input.value = ''; await showList(); }
   catch (error) { document.querySelector('#category-status').textContent = error.message; }
 });
+const tagsDialog = document.querySelector('#tags-dialog');
+const peopleDialog = document.querySelector('#people-dialog');
+function openTags() { tagsDialog.showModal(); document.querySelector('#new-category-name').focus(); }
+document.querySelector('#open-tags').addEventListener('click', openTags);
+document.querySelector('#new-tag').addEventListener('click', openTags);
+document.querySelector('#close-tags').addEventListener('click', () => tagsDialog.close());
+document.querySelector('#open-people').addEventListener('click', async () => {
+  peopleDialog.showModal();
+  try { await loadPeoplePanel(); } catch (error) { setStatus(error.message); }
+});
+document.querySelector('#close-people').addEventListener('click', () => peopleDialog.close());
 document.querySelector('#show-trash').addEventListener('click', () => showTrash().catch(error => document.querySelector('#trash-status').textContent = error.message));
 document.querySelector('#back-from-trash').addEventListener('click', () => showList().catch(error => setStatus(error.message)));
 document.querySelector('#person-rename-form').addEventListener('submit', async event => {
@@ -3443,22 +3452,26 @@ function notebookCard(notebook) {
   }
   return card;
 }
-function renderRailFilter() {
-  const picker = document.querySelector('#category-filter');
-  const current = picker.selectedOptions[0];
-  document.querySelector('#rail-filter-label').textContent = current ? current.textContent.replace(/ \(\d+\)$/, '') : 'All';
-  const pills = [...picker.options].map(option => {
+function renderRailTags() {
+  const untagged = libraryConversations.filter(item => !item.category_ids.length).length;
+  const options = [...libraryCategories.filter(item => item.conversation_count).map(item => [item.id, item.name]),
+    ...(untagged ? [['untagged', 'Untagged']] : [])];
+  const pills = options.map(([id, name]) => {
     const pill = document.createElement('button'); pill.type = 'button'; pill.className = 'rail-filter-pill';
-    pill.textContent = option.textContent; pill.setAttribute('aria-pressed', String(option.value === picker.value));
+    pill.textContent = name; pill.setAttribute('aria-pressed', String(railTags.has(id)));
     pill.addEventListener('click', () => {
-      picker.value = option.value;
-      document.querySelector('#rail-filter').open = false;
-      picker.dispatchEvent(new Event('change'));
-      renderRailFilter();
+      if (railTags.has(id)) railTags.delete(id); else railTags.add(id);
+      renderRailTags(); renderConversationList();
     });
     return pill;
   });
-  document.querySelector('#rail-filter-pills').replaceChildren(...pills);
+  if (railTags.size) {
+    const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'rail-filter-clear';
+    clear.textContent = 'Clear';
+    clear.addEventListener('click', () => { railTags.clear(); renderRailTags(); renderConversationList(); });
+    pills.push(clear);
+  }
+  document.querySelector('#rail-tags').replaceChildren(...pills);
 }
 // Rail rows drag onto Home cards; More options keeps the keyboard and touch route.
 const CONVERSATION_DRAG = 'application/x-stellis-conversation';
@@ -3495,29 +3508,28 @@ async function dropOnNotebook(item, notebook) {
     {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notebook_id:notebook.id})}));
   return `Moved ${item.title} to ${notebook.name}`;
 }
-function categoryCard(group) {
-  // Same card as a notebook: the group's latest conversation, its takeaways, then older ones.
-  const card = notebookCard({...group, id: group.id});
-  card.classList.add('category-card');
-  const head = card.querySelector('.notebook-card-head');
+function tagCard(tag) {
+  // A compact card: the tag's five newest conversations.
+  const items = libraryConversations.filter(item => item.category_ids.includes(tag.id));
+  const card = document.createElement('article'); card.className = 'notebook-card tag-card';
+  const head = document.createElement('div'); head.className = 'notebook-card-head';
   const filter = document.createElement('button'); filter.type = 'button'; filter.className = 'category-card-name';
-  filter.textContent = group.name; filter.title = `Show ${group.name} in recent conversations`;
-  filter.addEventListener('click', () => {
-    const picker = document.querySelector('#category-filter');
-    picker.value = group.id; picker.dispatchEvent(new Event('change')); renderRailFilter();
-  });
-  head.replaceChildren(icon('tag'), filter);
-  acceptConversationDrop(card, item => dropOnCategory(item, group));
+  filter.textContent = tag.name; filter.title = `Show ${tag.name} in recent conversations`;
+  filter.addEventListener('click', () => { railTags = new Set([tag.id]); renderRailTags(); renderConversationList(); });
+  const count = document.createElement('small'); count.textContent = items.length;
+  head.append(icon('tag'), filter, count);
+  card.append(head);
+  if (items.length) {
+    const rows = document.createElement('ul'); rows.className = 'tag-list';
+    for (const item of items.slice(0, 5)) { const row = document.createElement('li'); row.append(meetingLink(item, 'notebook-meeting')); rows.append(row); }
+    card.append(rows);
+  } else {
+    const empty = document.createElement('p'); empty.className = 'notebook-empty'; empty.textContent = 'Drag a conversation here';
+    card.append(empty);
+  }
+  acceptConversationDrop(card, item => dropOnCategory(item, tag));
   return card;
 }
-document.addEventListener('click', event => {
-  const filter = document.querySelector('#rail-filter');
-  if (filter.open && !filter.contains(event.target)) filter.open = false;
-});
-document.addEventListener('keydown', event => {
-  const filter = document.querySelector('#rail-filter');
-  if (event.key === 'Escape' && filter.open) { filter.open = false; filter.querySelector('summary').focus(); }
-});
 let samplesTimer;
 let samplesAdded = null;
 async function watchSamples() {
@@ -3572,9 +3584,15 @@ async function watchSetup() {
   if (state.state !== 'failed') setupTimer = setTimeout(watchSetup, 2000);
 }
 function renderCategoryGroups() {
-  const section = document.querySelector('#category-groups');
-  section.hidden = !libraryCategoryGroups.length;
-  document.querySelector('#category-group-grid').replaceChildren(...libraryCategoryGroups.map(categoryCard));
+  // Most used first, so the busiest tags lead.
+  const tags = [...libraryCategories].sort((a, b) => b.conversation_count - a.conversation_count ||
+    a.name.localeCompare(b.name));
+  const grid = document.querySelector('#category-group-grid');
+  grid.replaceChildren(...tags.map(tagCard));
+  if (!tags.length) {
+    const empty = document.createElement('p'); empty.className = 'recent-empty'; empty.textContent = 'Tags group conversations across notebooks';
+    grid.append(empty);
+  }
 }
 function renderNotebooks() {
   const grid = document.querySelector('#notebook-grid');

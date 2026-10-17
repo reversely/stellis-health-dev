@@ -521,8 +521,8 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .button-with-icon { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .button-with-icon[hidden] { display: none; }
 .button-with-icon svg { width: 17px; height: 17px; flex: none; }
-#conversation-categories-dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-sizing: border-box; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
-#conversation-categories-dialog::backdrop { background: #02050ea8; }
+#conversation-categories-dialog, .library-dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-sizing: border-box; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+#conversation-categories-dialog::backdrop, .library-dialog::backdrop { background: #02050ea8; }
 .category-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .category-dialog-header h2 { margin: 0; font-size: 21px; }
 .category-dialog-header button { width: 34px; height: 34px; padding: 0; border: 0; background: transparent; color: var(--ink); font-size: 25px; cursor: pointer; }
@@ -709,16 +709,6 @@ body:has(#list-view:not([hidden])) #status:not(:empty) { min-height: 0; margin: 
 .recovery-summary strong { font-size: 16px; overflow-wrap: anywhere; }
 .recovery-summary span { color: var(--muted); }
 .recovery-summary .remote-live-preview { margin-top: 5px; font-size: 13px; }
-#list-view .library-management { margin-top: 18px; border-top: 1px solid var(--line-soft); }
-#list-view .library-management > summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); cursor: pointer; font-size: 13px; list-style: none; }
-#list-view .library-management > summary::-webkit-details-marker { display: none; }
-#list-view .library-management > summary::before { content: '▸'; margin-right: 8px; }
-#list-view .library-management[open] > summary::before { content: '▾'; }
-#list-view .library-management-content { display: grid; gap: 12px; padding: 8px 0 18px; }
-#list-view .library-management-content > details, #list-view .library-management-content > button { margin: 0; padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
-#list-view .library-management-content > button { min-height: 44px; text-align: left; cursor: pointer; }
-#list-view .library-management-content > button:hover { border-color: var(--accent); }
-#list-view .library-management-content > details > summary { color: var(--ink); cursor: pointer; font-weight: 650; }
 #list-view #manage-categories { margin-top: 0; }
 body:has(#list-view:not([hidden])) #vocabulary-panel { max-width: 920px; margin: 0 auto 35px; padding: 0; border-top: 1px solid var(--line-soft); border-bottom: 0; border-left: 0; border-right: 0; border-radius: 0; background: transparent; box-shadow: none; }
 body:has(#list-view:not([hidden])) #vocabulary-panel summary { padding: 13px 0; color: var(--muted); font-size: 13px; font-weight: 400; }
@@ -1010,7 +1000,7 @@ html[data-theme='dark'] body::before { display: none; }
   }
   #list-view .search-card { max-width: 900px; }
   #list-view .conversation-list, #list-view .library-toolbar, #list-view .recover-recordings,
-  #list-view .library-management, #list-view .live-recording-card { max-width: 900px; }
+  #list-view .live-recording-card { max-width: 900px; }
   body.recording-page #status, body.recording-page .heading { display: none; }
   body.recording-page #recording-panel, body.recording-page .recording-workspace-grid { display: contents; }
   body.recording-page .recording-workspace-head {
@@ -1244,8 +1234,7 @@ body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) .
 #detail-view .conversation-tabs { border-bottom-color: #413A48; }
 #detail-view .player-card { border-radius: 6px; }
 #list-view .conversation-row, #list-view .live-recording-card,
-#list-view .recovery-row, #list-view .library-management-content > details,
-#list-view .library-management-content > button { border-radius: 6px; }
+#list-view .recovery-row { border-radius: 6px; }
 .recording-live-peek { border-radius: 6px; }
 .conversation-page .heading-actions #import-button {
   border-color: #413A48;
@@ -1343,24 +1332,23 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 }
 .home-rail-head { display: grid; justify-items: start; gap: 10px; }
 .home-rail-head h2 { margin: 0; font: 400 26px/1.15 Piazzolla, Georgia, serif; letter-spacing: -.02em; text-wrap: balance; }
-.home-rail-head select {
-  min-height: 36px; max-width: 100%; padding: 0 8px; border: 1px solid color-mix(in srgb, #F7F5F6 22%, transparent);
-  border-radius: 8px; background: color-mix(in srgb, #27222B 55%, transparent); color: var(--ink); font: 13px Inter, sans-serif;
-}
 .recent-list { display: grid; align-content: start; gap: 2px; margin: 0 -8px; padding: 0 8px; }
 .recent-row {
-  display: grid; grid-template-columns: 9px minmax(0, 1fr); align-items: baseline; column-gap: 10px; row-gap: 3px;
-  padding: 10px 8px; border-radius: 8px; color: var(--ink); text-decoration: none;
+  display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 3px;
+  padding: 9px 8px 9px 27px; border-radius: 8px; color: var(--ink); text-decoration: none;
   transition: background-color 150ms ease-out;
 }
 @media (hover: hover) and (pointer: fine) { .recent-row:hover { background: color-mix(in srgb, #F7F5F6 9%, transparent); } }
 /* Titles and topic previews wrap in full rather than truncate; the date and dot stay on the first line. */
 .recent-row strong { min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; text-wrap: pretty; }
-.recent-row .recent-dot { align-self: start; margin-top: 5px; }
 .recent-row time { margin-right: 4px; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.recent-row small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; text-wrap: pretty; }
+.recent-row small { color: var(--muted); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; text-wrap: pretty; }
 .recent-row .recent-processing { color: var(--ink); font-variant-numeric: tabular-nums; }
 .recent-empty { color: var(--muted); font-size: 14px; }
+/* Notebook headings group the rail; a row's title lines up with the notebook name. */
+.recent-group { display: flex; align-items: center; gap: 10px; margin: 18px 0 2px; padding: 0 8px; color: var(--ink); font: 650 13px/1.3 Inter, sans-serif; letter-spacing: .01em; }
+.recent-group:first-child { margin-top: 4px; }
+.recent-group small { margin-left: auto; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 .home-rail .recent-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, #F7F5F6 60%, transparent); }
 .settings-link {
   display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-radius: 8px;
@@ -1678,34 +1666,43 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 .turn-heading .speaker-check { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%;
   background: var(--check-bg); color: var(--check-ink); flex: none; }
 
-/* Home (#222): rail filter as a dropdown of pills; category groups reuse notebook cards. */
-.rail-filter { position: relative; }
-.rail-filter summary {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; list-style: none; cursor: pointer;
-  border: 1px solid color-mix(in srgb, #F7F5F6 22%, transparent); border-radius: 999px;
-  background: color-mix(in srgb, #27222B 55%, transparent); color: var(--ink); font: 600 13px Inter, sans-serif;
-}
-.rail-filter summary::-webkit-details-marker { display: none; }
-.rail-filter summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; }
-.rail-filter[open] summary::after { margin-top: 3px; rotate: 225deg; }
-.rail-filter summary:focus-visible, .rail-filter-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-/* The pills float over the list like a menu instead of pushing it down. */
-.rail-filter-pills {
-  position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: flex; flex-wrap: wrap; gap: 6px;
-  width: min(300px, calc(100vw - 40px)); box-sizing: border-box; padding: 10px; border: 1px solid #605465;
-  border-radius: 10px; background: #27222B; box-shadow: 0 16px 38px #00000059;
-}
+/* Home: tag pills filter the rail (any selected tag); tag cards list five conversations each. */
+.rail-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.rail-tags:empty { display: none; }
 .rail-filter-pill {
-  min-height: 32px; padding: 0 12px; border: 1px solid color-mix(in srgb, #F7F5F6 22%, transparent); border-radius: 999px;
+  min-height: 30px; padding: 0 11px; border: 1px solid color-mix(in srgb, #F7F5F6 22%, transparent); border-radius: 999px;
   background: transparent; color: var(--ink); font: 13px Inter, sans-serif; cursor: pointer;
 }
 /* The rail is always dark, so the selected pill uses the rail palette, not the page tokens. */
 .rail-filter-pill[aria-pressed="true"] { background: #F7F5F6; color: #27222B; border-color: #F7F5F6; font-weight: 600; }
-.category-groups { display: grid; gap: 16px; }
-.category-card-name { padding: 0; border: 0; background: transparent; color: inherit; font: 400 23px/1.15 Piazzolla, Georgia, serif;
+.rail-filter-clear { min-height: 30px; padding: 0 6px; border: 0; background: transparent; color: var(--muted); font: 13px Inter, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.rail-filter-pill:focus-visible, .rail-filter-clear:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.category-groups { margin-bottom: 44px; }
+.tag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); align-items: start; gap: 16px; }
+.tag-grid > .recent-empty { margin: 0; }
+/* Tags stay neutral so the notebook colours keep meaning one notebook each. */
+.notebook-card.tag-card { --notebook-ink: var(--ink); min-height: 0; gap: 12px; padding: 16px 18px 18px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.tag-card .notebook-card-head { grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
+.tag-card .notebook-card-head > .icon { width: 18px; height: 18px; }
+.tag-card .notebook-card-head small { opacity: .72; font-size: 13px; font-variant-numeric: tabular-nums; }
+.category-card-name { padding: 0; border: 0; background: transparent; color: inherit; font: 400 19px/1.2 Piazzolla, Georgia, serif;
   text-align: left; cursor: pointer; overflow-wrap: anywhere; }
 .category-card-name:hover { text-decoration: underline; text-underline-offset: 4px; }
-.category-card .notebook-card-head { grid-template-columns: auto minmax(0, 1fr); }
+.tag-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tag-list li { min-width: 0; }
+.tag-card .notebook-meeting { font-size: 13.5px; opacity: .88; }
+.tag-card .notebook-empty { margin: 0; font-size: 13.5px; }
+/* Library options sit beside Record: custom vocabulary, tags, people, Recently deleted. */
+.library-more summary { width: 44px; height: 44px; border-radius: 8px; background: var(--surface); }
+.library-more .more-menu-items a, .library-more .more-menu-items button {
+  display: flex; align-items: center; min-height: 40px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink); font: 15px Inter, sans-serif; text-align: left; text-decoration: none; cursor: pointer;
+}
+.library-more .more-menu-items a:hover, .library-more .more-menu-items button:hover { background: var(--raised); }
+.library-dialog #category-list, .library-dialog #people-list { max-height: 50vh; overflow-y: auto; }
+.library-dialog form { display: grid; gap: 6px; margin: 16px 0 10px; }
+.library-dialog .category-checkbox { margin-top: 14px; }
+.library-dialog #category-status:empty { display: none; }
 
 /* First-run model download (setup card). */
 .setup-card { display: grid; gap: 10px; margin: 0 0 24px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
