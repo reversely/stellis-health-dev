@@ -831,18 +831,17 @@ function renderConversationList() {
     if (notebook) dot.style.setProperty('--dot', notebook.color);
     const title = document.createElement('strong'); title.textContent = item.title;
     const date = document.createElement('time'); date.dateTime = capturedAt(item); date.textContent = shortDate(capturedAt(item));
-    row.append(dot, title, date);
     const job = item.processing_job;
     const progress = job && (job.state === 'queued' ? 'Queued' : job.state === 'running' ?
       `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)}: ${Math.round(job.progress * 100)}%` :
       job.state === 'failed' ? 'Processing stopped' : '');
-    const state = progress;
-    if (state) {
-      const line = document.createElement('small'); line.className = 'recent-processing'; line.textContent = state;
-      row.append(line);
-    } else if (item.summary_line) {
-      const line = document.createElement('small'); line.textContent = item.summary_line; row.append(line);
-    }
+    // The date leads the preview line so the title keeps the full rail width.
+    const line = document.createElement('small'); line.append(date);
+    if (progress) {
+      const state = document.createElement('span'); state.className = 'recent-processing'; state.textContent = progress;
+      line.append(' ', state);
+    } else if (item.topic_line) line.append(` ${item.topic_line}`);
+    row.append(dot, title, line);
     list.append(row);
   }
   clearTimeout(libraryJobTimer);
