@@ -23,7 +23,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v5"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v6"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 # Whisper writes bracketed sound tags such as "(scissors snipping)" or
@@ -526,6 +526,16 @@ def align_segments(conversation_id: str, segments: list[dict[str, object]],
     return aligned, confident / len(aligned) if aligned else 0
 
 
+def _group_speakers(wav: Path, embedding_model: Path, segments: list[dict[str, object]]) -> bool:
+    """Replace turn-overlap clusters with groups of per-passage voice embeddings."""
+    from stellis import rematch, speaker_clustering
+
+    if not segments:
+        return False
+    vectors, valid = rematch.extract_embeddings(wav, embedding_model, segments)
+    return speaker_clustering.assign(segments, vectors, valid)
+
+
 def _fill_unassigned_speakers(wav: Path, embedding_model: Path, segments: list[dict[str, object]],
                               turns: list[dict[str, object]]) -> int:
     """Embed only prototype and no-turn passages, then assign the no-turn ones."""
@@ -724,13 +734,17 @@ def run_job(job_id: str) -> None:
                     vocabulary_fallback = True
             _stage(job_id, "aligning", 0.96)
             aligned, coverage = align_segments(str(conversation["id"]), segments, turns)
-            fallback_count = _fill_unassigned_speakers(wav, embedding, aligned, turns)
+            _stage(job_id, "grouping speakers", 0.97)
+            grouped = _group_speakers(wav, embedding, aligned)
+            fallback_count = 0 if grouped else _fill_unassigned_speakers(wav, embedding, aligned, turns)
             metrics = {
                 "processing_seconds": round(time.monotonic() - started, 2),
                 "segment_count": len(aligned), "turn_count": len(turns),
                 "cluster_count": len({turn["speaker_cluster_id"] for turn in turns}),
                 "confident_segment_fraction": round(coverage, 3),
                 "fallback_speaker_segment_count": fallback_count,
+                "speaker_grouping": "passage_cluster" if grouped else "acoustic_turns",
+                "passage_speaker_count": len({segment["speaker_cluster_id"] for segment in aligned}),
                 "vocabulary_fallback": vocabulary_fallback,
                 "speech_turn_coverage": round(_speech_turn_coverage(segments, turns), 3),
             }
