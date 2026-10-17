@@ -1479,7 +1479,7 @@ function groupTranscriptSegments(segments) {
     const sameTurn = previous &&
       previous.speaker_display_name === segment.speaker_display_name &&
       (previous.speaker_suggestion?.person_id || null) === (segment.speaker_suggestion?.person_id || null) &&
-      (previous.person_id || segment.person_id ? previous.person_id === segment.person_id : true) &&
+      (previous.person_id || previous.speaker_group_person_id || null) === (segment.person_id || segment.speaker_group_person_id || null) &&
       segment.start_ms - previous.end_ms <= 1500;
     if (sameTurn) current.push(segment);
     else turns.push([segment]);

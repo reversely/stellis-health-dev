@@ -69,6 +69,18 @@ class VoiceSuggestionTest(unittest.TestCase):
         self.assertEqual({origins[key] for key in origins if key != "known.mp3-2"}, {"propagated"})
         self.assertEqual(after["segments"][5]["speaker_label_origin"], "automatic")
 
+    def test_a_group_mostly_named_for_one_person_shows_that_name_throughout(self) -> None:
+        after = self._confirm_speaker(self.known, "known.mp3-0", "Shereen Lee")
+        person = after["segments"][0]["person_id"]
+        with storage.connect() as conn:
+            conn.execute("DELETE FROM person_links WHERE conversation_id = ? AND segment_id = 'known.mp3-3'", (self.known,))
+        segments = self.client.get(f"/api/v1/conversations/{self.known}/transcript").json()["segments"]
+        self.assertEqual(segments[3]["speaker_display_name"], "Shereen Lee")
+        self.assertEqual(segments[3]["speaker_label_origin"], "propagated")
+        self.assertNotIn("person_id", segments[3])
+        self.assertEqual(segments[5]["speaker_display_name"], "Speaker 2")
+        self.assertEqual(self.client.get(f"/api/v1/persons/{person}").json()["total_link_count"], 3)
+
     def test_a_known_voice_is_suggested_and_one_click_confirms_it(self) -> None:
         self._index(self.known, SHEREEN, OTHER)
         self._index(self.fresh, OTHER, SHEREEN)
