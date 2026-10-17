@@ -61,7 +61,9 @@ def _duration_ms(path: Path) -> int:
 
 def _title(filename: str) -> str:
     stem = Path(filename).stem
-    cleaned = re.sub(r"[\x00-\x1f\x7f]", "", stem).strip()
+    cleaned = re.sub(r"[\x00-\x1f\x7f]", "", stem)
+    # Exported voice notes separate fields with middle dots, which the UI never shows.
+    cleaned = " ".join(cleaned.replace("\u00b7", " ").split())
     return cleaned[:180] or "Untitled recording"
 
 

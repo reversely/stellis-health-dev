@@ -17,6 +17,7 @@ Apply this skill only to `/Users/slee/Repos/stellis` or `reversely/stellis`. Rea
 - Preserve distinct Import and Record actions, the requested type scale and hierarchy, and a cosmos dark default direction informed by Granola and Penguin. Edited Transcript is a separate tab for a quotable cleanup of exact spoken words, filler, artifacts, and misspeaks.
 - Optional login and end-to-end encryption are stretch work to be delivered through scoped tickets. Flutter remains required for the eventual iOS app and cross-platform native direction; the browser acceptance target comes first. Keep a durable cross-app backend and connection architecture.
 - Use only FOSS dependencies and integrations in the delivered product, with Nebius as the sole permitted non-FOSS external integration. Audit shipped and transitive licenses before adopting an editor or service. Do not adopt Tiptap for the notes editor.
+- **Inverted** means the control's fill takes the theme's text colour and its glyph or label takes the colour of the surface behind it: a light fill with a dark glyph in dark mode, a dark fill with a light glyph in light mode. It never means a flat accent-coloured button. The Summary regenerate icon is the reference.
 - Notes and Live transcript are the visually distinct primary conversation tabs; use a filled selected tab with inverted colors. Within Notes, My Notes and Enhanced Notes are a quieter secondary choice. Generate Enhanced Notes on first visit when a transcript is ready and let users refresh it without changing My Notes.
 
 ## Delivery and evidence

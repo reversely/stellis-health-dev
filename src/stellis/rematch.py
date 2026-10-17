@@ -60,8 +60,9 @@ def suggest_speakers(segments: list[dict[str, object]], embeddings: np.ndarray,
                      valid: np.ndarray) -> tuple[list[dict[str, object]], dict[str, object]]:
     """Use only well-supported acoustic groups as speaker prototypes.
 
-    Short/ambiguous voices are left unresolved instead of being folded into a
-    dominant group. Existing segment IDs, words, text, and timing are retained.
+    Short/ambiguous voices are left unresolved (uncertain, first-pass speaker)
+    instead of being folded into a dominant group. Existing segment IDs, words,
+    text, and timing are retained.
     """
     if len(segments) != len(embeddings) or len(segments) != len(valid):
         raise ValueError("Embedding count does not match transcript")
@@ -90,9 +91,12 @@ def suggest_speakers(segments: list[dict[str, object]], embeddings: np.ndarray,
         margin = best - float(scores[index, int(sorted_indices[index, 1])])
         supported = bool(valid[index] and best >= MIN_SIMILARITY and margin >= MIN_MARGIN)
         accepted += supported
+        # An unresolved passage keeps its first-pass speaker; one that never had
+        # a turn takes the closest prototype. Both stay marked uncertain.
+        fallback = segment.get("speaker_cluster_id") or (groups[winner][0] if valid[index] else None)
         suggested.append({**segment,
                           "raw_speaker_cluster_id": segment.get("speaker_cluster_id"),
-                          "speaker_cluster_id": groups[winner][0] if supported else None,
+                          "speaker_cluster_id": groups[winner][0] if supported else fallback,
                           "speaker_uncertain": not supported,
                           "speaker_match_source": "embedding_suggestion" if supported else "unresolved",
                           "speaker_match_score": round(best, 3) if valid[index] else None,

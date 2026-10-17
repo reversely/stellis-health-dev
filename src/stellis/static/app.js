@@ -24,8 +24,9 @@ conversationMore.addEventListener('keydown', event => {
 const themeButton = document.querySelector('#theme-toggle');
 function syncThemeButton() {
   const light = document.documentElement.dataset.theme === 'light';
-  themeButton.textContent = light ? 'Dark mode' : 'Light mode';
-  themeButton.setAttribute('aria-label', `Switch to ${light ? 'dark' : 'light'} mode`);
+  const label = `Switch to ${light ? 'dark' : 'light'} mode`;
+  themeButton.setAttribute('aria-label', label);
+  themeButton.title = label;
   document.querySelector('meta[name="theme-color"]').content = light ? '#27222B' : '#2A252F';
 }
 syncThemeButton();
@@ -585,9 +586,9 @@ async function selectEnhanced(run) {
   if (enhancedState?.id !== run.id && !(await flushEnhanced())) return;
   enhancedSelectedId = run.id;
   const status = document.querySelector('#enhanced-status');
-  status.textContent = run.state === 'failed' ? run.error_message :
+  status.textContent = run.state === 'failed' ? 'Summary failed to generate' :
     run.state === 'running' || run.state === 'queued' ? `Generating summary: ${run.stage}` :
-    run.stale ? 'Notes or transcript changed. Regenerate summary.' : '';
+    run.stale ? 'Notes or transcript changed since this summary' : '';
   const sources = document.querySelector('#enhanced-sources'); sources.replaceChildren();
   if (run.state !== 'succeeded') {
     enhancedState = null;
@@ -633,9 +634,9 @@ async function loadEnhancedRuns(id, autoStart = false) {
     picker.value = chosen.id;
     if (enhancedState?.id !== chosen.id || chosen.state !== 'succeeded') await selectEnhanced(chosen);
     else document.querySelector('#enhanced-status').textContent = chosen.stale ?
-      'Notes or transcript changed. Regenerate summary.' : '';
+      'Notes or transcript changed since this summary' : '';
   }
-  else {document.querySelector('#enhanced-status').textContent = currentTranscript?.segments?.length ? 'Summary is not ready.' : 'Summary will generate after transcription.';}
+  else document.querySelector('#enhanced-status').textContent = currentTranscript?.segments?.length ? 'Summary is not ready' : 'Summary will generate after transcription';
   clearTimeout(enhancedPollTimer);
   if (runs.some(run => run.state === 'queued' || run.state === 'running'))
     enhancedPollTimer = setTimeout(() => loadEnhancedRuns(id).catch(error => {
@@ -644,8 +645,8 @@ async function loadEnhancedRuns(id, autoStart = false) {
 async function startEnhanced(force) {
   const id = activeConversationId;
   const status = document.querySelector('#enhanced-status');
-  if (!currentTranscript?.segments?.length) { status.textContent = 'Summary will generate after transcription.'; return; }
-  if (!(await flushNotes(notesStates.conversation))) { status.textContent = 'Save My Notes before regenerating.'; return; }
+  if (!currentTranscript?.segments?.length) { status.textContent = 'Summary will generate after transcription'; return; }
+  if (!(await flushNotes(notesStates.conversation))) { status.textContent = 'Save My Notes before regenerating'; return; }
   status.textContent = 'Generating summary…';
   try {
     const run = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/enhanced-notes`, {
@@ -1442,12 +1443,17 @@ function watchJob(job) {
     catch (error) { setTranscriptLoading(false); processingStatus.textContent = error.message; }
   }, 1500);
 }
+const PROVISIONAL_SPEAKER_SOURCES = new Set(['embedding_fallback', 'nearest_turn', 'nearest_passage', 'single_speaker']);
 function groupTranscriptSegments(segments) {
   const turns = [];
   for (const segment of segments) {
     const current = turns.at(-1);
     const previous = current?.at(-1);
-    const resolved = item => item.person_id || item.speaker_label_source?.startsWith('manual') || (item.speaker_cluster_id && !item.speaker_uncertain);
+    // A passage given a provisional speaker stays its own turn even under a
+    // named group, so the guess remains visible until someone confirms it.
+    const resolved = item => item.person_id || item.speaker_label_source === 'manual_segment' ||
+      (item.speaker_label_source === 'manual_cluster' && !PROVISIONAL_SPEAKER_SOURCES.has(item.speaker_match_source)) ||
+      (item.speaker_cluster_id && !item.speaker_uncertain);
     const sameTurn = previous && resolved(previous) && resolved(segment) &&
       previous.speaker_display_name === segment.speaker_display_name &&
       (previous.person_id || segment.person_id ? previous.person_id === segment.person_id : true) &&
@@ -1563,7 +1569,7 @@ async function showTranscript(id) {
   const speakerDurations = new Map();
   for (const segment of data.segments) {
     const name = segment.speaker_display_name;
-    if (!name || name === 'Unknown speaker') continue;
+    if (!name) continue;
     const duration = Math.max(0, segment.end_ms - segment.start_ms);
     speakerDurations.set(name, (speakerDurations.get(name) || 0) + duration);
   }
@@ -1621,6 +1627,8 @@ async function showTranscript(id) {
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
     if (segment.speaker_match_source === 'embedding_suggestion') speaker.title = 'Suggested from this passage’s voice; click to confirm or edit';
     if (segment.speaker_match_source === 'unresolved') speaker.title = 'Speaker unresolved; click to assign';
+    if (PROVISIONAL_SPEAKER_SOURCES.has(segment.speaker_match_source) && !segment.person_id &&
+      segment.speaker_label_source !== 'manual_segment') speaker.title = 'Suggested speaker; click to confirm or edit';
     speaker.addEventListener('click', () => showSpeakerPicker(speaker, row, segment));
     const words = document.createElement('div');
     words.className = 'segment-text';

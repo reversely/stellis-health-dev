@@ -80,6 +80,13 @@ class ImportWorkflowTest(unittest.TestCase):
         self.assertEqual(reference.status_code, 200)
         self.assertIn("Hello.", reference.json()["transcript_text"])
 
+    def test_import_title_drops_middle_dots(self) -> None:
+        with patch("stellis.server.processing.capabilities", return_value={"features": {"transcribe": False}}):
+            imported = self.client.post("/api/v1/conversations/import",
+                                        files={"file": ("Note \u00b7 Oct 15, 2:17 PM \u00b7 57 sec.mp3", mp3_bytes(), "audio/mpeg")})
+        self.assertEqual(imported.status_code, 200)
+        self.assertEqual(imported.json()["conversation"]["title"], "Note Oct 15, 2:17 PM 57 sec")
+
     def test_zip_is_rejected_and_reference_is_separate(self) -> None:
         archive_bytes = io.BytesIO()
         with zipfile.ZipFile(archive_bytes, "w") as archive:
