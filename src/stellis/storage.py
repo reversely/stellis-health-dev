@@ -1344,6 +1344,26 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
             segment["speaker_display_name"] = display_names[cluster]
             segment["speaker_label_source"] = "automatic"
             segment["speaker_label_origin"] = "automatic"
+    # A speaker-wide confirmation names the whole group. After regrouping, a few of the
+    # group's passages can lack the carried link; they show the group's person too.
+    group_people: dict[str, dict[str, int]] = {}
+    for segment in segments:
+        if segment.get("person_id"):
+            people = group_people.setdefault(str(segment["speaker_cluster_id"]), {})
+            people[segment["person_id"]] = people.get(segment["person_id"], 0) + 1
+    group_size: dict[str, int] = {}
+    for segment in segments:
+        group_size[str(segment["speaker_cluster_id"])] = group_size.get(str(segment["speaker_cluster_id"]), 0) + 1
+    named_groups = {cluster: next(iter(people)) for cluster, people in group_people.items()
+                    if len(people) == 1 and next(iter(people.values())) * 2 > group_size[cluster]}
+    names_by_person = {link["id"]: link["name"] for link in person_links.values()}
+    for segment in segments:
+        cluster = str(segment["speaker_cluster_id"])
+        if segment["speaker_label_source"] == "automatic" and cluster in named_groups:
+            segment["speaker_display_name"] = names_by_person[named_groups[cluster]]
+            segment["speaker_label_source"] = "confirmed_group"
+            segment["speaker_label_origin"] = "propagated"
+            segment["speaker_group_person_id"] = named_groups[cluster]
     from stellis import voices
     suggested = voices.suggestions(conversation_id, segments)
     for segment in segments:
