@@ -24,7 +24,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v9"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v10"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 # Whisper writes bracketed sound tags such as "(scissors snipping)" or
@@ -478,7 +478,8 @@ def _repair_loops(audio_path: Path, model: Path, output_base: Path, vocabulary: 
     result: list[dict[str, object]] = []
     for index, segment in enumerate(segments):
         result.extend(repaired.get(index, [segment]))
-    return result
+    # Last guard: loop text is never saved, whatever the re-decode produced.
+    return [_first_copy(item) if is_looping(str(item["text"])) else item for item in result]
 
 
 def _first_copy(segment: dict[str, object]) -> dict[str, object]:
