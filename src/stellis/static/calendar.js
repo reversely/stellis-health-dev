@@ -16,6 +16,7 @@ window.StellisCalendar = (() => {
   }
   const days = document.querySelector('#calendar-days');
   const DAY_COUNT = 3;
+  const LIST_COUNT = 5;
   const HOUR_PX = 44;
   let upcoming = [];
   let errors = [];
@@ -41,7 +42,15 @@ window.StellisCalendar = (() => {
   function dayName(date) {
     const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const offset = Math.round((day - windowDates()[0]) / 86400000);
-    return offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : date.toLocaleDateString([], {weekday:'long'});
+    return offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' :
+      offset < 7 ? date.toLocaleDateString([], {weekday:'long'}) :
+      date.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+  }
+  // The list shows the next meetings that have not ended, however far ahead they are.
+  function nextMeetings() {
+    const now = new Date();
+    return upcoming.filter(item => endOf(item) > now)
+      .sort((a, b) => startOf(a) - startOf(b)).slice(0, LIST_COUNT);
   }
   function clock(date) { return date.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
   function happeningNow(item) { const now = new Date(); return !item.all_day && startOf(item) <= now && endOf(item) > now; }
@@ -193,14 +202,14 @@ window.StellisCalendar = (() => {
   setInterval(() => { if (!days.hidden) placeNow(); }, 60000);
 
   function render() {
-    const inRange = upcoming.filter(inWindow);
+    const shown = view === 'list' ? nextMeetings() : upcoming.filter(inWindow);
     meetings.hidden = view !== 'list'; days.hidden = view !== 'days';
     document.querySelector('#calendar-view-list').setAttribute('aria-pressed', String(view === 'list'));
     document.querySelector('#calendar-view-days').setAttribute('aria-pressed', String(view === 'days'));
-    if (view === 'list') meetings.replaceChildren(...inRange.map(meetingRow));
+    if (view === 'list') meetings.replaceChildren(...shown.map(meetingRow));
     else renderDays();
     status.textContent = errors.length ? errors.map(error => error.message).join(' ') :
-      inRange.length ? '' : 'No meetings in the next 3 days';
+      shown.length ? '' : view === 'list' ? 'No upcoming meetings' : 'No meetings in the next 3 days';
   }
   for (const [id, value] of [['#calendar-view-list', 'list'], ['#calendar-view-days', 'days']]) {
     document.querySelector(id).addEventListener('click', () => {
