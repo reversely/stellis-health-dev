@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from importlib.metadata import version
 from pathlib import Path
 import asyncio
@@ -19,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, enhanced_notes, generation_review, images, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, calendar, categorization, clean, enhanced_notes, generation_review, images, library, notebooks, notes, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -59,8 +60,8 @@ async def development_cache_policy(request: Request, call_next):
         response.headers["Cache-Control"] = "private, no-cache"
     elif path.startswith(("/api/v1/calendar/", "/api/calendar/")):
         response.headers["Cache-Control"] = "no-store"
-    elif (path in {"/", "/auth", "/recording", "/vocabulary"} or
-          path.startswith(("/conversation/", "/person/", "/vocabulary/"))):
+    elif (path in {"/", "/auth", "/recording", "/vocabulary", "/settings"} or
+          path.startswith(("/conversation/", "/person/", "/vocabulary/", "/notebook/"))):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -115,6 +116,91 @@ def auth_login(credentials: LoginCredentials) -> JSONResponse:
     if token is None:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     return _session_response(token, credentials.username)
+
+
+class ProfileUpdate(BaseModel):
+    name: str = Field(max_length=100)
+    email: str = Field(max_length=254)
+
+
+class UsernameChange(BaseModel):
+    username: str = Field(min_length=3, max_length=80)
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=1024)
+    new_password: str = Field(min_length=12, max_length=1024)
+
+
+class AccountDeletion(BaseModel):
+    password: str = Field(min_length=1, max_length=1024)
+    confirm: str
+
+
+def _account_request(request: Request) -> str | None:
+    """Return the session token for account changes, refusing open mode and the shared dev login."""
+    if not auth.enabled():
+        raise HTTPException(status_code=404, detail="Login is disabled")
+    token = request.cookies.get(auth.COOKIE_NAME)
+    if auth.dev_enabled() and auth.current_account(token) == "dev":
+        raise HTTPException(status_code=403, detail="The dev login has no account settings")
+    return token
+
+
+def _account_errors(action):
+    try:
+        return action()
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="That username is taken") from exc
+
+
+@app.get("/api/v1/account")
+def account_profile(request: Request) -> dict[str, str]:
+    _account_request(request)
+    return _account_errors(auth.profile)
+
+
+@app.patch("/api/v1/account")
+def account_update(request: Request, update: ProfileUpdate) -> dict[str, str]:
+    _account_request(request)
+    return _account_errors(lambda: auth.update_profile(update.name, update.email))
+
+
+@app.post("/api/v1/account/username")
+def account_username(request: Request, change: UsernameChange) -> dict[str, str]:
+    _account_request(request)
+    return _account_errors(lambda: auth.change_username(change.username, change.password))
+
+
+@app.post("/api/v1/account/password")
+def account_password(request: Request, change: PasswordChange) -> dict[str, bool]:
+    token = _account_request(request)
+    _account_errors(lambda: auth.change_password(change.current_password, change.new_password, token))
+    return {"changed": True}
+
+
+@app.delete("/api/v1/account")
+def account_delete(request: Request, deletion: AccountDeletion) -> JSONResponse:
+    _account_request(request)
+    if deletion.confirm != "DELETE":
+        raise HTTPException(status_code=400, detail="Type DELETE to confirm")
+    _account_errors(lambda: auth.verify_password(deletion.password))
+    try:
+        erased = library.erase_all()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    auth.delete_account()
+    response = JSONResponse({"deleted": True, **erased})
+    response.delete_cookie(auth.COOKIE_NAME, path="/")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.post("/api/v1/auth/logout")
@@ -243,6 +329,7 @@ class CommentBody(BaseModel):
 class RecordingStart(BaseModel):
     title: str = Field(min_length=1, max_length=180)
     media_type: str
+    notebook_id: str | None = None
 
 
 class RecordingRename(BaseModel):
@@ -327,7 +414,7 @@ def stop_retention_worker() -> None:
 
 
 def _public(record: dict[str, object]) -> dict[str, object]:
-    return {key: record[key] for key in ("id", "title", "duration_ms", "created_at")} | {
+    return {key: record.get(key) for key in ("id", "title", "duration_ms", "created_at", "recorded_at", "notebook_id")} | {
         "category_ids": library.assignments(str(record["id"])).get(str(record["id"]), [])}
 
 
@@ -434,6 +521,12 @@ def person_page(person_id: str) -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
+@app.get("/settings", include_in_schema=False)
+@app.get("/notebook/{notebook_id}", include_in_schema=False)
+def settings_or_notebook_page(notebook_id: str | None = None) -> FileResponse:
+    return FileResponse(_STATIC / "index.html")
+
+
 @app.get("/vocabulary", include_in_schema=False)
 @app.get("/vocabulary/{section}", include_in_schema=False)
 def vocabulary_page(section: str | None = None) -> FileResponse:
@@ -445,8 +538,78 @@ def vocabulary_page(section: str | None = None) -> FileResponse:
 @api.get("/conversations")
 def conversations() -> list[dict[str, object]]:
     assigned = library.assignments()
-    return [{**item, "category_ids": assigned.get(str(item["id"]), [])}
-            for item in storage.list_conversations()]
+    items = storage.list_conversations()
+    lines = notebooks.summary_points([str(item["id"]) for item in items])
+    return [{**item, "category_ids": assigned.get(str(item["id"]), []),
+             "summary_line": lines.get(str(item["id"]), {}).get("summary_line")} for item in items]
+
+
+class NotebookCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    color: str | None = None
+
+
+class NotebookUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    color: str | None = None
+
+
+class NotebookAssignment(BaseModel):
+    notebook_id: str | None = None
+
+
+@api.get("/notebooks")
+def list_notebooks() -> dict[str, object]:
+    return {"palette": list(notebooks.PALETTE), "notebooks": notebooks.list_notebooks()}
+
+
+@api.post("/notebooks")
+def create_notebook(request: NotebookCreate) -> dict[str, object]:
+    try:
+        return notebooks.create(request.name, request.color)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.patch("/notebooks/{notebook_id}")
+def update_notebook(notebook_id: str, request: NotebookUpdate) -> dict[str, object]:
+    try:
+        return notebooks.update(notebook_id, name=request.name, color=request.color)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.delete("/notebooks/{notebook_id}")
+def delete_notebook(notebook_id: str) -> dict[str, bool]:
+    if not notebooks.delete(notebook_id):
+        raise HTTPException(status_code=404, detail="Notebook not found")
+    return {"deleted": True}
+
+
+@api.put("/conversations/{conversation_id}/notebook")
+def assign_notebook(conversation_id: str, request: NotebookAssignment) -> dict[str, object]:
+    try:
+        return notebooks.assign(conversation_id, request.notebook_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _recorded_at(value: str | None) -> str | None:
+    """Accept a browser-reported capture time only when it is a plausible past instant."""
+    if not value:
+        return None
+    try:
+        stamp = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if stamp.tzinfo is None:
+        return None
+    now = datetime.now(timezone.utc)
+    if not datetime(1990, 1, 1, tzinfo=timezone.utc) <= stamp <= now + timedelta(minutes=5):
+        return None
+    return stamp.astimezone(timezone.utc).isoformat()
 
 
 @api.get("/categories")
@@ -669,9 +832,12 @@ def library_search(q: str = Query(min_length=2, max_length=120), category_id: st
 
 
 @api.post("/conversations/import")
-async def import_conversation(file: UploadFile = File(...)) -> dict[str, object]:
+async def import_conversation(file: UploadFile = File(...), recorded_at: str | None = Form(None),
+                              notebook_id: str | None = Form(None)) -> dict[str, object]:
+    if notebook_id and not notebooks.exists(notebook_id):
+        raise HTTPException(status_code=404, detail="Notebook not found")
     try:
-        record, duplicate = await import_upload(file)
+        record, duplicate = await import_upload(file, recorded_at=_recorded_at(recorded_at), notebook_id=notebook_id or None)
     except ImportFailure as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     job = storage.get_latest_job_for_conversation(str(record["id"]))
@@ -709,7 +875,9 @@ def discard_recording(recording_id: str) -> dict[str, bool]:
 @api.post("/recordings")
 def start_recording(request: RecordingStart) -> dict[str, object]:
     try:
-        return recording.create_session(request.title, request.media_type)
+        if request.notebook_id and not notebooks.exists(request.notebook_id):
+            raise ValueError("Notebook not found")
+        return recording.create_session(request.title, request.media_type, request.notebook_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except OSError as exc:

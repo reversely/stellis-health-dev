@@ -226,3 +226,25 @@ def delete_expired(*, now: datetime | None = None) -> dict[str, object]:
         except RuntimeError:
             deferred.append(conversation_id)
     return {"deleted": deleted, "deferred": deferred}
+
+
+def erase_all() -> dict[str, int]:
+    """Remove every conversation, capture, and library record on this device for account deletion."""
+    with storage.connect() as conn:
+        for table in ("processing_jobs", "ai_runs", "clean_runs", "enhanced_notes_runs", "recording_ai_runs"):
+            if conn.execute(f"SELECT 1 FROM {table} WHERE state IN ('queued', 'running') LIMIT 1").fetchone():
+                raise RuntimeError("Wait for processing to finish before deleting your account")
+        conn.execute("UPDATE conversations SET trashed_at = ? WHERE trashed_at IS NULL", (_now(),))
+        conversation_ids = [str(row["id"]) for row in conn.execute("SELECT id FROM conversations")]
+        captures = [str(row["id"]) for row in conn.execute("SELECT id FROM recording_sessions WHERE state = 'recording'")]
+    for conversation_id in conversation_ids:
+        delete_permanently(conversation_id)
+    from stellis import recording
+    for recording_id in captures:
+        recording.discard_session(recording_id)
+    with storage.connect() as conn:
+        for table in ("vocabulary", "persons", "notebooks", "category_automation", "categories"):
+            conn.execute(f"DELETE FROM {table}")
+        # Seed the default categories again for the next account.
+        conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")
+    return {"conversations": len(conversation_ids), "recordings": len(captures)}

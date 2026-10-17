@@ -52,6 +52,15 @@ def connect() -> Iterator[sqlite3.Connection]:
     conversation_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)")}
     if "trashed_at" not in conversation_columns:
         conn.execute("ALTER TABLE conversations ADD COLUMN trashed_at TEXT")
+    conn.execute("""CREATE TABLE IF NOT EXISTS notebooks (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE,
+        color TEXT NOT NULL, created_at TEXT NOT NULL
+    )""")
+    if "notebook_id" not in conversation_columns:
+        conn.execute("ALTER TABLE conversations ADD COLUMN notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL")
+    # When the audio was captured; imports without a known capture time fall back to created_at.
+    if "recorded_at" not in conversation_columns:
+        conn.execute("ALTER TABLE conversations ADD COLUMN recorded_at TEXT")
     conn.execute("""CREATE TABLE IF NOT EXISTS categories (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
     )""")
@@ -303,6 +312,8 @@ def connect() -> Iterator[sqlite3.Connection]:
             updated_at TEXT NOT NULL
         )"""
     )
+    if "notebook_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(recording_sessions)")}:
+        conn.execute("ALTER TABLE recording_sessions ADD COLUMN notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL")
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_images (
         id TEXT PRIMARY KEY,
         conversation_id TEXT REFERENCES conversations(id),
@@ -488,8 +499,9 @@ def list_conversations(*, trashed: bool = False) -> list[dict[str, object]]:
     """List local conversations with stable ordering."""
     with connect() as conn:
         rows = conn.execute(
-            "SELECT id, title, duration_ms, created_at, trashed_at FROM conversations "
-            "WHERE (trashed_at IS NOT NULL) = ? ORDER BY created_at DESC", (int(trashed),)
+            "SELECT id, title, duration_ms, created_at, recorded_at, notebook_id, trashed_at FROM conversations "
+            "WHERE (trashed_at IS NOT NULL) = ? ORDER BY COALESCE(recorded_at, created_at) DESC, created_at DESC",
+            (int(trashed),)
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -533,11 +545,12 @@ def add_conversation(record: dict[str, object]) -> None:
         conn.execute(
             """
             INSERT INTO conversations
-                (id, title, source_sha256, audio_filename, audio_media_type, duration_ms, created_at)
+                (id, title, source_sha256, audio_filename, audio_media_type, duration_ms, created_at,
+                 recorded_at, notebook_id)
             VALUES (:id, :title, :source_sha256, :audio_filename,
-                    :audio_media_type, :duration_ms, :created_at)
+                    :audio_media_type, :duration_ms, :created_at, :recorded_at, :notebook_id)
             """,
-            record,
+            {"recorded_at": None, "notebook_id": None} | record,
         )
 
 
