@@ -23,7 +23,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v6"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v7"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 # Whisper writes bracketed sound tags such as "(scissors snipping)" or

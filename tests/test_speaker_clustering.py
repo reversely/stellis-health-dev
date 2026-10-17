@@ -50,6 +50,13 @@ class SpeakerClusteringTest(unittest.TestCase):
         self.assertTrue(segments[25]["speaker_uncertain"])
         self.assertEqual(segments[25]["speaker_match_source"], "nearest_passage")
 
+    def test_a_short_recording_keeps_its_turn_assignment(self) -> None:
+        # A one-minute note with six passages from one voice once came out as five speakers.
+        segments = passages(6)
+        self.assertFalse(speaker_clustering.assign(segments, voices([0] * 6, spread=0.6), np.ones(6, dtype=bool)))
+        self.assertEqual({segment["speaker_cluster_id"] for segment in segments},
+                         {f"speaker-{index + 40}" for index in range(6)})
+
     def test_too_few_embedded_passages_leave_turn_assignment_untouched(self) -> None:
         segments = passages(5)
         valid = np.array([True, True, False, False, False])
