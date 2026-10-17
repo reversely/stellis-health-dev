@@ -112,7 +112,7 @@ header {
 .header-note, p, .conversation-row small, .player-heading, .segment-time,
 .turn-heading span, .seek-controls span, .highlight-controls span,
 .vocabulary-card summary span, .ai-privacy { color: var(--muted); }
-#theme-toggle, #logout-button {
+#logout-button {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--raised);
@@ -123,7 +123,28 @@ header {
   font-weight: 650;
   white-space: nowrap;
 }
-#theme-toggle:hover, #logout-button:hover { border-color: var(--accent); }
+#logout-button:hover { border-color: var(--accent); }
+/* Icon-only theme switch on the bare header: the sun shows in dark mode, the moon in light mode. */
+#theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition-property: color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+#theme-toggle svg { width: 22px; height: 22px; }
+#theme-toggle .icon-moon, html[data-theme='light'] #theme-toggle .icon-sun { display: none; }
+html[data-theme='light'] #theme-toggle .icon-moon { display: block; }
+#theme-toggle:active { scale: .96; }
+@media (hover: hover) and (pointer: fine) { #theme-toggle:hover { color: var(--ink); } }
 h1, .transcript-heading h2, .ai-heading h2 {
   color: var(--ink);
   font-family: Piazzolla, Georgia, serif;
@@ -220,15 +241,32 @@ main { max-width: 1100px; }
 .notes-choice { display: flex; gap: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
 .notes-choice button { padding: 9px 1px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
 .notes-choice button[aria-selected='true'] { border-color: var(--accent-strong); color: var(--ink); font-weight: 700; }
-.enhanced-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.enhanced-heading > div { display: flex; gap: 8px; }
+.enhanced-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.enhanced-heading h2 { margin: 0; }
+.enhanced-heading > div { display: flex; align-items: center; gap: 8px; }
+#enhanced-status { flex: 1 1 220px; margin: 0; }
 .enhanced-heading select { max-width: 190px; }
 .enhanced-heading button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; cursor: pointer; }
 .enhanced-heading button svg { display: block; width: 18px; height: 18px; }
-.enhanced-status-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.enhanced-status-line button { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; background: var(--raised); color: var(--ink); font: inherit; cursor: pointer; }
-.enhanced-status-line button:hover { border-color: var(--accent); }
-.enhanced-status-line button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Inverted: the fill takes the text colour and the glyph takes the card colour, in both themes. */
+.enhanced-heading #refresh-enhanced {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: var(--ink);
+  color: var(--surface);
+  transition-property: background-color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+.enhanced-heading #refresh-enhanced svg { width: 22px; height: 22px; }
+.enhanced-heading #refresh-enhanced:active { scale: .96; }
+@media (hover: hover) and (pointer: fine) {
+  .enhanced-heading #refresh-enhanced:hover { background: color-mix(in oklch, var(--ink) 84%, var(--surface)); }
+}
 .enhanced-sources { margin-top: 16px; }
 .enhanced-sources summary { cursor: pointer; font-weight: 650; }
 .recording-preview { display: grid; gap: 14px; }
@@ -245,6 +283,18 @@ main { max-width: 1100px; }
 #recording-chat-form { display: grid; gap: 7px; margin-top: 18px; }
 #recording-chat-form > div { display: flex; gap: 8px; }
 #recording-chat-form input { min-width: 0; flex: 1; }
+#recording-chat-form button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) { #recording-chat-form button:hover { background: var(--accent-strong); border-color: var(--accent-strong); } }
 #recording-chat-status { font-size: 13px; }
 #recording-waveform { display: block; width: min(320px, 30vw); height: 42px; flex: 0 1 320px; }
 .recording-bar { position: fixed; z-index: 30; inset: auto 0 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 88px; padding: 14px max(32px, calc((100vw - 1440px)/2)); border-top: 1px solid var(--line); background: var(--surface); box-shadow: 0 -8px 26px #00000018; }
@@ -674,7 +724,7 @@ body:has(#list-view:not([hidden])) #vocabulary-panel[open] summary { margin: 0; 
   .capture-header-controls { gap: 4px; margin-right: 6px; }
   .capture-header-controls button { width: 36px; height: 36px; }
   #capture-header-timer { min-width: 37px; font-size: 12px; }
-  #theme-toggle, #logout-button { padding: 7px 10px; }
+  #logout-button { padding: 7px 10px; }
   #logout-button { margin-right: 6px; }
   h1 { font-size: clamp(35px, 9vw, 44px); }
   .transcript-heading h2, .ai-heading h2 { font-size: 25px; }
@@ -844,12 +894,12 @@ html[data-theme='dark'] body::before { display: none; }
   body:has(#list-view:not([hidden])) header { backdrop-filter: none; }
   body.recording-page header { background: #27222B; backdrop-filter: none; }
   body:has(#list-view:not([hidden])) header .brand, body.recording-page header .brand { color: #F7F5F6; }
-  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle,
   body:has(#list-view:not([hidden])) header #logout-button, body.recording-page header #logout-button {
     border-color: #605465;
     background: #37303D;
     color: #F7F5F6;
   }
+  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle { color: #F7F5F6; }
   body:has(#list-view:not([hidden])) main, body.recording-page main {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -1037,8 +1087,8 @@ html[data-theme='dark'] body::before { display: none; }
     border: 0;
   }
   body:has(#list-view:not([hidden])) header .brand, body.recording-page header .brand { color: #F7F5F6; }
-  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle,
   body:has(#list-view:not([hidden])) header #logout-button, body.recording-page header #logout-button { background: #37303D; color: #F7F5F6; border-color: #605465; }
+  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle { color: #F7F5F6; }
   body:has(#list-view:not([hidden])) main, body.recording-page main { max-width: none; padding: 0; }
   body:has(#list-view:not([hidden])) .heading {
     display: grid;
