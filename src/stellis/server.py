@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from importlib.metadata import version
 from pathlib import Path
+import asyncio
 import json
 import logging
 import os
@@ -18,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, categorization, clean, enhanced_notes, generation_review, images, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, calendar, categorization, clean, enhanced_notes, generation_review, images, library, notes, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -37,7 +38,10 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
-    if path.startswith("/static/") or path in {"/auth", "/api/health", "/api/v1/health"} or path.startswith("/api/v1/auth/"):
+    if (path.startswith("/static/") or path in {"/auth", "/api/health", "/api/v1/health"}
+            or path.startswith("/api/v1/auth/")
+            or (request.method == "GET" and path in {
+                "/api/v1/calendar/google/callback", "/api/v1/calendar/microsoft/callback"})):
         return await call_next(request)
     if auth.current_account(request.cookies.get(auth.COOKIE_NAME)) is None:
         if path.startswith("/api/"):
@@ -53,6 +57,8 @@ async def development_cache_policy(request: Request, call_next):
     path = request.url.path
     if path.startswith(("/static/", "/shared/")):
         response.headers["Cache-Control"] = "private, no-cache"
+    elif path.startswith(("/api/v1/calendar/", "/api/calendar/")):
+        response.headers["Cache-Control"] = "no-store"
     elif (path in {"/", "/auth", "/recording", "/vocabulary"} or
           path.startswith(("/conversation/", "/person/", "/vocabulary/"))):
         response.headers["Cache-Control"] = "no-store"
@@ -347,6 +353,62 @@ def sync_config() -> dict[str, str | None]:
             or parsed.username is not None or parsed.password is not None):
         raise HTTPException(status_code=500, detail="Invalid sync origin configuration")
     return {"origin": value}
+
+
+@api.get("/calendar/connections")
+def calendar_connections() -> list[dict[str, object]]:
+    return calendar.connections()
+
+
+@api.get("/calendar/{provider}/authorize")
+def calendar_authorize(provider: str, request: Request) -> dict[str, str]:
+    if request.url.hostname not in {"127.0.0.1", "localhost"} or request.url.port is None:
+        raise HTTPException(status_code=400, detail="Open Stellis on its local address to connect a calendar")
+    try:
+        return {"url": calendar.authorize(provider, request.url.port, str(request.base_url).rstrip("/"))}
+    except calendar.CalendarError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.get("/calendar/{provider}/callback", include_in_schema=False)
+async def calendar_callback(provider: str, state: str = "", code: str = "", error: str = "") -> RedirectResponse:
+    return_origin = ""
+    try:
+        verifier, uri, return_origin = calendar.consume_state(provider, state)
+        if error or not code:
+            raise calendar.CalendarError("Calendar connection was cancelled")
+        await calendar.exchange(provider, code, verifier, uri)
+        result = "connected"
+    except calendar.CalendarError:
+        result = "failed"
+    response = RedirectResponse(f"{return_origin}/?calendar={result}", status_code=303)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@api.post("/calendar/{provider}/disconnect")
+def calendar_disconnect(provider: str) -> dict[str, bool]:
+    try:
+        calendar.disconnect(provider)
+    except calendar.CalendarError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"disconnected": True}
+
+
+@api.get("/calendar/meetings")
+async def calendar_meetings() -> dict[str, object]:
+    connected = [row["provider"] for row in calendar.connections() if row["connected"]]
+    results = await asyncio.gather(*(calendar.events(provider) for provider in connected), return_exceptions=True)
+    meetings: list[dict] = []
+    errors: list[dict] = []
+    for provider, result in zip(connected, results):
+        if isinstance(result, Exception):
+            errors.append({"provider": provider, "message": str(result) if isinstance(result, calendar.CalendarError)
+                           else "Could not load meetings. Try Refresh."})
+        else:
+            meetings.extend(result)
+    meetings.sort(key=lambda event: event["start"])
+    return {"meetings": meetings[:100], "errors": errors}
 
 
 @app.get("/", include_in_schema=False)

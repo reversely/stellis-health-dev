@@ -52,6 +52,16 @@ Choose **Import recording** for an MP3 or **Record** for microphone capture. A c
 
 Open a conversation to play or scrub its audio. **Notes** contains My Notes and the generated Summary. **Transcript** contains the source wording; **Edited Transcript** appears as a third tab after cleanup. Use the transcript's selection controls for highlights, comments, and sharing, or **Edit transcript** to save wording changes together. Use **More options** for rematching, reprocessing, summary regeneration, and deletion. Open **Vocabulary** from the library to manage speech hints for future processing.
 
+## Optional calendars
+
+The home page can show the next 14 days from a connected Google or Outlook primary/default calendar and start a local recording titled from an event. It does not write events, record automatically, send reminders, or send calendar details to Nebius or the encrypted account service. Provider tokens are stored in `calendar_tokens.sqlite3` under the private local data directory with file mode `0600`; they are not encrypted at rest. **Disconnect** deletes local tokens but does not revoke the provider grant.
+
+For Google, enable the Calendar API in the project that owns your OAuth client. Stellis reads the existing `GOOGLE_OAUTH_CLIENT_ID` and optional `GOOGLE_OAUTH_CLIENT_SECRET` from the ignored `.env` file or process environment. A dedicated `STELLIS_GOOGLE_CALENDAR_CLIENT_ID` can override it. The local callback is `http://127.0.0.1:<port>/api/v1/calendar/google/callback`; an existing Web client must allow that exact redirect, while a [Desktop client](https://developers.google.com/identity/protocols/oauth2/native-app) supports the loopback flow. No Calendar-specific client is required.
+
+For Outlook, register a [Microsoft desktop public client](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration) for the intended account types. Add the mobile/desktop redirect `http://localhost/api/v1/calendar/microsoft/callback`, enable public client flows, and set `STELLIS_MICROSOFT_CALENDAR_CLIENT_ID` to its application ID. Microsoft ignores the port when matching a localhost redirect but matches the path. A work or school tenant may require administrator consent. The connection requests `Calendars.ReadBasic` and `offline_access`.
+
+Both connections use authorization code with PKCE. The callback returns to the browser address where the connection began. A device must be running to refresh meetings. Revoke access in the Google or Microsoft account settings if you also want the provider grant removed.
+
 ## Optional encrypted account prototype
 
 Start the separate service with `uv run --locked stellis sync-serve --port 8769` and open <http://127.0.0.1:8769/>. It has independent development accounts and a vault passphrase that the service cannot recover. Browser Web Crypto encrypts note entries before upload and queues them in IndexedDB while offline.

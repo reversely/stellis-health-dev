@@ -1,6 +1,6 @@
 # Current architecture (development)
 
-Last updated: 2026-10-16, through the dedicated vocabulary workspace in #177 the README audit in #187, and the provisional speaker fallback in #180. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
+Last updated: 2026-10-17, through tickets #183 and #184, the dedicated vocabulary workspace in #177, the README audit in #187, and the provisional speaker fallback in #180. This page describes the development code and verified isolated browser runs. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.
 
@@ -19,6 +19,11 @@ flowchart LR
   F -->|revalidated mutable JS/CSS, local Inter/Piazzolla WOFF2, OFL notices| C
   C -->|light preference only| L[(Browser localStorage)]
   C -->|/api/v1 JSON + multipart; English-only import| A[FastAPI device API]
+  C -->|Connect, Refresh, Disconnect, Record from event| CA[Local calendar adapter]
+  CA -->|OAuth code + PKCE, read-only event requests| GC[Google Calendar]
+  CA -->|OAuth code + PKCE, read-only calendarView| MS[Microsoft Graph]
+  CA -->|access and refresh tokens only| CT[(Private local calendar token SQLite)]
+  CA -->|normalized upcoming titles and times| C
   C -->|separate loopback origin: account and devices| SI[FastAPI sync identity dev]
   C -->|optional exact-origin credentialed CORS bridge| SI
   C -->|Web Crypto AES-GCM ciphertext envelopes| SI
@@ -145,6 +150,7 @@ flowchart LR
 | Sync identity dev | `src/stellis/sync_server.py`, `src/stellis/sync_identity.py`, `src/stellis/sync_static/`, and shared browser modules in `src/stellis/shared/`, started by `uv run stellis sync-serve` | Separate loopback origin (`127.0.0.1:8769` by default), account shell with read-only decrypted text snapshots, independent multi-user credentials and seven-day sessions, account-owned device metadata, public vault salt/check ciphertext, bounded opaque text journal, optional exact-loopback-origin credentialed CORS, own private SQLite directory. No conversation, media, or plaintext-content routes. |
 | Device service | FastAPI in `src/stellis/server.py`, started by `uv run stellis serve` | Loopback HTTP (`127.0.0.1:8765`), API routes, static UI, development cache policy (`no-store` HTML and revalidated mutable static/shared assets; [ADR 0036](decisions/0036-development-asset-cache.md)), audio range responses, optional single-account session middleware, worker startup, startup and hourly Recently Deleted retention sweep. |
 | Local auth | `src/stellis/auth.py` | Default-on one-account verifier and seven-day hashed-token sessions in a separate private SQLite file; protected browser and API routes, with public health/login/static resources. Explicit dev credentials can sign in without normal signup and share the local workspace. Explicit open mode remains for loopback development. |
+| Local calendars | `src/stellis/calendar.py`, `/api/v1/calendar/*`, and `src/stellis/static/calendar.js`; [ADR 0050](decisions/0050-local-read-only-calendars.md) | Optional Google and Microsoft desktop OAuth code/PKCE connections, primary/default calendar reads for the next 14 days, bounded pagination, token renewal, local disconnect, and a meeting Record action. Tokens remain in private mode-`0600` local SQLite; event bodies, attendees, locations, and links are not kept. No calendar data enters encrypted sync or Nebius. |
 | Importer | `src/stellis/importer.py` | Bounded MP3 public import and browser recording handoff, SHA-256 deduplication, `ffprobe` duration/stream validation. |
 | Recorder | `src/stellis/recording.py` | Private bounded chunk files with fsync/digest, interrupted-session listing and title updates, pause/device events, verified join, ffmpeg stream-copy remux, import handoff, explicit discard. |
 | Notes | `src/stellis/notes.py`, `meeting_notes` in device SQLite, and the committed Lexical bundle in `src/stellis/static/` with MIT `@lexical/table` and `@lexical/utils` | Revisioned local Markdown owned by an active recording or saved conversation; expected-revision writes, capture-to-conversation transfer, append on deduplicated media, autosave and browser draft recovery, toolbar formatting, editable pipe tables, opaque inline image references, and discard/permanent-delete cleanup. The local login gate applies to both note API scopes. |

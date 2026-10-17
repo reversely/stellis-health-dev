@@ -12,6 +12,7 @@
     <script src="/shared/sync-crypto.js" defer></script>
     <script src="/shared/snapshot-format.js" defer></script>
     <script src="/static/app.js" defer></script>
+    <script src="/static/calendar.js" defer></script>
     <script src="/static/conversation-sync.js" defer></script>
     <script src="/static/rail-shader.js" defer></script>
   </head>
@@ -30,6 +31,13 @@
         <div class="recording-bar"><div class="recording-source"><strong id="recording-state">Ready to record</strong><span id="recording-source-label">Microphone (English)</span><p id="recording-detail" role="status" aria-live="polite"></p></div><canvas id="recording-waveform" width="320" height="42" aria-label="Live soundwave"></canvas><div class="recording-actions"><button id="start-recording" class="button-with-icon" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg><span>Start recording</span></button><button id="pause-recording" type="button" hidden>Pause</button><span id="recording-timer">0:00</span><button id="stop-recording" class="button-with-icon" type="button" hidden><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span>Stop</span></button></div></div>
       </section>
       <section id="list-view">
+        <section id="calendar-card" class="calendar-card" aria-label="Upcoming meetings">
+          <div class="calendar-heading"><h2>Upcoming meetings</h2><button id="calendar-refresh" type="button">Refresh</button></div>
+          <p class="calendar-privacy">Stellis reads events on this device. Calendar details are not synced.</p>
+          <div id="calendar-connections" class="calendar-connections"></div>
+          <p id="calendar-status" role="status" aria-live="polite"></p>
+          <div id="calendar-meetings" class="calendar-meetings"></div>
+        </section>
         <section class="search-card" aria-label="Search conversations">
           <form id="library-search-form"><label for="library-search-input">Search conversations</label><div class="search-row"><input id="library-search-input" type="search" minlength="2" maxlength="120" autocomplete="off" /><button type="submit">Search</button></div></form>
           <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option><option value="person">People</option></select></div>
