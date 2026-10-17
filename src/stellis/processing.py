@@ -24,7 +24,7 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v7"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v8"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
 # Whisper writes bracketed sound tags such as "(scissors snipping)" or
@@ -387,10 +387,19 @@ def _command(command: list[str], timeout: int) -> None:
 
 def _transcribe(audio_path: Path, model: Path, output_base: Path,
                 vocabulary: list[str]) -> list[dict[str, object]]:
+    segments = _decode(audio_path, model, output_base, vocabulary)
+    if not segments:
+        raise RuntimeError("The on-device model returned no speech segments")
+    segments = _repair_loops(audio_path, model, output_base, vocabulary, segments)
+    return [segment for segment in segments if not is_non_speech(str(segment["text"]))]
+
+
+def _decode(audio_path: Path, model: Path, output_base: Path, vocabulary: list[str],
+            extra: list[str] | None = None, offset_ms: int = 0) -> list[dict[str, object]]:
     audio_info = sf.info(audio_path)
     duration_ms = round(audio_info.frames / audio_info.samplerate * 1000)
     command = ["whisper-cli", "-m", str(model), "-f", str(audio_path), "-l", "en",
-               "-t", "4", "-ojf", "-of", str(output_base), "-np"]
+               "-t", "4", "-ojf", "-of", str(output_base), "-np", *(extra or [])]
     if vocabulary:
         command.extend(["--prompt", "Vocabulary: " + ", ".join(vocabulary)])
     _command(command, timeout=7200)
@@ -405,12 +414,77 @@ def _transcribe(audio_path: Path, model: Path, output_base: Path,
                 word_start = max(start, int(word["start_ms"]))
                 word_end = min(end, int(word["end_ms"]))
                 if word_end > word_start:
-                    words.append({**word, "start_ms": word_start, "end_ms": word_end})
-            segments.append({"start_ms": start, "end_ms": end, "text": str(item["text"]).strip(),
-                             "words": words})
-    if not segments:
-        raise RuntimeError("The on-device model returned no speech segments")
-    return [segment for segment in segments if not is_non_speech(str(segment["text"]))]
+                    words.append({**word, "start_ms": word_start + offset_ms, "end_ms": word_end + offset_ms})
+            segments.append({"start_ms": start + offset_ms, "end_ms": end + offset_ms,
+                             "text": str(item["text"]).strip(), "words": words})
+    return segments
+
+
+def is_looping(text: str) -> bool:
+    """True when most of a passage is one short phrase repeated, a Whisper decoding loop."""
+    words = re.findall(r"[a-z0-9']+", text.casefold())
+    for size in (2, 3, 4, 5, 6):
+        grams = [" ".join(words[index:index + size]) for index in range(0, len(words) - size + 1)]
+        if len(grams) < 8:
+            continue
+        top = max(set(grams), key=grams.count)
+        if grams.count(top) >= 4 and grams.count(top) * size >= 0.6 * len(words):
+            return True
+    return False
+
+
+def _repair_loops(audio_path: Path, model: Path, output_base: Path, vocabulary: list[str],
+                  segments: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Re-decode each stretch where Whisper looped on its own context.
+
+    A loop builds up from text carried across a long file; the same audio decoded on
+    its own transcribes normally. Try the vocabulary prompt first, then no carried
+    context; if both still loop, keep only the passage's first copy of the phrase."""
+    spans: list[list[int]] = []
+    for index, segment in enumerate(segments):
+        if is_looping(str(segment["text"])):
+            if spans and spans[-1][1] == index - 1:
+                spans[-1][1] = index
+            else:
+                spans.append([index, index])
+    if not spans:
+        return segments
+    audio, rate = sf.read(audio_path, dtype="float32")
+    repaired: dict[int, list[dict[str, object]]] = {}
+    for number, (first, last) in enumerate(spans):
+        start = max(0, int(segments[first]["start_ms"]) - 1000)
+        end = int(segments[last]["end_ms"]) + 1000
+        window = output_base.with_name(f"{output_base.name}-loop-{number}")
+        clip = window.with_suffix(".wav")
+        sf.write(clip, audio[start * rate // 1000:end * rate // 1000], rate)
+        replacement = None
+        for terms, extra in ((vocabulary, []), ([], ["--max-context", "0"])):
+            try:
+                attempt = _decode(clip, model, window, terms, extra, offset_ms=start)
+            except RuntimeError:
+                continue
+            if attempt and not any(is_looping(str(item["text"])) for item in attempt):
+                replacement = attempt
+                break
+        clip.unlink(missing_ok=True)
+        if replacement is None:
+            replacement = [_first_copy(segments[index]) for index in range(first, last + 1)]
+        # Keep neighbouring passages intact: only text inside the looping stretch is replaced.
+        low, high = int(segments[first]["start_ms"]), int(segments[last]["end_ms"])
+        repaired[first] = [item for item in replacement
+                           if low <= (int(item["start_ms"]) + int(item["end_ms"])) / 2 <= high]
+        for index in range(first + 1, last + 1):
+            repaired[index] = []
+    result: list[dict[str, object]] = []
+    for index, segment in enumerate(segments):
+        result.extend(repaired.get(index, [segment]))
+    return result
+
+
+def _first_copy(segment: dict[str, object]) -> dict[str, object]:
+    sentences = re.split(r"(?<=[,.!?])\s+", str(segment["text"]))
+    kept = [sentence for position, sentence in enumerate(sentences) if sentence not in sentences[:position]]
+    return {**segment, "text": " ".join(kept).strip(), "words": []}
 
 
 def is_non_speech(text: str) -> bool:
