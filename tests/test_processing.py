@@ -73,7 +73,7 @@ class ProcessingWorkflowTest(unittest.TestCase):
              patch.object(processing, "_command"), \
              patch.object(processing, "_transcribe", return_value=segments), \
              patch.object(processing, "_diarize", return_value=turns), \
-             patch.object(processing, "_group_speakers", return_value=False):
+             patch.object(processing, "_group_speakers", return_value=(False, None, None)):
             processing.run_job(str(job["id"]))
         result = self.client.get(f"/api/v1/jobs/{job['id']}").json()
         self.assertEqual(result["state"], "succeeded")
@@ -165,7 +165,7 @@ class ProcessingWorkflowTest(unittest.TestCase):
              patch.object(processing, "_command", side_effect=decode), \
              patch.object(processing, "_transcribe", side_effect=transcribe), \
              patch.object(processing, "_diarize", return_value=turns), \
-             patch.object(processing, "_group_speakers", return_value=False):
+             patch.object(processing, "_group_speakers", return_value=(False, None, None)):
             processing.run_job(str(job["id"]))
         saved = self.client.get(f"/api/v1/conversations/{self.conversation_id}/transcript").json()
         status = self.client.get(f"/api/v1/jobs/{job['id']}").json()

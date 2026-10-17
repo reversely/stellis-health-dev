@@ -221,6 +221,85 @@ def request_silence_scan(conversation_id: str) -> dict[str, object]:
         return record
 
 
+VOICE_INDEX_VERSION = "titanet-small-voices-v1"
+
+
+def request_voice_index(conversation_id: str) -> dict[str, object]:
+    """Queue fingerprinting of a transcript's passages for speaker suggestions."""
+    if storage.get_transcript(conversation_id) is None:
+        raise LookupError("Transcript is not ready")
+    with _REQUEST_LOCK:
+        existing = storage.get_job_for_conversation(conversation_id, VOICE_INDEX_VERSION)
+        if existing and existing["state"] in ("queued", "running"):
+            return existing
+        stamp = now()
+        if existing:
+            storage.update_job(str(existing["id"]), state="queued", stage="queued", progress=0,
+                               error=None, updated_at=stamp)
+            _QUEUE.put(str(existing["id"]))
+            return storage.get_job(str(existing["id"])) or existing
+        record: dict[str, object] = {
+            "id": str(uuid.uuid4()), "conversation_id": conversation_id,
+            "pipeline_version": VOICE_INDEX_VERSION, "kind": "voice_index",
+            "state": "queued", "stage": "queued", "progress": 0, "error": None,
+            "metrics_json": None, "vocabulary_json": "[]", "created_at": stamp, "updated_at": stamp,
+        }
+        storage.add_job(record)
+        _QUEUE.put(str(record["id"]))
+        return record
+
+
+def index_missing_voices() -> int:
+    """Fingerprint every saved transcript that has no stored voices yet."""
+    from stellis import voices
+    queued = 0
+    for item in storage.list_conversations():
+        conversation_id = str(item["id"])
+        latest = storage.get_latest_job_for_conversation(conversation_id)
+        if latest and latest["kind"] == "speech" and latest["state"] in ("queued", "running"):
+            continue  # The speech job stores fingerprints of its own new passages.
+        if storage.get_transcript(conversation_id) is not None and not voices.has_index(conversation_id):
+            try:
+                request_voice_index(conversation_id)
+                queued += 1
+            except LookupError:
+                continue
+    return queued
+
+
+def run_voice_index_job(job_id: str) -> None:
+    from stellis import rematch, voices
+
+    job = storage.get_job(job_id)
+    if not job or job["state"] == "succeeded":
+        return
+    conversation_id = str(job["conversation_id"])
+    try:
+        conversation = storage.get_conversation(conversation_id)
+        transcript = storage.get_transcript(conversation_id)
+        if conversation is None or transcript is None:
+            raise RuntimeError("Transcript is not ready")
+        embedding_model = model_paths()[2]
+        if not embedding_model.is_file():
+            raise RuntimeError("Speaker embedding model is unavailable")
+        media = storage.data_dir() / "media" / str(conversation["audio_filename"])
+        if not media.is_file():
+            raise RuntimeError("Source audio is missing")
+        segments = json.loads(str(transcript["segments_json"]))
+        with tempfile.TemporaryDirectory(prefix="stellis-voices-", dir=storage.data_dir()) as temporary:
+            wav = Path(temporary) / "audio.wav"
+            _stage(job_id, "decoding for voice matching", 0.1)
+            _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(media),
+                      "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
+            _stage(job_id, "indexing voices", 0.4)
+            vectors, valid = rematch.extract_embeddings(wav, embedding_model, segments)
+        count = voices.save(conversation_id, segments, vectors, valid)
+        storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
+                           metrics_json=json.dumps({"indexed_passages": count}), error=None, updated_at=now())
+    except Exception as exc:
+        storage.update_job(job_id, state="failed", stage="failed", error=str(exc), updated_at=now())
+
+
 def _worker_loop() -> None:
     while True:
         job_id = _QUEUE.get()
@@ -557,14 +636,16 @@ def align_segments(conversation_id: str, segments: list[dict[str, object]],
     return aligned, confident / len(aligned) if aligned else 0
 
 
-def _group_speakers(wav: Path, embedding_model: Path, segments: list[dict[str, object]]) -> bool:
-    """Replace turn-overlap clusters with groups of per-passage voice embeddings."""
+def _group_speakers(wav: Path, embedding_model: Path, segments: list[dict[str, object]]):
+    """Replace turn-overlap clusters with groups of per-passage voice embeddings.
+
+    Returns whether grouping applied, plus the passage vectors for the voice index."""
     from stellis import rematch, speaker_clustering
 
     if not segments:
-        return False
+        return False, None, None
     vectors, valid = rematch.extract_embeddings(wav, embedding_model, segments)
-    return speaker_clustering.assign(segments, vectors, valid)
+    return speaker_clustering.assign(segments, vectors, valid), vectors, valid
 
 
 def _fill_unassigned_speakers(wav: Path, embedding_model: Path, segments: list[dict[str, object]],
@@ -718,6 +799,9 @@ def run_job(job_id: str) -> None:
     if job["kind"] == "word_alignment":
         run_word_alignment_job(job_id)
         return
+    if job["kind"] == "voice_index":
+        run_voice_index_job(job_id)
+        return
     if job["kind"] == "silence":
         run_silence_job(job_id)
         return
@@ -766,7 +850,7 @@ def run_job(job_id: str) -> None:
             _stage(job_id, "aligning", 0.96)
             aligned, coverage = align_segments(str(conversation["id"]), segments, turns)
             _stage(job_id, "grouping speakers", 0.97)
-            grouped = _group_speakers(wav, embedding, aligned)
+            grouped, voice_vectors, voice_valid = _group_speakers(wav, embedding, aligned)
             fallback_count = 0 if grouped else _fill_unassigned_speakers(wav, embedding, aligned, turns)
             metrics = {
                 "processing_seconds": round(time.monotonic() - started, 2),
@@ -788,6 +872,9 @@ def run_job(job_id: str) -> None:
             from stellis import generation_review
             if generation_review.stage(record) is None:
                 storage.save_transcript(record)
+            if voice_vectors is not None:
+                from stellis import voices
+                voices.save(str(conversation["id"]), aligned, voice_vectors, voice_valid)
             storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
                                metrics_json=json.dumps(metrics), error=None, updated_at=now())
     except Exception as exc:

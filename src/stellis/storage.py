@@ -127,6 +127,26 @@ def connect() -> Iterator[sqlite3.Connection]:
             else:
                 keeper_by_key[key] = str(row["id"])
                 conn.execute("UPDATE persons SET name_key = ? WHERE id = ?", (key, row["id"]))
+    link_columns = {row["name"] for row in conn.execute("PRAGMA table_info(person_links)")}
+    if "origin" not in link_columns:
+        try:
+            conn.execute("ALTER TABLE person_links ADD COLUMN origin TEXT")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column" not in str(exc):
+                raise
+    if conn.execute("SELECT 1 FROM person_links WHERE origin IS NULL LIMIT 1").fetchone():
+        # Older links did not record where they came from. A link confirmed alone was
+        # made on that passage; links written together came from a speaker-wide choice.
+        conn.execute("""UPDATE person_links SET origin = CASE WHEN (SELECT COUNT(*) FROM person_links other
+            WHERE other.conversation_id = person_links.conversation_id
+              AND other.confirmed_at = person_links.confirmed_at) > 1 THEN 'propagated' ELSE 'manual' END
+            WHERE origin IS NULL""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS passage_voices (
+        conversation_id TEXT NOT NULL REFERENCES conversations(id),
+        segment_id TEXT NOT NULL,
+        vector BLOB NOT NULL,
+        PRIMARY KEY(conversation_id, segment_id)
+    )""")
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS persons_name_key_unique ON persons(name_key)")
     conn.execute("""CREATE TRIGGER IF NOT EXISTS persons_name_key_required_insert
         BEFORE INSERT ON persons WHEN NEW.name_key IS NULL OR NEW.name_key = ''
@@ -1283,8 +1303,9 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
     edits = get_transcript_edits(conversation_id)
     labels = get_speaker_labels(conversation_id)
     with connect() as conn:
-        person_links = {str(row["segment_id"]): {"id": str(row["person_id"]), "name": str(row["name"])}
-                        for row in conn.execute("""SELECT pl.segment_id, p.id AS person_id, p.name
+        person_links = {str(row["segment_id"]): {"id": str(row["person_id"]), "name": str(row["name"]),
+                                                  "origin": str(row["origin"] or "manual")}
+                        for row in conn.execute("""SELECT pl.segment_id, pl.origin, p.id AS person_id, p.name
                             FROM person_links pl JOIN persons p ON p.id = pl.person_id
                             WHERE pl.conversation_id = ?""", (conversation_id,))}
     cluster_labels = {str(item["target_id"]): str(item["name"]) for item in labels if item["scope"] == "cluster"}
@@ -1310,15 +1331,24 @@ def get_display_transcript(conversation_id: str) -> dict[str, object] | None:
             segment["speaker_label_source"] = "confirmed_person"
             segment["person_id"] = person_links[segment["id"]]["id"]
             segment["speaker_uncertain"] = False
+            segment["speaker_label_origin"] = person_links[segment["id"]]["origin"]
         elif segment["id"] in segment_labels:
             segment["speaker_display_name"] = segment_labels[segment["id"]]
             segment["speaker_label_source"] = "manual_segment"
+            segment["speaker_label_origin"] = "manual"
         elif cluster in cluster_labels:
             segment["speaker_display_name"] = cluster_labels[cluster]
             segment["speaker_label_source"] = "manual_cluster"
+            segment["speaker_label_origin"] = "propagated"
         else:
             segment["speaker_display_name"] = display_names[cluster]
             segment["speaker_label_source"] = "automatic"
+            segment["speaker_label_origin"] = "automatic"
+    from stellis import voices
+    suggested = voices.suggestions(conversation_id, segments)
+    for segment in segments:
+        if segment["speaker_label_source"] == "automatic" and segment["speaker_cluster_id"] in suggested:
+            segment["speaker_suggestion"] = suggested[segment["speaker_cluster_id"]]
     return {
         "conversation_id": conversation_id, "revision": record["revision"],
         "generation_version": record["generation_version"], "language": record["language"],
