@@ -846,6 +846,13 @@ function renderConversationList() {
       line.append(' ', state);
     } else if (item.topic_line) line.append(` ${item.topic_line}`);
     row.append(dot, title, line);
+    row.draggable = true;
+    row.addEventListener('dragstart', event => {
+      event.dataTransfer.setData(CONVERSATION_DRAG, item.id);
+      event.dataTransfer.effectAllowed = 'copyMove';
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => row.classList.remove('dragging'));
     list.append(row);
   }
   clearTimeout(libraryJobTimer);
@@ -3433,6 +3440,41 @@ function renderRailFilter() {
   });
   document.querySelector('#rail-filter-pills').replaceChildren(...pills);
 }
+// Rail rows drag onto Home cards; More options keeps the keyboard and touch route.
+const CONVERSATION_DRAG = 'application/x-stellis-conversation';
+function acceptConversationDrop(card, place) {
+  const carries = event => event.dataTransfer.types.includes(CONVERSATION_DRAG);
+  // Chromium sends dragleave with no relatedTarget when crossing child elements, so count enters and leaves.
+  let depth = 0;
+  card.addEventListener('dragenter', event => {
+    if (!carries(event)) return;
+    depth += 1; card.classList.add('drop-target');
+  });
+  card.addEventListener('dragover', event => { if (carries(event)) event.preventDefault(); });
+  card.addEventListener('dragleave', event => {
+    if (carries(event) && --depth <= 0) { depth = 0; card.classList.remove('drop-target'); }
+  });
+  card.addEventListener('drop', async event => {
+    if (!carries(event)) return;
+    event.preventDefault(); depth = 0; card.classList.remove('drop-target');
+    const item = libraryConversations.find(entry => entry.id === event.dataTransfer.getData(CONVERSATION_DRAG));
+    if (!item) return;
+    try { setStatus(await place(item), true); await showList(); }
+    catch (error) { setStatus(error.message); }
+  });
+}
+async function dropOnCategory(item, group) {
+  if (item.category_ids.includes(group.id)) return `${item.title} is already in ${group.name}`;
+  await json(await fetch(`${API}/conversations/${encodeURIComponent(item.id)}/categories/${encodeURIComponent(group.id)}`, {method:'PUT'}));
+  return `Added ${item.title} to ${group.name}`;
+}
+async function dropOnNotebook(item, notebook) {
+  // A conversation sits in one notebook, so a drop moves it.
+  if (item.notebook_id === notebook.id) return `${item.title} is already in ${notebook.name}`;
+  await json(await fetch(`${API}/conversations/${encodeURIComponent(item.id)}/notebook`,
+    {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notebook_id:notebook.id})}));
+  return `Moved ${item.title} to ${notebook.name}`;
+}
 function categoryCard(group) {
   // Same card as a notebook: the group's latest conversation, its takeaways, then older ones.
   const card = notebookCard({...group, id: group.id});
@@ -3445,6 +3487,7 @@ function categoryCard(group) {
     picker.value = group.id; picker.dispatchEvent(new Event('change')); renderRailFilter();
   });
   head.replaceChildren(icon('tag'), filter);
+  acceptConversationDrop(card, item => dropOnCategory(item, group));
   return card;
 }
 document.addEventListener('click', event => {
@@ -3462,7 +3505,11 @@ function renderCategoryGroups() {
 }
 function renderNotebooks() {
   const grid = document.querySelector('#notebook-grid');
-  grid.replaceChildren(...libraryNotebooks.map(notebookCard));
+  grid.replaceChildren(...libraryNotebooks.map(notebook => {
+    const card = notebookCard(notebook);
+    acceptConversationDrop(card, item => dropOnNotebook(item, notebook));
+    return card;
+  }));
   const create = document.createElement('button'); create.type = 'button'; create.className = 'notebook-new';
   const label = document.createElement('span');
   label.textContent = libraryNotebooks.length ? 'New notebook' : 'Start a notebook for each project';
