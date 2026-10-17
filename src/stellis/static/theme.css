@@ -1712,3 +1712,12 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 .setup-card h2 { margin: 0; font: 600 17px/1.3 Inter, sans-serif; }
 .setup-card p { margin: 0; color: var(--muted); }
 .setup-card progress { width: 100%; height: 8px; accent-color: var(--accent); }
+
+.ai-no-key { display: none; margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.ai-no-key a, #category-status a { color: var(--accent); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+body.no-ai .ai-no-key { display: block; }
+body.no-ai #refresh-enhanced, body.no-ai #regenerate-summary, body.no-ai #clean-button, body.no-ai #ai-question-form,
+body.no-ai #recording-chat-toggle, body.no-ai #recording-ai-panel { display: none; }
+body.no-ai .ai-question:not(:has(#ai-answers > *, #saved-recording-chat > *)) { display: none; }
+#enhanced-notes-panel.no-key-empty :is(#enhanced-status, #enhanced-version, #enhanced-notes-toolbar, #enhanced-notes-editor, .notes-save-line, .enhanced-sources) { display: none; }
+body.no-ai.recording-page .recording-workspace-grid { grid-template-columns: minmax(0, 1fr); }

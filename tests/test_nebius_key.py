@@ -47,6 +47,13 @@ class NebiusKeyTest(unittest.TestCase):
         self.assertEqual(self.client.delete("/api/v1/settings/nebius-key").json(), {"configured": False, "source": None})
         self.assertIsNone(ai._key())
 
+    def test_capabilities_report_whether_ai_is_configured(self) -> None:
+        self.assertFalse(self.client.get("/api/v1/capabilities").json()["ai"]["configured"])
+        self.client.put("/api/v1/settings/nebius-key", json={"key": KEY})
+        self.assertTrue(self.client.get("/api/v1/capabilities").json()["ai"]["configured"])
+        self.client.delete("/api/v1/settings/nebius-key")
+        self.assertFalse(self.client.get("/api/v1/capabilities").json()["ai"]["configured"])
+
     def test_saved_key_wins_over_the_environment_and_removal_falls_back(self) -> None:
         with patch.dict(os.environ, {"NEBIUS_API_KEY": "env-key-abcdefghijklmnop"}):
             self.assertEqual(self.client.get("/api/v1/settings/nebius-key").json()["source"], "environment")

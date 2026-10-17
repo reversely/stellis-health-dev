@@ -34,6 +34,7 @@ The **desktop home left rail** is a WebGL fill (`static/rail-shader.js`) of five
 - Keep Record, Import, Pause, and Stop visually related within the solid recording rail. Use the wine fill for Stop. Do not give Record a competing bright accent.
 - Label inputs directly. Use a semantic `button` with an explicit type when it sits in a form. Icon-only buttons need an accessible name. Errors appear close to the action and describe what the user can do next.
 - Show live recording and transcription where the user is working; make interruption and recovery states explicit. Match the status text to the actual recording state.
+- **No Nebius key:** read `ai.configured` from `/api/v1/capabilities`. When it is false, hide the controls that need a key (Summary refresh and its menu item, Clean transcript, the question form, the recording AI Chat panel and toggle) and show one sentence with a link: "Summaries and questions need a Nebius API key. Add a key in Account settings". The categories status reads "Automatic categories need a Nebius API key." with the same link. The link is accent coloured, bold, underlined, and goes to Settings with the key field focused. Saved summaries stay editable, and saved answers and clean versions still display.
 - Use short, familiar UI labels. Do not use interpuncts or middle dots (`·`) anywhere in user-facing copy, including metadata. Never mention Otter in the product UI. Show an unnamed speaker as `Speaker N` with no appended prompt.
 
 ## Screen hierarchy

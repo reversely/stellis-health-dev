@@ -511,6 +511,18 @@ async function recoverNotesDraft(recordingId) {
   localStorage.removeItem(key);
 }
 const enhancedFields = [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']];
+let aiConfigured = true;
+async function refreshAI() {
+  try { aiConfigured = (await json(await fetch(`${API}/capabilities`))).ai.configured; } catch {}
+  document.body.classList.toggle('no-ai', !aiConfigured);
+}
+function setCategoryStatus(unavailable, message = '') {
+  const status = document.querySelector('#category-status');
+  if (!unavailable) { status.textContent = message; return; }
+  const link = document.createElement('a'); link.href = '/settings'; link.dataset.addKey = '';
+  link.textContent = 'Add a key in Account settings';
+  status.replaceChildren('Automatic categories need a Nebius API key. ', link);
+}
 let enhancedRuns = [];
 let enhancedSelectedId = null;
 let enhancedEditor = null;
@@ -620,7 +632,9 @@ async function loadEnhancedRuns(id, autoStart = false) {
   const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/enhanced-notes`));
   if (id !== activeConversationId) return;
   enhancedRuns = runs;
-  if (!runs.length && autoStart && currentTranscript?.segments?.length) {
+  document.querySelector('#enhanced-notes-panel').classList.toggle('no-key-empty',
+    !aiConfigured && !runs.some(run => run.state === 'succeeded'));
+  if (!runs.length && autoStart && aiConfigured && currentTranscript?.segments?.length) {
     await startEnhanced(false);
     return;
   }
@@ -774,6 +788,7 @@ function updateTranscriptSearch() {
   } else refreshTranscriptSearch();
 }
 async function showList() {
+  await refreshAI();
   document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
   recordingPanel.hidden = true;
   document.querySelector('#vocabulary-panel').hidden = true;
@@ -807,8 +822,7 @@ async function showList() {
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
   document.querySelector('#auto-categories').checked = automation.enabled;
-  document.querySelector('#category-status').textContent = automation.enabled && !automation.configured ?
-    'Nebius API key is unavailable. Classification will wait for a key.' : '';
+  setCategoryStatus(automation.enabled && !automation.configured);
   renderCategoryControls();
   renderConversationList();
   captureControls();
@@ -1024,6 +1038,7 @@ async function showPerson(id) {
 async function showDetail(id) {
   await flushNotes(notesStates.conversation);
   await flushEnhanced();
+  await refreshAI();
   document.body.classList.remove('profile-page', 'recording-page');
   recordingPanel.hidden = true;
   document.querySelector('#vocabulary-panel').hidden = true; hideAppPages();
@@ -2613,6 +2628,7 @@ document.querySelector('#recording-live-peek').addEventListener('click', () => s
 document.querySelector('#recording-chat-toggle').addEventListener('click', () =>
   showRecordingView(document.querySelector('#recording-chat-toggle').getAttribute('aria-expanded') === 'true' ? recordingPrimaryView : 'chat'));
 function showRecordingWorkspace() {
+  refreshAI();
   document.body.classList.remove('profile-page', 'conversation-page');
   document.body.classList.add('recording-page');
   conversationMore.open = false; conversationMore.hidden = true;
@@ -3139,8 +3155,7 @@ document.querySelector('#auto-categories').addEventListener('change', async even
   try {
     const setting = await json(await fetch(`${API}/categories/automation`, {method:'PUT',
       headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:checkbox.checked})}));
-    document.querySelector('#category-status').textContent = checkbox.checked && !setting.configured ?
-      'Nebius API key is unavailable. Classification will wait for a key.' : '';
+    setCategoryStatus(checkbox.checked && !setting.configured);
   } catch (error) {
     checkbox.checked = !checkbox.checked;
     document.querySelector('#category-status').textContent = error.message;
@@ -3788,7 +3803,19 @@ async function showSettings() {
   await loadSettingsCalendars().catch(error => { document.querySelector('#settings-calendar-status').textContent = error.message; });
   await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
   captureControls();
+  if (focusKeyInput()) {
+    document.querySelector('#settings-ai-title').scrollIntoView({block: 'start'});
+    document.querySelector('#nebius-key-input').focus({preventScroll: true});
+  }
 }
+function focusKeyInput() {
+  try { const wanted = sessionStorage.getItem('stellis-focus-key') === '1'; sessionStorage.removeItem('stellis-focus-key'); return wanted; }
+  catch { return false; }
+}
+document.addEventListener('click', event => {
+  if (!event.target.closest('a[data-add-key]')) return;
+  try { sessionStorage.setItem('stellis-focus-key', '1'); } catch {}
+});
 function showNebiusKey(state) {
   // The saved key is never sent back; the page only learns whether one exists.
   document.querySelector('#nebius-key-input').value = '';
@@ -3806,11 +3833,12 @@ document.querySelector('#nebius-key-form').addEventListener('submit', async even
   try {
     showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'PUT',
       headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: input.value})})));
+    await refreshAI();
   } catch (error) { document.querySelector('#nebius-key-status').textContent = error.message; }
   finally { save.disabled = false; }
 });
 document.querySelector('#nebius-key-remove').addEventListener('click', async () => {
-  try { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'DELETE'}))); }
+  try { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'DELETE'}))); await refreshAI(); }
   catch (error) { document.querySelector('#nebius-key-status').textContent = error.message; }
 });
 
