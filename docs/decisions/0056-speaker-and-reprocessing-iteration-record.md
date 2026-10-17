@@ -81,7 +81,7 @@ The looping passages carried a Shereen Lee person link. The ADR 0054 rule then k
 
 ## Open items
 
-- **Hackathon person link.** Shereen Lee's labelled passages in Hackathon Project Planning and Ideation scored 0.25 against that person's voice profile from other recordings, while the unnamed speaker scored 0.60. The label may sit on the other person. Until the repo owner checks, the voice profile mixes two people and suggestions for that person are unreliable.
-- **Suggestion threshold.** The 0.6 similarity and 0.1 lead in `voices.py` are starting values to revise after the label check.
+- **Hackathon person link (resolved).** The repo owner confirmed that the Hackathon "Shereen Lee" label sat on the other person and relabelled it in the app. Afterwards the labelled groups scored 0.51 to 0.59 against the profile, and the other person scored 0.24 ([ADR 0055](0055-voice-suggestions.md)).
+- **Suggestion threshold.** The 0.6 similarity and 0.1 lead in `voices.py` give four Shereen Lee suggestions. Confirmed groups scored 0.51 to 0.59, so the threshold is revised once the repo owner checks the suggested and just-below groups listed in ADR 0055.
 - **Heavier diarization models.** #37 stays open for the benchmark of a larger on-device model, and for the exact NME-SC variant from the paper.
 - **Filed during this work:** #190 (diarization thread count), #191 (passage links open Notes), and #192 (concurrent schema setup).

@@ -25,7 +25,18 @@ Fingerprints were indexed for all 14 saved conversations on a copy of the data, 
 - **Jay Matlock** (confirmed only in CIFAR Aerospace Research Overview) scored at most 0.42 against any group elsewhere, so he is never suggested. That is the expected result.
 - **Shereen Lee's own labelled groups** scored low against her profile from other recordings: 0.25 in Hackathon Project Planning and Ideation, 0.24 in "How it works". Meanwhile the unnamed "Speaker 2" in the Hackathon recording scored 0.60.
 
-The most likely cause is that the Hackathon "Shereen Lee" label sits on the other person. It came from a speaker-wide confirmation on the old, over-split groups and was carried over by time. Until the user confirms which Hackathon speaker they are, her profile mixes two voices, and suggestions for her are unreliable. The 0.6 and 0.1 values are starting points, to be revised once the labels are checked.
+The repo owner confirmed on 2026-10-17 that the Hackathon "Shereen Lee" label was on the other person, and relabelled it in the app. With that fixed, each group labelled Shereen Lee scored 0.51 to 0.59 against the profile from the other recordings: 0.59 in Hackathon, 0.55 in "How it works", 0.51 in CIFAR. The other Hackathon person scored 0.24, and Jay Matlock's groups scored 0.02 to 0.08.
+
+At 0.6 and 0.1, four unnamed groups get a Shereen Lee suggestion:
+
+| Recording | Speaker | Talk time | Similarity |
+| --- | --- | --- | --- |
+| Part Number Analysis and Data Mapping | Speaker 4 | 2.4 min | 0.77 |
+| 40k Inspection Parts and Span Time Analysis | Speaker 2 | 1.6 min | 0.74 |
+| Service Center Capacity and Span Time Analysis | Speaker 2 | 3.2 min | 0.69 |
+| Food, Technology, and Power Narratives | Speaker 2 | 4.8 min | 0.62 |
+
+Two groups scored just under the threshold without a suggestion: "New recording" Speaker 1 (0.56) and DMS Data Cleaning and Upload Tasks Speaker 3 (0.55). The confirmed groups' 0.51 to 0.59 overlaps that range, so 0.6 can miss a true match. The threshold is revised when the repo owner confirms or rejects these six groups.
 
 ## Tradeoffs
 
