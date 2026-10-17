@@ -1,4 +1,4 @@
-// Home rail fill: five soft blobs that drift and lean toward the pointer.
+// Home rail fill: five soft blobs in the user's palette that drift slowly and lean slightly toward the pointer.
 // The CSS gradient underneath stays as the fallback when WebGL is unavailable.
 (() => {
   const canvas = document.querySelector('#rail-shader');
@@ -9,31 +9,37 @@
     precision mediump float;
     uniform vec2 size; uniform float time; uniform vec2 pointer; uniform float pull; uniform float blur;
     const vec3 base = vec3(0.153, 0.133, 0.169);
+    // #495575, #56465C, #594F4F, #547980, #45ADA8
     vec3 tint(int i) {
-      if (i == 0) return vec3(0.200, 0.361, 0.388);
-      if (i == 1) return vec3(0.224, 0.298, 0.337);
-      if (i == 2) return vec3(0.357, 0.263, 0.557);
-      if (i == 3) return vec3(0.275, 0.365, 0.647);
-      return vec3(0.396, 0.275, 0.329);
+      if (i == 0) return vec3(0.286, 0.333, 0.459);
+      if (i == 1) return vec3(0.337, 0.275, 0.361);
+      if (i == 2) return vec3(0.349, 0.310, 0.310);
+      if (i == 3) return vec3(0.329, 0.475, 0.502);
+      return vec3(0.271, 0.678, 0.659);
     }
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
       vec2 uv = gl_FragCoord.xy / size;
       vec2 aspect = vec2(size.x / size.y, 1.0);
       // Gentle domain warp keeps each blob's edge irregular instead of circular.
-      vec2 warped = uv + 0.035 * vec2(sin(uv.y * 7.0 + time * 0.31), cos(uv.x * 6.0 - time * 0.27));
+      vec2 warped = uv + 0.018 * vec2(sin(uv.y * 5.0 + time * 0.12), cos(uv.x * 4.0 - time * 0.10));
       vec3 color = vec3(0.0); float weight = 0.0;
       for (int i = 0; i < 5; i++) {
         float f = float(i);
-        vec2 center = vec2(0.5 + 0.32 * sin(time * (0.050 + f * 0.011) + f * 1.7),
-                           0.5 + 0.36 * cos(time * (0.041 + f * 0.009) + f * 2.3));
-        center += (pointer - center) * pull * (0.10 + 0.03 * f);
-        float radius = 0.20 + 0.05 * sin(time * 0.13 + f * 4.1);
+        vec2 center = vec2(0.5 + 0.22 * sin(time * (0.022 + f * 0.005) + f * 1.7),
+                           0.5 + 0.26 * cos(time * (0.018 + f * 0.004) + f * 2.3));
+        center += (pointer - center) * pull * (0.04 + 0.01 * f);
+        // The bright teal stays smaller so it accents rather than floods the rail.
+        float radius = (i == 4 ? 0.15 : 0.22) + 0.02 * sin(time * 0.05 + f * 4.1);
         vec2 d = (warped - center) * aspect;
         float field = exp(-dot(d, d) / (radius * radius * (0.35 + blur * 1.6)));
         color += tint(i) * field; weight += field;
       }
       vec3 blobs = color / max(weight, 1e-4);
-      gl_FragColor = vec4(mix(base, blobs, smoothstep(0.0, 0.9, weight)), 1.0);
+      vec3 color3 = mix(base, blobs, 0.85 * smoothstep(0.0, 1.2, weight));
+      // Static per-pixel grain also hides gradient banding.
+      color3 += (hash(gl_FragCoord.xy) - 0.5) * 0.035;
+      gl_FragColor = vec4(color3, 1.0);
     }`;
   const compile = (type, source) => {
     const shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);

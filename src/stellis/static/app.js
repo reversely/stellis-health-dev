@@ -790,12 +790,16 @@ async function showList() {
   detailView.hidden = true;
   document.querySelector('#trash-view').hidden = true;
   document.querySelector('#person-view').hidden = true;
-  document.querySelector('#page-title').textContent = 'Your conversations';
-  const [conversations, categories] = await Promise.all([
-    json(await fetch(`${API}/conversations`)), json(await fetch(`${API}/categories`)),
+  hideAppPages();
+  document.querySelector('#page-title').textContent = 'Recent conversations';
+  const [conversations, categories, books] = await Promise.all([
+    fetch(`${API}/conversations`).then(json), fetch(`${API}/categories`).then(json), fetch(`${API}/notebooks`).then(json),
   ]);
   libraryConversations = conversations;
   libraryCategories = categories;
+  libraryNotebooks = books.notebooks; notebookPalette = books.palette;
+  renderNotebooks();
+  if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
   document.querySelector('#auto-categories').checked = automation.enabled;
   document.querySelector('#category-status').textContent = automation.enabled && !automation.configured ?
@@ -814,36 +818,30 @@ function renderConversationList() {
     (category === 'uncategorized' ? !item.category_ids.length : item.category_ids.includes(category)));
   list.replaceChildren();
   if (!conversations.length) {
-    const empty = document.createElement('p');
-    empty.textContent = category ? 'No conversations in this category.' : 'No saved conversations yet.';
+    const empty = document.createElement('p'); empty.className = 'recent-empty';
+    empty.textContent = category ? 'No conversations in this category' : 'Record or import your first conversation';
     list.append(empty);
   }
   for (const item of conversations) {
     const row = document.createElement('a');
-    row.className = 'conversation-row';
+    row.className = 'recent-row';
     row.href = `/conversation/${encodeURIComponent(item.id)}`;
-    const summary = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = item.title;
-    const meta = document.createElement('small');
-    meta.textContent = `${new Date(item.created_at).toLocaleDateString()} (${time(item.duration_ms / 1000)})`;
-    summary.append(title, meta);
-    for (const categoryId of item.category_ids) {
-      const category = libraryCategories.find(value => value.id === categoryId);
-      if (category) { const tag = document.createElement('span'); tag.className = 'category-tag'; tag.textContent = category.name; summary.append(tag); }
+    const notebook = libraryNotebooks.find(book => book.id === item.notebook_id);
+    const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
+    if (notebook) dot.style.setProperty('--dot', notebook.color);
+    const title = document.createElement('strong'); title.textContent = item.title;
+    const date = document.createElement('time'); date.dateTime = capturedAt(item); date.textContent = shortDate(capturedAt(item));
+    row.append(dot, title, date);
+    if (item.summary_line) {
+      const line = document.createElement('small'); line.textContent = item.summary_line; row.append(line);
     }
-    const arrow = document.createElement('span');
-    arrow.className = 'arrow';
-    arrow.setAttribute('aria-hidden', 'true');
-    arrow.textContent = '→';
-    row.append(summary, arrow);
     list.append(row);
   }
 }
 function renderCategoryControls() {
   const picker = document.querySelector('#category-filter');
   const selected = picker.value;
-  picker.replaceChildren(new Option('All conversations', ''),
+  picker.replaceChildren(new Option('All', ''),
     new Option(`Uncategorized (${libraryConversations.filter(item => !item.category_ids.length).length})`, 'uncategorized'),
     ...libraryCategories.map(item => new Option(`${item.name} (${item.conversation_count})`, item.id)));
   picker.value = selected === 'uncategorized' || libraryCategories.some(item => item.id === selected) ? selected : '';
@@ -911,7 +909,7 @@ async function refreshCategorizationStatus() {
 async function showTrash() {
   const items = await json(await fetch(`${API}/trash`));
   document.querySelector('#trash-status').textContent = '';
-  document.querySelector('#vocabulary-panel').hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = true; hideAppPages();
   listView.hidden = true; detailView.hidden = true; document.querySelector('#person-view').hidden = true;
   document.querySelector('#trash-view').hidden = false;
   const container = document.querySelector('#trash-list'); container.replaceChildren();
@@ -949,7 +947,7 @@ async function loadPeoplePanel() {
 async function showPerson(id) {
   document.body.classList.remove('conversation-page', 'recording-page');
   recordingPanel.hidden = true;
-  document.querySelector('#vocabulary-panel').hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = true; hideAppPages();
   document.body.classList.add('profile-page');
   conversationMore.open = false; conversationMore.hidden = true;
   clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer); clearTimeout(recordingChatTimer); clearTimeout(cleanRunTimer);
@@ -1000,7 +998,7 @@ async function showDetail(id) {
   await flushEnhanced();
   document.body.classList.remove('profile-page', 'recording-page');
   recordingPanel.hidden = true;
-  document.querySelector('#vocabulary-panel').hidden = true;
+  document.querySelector('#vocabulary-panel').hidden = true; hideAppPages();
   if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
   document.body.classList.add('conversation-page');
   conversationMore.open = false; conversationMore.hidden = false;
@@ -2418,7 +2416,7 @@ async function showVocabulary(section = null) {
   activeConversationId = null; activePersonId = null;
   listView.hidden = true; detailView.hidden = true;
   document.querySelector('#trash-view').hidden = true;
-  document.querySelector('#person-view').hidden = true;
+  document.querySelector('#person-view').hidden = true; hideAppPages();
   document.querySelector('#vocabulary-panel').hidden = false;
   document.querySelector('#vocabulary-overview').hidden = !!section;
   document.querySelector('#vocabulary-terms-page').hidden = !section;
@@ -2427,7 +2425,7 @@ async function showVocabulary(section = null) {
     else link.removeAttribute('aria-current');
   }
   vocabularyKind = section === 'names' ? 'name' : 'other';
-  document.querySelector('#page-title').textContent = 'Vocabulary';
+  document.querySelector('#page-title').textContent = 'Custom vocabulary';
   document.querySelector('#vocabulary-kind-title').textContent = section === 'names' ? 'Names of people' : 'Other vocabulary';
   document.querySelector('#vocabulary-form label').textContent = section === 'names' ? 'Add names of people' : 'Add words or phrases';
   document.querySelector('#vocabulary-move-selected').textContent = section === 'names' ? 'Move to Other vocabulary' : 'Move to Names of people';
@@ -2450,6 +2448,9 @@ async function route() {
   else if (location.pathname === '/vocabulary/other') await showVocabulary('other');
   else if (location.pathname.match(/^\/person\/([^/]+)$/))
     await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
+  else if (location.pathname === '/settings') await showSettings();
+  else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
+    await showNotebook(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
 }
 async function importFile(file) {
@@ -2465,6 +2466,9 @@ async function importFile(file) {
   document.querySelector('#import-close').disabled = true;
   const body = new FormData();
   body.append('file', file);
+  // The file's modified time is the best capture time a browser exposes.
+  if (file.lastModified) body.append('recorded_at', new Date(file.lastModified).toISOString());
+  if (pendingNotebookId) body.append('notebook_id', pendingNotebookId);
   try {
     const result = await json(await fetch(`${API}/conversations/import`, {method: 'POST', body}));
     history.pushState({}, '', `/conversation/${encodeURIComponent(result.conversation.id)}`);
@@ -2637,7 +2641,7 @@ function showRecordingWorkspace() {
   activeConversationId = null;
   listView.hidden = true; detailView.hidden = true;
   document.querySelector('#trash-view').hidden = true;
-  document.querySelector('#person-view').hidden = true;
+  document.querySelector('#person-view').hidden = true; hideAppPages();
   document.querySelector('#vocabulary-panel').hidden = true;
   recordingPanel.hidden = false;
   document.querySelector('#page-title').textContent = 'New recording';
@@ -2794,7 +2798,9 @@ async function startCapture() {
     document.querySelector('#recording-source-label').textContent = `${stream.getAudioTracks()[0]?.label || 'Microphone'} (English)`;
     const recorder = new MediaRecorder(stream, {mimeType:mediaType});
     const session = await json(await fetch(`${API}/recordings`, {method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0]})}));
+      body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0],
+        notebook_id:pendingNotebookId})}));
+    pendingNotebookId = null;
     capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
       startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false,
       previewPending:false, previewRetryAfter:0, lastPreviewSequence:-1};
@@ -2897,6 +2903,7 @@ async function finishCapture() {
 }
 document.querySelector('#record-button').addEventListener('click', () => {
   if (capture) {
+    pendingNotebookId = null;
     history.pushState({}, '', '/recording');
     route().catch(error => setStatus(error.message));
     return;
@@ -2941,6 +2948,7 @@ document.querySelector('#import-button').addEventListener('click', () => {
 });
 document.querySelector('#recording-import').addEventListener('click', () => document.querySelector('#import-button').click());
 document.querySelector('#import-close').addEventListener('click', () => importDialog.close());
+importDialog.addEventListener('close', () => { pendingNotebookId = null; });
 importDialog.addEventListener('cancel', event => {
   if (fileInput.disabled) event.preventDefault();
 });
@@ -3123,7 +3131,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3341,4 +3349,359 @@ window.addEventListener('storage', event => {
 setInterval(() => {
   if (document.querySelector('.remote-live-recording')) loadRecoveries().catch(error => setStatus(error.message));
 }, 5000);
+
+// Home notebooks, the notebook page, and account settings.
+const NOTEBOOK_DARK_INK = new Set(['#45ADA8']);
+let libraryNotebooks = [];
+let notebookPalette = [];
+let pendingNotebookId = null;
+let editingNotebook = null;
+let addingToNotebook = null;
+let activeNotebookId = null;
+let calendarOutcome = new URLSearchParams(location.search).get('calendar');
+if (calendarOutcome) history.replaceState(history.state, '', location.pathname);
+function calendarOutcomeText() { return calendarOutcome === 'connected' ? 'Calendar connected' : 'Calendar connection failed'; }
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', `#i-${name}`);
+  svg.append(use);
+  return svg;
+}
+function capturedAt(item) { return item.recorded_at || item.created_at; }
+function shortDate(value) {
+  const date = new Date(value);
+  const options = {month:'short', day:'numeric'};
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = 'numeric';
+  return date.toLocaleDateString(undefined, options);
+}
+function paintNotebook(element, notebook) {
+  element.style.setProperty('--notebook', notebook.color);
+  element.style.setProperty('--notebook-ink', NOTEBOOK_DARK_INK.has(notebook.color.toUpperCase()) ? '#27222B' : '#F7F5F6');
+}
+function hideAppPages() {
+  document.querySelector('#settings-view').hidden = true;
+  document.querySelector('#notebook-view').hidden = true;
+  document.body.classList.remove('settings-page', 'notebook-page');
+  activeNotebookId = null;
+}
+async function leaveForAppPage(bodyClass, title) {
+  await flushNotes(notesStates.conversation);
+  await flushEnhanced();
+  document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
+  recordingPanel.hidden = true;
+  if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
+  conversationMore.open = false; conversationMore.hidden = true;
+  clearTimeout(jobTimer); clearTimeout(aiRunTimer); clearTimeout(enhancedPollTimer);
+  clearTimeout(recordingChatTimer); clearTimeout(cleanRunTimer); clearTimeout(silenceScanTimer);
+  player.pause(); player.removeAttribute('src'); player.load();
+  activeConversationId = null; activePersonId = null;
+  listView.hidden = true; detailView.hidden = true;
+  for (const selector of ['#trash-view', '#person-view', '#vocabulary-panel']) document.querySelector(selector).hidden = true;
+  hideAppPages();
+  document.body.classList.add(bodyClass);
+  document.querySelector('#page-title').textContent = title;
+}
+function meetingLink(item, className) {
+  const link = document.createElement('a'); link.className = className;
+  link.href = `/conversation/${encodeURIComponent(item.id)}`;
+  const title = document.createElement('span'); title.textContent = item.title;
+  const date = document.createElement('time'); date.dateTime = capturedAt(item); date.textContent = shortDate(capturedAt(item));
+  link.append(title, date);
+  return link;
+}
+function notebookCard(notebook) {
+  const card = document.createElement('article'); card.className = 'notebook-card'; paintNotebook(card, notebook);
+  const head = document.createElement('div'); head.className = 'notebook-card-head';
+  const name = document.createElement('h3'); const link = document.createElement('a');
+  link.href = `/notebook/${encodeURIComponent(notebook.id)}`; link.textContent = notebook.name; name.append(link);
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'notebook-plus';
+  add.setAttribute('aria-label', `Add to ${notebook.name}`); add.title = 'Add a conversation'; add.append(icon('plus'));
+  add.addEventListener('click', () => openNotebookAdd(notebook));
+  head.append(icon('notebook'), name, add);
+  card.append(head);
+  const [latest, ...older] = notebook.conversations;
+  if (!latest) {
+    const empty = document.createElement('p'); empty.className = 'notebook-empty'; empty.textContent = 'No meetings yet';
+    card.append(empty);
+    return card;
+  }
+  card.append(meetingLink(latest, 'notebook-latest'));
+  if (notebook.progress.length) {
+    const progress = document.createElement('ul'); progress.className = 'notebook-progress'; progress.setAttribute('aria-label', 'Progress');
+    for (const point of notebook.progress) {
+      const item = document.createElement('li'); const text = document.createElement('span'); text.textContent = point;
+      item.append(icon('circle-check'), text); progress.append(item);
+    }
+    card.append(progress);
+  }
+  if (older.length) {
+    const history = document.createElement('ul'); history.className = 'notebook-history';
+    for (const item of older.slice(0, 3)) { const row = document.createElement('li'); row.append(meetingLink(item, 'notebook-meeting')); history.append(row); }
+    card.append(history);
+  }
+  return card;
+}
+function renderNotebooks() {
+  const grid = document.querySelector('#notebook-grid');
+  grid.replaceChildren(...libraryNotebooks.map(notebookCard));
+  const create = document.createElement('button'); create.type = 'button'; create.className = 'notebook-new';
+  const label = document.createElement('span');
+  label.textContent = libraryNotebooks.length ? 'New notebook' : 'Start a notebook for each project';
+  create.append(icon('plus'), label);
+  create.addEventListener('click', () => openNotebookDialog());
+  grid.append(create);
+}
+
+const notebookDialog = document.querySelector('#notebook-dialog');
+function openNotebookDialog(notebook = null) {
+  editingNotebook = notebook;
+  document.querySelector('#notebook-dialog-title').textContent = notebook ? 'Edit notebook' : 'New notebook';
+  document.querySelector('#notebook-save').textContent = notebook ? 'Save' : 'Create';
+  document.querySelector('#notebook-name-input').value = notebook?.name || '';
+  document.querySelector('#notebook-form-status').textContent = '';
+  const selected = notebook?.color || notebookPalette[libraryNotebooks.length % notebookPalette.length];
+  document.querySelector('#notebook-swatches').replaceChildren(...notebookPalette.map((color, index) => {
+    const option = document.createElement('label'); option.className = 'swatch'; option.style.setProperty('--swatch', color);
+    const radio = document.createElement('input'); radio.type = 'radio'; radio.name = 'notebook-color'; radio.value = color;
+    radio.checked = color === selected;
+    const text = document.createElement('span'); text.className = 'visually-hidden'; text.textContent = `Colour ${index + 1}`;
+    option.append(radio, text);
+    return option;
+  }));
+  notebookDialog.showModal();
+}
+document.querySelector('#new-notebook').addEventListener('click', () => openNotebookDialog());
+document.querySelector('#notebook-cancel').addEventListener('click', () => notebookDialog.close());
+document.querySelector('#notebook-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const save = document.querySelector('#notebook-save'); save.disabled = true;
+  const body = {name:document.querySelector('#notebook-name-input').value,
+                color:document.querySelector('input[name="notebook-color"]:checked')?.value};
+  try {
+    await json(await fetch(editingNotebook ? `${API}/notebooks/${encodeURIComponent(editingNotebook.id)}` : `${API}/notebooks`,
+      {method:editingNotebook ? 'PATCH' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}));
+    notebookDialog.close();
+    if (activeNotebookId) await showNotebook(activeNotebookId); else await showList();
+  } catch (error) { document.querySelector('#notebook-form-status').textContent = error.message; }
+  finally { save.disabled = false; }
+});
+
+const notebookAddDialog = document.querySelector('#notebook-add-dialog');
+async function openNotebookAdd(notebook) {
+  addingToNotebook = notebook;
+  document.querySelector('#notebook-add-title').textContent = `Add to ${notebook.name}`;
+  document.querySelector('#notebook-add-status').textContent = '';
+  if (!libraryConversations.length) libraryConversations = await json(await fetch(`${API}/conversations`));
+  const candidates = libraryConversations.filter(item => item.notebook_id !== notebook.id).slice(0, 40);
+  const container = document.querySelector('#notebook-add-list');
+  container.replaceChildren(...candidates.map(item => {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'notebook-add-row';
+    const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
+    const other = libraryNotebooks.find(book => book.id === item.notebook_id);
+    if (other) dot.style.setProperty('--dot', other.color);
+    const title = document.createElement('span'); title.textContent = item.title;
+    const date = document.createElement('time'); date.textContent = shortDate(capturedAt(item));
+    button.append(dot, title, date);
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        await json(await fetch(`${API}/conversations/${encodeURIComponent(item.id)}/notebook`,
+          {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notebook_id:notebook.id})}));
+        notebookAddDialog.close();
+        if (activeNotebookId) await showNotebook(activeNotebookId); else await showList();
+      } catch (error) { document.querySelector('#notebook-add-status').textContent = error.message; button.disabled = false; }
+    });
+    return button;
+  }));
+  if (!candidates.length) {
+    const empty = document.createElement('p'); empty.textContent = 'Every conversation is already here'; container.append(empty);
+  }
+  notebookAddDialog.showModal();
+}
+document.querySelector('#notebook-add-close').addEventListener('click', () => notebookAddDialog.close());
+document.querySelector('#notebook-add-record').addEventListener('click', () => {
+  notebookAddDialog.close();
+  if (!capture) pendingNotebookId = addingToNotebook.id;
+  document.querySelector('#record-button').click();
+});
+document.querySelector('#notebook-add-import').addEventListener('click', () => {
+  notebookAddDialog.close();
+  document.querySelector('#import-button').click();
+  pendingNotebookId = addingToNotebook.id;
+});
+document.querySelector('#home-record').addEventListener('click', () => {
+  pendingNotebookId = null; document.querySelector('#record-button').click();
+});
+document.querySelector('#home-import').addEventListener('click', () => {
+  pendingNotebookId = null; document.querySelector('#import-button').click();
+});
+
+async function showNotebook(id) {
+  await leaveForAppPage('notebook-page', 'Notebook');
+  const [books, conversations] = await Promise.all([fetch(`${API}/notebooks`).then(json), fetch(`${API}/conversations`).then(json)]);
+  libraryNotebooks = books.notebooks; notebookPalette = books.palette; libraryConversations = conversations;
+  const notebook = libraryNotebooks.find(item => item.id === id);
+  if (!notebook) {
+    history.replaceState({}, '', '/'); await showList(); setStatus('That notebook no longer exists'); return;
+  }
+  activeNotebookId = id;
+  document.querySelector('#page-title').textContent = notebook.name;
+  paintNotebook(document.querySelector('#notebook-hero'), notebook);
+  document.querySelector('#notebook-name').textContent = notebook.name;
+  const lines = new Map(conversations.map(item => [item.id, item.summary_line]));
+  const container = document.querySelector('#notebook-conversations');
+  container.replaceChildren(...notebook.conversations.map(item => {
+    const row = meetingLink(item, 'notebook-row');
+    const line = lines.get(item.id);
+    if (line) { const summary = document.createElement('small'); summary.textContent = line; row.append(summary); }
+    return row;
+  }));
+  if (!notebook.conversations.length) {
+    const empty = document.createElement('p'); empty.className = 'notebook-page-empty';
+    empty.textContent = 'Record or move a conversation into this notebook';
+    container.append(empty);
+  }
+  document.querySelector('#notebook-view').hidden = false;
+  captureControls();
+}
+document.querySelector('#notebook-add').addEventListener('click', () => {
+  const notebook = libraryNotebooks.find(item => item.id === activeNotebookId);
+  if (notebook) openNotebookAdd(notebook);
+});
+document.querySelector('#notebook-edit').addEventListener('click', () => {
+  const notebook = libraryNotebooks.find(item => item.id === activeNotebookId);
+  if (notebook) openNotebookDialog(notebook);
+});
+document.querySelector('#notebook-delete').addEventListener('click', async () => {
+  const notebook = libraryNotebooks.find(item => item.id === activeNotebookId);
+  if (!notebook || !window.confirm(`Delete the notebook “${notebook.name}”? Its conversations stay in your library.`)) return;
+  try {
+    await json(await fetch(`${API}/notebooks/${encodeURIComponent(notebook.id)}`, {method:'DELETE'}));
+    history.pushState({}, '', '/'); await showList();
+  } catch (error) { setStatus(error.message); }
+});
+
+const moveNotebookDialog = document.querySelector('#move-notebook-dialog');
+document.querySelector('#move-to-notebook').addEventListener('click', async () => {
+  conversationMore.open = false;
+  const [books, current] = await Promise.all([fetch(`${API}/notebooks`).then(json),
+    fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}`).then(json)]);
+  libraryNotebooks = books.notebooks;
+  const choices = [{id:'', name:'No notebook', color:null}, ...libraryNotebooks];
+  document.querySelector('#move-notebook-options').replaceChildren(...choices.map(book => {
+    const option = document.createElement('label'); option.className = 'move-notebook-option';
+    const radio = document.createElement('input'); radio.type = 'radio'; radio.name = 'move-notebook'; radio.value = book.id;
+    radio.checked = (current.notebook_id || '') === book.id;
+    const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
+    if (book.color) dot.style.setProperty('--dot', book.color);
+    const name = document.createElement('span'); name.textContent = book.name;
+    option.append(radio, dot, name);
+    return option;
+  }));
+  document.querySelector('#move-notebook-status').textContent = libraryNotebooks.length ? '' : 'Create a notebook on the home page first';
+  moveNotebookDialog.showModal();
+});
+document.querySelector('#move-notebook-cancel').addEventListener('click', () => moveNotebookDialog.close());
+document.querySelector('#move-notebook-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const value = document.querySelector('input[name="move-notebook"]:checked')?.value ?? '';
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/notebook`,
+      {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notebook_id:value || null})}));
+    moveNotebookDialog.close();
+    const book = libraryNotebooks.find(item => item.id === value);
+    setStatus(book ? `Moved to ${book.name}` : 'Removed from its notebook', true);
+  } catch (error) { document.querySelector('#move-notebook-status').textContent = error.message; }
+});
+
+async function accountRequest(path, method, body) {
+  return json(await fetch(`${API}/account${path}`, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}));
+}
+function settingsForm(selector, statusSelector, action) {
+  const form = document.querySelector(selector);
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const status = document.querySelector(statusSelector); const button = form.querySelector('button[type="submit"]');
+    status.textContent = ''; status.classList.remove('success'); button.disabled = true;
+    try { status.textContent = await action(); status.classList.add('success'); }
+    catch (error) { status.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+}
+settingsForm('#profile-form', '#profile-status', async () => {
+  await accountRequest('', 'PATCH', {name:document.querySelector('#profile-name').value, email:document.querySelector('#profile-email').value});
+  return 'Profile saved';
+});
+settingsForm('#username-form', '#username-status', async () => {
+  const result = await accountRequest('/username', 'POST',
+    {username:document.querySelector('#account-username').value, password:document.querySelector('#username-password').value});
+  document.querySelector('#username-password').value = '';
+  return `Username changed to ${result.username}`;
+});
+settingsForm('#password-form', '#password-status', async () => {
+  const next = document.querySelector('#new-password').value;
+  if (next !== document.querySelector('#confirm-password').value) throw Error('The new passwords do not match');
+  await accountRequest('/password', 'POST', {current_password:document.querySelector('#current-password').value, new_password:next});
+  for (const id of ['#current-password', '#new-password', '#confirm-password']) document.querySelector(id).value = '';
+  return 'Password changed and other sessions signed out';
+});
+settingsForm('#delete-account-form', '#delete-status', async () => {
+  if (document.querySelector('#delete-confirm').value !== 'DELETE') throw Error('Type DELETE in capitals to confirm');
+  await accountRequest('', 'DELETE', {password:document.querySelector('#delete-password').value, confirm:'DELETE'});
+  location.replace('/auth');
+  return 'Account deleted';
+});
+async function loadSettingsCalendars() {
+  const container = document.querySelector('#settings-calendars');
+  // On a direct /settings load this runs before the deferred calendar.js; DOMContentLoaded follows it.
+  if (!window.StellisCalendar) await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, {once:true}));
+  const rows = await window.StellisCalendar.request('/connections');
+  container.replaceChildren(...rows.map(item => {
+    const row = document.createElement('div'); row.className = 'integration-row';
+    const text = document.createElement('div');
+    const name = document.createElement('strong'); name.textContent = window.StellisCalendar.labels[item.provider];
+    const state = document.createElement('small');
+    state.textContent = item.connected ? 'Connected' : item.configured ? 'Not connected' : 'Needs an OAuth client on this device';
+    text.append(name, state);
+    row.append(icon('calendar'), text);
+    if (item.connected || item.configured) {
+      const action = document.createElement('button'); action.type = 'button';
+      action.textContent = item.connected ? 'Disconnect' : 'Connect';
+      action.addEventListener('click', async () => {
+        action.disabled = true; document.querySelector('#settings-calendar-status').textContent = '';
+        try {
+          if (item.connected) { await window.StellisCalendar.request(`/${item.provider}/disconnect`, {method:'POST'}); await loadSettingsCalendars(); }
+          else location.assign((await window.StellisCalendar.request(`/${item.provider}/authorize?return_to=/settings`)).url);
+        } catch (error) { document.querySelector('#settings-calendar-status').textContent = error.message; action.disabled = false; }
+      });
+      row.append(action);
+    }
+    return row;
+  }));
+}
+async function showSettings() {
+  await leaveForAppPage('settings-page', 'Account settings');
+  for (const id of ['#profile-status', '#username-status', '#password-status', '#delete-status', '#settings-calendar-status'])
+    document.querySelector(id).textContent = '';
+  if (calendarOutcome) { document.querySelector('#settings-calendar-status').textContent = calendarOutcomeText(); calendarOutcome = null; }
+  document.querySelector('#settings-view').hidden = false;
+  const [account, terms] = await Promise.all([fetch(`${API}/account`), fetch(`${API}/vocabulary`).then(json)]);
+  const signedIn = account.ok;
+  for (const form of document.querySelectorAll('#settings-view form')) {
+    form.querySelectorAll('input, button').forEach(control => { control.disabled = !signedIn; });
+  }
+  if (signedIn) {
+    const profile = await account.json();
+    document.querySelector('#profile-name').value = profile.name;
+    document.querySelector('#profile-email').value = profile.email;
+    document.querySelector('#account-username').value = profile.username;
+  } else document.querySelector('#profile-status').textContent = 'Sign in with your own account to change these settings';
+  const names = terms.filter(term => term.kind === 'name').length;
+  document.querySelector('#settings-vocabulary-count').textContent =
+    `${names} ${names === 1 ? 'name' : 'names'} and ${terms.length - names} other ${terms.length - names === 1 ? 'term' : 'terms'}`;
+  await loadSettingsCalendars().catch(error => { document.querySelector('#settings-calendar-status').textContent = error.message; });
+  captureControls();
+}
+
 route().catch(error => setStatus(error.message));

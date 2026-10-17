@@ -63,3 +63,18 @@ This iteration was superseded by the measured and darker correction below. Its c
 **Feedback, implemented and browser checked 2026-10-16:** The user questioned whether the prior result was radial. They were right about the visible result: an ellipse spanning 140% of the sidebar and anchored at the upper-left corner produced broad diagonal bands. This was a wrong implementation of the requested look, even though the CSS used `radial-gradient`.
 
 **Correction:** Keep the single home-rail gradient, grain, motion, solid recording rail, matching purple controls, and continuous header. Put the teal focal point inside the rail at `(52%, 42%)`, use an `85% × 55%` ellipse, and fade through muted blue and mauve to the dark nonblack edge. The focal point moves vertically with the 24-second animation. The [start](refs/centered-radial/home-start-1440.png), [moving](refs/centered-radial/home-motion-1440.png), and [Dark mode](refs/centered-radial/home-dark-1440.png) browser captures now show a centered glow with darker edges rather than a diagonal sweep. Dark mode still computes to one radial color gradient and has no horizontal overflow. The reference image is static, so its exact motion remains an interpretation of the user's request.
+
+## Home notebooks, settings, and calmer rail
+
+**Feedback, implemented and browser checked 2026-10-17:** The user supplied a back-of-the-napkin sketch and asked for the following. Each item's status is implemented and browser checked on a signed-in copy of the local data at 1440px and 390px in both themes.
+
+- A settings gear button at the bottom of the rail that opens a page with name, username and password change, email, integrations including Google Calendar, custom vocabulary, and account deletion, "accompanied with ui components".
+- "dictionary -> custom vocabulary in all cases when it refers to adding words". The UI never used "dictionary"; the Vocabulary page and its links now read **Custom vocabulary**.
+- "Your Conversations" should read "Recent Conversations", with the recent conversations in the rail "in strict reverse" order.
+- Record and Import "should be white or glass background, background text". They are inverted buttons in the main column, as in the sketch.
+- The blob "moves too much and the colours change too drastically". The shader now uses the user's colours `495575`, `56465C`, `594F4F`, `547980`, and `45ADA8`, moves at about half the speed over a smaller range, blends edges more, and carries grain.
+- The home "should be less text heavy and more visual (icons, negative space, different colours for folders, etc) than my prototype says". Notebook cards fill with their own palette colour, lead with an icon, and show at most three progress points.
+
+**Decisions taken with the user:** notebooks are a new project folder entity, progress points come from the latest meeting's Summary, and account deletion removes all local data. See [ADR 0052](decisions/0052-notebooks-capture-time-and-account-deletion.md). The Google Calendar connection uses the existing calendar API rather than a second integration.
+
+**Unknowns:** No real Google or Microsoft connection was tried, because no OAuth client is configured on this device. Existing imports have no capture time and sort by import time.
