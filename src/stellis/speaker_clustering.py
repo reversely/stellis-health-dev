@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import numpy as np
 
-MIN_PASSAGES = 3
+# Below this many embedded passages the pruned affinity graph splits into
+# pieces and each piece reads as a speaker, so turn assignment is kept.
+MIN_PASSAGES = 20
 MAX_SPEAKERS = 8
 PRUNE_RATIOS = (0.1, 0.15, 0.2, 0.25, 0.3)
 UNCERTAIN_MARGIN = 0.10

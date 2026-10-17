@@ -26,7 +26,7 @@ With a fixed speaker count, the embeddings separated the people on every recordi
 
 - After turn alignment, `src/stellis/speaker_clustering.py` embeds every passage, then groups the passages with spectral clustering. It prunes the cosine-affinity matrix to each row's strongest 10% to 30%, and estimates the speaker count, up to 8, from the largest Laplacian eigengap. The pruning ratio is chosen by the normalized maximum eigengap criterion of Park et al., "Auto-Tuning Spectral Clustering for Speaker Diarization Using Normalized Maximum Eigengap" (arXiv 2003.02405). Unlike the paper, affinities keep their values rather than being binarized, the Laplacian is normalized, and five ratios are searched. The speaker count is never supplied.
 - Groups are numbered by first appearance. A passage is uncertain when its similarity to its own group's centroid exceeds the next group's by less than 0.10. A passage too short to embed takes its nearest passage's group and stays uncertain (`speaker_match_source = nearest_passage`).
-- With fewer than three embedded passages, the turn-overlap assignment and the ADR 0050 fallback stay in use. The pipeline version moves to `…-words-v6`; job metrics record `speaker_grouping` and `passage_speaker_count`.
+- With fewer than 20 embedded passages, the turn-overlap assignment and the ADR 0050 fallback stay in use. In the first live run, a one-minute recording with six passages from one voice came out as five speakers, because the pruned affinity graph split into pieces. The pipeline version moves to `…-words-v7` (v6 used a three-passage minimum); job metrics record `speaker_grouping` and `passage_speaker_count`.
 
 ## Tradeoffs
 
