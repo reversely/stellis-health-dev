@@ -1,4 +1,4 @@
-# ADR 0049: Provisional speaker for passages outside every acoustic turn
+# ADR 0050: Provisional speaker for passages outside every acoustic turn
 
 Status: accepted for development, 2026-10-16 (#180).
 
