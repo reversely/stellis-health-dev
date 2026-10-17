@@ -97,6 +97,27 @@ def list_notebooks() -> list[dict[str, object]]:
     return books
 
 
+def category_groups(limit: int = 5) -> list[dict[str, object]]:
+    """The most used categories, shaped like notebooks, for the home page groups."""
+    with storage.connect() as conn:
+        rows = conn.execute("""SELECT c.id AS category_id, c.name AS category_name, v.id, v.title, v.duration_ms,
+                v.created_at, v.recorded_at
+            FROM categories c JOIN conversation_categories cc ON cc.category_id = c.id
+            JOIN conversations v ON v.id = cc.conversation_id AND v.trashed_at IS NULL
+            ORDER BY COALESCE(v.recorded_at, v.created_at) DESC, v.created_at DESC""").fetchall()
+    groups: dict[str, dict[str, object]] = {}
+    for row in rows:
+        group = groups.setdefault(str(row["category_id"]), {"id": str(row["category_id"]), "name": str(row["category_name"]),
+                                                            "conversations": []})
+        group["conversations"].append({key: row[key] for key in ("id", "title", "duration_ms", "created_at", "recorded_at")})
+    chosen = sorted(groups.values(), key=lambda group: (-len(group["conversations"]), str(group["name"]).casefold()))[:limit]
+    points = summary_points([str(group["conversations"][0]["id"]) for group in chosen])
+    for index, group in enumerate(chosen):
+        group["color"] = PALETTE[index % len(PALETTE)]
+        group["progress"] = points.get(str(group["conversations"][0]["id"]), {}).get("progress", [])
+    return chosen
+
+
 def create(name: str, color: str | None = None) -> dict[str, object]:
     value = _name(name)
     with storage.connect() as conn:

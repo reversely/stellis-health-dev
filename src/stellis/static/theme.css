@@ -1325,11 +1325,11 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 @media (hover: hover) and (pointer: fine) { .icon-button:hover { background: var(--raised); color: var(--ink); } }
 .invert-button {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 15px;
-  border: 0; border-radius: 8px; background: var(--ink); color: var(--field); font: inherit; font-weight: 650; cursor: pointer;
+  border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 650; cursor: pointer;
   transition-property: background-color, scale; transition-duration: 150ms; transition-timing-function: ease-out;
 }
 .invert-button:active { scale: .96; }
-@media (hover: hover) and (pointer: fine) { .invert-button:hover { background: color-mix(in oklch, var(--ink) 86%, var(--field)); } }
+@media (hover: hover) and (pointer: fine) { .invert-button:hover { background: var(--accent-strong); } }
 .recent-dot {
   flex: none; width: 9px; height: 9px; border-radius: 50%;
   background: var(--dot, transparent);
@@ -1591,3 +1591,32 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 .turn-heading button.speaker-set { color: var(--ink); }
 .turn-heading .speaker-check { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%;
   background: var(--check-bg); color: var(--check-ink); flex: none; }
+
+/* Home (#222): rail filter as a dropdown of pills; category groups reuse notebook cards. */
+.rail-filter { position: relative; }
+.rail-filter summary {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; list-style: none; cursor: pointer;
+  border: 1px solid color-mix(in srgb, #F7F5F6 22%, transparent); border-radius: 999px;
+  background: color-mix(in srgb, #27222B 55%, transparent); color: var(--ink); font: 600 13px Inter, sans-serif;
+}
+.rail-filter summary::-webkit-details-marker { display: none; }
+.rail-filter summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; }
+.rail-filter[open] summary::after { margin-top: 3px; rotate: 225deg; }
+.rail-filter summary:focus-visible, .rail-filter-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The pills float over the list like a menu instead of pushing it down. */
+.rail-filter-pills {
+  position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: flex; flex-wrap: wrap; gap: 6px;
+  width: min(300px, calc(100vw - 40px)); box-sizing: border-box; padding: 10px; border: 1px solid #605465;
+  border-radius: 10px; background: #27222B; box-shadow: 0 16px 38px #00000059;
+}
+.rail-filter-pill {
+  min-height: 32px; padding: 0 12px; border: 1px solid color-mix(in srgb, #F7F5F6 22%, transparent); border-radius: 999px;
+  background: transparent; color: var(--ink); font: 13px Inter, sans-serif; cursor: pointer;
+}
+/* The rail is always dark, so the selected pill uses the rail palette, not the page tokens. */
+.rail-filter-pill[aria-pressed="true"] { background: #F7F5F6; color: #27222B; border-color: #F7F5F6; font-weight: 600; }
+.category-groups { display: grid; gap: 16px; }
+.category-card-name { padding: 0; border: 0; background: transparent; color: inherit; font: 400 23px/1.15 Piazzolla, Georgia, serif;
+  text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.category-card-name:hover { text-decoration: underline; text-underline-offset: 4px; }
+.category-card .notebook-card-head { grid-template-columns: auto minmax(0, 1fr); }

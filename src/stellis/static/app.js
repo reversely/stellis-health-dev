@@ -99,6 +99,7 @@ let librarySearchLimited = false;
 let libraryCategories = [];
 let libraryConversations = [];
 let libraryJobTimer;
+let libraryCategoryGroups = [];
 let activePersonId = null;
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
@@ -792,13 +793,16 @@ async function showList() {
   document.querySelector('#person-view').hidden = true;
   hideAppPages();
   document.querySelector('#page-title').textContent = 'Recent conversations';
-  const [conversations, categories, books] = await Promise.all([
+  const [conversations, categories, books, groups] = await Promise.all([
     fetch(`${API}/conversations`).then(json), fetch(`${API}/categories`).then(json), fetch(`${API}/notebooks`).then(json),
+    fetch(`${API}/category-groups`).then(json),
   ]);
   libraryConversations = conversations;
   libraryCategories = categories;
+  libraryCategoryGroups = groups;
   libraryNotebooks = books.notebooks; notebookPalette = books.palette;
   renderNotebooks();
+  renderCategoryGroups();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
   document.querySelector('#auto-categories').checked = automation.enabled;
@@ -860,6 +864,7 @@ function renderCategoryControls() {
     new Option(`Uncategorized (${libraryConversations.filter(item => !item.category_ids.length).length})`, 'uncategorized'),
     ...libraryCategories.map(item => new Option(`${item.name} (${item.conversation_count})`, item.id)));
   picker.value = selected === 'uncategorized' || libraryCategories.some(item => item.id === selected) ? selected : '';
+  renderRailFilter();
   const container = document.querySelector('#category-list'); container.replaceChildren();
   for (const category of libraryCategories) {
     const row = document.createElement('div'); row.className = 'category-row';
@@ -3410,6 +3415,50 @@ function notebookCard(notebook) {
     card.append(history);
   }
   return card;
+}
+function renderRailFilter() {
+  const picker = document.querySelector('#category-filter');
+  const current = picker.selectedOptions[0];
+  document.querySelector('#rail-filter-label').textContent = current ? current.textContent.replace(/ \(\d+\)$/, '') : 'All';
+  const pills = [...picker.options].map(option => {
+    const pill = document.createElement('button'); pill.type = 'button'; pill.className = 'rail-filter-pill';
+    pill.textContent = option.textContent; pill.setAttribute('aria-pressed', String(option.value === picker.value));
+    pill.addEventListener('click', () => {
+      picker.value = option.value;
+      document.querySelector('#rail-filter').open = false;
+      picker.dispatchEvent(new Event('change'));
+      renderRailFilter();
+    });
+    return pill;
+  });
+  document.querySelector('#rail-filter-pills').replaceChildren(...pills);
+}
+function categoryCard(group) {
+  // Same card as a notebook: the group's latest conversation, its takeaways, then older ones.
+  const card = notebookCard({...group, id: group.id});
+  card.classList.add('category-card');
+  const head = card.querySelector('.notebook-card-head');
+  const filter = document.createElement('button'); filter.type = 'button'; filter.className = 'category-card-name';
+  filter.textContent = group.name; filter.title = `Show ${group.name} in recent conversations`;
+  filter.addEventListener('click', () => {
+    const picker = document.querySelector('#category-filter');
+    picker.value = group.id; picker.dispatchEvent(new Event('change')); renderRailFilter();
+  });
+  head.replaceChildren(icon('tag'), filter);
+  return card;
+}
+document.addEventListener('click', event => {
+  const filter = document.querySelector('#rail-filter');
+  if (filter.open && !filter.contains(event.target)) filter.open = false;
+});
+document.addEventListener('keydown', event => {
+  const filter = document.querySelector('#rail-filter');
+  if (event.key === 'Escape' && filter.open) { filter.open = false; filter.querySelector('summary').focus(); }
+});
+function renderCategoryGroups() {
+  const section = document.querySelector('#category-groups');
+  section.hidden = !libraryCategoryGroups.length;
+  document.querySelector('#category-group-grid').replaceChildren(...libraryCategoryGroups.map(categoryCard));
 }
 function renderNotebooks() {
   const grid = document.querySelector('#notebook-grid');

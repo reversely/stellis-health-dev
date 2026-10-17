@@ -29,8 +29,8 @@ def categories() -> list[dict[str, object]]:
             FROM categories c LEFT JOIN conversation_categories cc ON cc.category_id = c.id
             LEFT JOIN conversations v ON v.id = cc.conversation_id AND v.trashed_at IS NULL
             GROUP BY c.id ORDER BY
-                CASE c.normalized WHEN 'meeting' THEN 0 WHEN 'event' THEN 1
-                    WHEN 'interview' THEN 2 WHEN 'conversation' THEN 3 ELSE 4 END,
+                CASE c.normalized WHEN 'meetings' THEN 0 WHEN 'interviews' THEN 1
+                    WHEN 'workshops' THEN 2 WHEN 'briefings' THEN 3 WHEN 'calls' THEN 4 ELSE 5 END,
                 c.name COLLATE NOCASE""").fetchall()
     return [dict(row) for row in rows]
 

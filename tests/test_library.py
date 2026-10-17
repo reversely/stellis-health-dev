@@ -58,7 +58,7 @@ class LibraryWorkflowTest(unittest.TestCase):
 
     def test_categories_trash_restore_and_permanent_delete(self):
         categories = [self.client.post('/api/v1/categories', json={'name': name}).json()
-                      for name in ('Research', 'Interviews')]
+                      for name in ('Research', 'Field notes')]
         for category in categories:
             response = self.client.put(f'/api/v1/conversations/{self.first}/categories/{category["id"]}')
             self.assertEqual(response.status_code, 200)
@@ -97,7 +97,7 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertFalse(media.exists())
         self.assertIsNone(storage.get_conversation(self.first, include_trashed=True))
         self.assertEqual(self.client.get('/api/v1/search', params={'q':'Asteroid'}).json()['total'], 0)
-        self.assertEqual(len(self.client.get('/api/v1/categories').json()), 5)
+        self.assertEqual(len(self.client.get('/api/v1/categories').json()), len(storage.INITIAL_CATEGORIES) + 1)
         self.assertEqual(len(self.client.get('/api/v1/conversations').json()), 1)
         with storage.connect() as conn:
             for table in ('transcripts', 'transcript_generations', 'transcript_edits',
@@ -119,13 +119,13 @@ class LibraryWorkflowTest(unittest.TestCase):
             conn.execute("""INSERT INTO category_decisions
                 (conversation_id, state, model_id, transcript_revision, updated_at)
                 VALUES (?, 'queued', ?, ?, ?)""", (self.first, categorization.MODEL_ID, revision, datetime.now(timezone.utc).isoformat()))
-        with patch.object(categorization, 'classify', return_value=('Interview', 0.98)):
+        with patch.object(categorization, 'classify', return_value=('Interviews', 0.98)):
             categorization._run(self.first, revision, 'test-key')
-        category = next(item for item in self.client.get('/api/v1/categories').json() if item['name'] == 'Interview')
+        category = next(item for item in self.client.get('/api/v1/categories').json() if item['name'] == 'Interviews')
         self.assertIn(category['id'], self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'])
         self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['state'], 'assigned')
         self.client.delete(f'/api/v1/conversations/{self.first}/categories/{category["id"]}')
-        with patch.object(categorization, 'classify', return_value=('Meeting', 0.99)):
+        with patch.object(categorization, 'classify', return_value=('Meetings', 0.99)):
             categorization._run(self.first, revision, 'test-key')
         self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
         self.assertTrue(self.client.get(f'/api/v1/conversations/{self.first}/categorization').json()['manual_override'])
@@ -157,13 +157,13 @@ class LibraryWorkflowTest(unittest.TestCase):
         initial = self.client.get(endpoint).json()
         self.assertEqual([item['name'] for item in initial], list(storage.INITIAL_CATEGORIES))
         meeting = initial[0]
-        self.assertEqual(self.client.patch(f"{endpoint}/{meeting['id']}", json={'name':'Workshop'}).status_code, 200)
+        self.assertEqual(self.client.patch(f"{endpoint}/{meeting['id']}", json={'name':'Standups'}).status_code, 200)
         self.assertEqual(self.client.delete(f"{endpoint}/{initial[1]['id']}").status_code, 200)
         with storage.connect():
             pass
         current = self.client.get(endpoint).json()
-        self.assertEqual({item['name'] for item in current}, {'Workshop', 'Interview', 'Conversation'})
-        self.assertEqual(next(item['id'] for item in current if item['name'] == 'Workshop'), meeting['id'])
+        self.assertEqual({item['name'] for item in current}, {'Standups', 'Workshops', 'Briefings', 'Calls'})
+        self.assertEqual(next(item['id'] for item in current if item['name'] == 'Standups'), meeting['id'])
         self.assertEqual(self.client.get(f'/api/v1/conversations/{self.first}').json()['category_ids'], [])
 
     def test_existing_categories_survive_one_time_seed(self):
@@ -172,15 +172,25 @@ class LibraryWorkflowTest(unittest.TestCase):
             with sqlite3.connect(database) as conn:
                 conn.execute('CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT NOT NULL, normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)')
                 conn.execute('INSERT INTO categories VALUES (?, ?, ?, ?)',
-                             ('existing-meeting', 'MEETING', 'meeting', '2026-01-01'))
+                             ('existing-meeting', 'MEETINGS', 'meetings', '2026-01-01'))
                 conn.execute('INSERT INTO categories VALUES (?, ?, ?, ?)',
                              ('custom', 'Research', 'research', '2026-01-01'))
             seeded = library.categories()
-            self.assertEqual([item['name'] for item in seeded[:4]],
-                             ['MEETING', 'Event', 'Interview', 'Conversation'])
+            self.assertEqual([item['name'] for item in seeded[:5]],
+                             ['MEETINGS', 'Interviews', 'Workshops', 'Briefings', 'Calls'])
             self.assertEqual(seeded[0]['id'], 'existing-meeting')
-            self.assertEqual(len(seeded), 5)
+            self.assertEqual(len(seeded), 6)
             self.assertEqual(library.categories(), seeded)
+
+    def test_category_groups_list_the_most_used_categories_with_their_conversations(self):
+        categories = {item['name']: item['id'] for item in self.client.get('/api/v1/categories').json()}
+        for conversation, name in ((self.first, 'Meetings'), (self.second, 'Meetings'), (self.second, 'Calls')):
+            self.assertEqual(self.client.put(f'/api/v1/conversations/{conversation}/categories/{categories[name]}').status_code, 200)
+        groups = self.client.get('/api/v1/category-groups').json()
+        self.assertEqual([group['name'] for group in groups], ['Meetings', 'Calls'])
+        self.assertEqual({item['id'] for item in groups[0]['conversations']}, {self.first, self.second})
+        self.assertTrue(all(group['color'].startswith('#') for group in groups))
+        self.assertTrue(all('<' not in group['name'] for group in groups))
 
     def test_library_lists_each_conversations_unfinished_processing(self):
         now = datetime.now(timezone.utc).isoformat()
