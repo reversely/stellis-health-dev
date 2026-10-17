@@ -786,6 +786,7 @@ body, html[data-theme='light'] body {
   background: var(--field);
 }
 html[data-theme='dark'] body::before { display: none; }
+#rail-shader { display: none; }
 
 @media (min-width: 1001px) {
   body:has(#list-view:not([hidden])), body.recording-page {
@@ -819,6 +820,18 @@ html[data-theme='dark'] body::before { display: none; }
   @media (prefers-reduced-motion: reduce) {
     body:has(#list-view:not([hidden])) { animation: none; }
   }
+  body:has(#list-view:not([hidden])) #rail-shader {
+    display: block;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 0;
+    width: var(--rail-width);
+    height: 100vh;
+    /* Blob edge softness, 0 (defined) to 1 (diffuse). */
+    --rail-blur: .2;
+    pointer-events: none;
+  }
+  html.rail-shader-ready body:has(#list-view:not([hidden])) { animation: none; }
   body:has(#list-view:not([hidden])) header, body.recording-page header {
     grid-column: 1;
     grid-row: 1;
