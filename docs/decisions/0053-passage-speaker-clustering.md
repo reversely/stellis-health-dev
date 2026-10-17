@@ -14,7 +14,7 @@ Each recording's saved passages were embedded with the installed TitaNet small m
 | --- | --- | --- | --- |
 | 40k Inspection Parts and Span Time Analysis (tune) | 2 | 13 → 2 | 86% → 96% |
 | Part Number Analysis and Data Mapping (tune) | 3 | 35 → 3 | 30% → 79% |
-| Hackathon Project Planning and Ideation (tune) | 3 | 20 → 3 | 55% → 84% |
+| Hackathon Project Planning and Ideation (tune) | 3 (2 per the repo owner) | 20 → 3 | 55% → 84% |
 | CIFAR Aerospace Research Overview (check) | 5 | 13 → 4 | 68% → 88% |
 | Food, Technology, and Power Narratives (check) | 3 | 21 → 3 | 84% → 90% |
 | Service Center Capacity and Span Time Analysis (check) | 2 | 20 → 2 | 78% → 91% |
@@ -30,6 +30,6 @@ With a fixed speaker count, the embeddings separated the people on every recordi
 
 ## Tradeoffs
 
-Fewer groups means two similar voices can share one speaker. In CIFAR Aerospace Research Overview, two people with about 4.5 minutes each shared a group. In a full v6 run of Hackathon Project Planning and Ideation, two people (5.3 and 2.4 minutes) shared "Speaker 1" while the main speaker was correct; the older passages of that recording gave three groups, so its count is borderline. Turn-overlap assignment almost never merged people, because it split everyone into many groups. Users correct merges with the existing speaker labels.
+Fewer groups means two similar voices can share one speaker. In CIFAR Aerospace Research Overview, two people with about 4.5 minutes each shared a group. A full v6 run of Hackathon Project Planning and Ideation gave two speakers. The repo owner confirmed the recording has two people, so that result is correct; the Otter export's third person is an Otter error, which also lowers that recording's score in the table. Turn-overlap assignment almost never merged people, because it split everyone into many groups. Users correct merges with the existing speaker labels.
 
 Embedding every passage took 9 to 34 seconds per recording on an Apple A18 Pro (6 cores, 8 GB, two TitaNet threads), and clustering took under half a second. The paper's exact variant (binarized affinities, every pruning value) was not finished before this decision and remains a follow-up.
