@@ -17,7 +17,7 @@ Use this guide for new screens and when revising existing controls. It records t
 
 Use the roles already defined in `src/stellis/static/theme.css` before adding a color. Check text and icon contrast in both themes. The dark core has a red undertone and is never pure black. Keep the light document surface flat. Dark mode uses a flat mauve document surface.
 
-The **desktop home left rail** has one centered radial gradient, subtle grain, and slow vertical motion. Freeze that motion for reduced-motion preferences. Its transparent header is continuous with the rail, with no separate top bar or divider. The recording rail, buttons, cards, notebook, and auth screen use solid fills. At narrow widths the home layout has a solid top section because there is no left sidebar. Do not spread the gradient across controls or other pages.
+The **desktop home left rail** is a WebGL fill (`static/rail-shader.js`) of five soft blobs in the rail palette (teal, slate, violet, blue, and wine over the dark core) under subtle grain. The blobs drift slowly and lean slightly toward the pointer. `--rail-blur` on `#rail-shader` sets edge softness from 0 to 1; the default is 0.2, which keeps five distinct blobs with the dark core visible between them. Reduced-motion preferences get one still frame. Without WebGL the rail falls back to the centered radial gradient. Its transparent header is continuous with the rail, with no separate top bar or divider. The recording rail, buttons, cards, notebook, and auth screen use solid fills. At narrow widths the home layout has a solid top section because there is no left sidebar. Do not spread the gradient across controls or other pages.
 
 ## Type and shape
 

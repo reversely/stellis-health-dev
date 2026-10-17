@@ -12,8 +12,10 @@
     <script src="/shared/snapshot-format.js" defer></script>
     <script src="/static/app.js" defer></script>
     <script src="/static/conversation-sync.js" defer></script>
+    <script src="/static/rail-shader.js" defer></script>
   </head>
   <body>
+    <canvas id="rail-shader" aria-hidden="true"></canvas>
     <header><a class="brand" href="/">stellis</a><div class="header-side"><div id="capture-header-controls" class="capture-header-controls" hidden><span id="capture-header-timer">0:00</span><button id="capture-header-pause" type="button" aria-label="Pause recording" title="Pause recording">Ⅱ</button><button id="capture-header-stop" type="button" aria-label="Stop recording" title="Stop recording">■</button></div><button id="logout-button" type="button" hidden>Log out</button><button id="theme-toggle" type="button" aria-label="Switch to light mode">Light mode</button></div></header>
     <main>
       <section class="heading">
