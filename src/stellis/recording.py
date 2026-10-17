@@ -13,7 +13,7 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from stellis import storage, tools
+from stellis import notes, storage, tools
 from stellis.importer import ImportFailure, MAX_AUDIO_BYTES, import_upload
 
 MAX_CHUNK_BYTES = 8_000_000
@@ -40,7 +40,8 @@ def _public(row) -> dict[str, object]:
                                       "conversation_id", "created_at", "updated_at")}
 
 
-def create_session(title: str, media_type: str, notebook_id: str | None = None) -> dict[str, object]:
+def create_session(title: str, media_type: str, notebook_id: str | None = None,
+                   calendar_event: tuple[str, str] | None = None) -> dict[str, object]:
     """Start a recoverable local recording before microphone capture begins."""
     if media_type not in RECORDING_TYPES:
         raise ValueError("This browser recording format is unsupported")
@@ -57,6 +58,8 @@ def create_session(title: str, media_type: str, notebook_id: str | None = None) 
                VALUES (:id, :title, :media_type, :state, :conversation_id, :notebook_id, :created_at, :updated_at)""",
             record,
         )
+        if calendar_event:
+            notes.move_event_to_recording(conn, *calendar_event, record["id"])
     return record
 
 
@@ -231,7 +234,6 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
             conversation, duplicate = await import_upload(
                 upload, browser_recording=True, recorded_at=str(session["created_at"]),
                 notebook_id=session.get("notebook_id"))
-        from stellis import notes
         notes.attach_to_conversation(recording_id, str(conversation["id"]))
         from stellis import images
         images.attach_to_conversation(recording_id, str(conversation["id"]), int(conversation["duration_ms"]))

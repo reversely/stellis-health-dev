@@ -2781,8 +2781,9 @@ async function startCapture() {
     const recorder = new MediaRecorder(stream, {mimeType:mediaType});
     const session = await json(await fetch(`${API}/recordings`, {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0],
-        notebook_id:pendingNotebookId})}));
-    pendingNotebookId = null;
+        notebook_id:pendingNotebookId, calendar_provider:pendingCalendarEvent?.provider,
+        calendar_event_id:pendingCalendarEvent?.id})}));
+    pendingNotebookId = null; pendingCalendarEvent = null;
     capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
       startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false,
       previewPending:false, previewRetryAfter:0, lastPreviewSequence:-1};
@@ -2885,7 +2886,7 @@ async function finishCapture() {
 }
 document.querySelector('#record-button').addEventListener('click', () => {
   if (capture) {
-    pendingNotebookId = null;
+    pendingNotebookId = null; pendingCalendarEvent = null;
     history.pushState({}, '', '/recording');
     route().catch(error => setStatus(error.message));
     return;
@@ -3337,6 +3338,8 @@ const NOTEBOOK_DARK_INK = new Set(['#45ADA8']);
 let libraryNotebooks = [];
 let notebookPalette = [];
 let pendingNotebookId = null;
+// A calendar meeting whose notes the next recording starts from.
+let pendingCalendarEvent = null;
 let editingNotebook = null;
 let addingToNotebook = null;
 let activeNotebookId = null;
@@ -3613,7 +3616,7 @@ document.querySelector('#notebook-add-import').addEventListener('click', () => {
   pendingNotebookId = addingToNotebook.id;
 });
 document.querySelector('#home-record').addEventListener('click', () => {
-  pendingNotebookId = null; document.querySelector('#record-button').click();
+  pendingNotebookId = null; pendingCalendarEvent = null; document.querySelector('#record-button').click();
 });
 document.querySelector('#home-import').addEventListener('click', () => {
   pendingNotebookId = null; document.querySelector('#import-button').click();

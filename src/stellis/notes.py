@@ -96,3 +96,55 @@ def attach_to_conversation(recording_id: str, conversation_id: str) -> None:
             conn.execute("UPDATE meeting_notes SET markdown = ?, revision = revision + 1, updated_at = ? WHERE id = ?",
                          (combined, _stamp(), existing["id"]))
         conn.execute("DELETE FROM meeting_notes WHERE id = ?", (captured["id"],))
+
+
+EVENT_PROVIDERS = ("google", "microsoft")
+
+
+def _event_key(provider: str, event_id: str) -> tuple[str, str]:
+    if provider not in EVENT_PROVIDERS or not 1 <= len(event_id) <= 1024:
+        raise ValueError("Invalid calendar event")
+    return provider, event_id
+
+
+def get_event(provider: str, event_id: str) -> dict[str, object]:
+    """Read the notes written ahead of a calendar meeting; an untouched meeting has empty notes."""
+    key = _event_key(provider, event_id)
+    with storage.connect() as conn:
+        row = conn.execute("SELECT * FROM event_notes WHERE provider = ? AND event_id = ?", key).fetchone()
+    return _public(row)
+
+
+def save_event(provider: str, event_id: str, markdown: str, expected_revision: int) -> dict[str, object]:
+    key = _event_key(provider, event_id)
+    if not isinstance(markdown, str) or len(markdown.encode("utf-8")) > MAX_MARKDOWN:
+        raise ValueError("Notes are too large")
+    with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT * FROM event_notes WHERE provider = ? AND event_id = ?", key).fetchone()
+        current_revision = int(row["revision"]) if row else 0
+        if current_revision != expected_revision:
+            raise RuntimeError("Notes changed in another tab")
+        conn.execute("""INSERT INTO event_notes (provider, event_id, markdown, revision, updated_at) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(provider, event_id) DO UPDATE SET markdown = excluded.markdown, revision = excluded.revision,
+            updated_at = excluded.updated_at""", (*key, markdown, current_revision + 1, _stamp()))
+        updated = conn.execute("SELECT * FROM event_notes WHERE provider = ? AND event_id = ?", key).fetchone()
+    return _public(updated)
+
+
+def events_with_notes() -> set[tuple[str, str]]:
+    with storage.connect() as conn:
+        rows = conn.execute("SELECT provider, event_id FROM event_notes WHERE TRIM(markdown) != ''").fetchall()
+    return {(str(row["provider"]), str(row["event_id"])) for row in rows}
+
+
+def move_event_to_recording(conn, provider: str, event_id: str, recording_id: str) -> None:
+    """Start a recording's My Notes from its meeting's notes, inside the caller's transaction."""
+    key = _event_key(provider, event_id)
+    row = conn.execute("SELECT markdown FROM event_notes WHERE provider = ? AND event_id = ?", key).fetchone()
+    if row is None:
+        return
+    if str(row["markdown"]).strip():
+        conn.execute("INSERT INTO meeting_notes (id, recording_id, markdown, revision, updated_at) VALUES (?, ?, ?, 1, ?)",
+                     (str(uuid.uuid4()), recording_id, row["markdown"], _stamp()))
+    conn.execute("DELETE FROM event_notes WHERE provider = ? AND event_id = ?", key)

@@ -243,7 +243,7 @@ def erase_all() -> dict[str, int]:
     for recording_id in captures:
         recording.discard_session(recording_id)
     with storage.connect() as conn:
-        for table in ("vocabulary", "persons", "notebooks", "category_automation", "categories"):
+        for table in ("vocabulary", "persons", "notebooks", "category_automation", "categories", "event_notes"):
             conn.execute(f"DELETE FROM {table}")
         # Seed the default categories again for the next account.
         conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")

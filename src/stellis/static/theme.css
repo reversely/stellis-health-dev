@@ -1442,16 +1442,96 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 .calendar-heading { justify-content: flex-start; gap: 6px; margin-bottom: 14px; }
 #calendar-status:empty { display: none; }
 #calendar-status { margin: 0 0 12px; min-height: 0; color: var(--muted); font-size: 14px; }
-.calendar-meetings { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-.calendar-meeting {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 2px;
-  padding: 12px 8px 12px 16px; border: 1px solid var(--line-soft); border-top: 1px solid var(--line-soft);
-  border-radius: 6px; background: var(--surface);
-}
-.calendar-meeting time { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.calendar-meeting strong { grid-column: 1; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
-.calendar-meeting .icon-button { grid-column: 2; grid-row: 1 / 3; }
 #list-view .calendar-card .icon-button { border: 0; background: transparent; padding: 0; }
+.calendar-views { display: flex; gap: 2px; margin-left: auto; }
+#list-view .calendar-views [aria-pressed='true'] { background: var(--raised); color: var(--ink); }
+
+/* List: one plain row per meeting in the next three days. */
+.calendar-meetings[hidden], .calendar-days[hidden] { display: none; }
+.calendar-meetings { display: grid; }
+.calendar-meeting {
+  display: grid; grid-template-columns: 10rem minmax(0, 1fr) auto; align-items: center; column-gap: 16px;
+  min-height: 52px; padding: 4px 0; border: 0; border-bottom: 1px solid var(--line-soft); border-radius: 0; background: none;
+}
+.calendar-meeting:first-child { border-top: 1px solid var(--line-soft); }
+.calendar-meeting time { color: var(--muted); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.calendar-meeting strong { color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; text-wrap: pretty; }
+.calendar-meeting.is-now time { color: var(--ink); font-weight: 650; }
+.calendar-card .meeting-actions { display: flex; gap: 2px; }
+#list-view .calendar-card .meeting-action { padding: 0; border: 0; background: transparent; color: var(--muted); }
+#list-view .calendar-card .meeting-action.has-notes { color: var(--ink); }
+.meeting-action {
+  position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer;
+  transition-property: background-color, color, scale; transition-duration: 150ms; transition-timing-function: ease-out;
+}
+.meeting-action::before { content: ''; position: absolute; inset: -2px; }
+.meeting-action:active { scale: .96; }
+.meeting-action .icon { width: 20px; height: 20px; }
+.meeting-action.has-notes { color: var(--ink); }
+.meeting-action:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) { #list-view .calendar-card .meeting-action:hover { background: var(--raised); color: var(--ink); } }
+/* Record is a small dot in a ring, quieter than the page's Record button. */
+.record-dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; outline: 1.5px solid currentColor; outline-offset: 2.5px; }
+
+/* Next 3 days: a day column per date on an hour grid, with a bar at the current time today. */
+.calendar-days { --gutter: 52px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--surface); overflow: hidden; }
+.days-head, .days-all-day, .days-grid { display: grid; grid-template-columns: var(--gutter) repeat(3, minmax(0, 1fr)); }
+.days-head, .days-all-day { border-bottom: 1px solid var(--line-soft); }
+.days-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 10px 12px; border-left: 1px solid var(--line-soft); }
+.days-label strong { color: var(--ink); font-size: 14px; }
+.days-label span { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.days-all-day > div { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 6px; border-left: 1px solid var(--line-soft); }
+.days-chip { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; padding: 0 0 0 10px; border-radius: 6px; background: var(--raised); }
+.days-chip strong { min-width: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.days-grid { position: relative; height: calc(var(--hour) * var(--hours)); }
+.days-hours { display: grid; grid-auto-rows: var(--hour); }
+.days-hours span { padding: 3px 8px 0 0; white-space: nowrap; color: var(--muted); font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; }
+.days-column {
+  position: relative; min-width: 0; border-left: 1px solid var(--line-soft);
+  background: repeating-linear-gradient(to bottom, var(--line-soft) 0 1px, transparent 1px var(--hour));
+}
+.days-event {
+  position: absolute; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: 0 2px; padding: 4px 2px 4px 8px; overflow: hidden; border-left: 3px solid var(--line); border-radius: 6px;
+  background: var(--raised); color: var(--ink);
+}
+.days-event.is-now { border-left-color: var(--ink); }
+.days-event-text { display: grid; gap: 1px; min-width: 0; flex: 1 1 90px; }
+.days-event strong { font-size: 13px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.days-event time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* A short block keeps the start of its title in view; the full title is its tooltip. */
+.days-event.is-short { flex-wrap: nowrap; padding-top: 2px; padding-bottom: 0; }
+.days-event.is-short time { display: none; }
+.days-event.is-short .meeting-action { width: 28px; height: 22px; }
+.days-event .meeting-action, .days-chip .meeting-action { width: 32px; height: 32px; }
+.days-event .meeting-action .icon, .days-chip .meeting-action .icon { width: 17px; height: 17px; }
+.days-event .record-dot, .days-chip .record-dot { width: 8px; height: 8px; outline-offset: 2px; }
+.days-now { position: absolute; left: -1px; right: 0; z-index: 2; height: 2px; background: var(--ink); pointer-events: none; }
+.days-now::before { content: ''; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+@media (max-width: 560px) {
+  .calendar-meeting { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; padding: 8px 0; }
+  .calendar-meeting time { grid-column: 1; }
+  .calendar-meeting strong { grid-column: 1; }
+  .calendar-meeting .meeting-actions { grid-column: 2; grid-row: 1 / 3; }
+  .calendar-days { --gutter: 44px; }
+  .days-hours span { padding-right: 5px; font-size: 10.5px; }
+  .days-label { padding: 8px; }
+  /* Narrow columns keep the title and both actions; the time reads from the grid. */
+  .days-event { padding-left: 5px; }
+  .days-event time { display: none; }
+}
+
+/* Notes written before a meeting. */
+#event-notes-dialog {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-sizing: border-box; padding: 24px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow);
+}
+.event-notes-head { display: grid; gap: 4px; margin-bottom: 14px; }
+.event-notes-head h2 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.event-notes-head time { color: var(--muted); font-size: 14px; }
+#event-notes-editor { min-height: 180px; max-height: 50vh; overflow-y: auto; }
+#event-notes-status { min-height: 20px; margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
 /* Account settings. */
 .settings-view, .notebook-view { max-width: 760px; margin: 0 auto; }
