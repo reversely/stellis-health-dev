@@ -16,14 +16,14 @@ Status: accepted for development, 2026-10-17 (#210). Revises the turn rule in [A
 - A person's profile is the mean fingerprint of their confirmed passages in other conversations, with at least three passages. An unnamed speaker group in the current conversation gets a suggestion when its mean fingerprint has cosine similarity of at least 0.6 with one profile, and leads the next profile by at least 0.1. Each person is suggested for at most one group per conversation.
 - `person_links.origin` records `manual` for the passage the user acted on and `propagated` for the passages a speaker-wide choice filled in. Older links have no record of which passage was clicked. A link confirmed alone is classified `manual`; links written together in one batch are classified `propagated`. A passage-scope speaker label counts as manual, and a speaker-wide label as propagated.
 - Clicking a grey suggested name confirms that person for the whole speaker group, with the clicked passage marked manual.
-- Back-to-back passages under the same name, within 1.5 seconds, now share one turn whether or not their assignment is uncertain. The name's colour shows whether it is automatic. Each passage keeps its own speaker control.
+- Back-to-back passages under the same name, within 1.5 seconds, now share one turn whether or not their assignment is uncertain. The name's colour shows whether it is automatic. Each passage keeps a separate speaker control.
 
 ## Calibration and open question
 
 Fingerprints were indexed for all 14 saved conversations on a copy of the data, in 99 seconds. Each speaker group was compared with profiles built only from other conversations.
 
-- **Jay Matlock** (confirmed only in CIFAR Aerospace Research Overview) scored at most 0.42 against any group elsewhere, so he is never suggested. That is the expected result.
-- **Shereen Lee's own labelled groups** scored low against her profile from other recordings: 0.25 in Hackathon Project Planning and Ideation, 0.24 in "How it works". Meanwhile the unnamed "Speaker 2" in the Hackathon recording scored 0.60.
+- **Jay Matlock** (confirmed only in CIFAR Aerospace Research Overview) scored at most 0.42 against any group elsewhere, so no suggestion names Jay Matlock outside that recording.
+- **Before the relabel, the groups labelled Shereen Lee** scored low against the Shereen Lee profile from other recordings: 0.25 in Hackathon Project Planning and Ideation, 0.24 in "How it works". Meanwhile the unnamed "Speaker 2" in the Hackathon recording scored 0.60.
 
 The repo owner confirmed on 2026-10-17 that the Hackathon "Shereen Lee" label was on the other person, and relabelled it in the app. With that fixed, each group labelled Shereen Lee scored 0.51 to 0.59 against the profile from the other recordings: 0.59 in Hackathon, 0.55 in "How it works", 0.51 in CIFAR. The other Hackathon person scored 0.24, and Jay Matlock's groups scored 0.02 to 0.08.
 
