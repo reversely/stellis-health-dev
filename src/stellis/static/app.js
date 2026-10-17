@@ -1658,7 +1658,7 @@ async function showTranscript(id) {
   }
   const unresolved = data.segments.filter(segment => !segment.speaker_cluster_id).length;
   setTranscriptLoading(false);
-  processingStatus.textContent = `${data.segments.length} passages, ${turns.length} turns, ${speakerDurations.size} speakers${unresolved ? `, ${unresolved} unresolved` : ''}`;
+  processingStatus.textContent = !data.segments.length ? 'No speech detected' : `${data.segments.length} passages, ${turns.length} turns, ${speakerDurations.size} speakers${unresolved ? `, ${unresolved} unresolved` : ''}`;
   if (transcriptEditMode) setTranscriptEditMode(true);
   if (cleanRuns.length) loadCleanRuns(id).catch(error => document.querySelector('#clean-status').textContent = error.message);
   refreshTranscriptSearch();
