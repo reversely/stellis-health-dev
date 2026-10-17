@@ -585,7 +585,8 @@ async function selectEnhanced(run) {
   if (enhancedState?.id !== run.id && !(await flushEnhanced())) return;
   enhancedSelectedId = run.id;
   const status = document.querySelector('#enhanced-status');
-  status.textContent = run.state === 'failed' ? run.error_message :
+  document.querySelector('#enhanced-regenerate').hidden = run.state !== 'failed';
+  status.textContent = run.state === 'failed' ? 'Summary failed to generate; please try again' :
     run.state === 'running' || run.state === 'queued' ? `Generating summary: ${run.stage}` :
     run.stale ? 'Notes or transcript changed. Regenerate summary.' : '';
   const sources = document.querySelector('#enhanced-sources'); sources.replaceChildren();
@@ -635,7 +636,8 @@ async function loadEnhancedRuns(id, autoStart = false) {
     else document.querySelector('#enhanced-status').textContent = chosen.stale ?
       'Notes or transcript changed. Regenerate summary.' : '';
   }
-  else {document.querySelector('#enhanced-status').textContent = currentTranscript?.segments?.length ? 'Summary is not ready.' : 'Summary will generate after transcription.';}
+  else {document.querySelector('#enhanced-regenerate').hidden = true;
+    document.querySelector('#enhanced-status').textContent = currentTranscript?.segments?.length ? 'Summary is not ready.' : 'Summary will generate after transcription.';}
   clearTimeout(enhancedPollTimer);
   if (runs.some(run => run.state === 'queued' || run.state === 'running'))
     enhancedPollTimer = setTimeout(() => loadEnhancedRuns(id).catch(error => {
@@ -647,6 +649,7 @@ async function startEnhanced(force) {
   if (!currentTranscript?.segments?.length) { status.textContent = 'Summary will generate after transcription.'; return; }
   if (!(await flushNotes(notesStates.conversation))) { status.textContent = 'Save My Notes before regenerating.'; return; }
   status.textContent = 'Generating summary…';
+  document.querySelector('#enhanced-regenerate').hidden = true;
   try {
     const run = await json(await fetch(`${API}/conversations/${encodeURIComponent(id)}/enhanced-notes`, {
       method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force})}));
@@ -670,6 +673,7 @@ document.querySelector('#enhanced-notes-tab').addEventListener('click', async ()
   });
 });
 document.querySelector('#refresh-enhanced').addEventListener('click', () => startEnhanced(true));
+document.querySelector('#enhanced-regenerate').addEventListener('click', () => startEnhanced(true));
 document.querySelector('#enhanced-version').addEventListener('change', async event => {
   const run = enhancedRuns.find(item => item.id === event.target.value);
   if (run) await selectEnhanced(run);

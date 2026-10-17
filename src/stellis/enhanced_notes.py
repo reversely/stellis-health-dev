@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import threading
 import uuid
@@ -188,10 +189,13 @@ def _run(run_id: str) -> None:
                 provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"],
                 error_code=None, error_message=None)
     except ai.AIError as exc:
+        # The UI shows a generic retry message; keep the cause here and on the run.
+        logging.getLogger(__name__).warning("Summary run %s failed (%s): %s", run_id, exc.code, exc)
         _update(run_id, state="failed", stage="failed", error_code=exc.code, error_message=str(exc),
                 usage_json=json.dumps(metadata["usage"]),
                 provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"])
     except Exception:
+        logging.getLogger(__name__).exception("Summary run %s stopped unexpectedly", run_id)
         _update(run_id, state="failed", stage="failed", error_code="unexpected",
                 error_message="Summary stopped unexpectedly",
                 usage_json=json.dumps(metadata["usage"]),

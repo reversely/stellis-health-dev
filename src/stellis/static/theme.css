@@ -225,6 +225,8 @@ main { max-width: 1100px; }
 .enhanced-heading select { max-width: 190px; }
 .enhanced-heading button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; cursor: pointer; }
 .enhanced-heading button svg { display: block; width: 18px; height: 18px; }
+.enhanced-status-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.enhanced-status-line button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; cursor: pointer; }
 .enhanced-sources { margin-top: 16px; }
 .enhanced-sources summary { cursor: pointer; font-weight: 650; }
 .recording-preview { display: grid; gap: 14px; }
