@@ -68,11 +68,14 @@ class EnhancedNotesWorkflowTest(unittest.TestCase):
             self.assertEqual(len(client.get(f"{base}/enhanced-notes").json()), 2)
             invalid = {"overview":[{"text":"Invented","source_segment_ids":["s99"]}],
                        "topics":[],"decisions":[],"action_items":[]}
-            with patch.object(ai, "_key", return_value="test-key"), patch.object(ai, "_request", return_value=invalid):
+            with patch.object(ai, "_key", return_value="test-key"), patch.object(ai, "_request", return_value=invalid), \
+                    self.assertLogs("stellis.enhanced_notes", "WARNING") as logs:
                 enhanced_notes._run(refreshed["id"])
             failed = client.get(f"/api/v1/enhanced-notes/{refreshed['id']}").json()
             self.assertEqual(failed["state"], "failed")
             self.assertEqual(failed["error_code"], "invalid_source")
+            self.assertEqual(failed["error_message"], "The model cited a passage outside its evidence")
+            self.assertIn("invalid_source", logs.output[0])
             self.assertEqual(client.get(f"/api/v1/enhanced-notes/{first['id']}").json()["edited_markdown"],
                              "## Overview\n\n- Edited note")
             client.put(f"{base}/notes", json={"markdown":"Revised raw note", "expected_revision":1})
