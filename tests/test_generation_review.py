@@ -62,143 +62,116 @@ class GenerationReviewTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def test_split_and_merge_require_decisions_and_preserve_unresolved_source(self):
-        self.assertTrue(generation_review.stage(self.record))
-        current = self.client.get(f'/api/v1/conversations/{self.id}/transcript').json()
-        self.assertEqual(current['generation_version'],'source-v1')
-        self.assertEqual(current['segments'][0]['text'],'Hello world orbit.')
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        self.assertEqual(review['state'],'pending')
-        self.assertEqual(len(review['items']),5)
-        self.assertEqual(next(item for item in review['items'] if item['source_segment_id']=='s1')['boundary_change'],'split')
-        self.assertEqual(next(item for item in review['items'] if item['source_segment_id']=='s2')['boundary_change'],'merge')
-        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,409)
-        for item in review['items']:
-            target = {'person':'t1','highlight':'t1','speaker':'t3'}.get(item['kind'])
-            response = self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions',
-                json={'item_id':item['id'],'target_segment_id':target})
-            self.assertEqual(response.status_code,200)
-        result = self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate')
-        self.assertEqual(result.status_code,200)
-        self.assertEqual(result.json()['unresolved'],2)
-        after = self.client.get(f'/api/v1/conversations/{self.id}/transcript').json()
-        self.assertEqual(after['generation_version'],'target-v2')
-        self.assertEqual(after['segments'][0]['person_id'],self.person['id'])
-        self.assertEqual(after['segments'][2]['speaker_display_name'],'Interviewer')
-        self.assertEqual(after['highlights'][-1]['segment_id'],'t1')
-        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()['state'],'accepted')
-        history = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review/history').json()
-        self.assertEqual(history[0]['outcome'],'accepted')
-        self.assertEqual(history[0]['target_version'],'target-v2')
-        with storage.connect() as conn:
-            self.assertEqual(conn.execute('SELECT COUNT(*) FROM transcript_edits WHERE conversation_id=?',(self.id,)).fetchone()[0],2)
-        self.client.post(f'/api/v1/conversations/{self.id}/trash')
-        self.assertEqual(self.client.delete(f'/api/v1/trash/{self.id}').status_code,200)
-        self.assertEqual(self.client.get(f'/api/v1/persons/{self.person["id"]}').json()['total_link_count'],0)
+    def transcript(self):
+        return self.client.get(f'/api/v1/conversations/{self.id}/transcript').json()
 
-    def test_keep_source_does_not_activate_candidate(self):
-        self.assertTrue(generation_review.stage(self.record))
-        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/keep-source').status_code,200)
-        self.assertIsNone(self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json())
-        self.assertEqual(storage.get_transcript(self.id)['generation_version'],'source-v1')
-        self.assertIsNotNone(storage.get_transcript_generation(self.id,'target-v2'))
-        self.assertEqual(self.client.get(f'/api/v1/conversations/{self.id}/transcript/review/history').json()[0]['outcome'],
-                         'kept_source')
+    def test_edited_passages_are_kept_as_written_with_their_names_and_highlights(self):
+        self.assertEqual(generation_review.stage(self.record), 'applied')
+        after = self.transcript()
+        self.assertEqual(after['generation_version'], 'target-v2')
+        self.assertEqual([item['id'] for item in after['segments']], ['s1', 's2', 's3'])
+        self.assertEqual(after['segments'][0]['text'], 'Hello world orbit.')
+        self.assertEqual(after['segments'][0]['person_id'], self.person['id'])
+        self.assertEqual(after['segments'][1]['speaker_display_name'], 'Interviewer')
+        self.assertEqual(after['segments'][2]['text'], 'Closing worlds.')
+        self.assertEqual(after['highlights'][0]['segment_id'], 's1')
+        # Kept passages take the new speaker grouping.
+        self.assertEqual(after['segments'][0]['speaker_cluster_id'], 'speaker-9')
+        self.assertIsNone(generation_review.get_review(self.id) if generation_review.get_review(self.id) and
+                          generation_review.get_review(self.id)['state'] == 'pending' else None)
+        self.assertEqual(self.client.get(f'/api/v1/persons/{self.person["id"]}').json()['total_link_count'], 1)
 
-    def test_close_suggestion_never_maps_confirmed_person_automatically(self):
-        self.target[0] = {**self.source[0], 'id':'new-s1'}
-        self.target[1] = {**self.source[1], 'id':'new-s2'}
-        self.target[2] = {**self.source[2], 'id':'new-s3'}
+    def test_same_passages_with_new_ids_carry_every_overlay(self):
+        self.target = [{**item, 'id': f'new-{item["id"]}'} for item in self.source]
         self.record['segments_json'] = json.dumps(self.target)
-        self.assertTrue(generation_review.stage(self.record))
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        person_item = next(item for item in review['items'] if item['kind']=='person')
-        self.assertEqual(person_item['suggestion'],'new-s1')
-        self.assertEqual(review['decisions'],{})
-        self.assertEqual(storage.get_transcript(self.id)['generation_version'],'source-v1')
-        self.assertEqual(self.client.get(f'/api/v1/persons/{self.person["id"]}').json()['total_link_count'],1)
+        self.assertEqual(generation_review.stage(self.record), 'applied')
+        after = self.transcript()
+        self.assertEqual([item['id'] for item in after['segments']], ['new-s1', 'new-s2', 'new-s3'])
+        self.assertEqual(after['segments'][0]['text'], 'Hello world orbit.')
+        self.assertEqual(after['segments'][0]['person_id'], self.person['id'])
+        self.assertEqual(after['segments'][1]['speaker_display_name'], 'Interviewer')
+        self.assertEqual(after['segments'][2]['text'], 'Closing worlds.')
+        self.assertEqual(after['highlights'][-1]['segment_id'], 'new-s1')
+        self.assertEqual(self.client.get(f'/api/v1/persons/{self.person["id"]}').json()['total_link_count'], 1)
 
-    def test_invalid_highlight_mapping_keeps_old_generation_and_anchors(self):
-        self.assertTrue(generation_review.stage(self.record))
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        for item in review['items']:
-            target = 't2' if item['kind']=='highlight' else None
-            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions',
-                            json={'item_id':item['id'],'target_segment_id':target})
-        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,409)
-        self.assertEqual(storage.get_transcript(self.id)['generation_version'],'source-v1')
-        self.assertEqual(len(storage.list_highlights(self.id)),1)
-
-    def test_comment_requires_explicit_remap_and_is_deleted_with_conversation(self):
-        created = self.client.post(f'/api/v1/conversations/{self.id}/comments',json={
-            'segment_id':'s1','start_offset':0,'end_offset':5,
-            'body':'Check opening','expected_revision':4})
-        self.assertEqual(created.status_code,200,created.text)
-        comment_id = created.json()['id']
-        self.assertTrue(generation_review.stage(self.record))
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        comment_item = next(item for item in review['items'] if item['kind']=='comment')
-        self.assertEqual(comment_item['source_comment_id'],comment_id)
-        for item in review['items']:
-            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions',json={
-                'item_id':item['id'],'target_segment_id':'t1' if item['kind']=='comment' else None})
-        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,200)
-        mapped = storage.list_comments(self.id)[0]
-        self.assertEqual((mapped['id'],mapped['segment_id'],mapped['quote']),(comment_id,'t1','Hello'))
-        self.client.post(f'/api/v1/conversations/{self.id}/trash')
-        self.assertEqual(self.client.delete(f'/api/v1/trash/{self.id}').status_code,200)
-        with storage.connect() as conn:
-            self.assertEqual(conn.execute('SELECT COUNT(*) FROM transcript_comments WHERE id=?',(comment_id,)).fetchone()[0],0)
-
-    def test_ambiguous_comment_quote_cannot_be_silently_remapped(self):
-        created = self.client.post(f'/api/v1/conversations/{self.id}/comments',json={
-            'segment_id':'s1','start_offset':0,'end_offset':5,
-            'body':'Two Hellos','expected_revision':4})
-        self.assertEqual(created.status_code,200)
+    def test_ambiguous_comment_quote_keeps_its_passage(self):
+        created = self.client.post(f'/api/v1/conversations/{self.id}/comments', json={
+            'segment_id': 's1', 'start_offset': 0, 'end_offset': 5,
+            'body': 'Two Hellos', 'expected_revision': 4})
+        self.assertEqual(created.status_code, 200)
         self.target[0]['text'] = 'Hello Hello'
         self.record['segments_json'] = json.dumps(self.target)
-        self.assertTrue(generation_review.stage(self.record))
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        for item in review['items']:
-            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions',json={
-                'item_id':item['id'],'target_segment_id':'t1' if item['kind']=='comment' else None})
-        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code,409)
-        self.assertEqual(storage.list_comments(self.id)[0]['segment_id'],'s1')
+        self.assertEqual(generation_review.stage(self.record), 'applied')
+        self.assertEqual(storage.list_comments(self.id)[0]['segment_id'], 's1')
+        self.assertEqual(self.transcript()['generation_version'], 'target-v2')
 
-    def test_selected_image_requires_explicit_exact_remap(self):
+    def test_selected_image_keeps_its_exact_quote(self):
         endpoint = f'/api/v1/conversations/{self.id}/images'
-        created = self.client.post(endpoint, files={'file':('slide.png',png_bytes(),'image/png')},
-                                   data={'media_position_ms':'0','segment_id':'s1','start_offset':'0',
-                                         'end_offset':'5','expected_revision':'4'})
+        created = self.client.post(endpoint, files={'file': ('slide.png', png_bytes(), 'image/png')},
+                                   data={'media_position_ms': '0', 'segment_id': 's1', 'start_offset': '0',
+                                         'end_offset': '5', 'expected_revision': '4'})
         self.assertEqual(created.status_code, 200, created.text)
-        image_id = created.json()['id']
-        self.assertTrue(generation_review.stage(self.record))
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        image_item = next(item for item in review['items'] if item['kind'] == 'image')
-        self.assertEqual(image_item['source_image_id'], image_id)
-        for item in review['items']:
-            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions', json={
-                'item_id':item['id'], 'target_segment_id':'t1' if item['kind']=='image' else None})
-        result = self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate')
-        self.assertEqual(result.status_code, 200, result.text)
-        mapped = self.client.get(endpoint).json()[0]
-        self.assertEqual((mapped['id'], mapped['segment_id'], mapped['quote'], mapped['start_offset']),
-                         (image_id, 't1', 'Hello', 0))
+        self.assertEqual(generation_review.stage(self.record), 'applied')
+        image = self.client.get(endpoint).json()[0]
+        self.assertEqual((image['segment_id'], image['quote'], image['start_offset']), ('s1', 'Hello', 0))
 
-    def test_ambiguous_image_quote_keeps_source_generation(self):
-        endpoint = f'/api/v1/conversations/{self.id}/images'
-        self.assertEqual(self.client.post(endpoint, files={'file':('slide.png',png_bytes(),'image/png')},
-                          data={'media_position_ms':'0','segment_id':'s1','start_offset':'0',
-                                'end_offset':'5','expected_revision':'4'}).status_code, 200)
-        self.target[0]['text'] = 'Hello Hello'
-        self.record['segments_json'] = json.dumps(self.target)
-        self.assertTrue(generation_review.stage(self.record))
-        review = self.client.get(f'/api/v1/conversations/{self.id}/transcript/review').json()
-        for item in review['items']:
-            self.client.put(f'/api/v1/conversations/{self.id}/transcript/review/decisions', json={
-                'item_id':item['id'], 'target_segment_id':'t1' if item['kind']=='image' else None})
-        self.assertEqual(self.client.post(f'/api/v1/conversations/{self.id}/transcript/review/activate').status_code, 409)
-        self.assertEqual(self.client.get(endpoint).json()[0]['segment_id'], 's1')
+    def test_review_left_by_the_old_flow_is_resolved_on_startup(self):
+        stamp = datetime.now(timezone.utc).isoformat()
+        with storage.connect() as conn:
+            conn.execute("""INSERT INTO transcript_generations (conversation_id, pipeline_version, revision, language,
+                segments_json, turns_json, created_at) VALUES (?, 'target-v2', 5, 'en', ?, '[]', ?)""",
+                (self.id, self.record['segments_json'], stamp))
+            source = storage.get_transcript(self.id)
+            conn.execute("""INSERT INTO transcript_reviews (conversation_id, source_version, target_version,
+                source_revision, items_json, decisions_json, state, created_at, updated_at)
+                VALUES (?, ?, 'target-v2', ?, '[]', '{}', 'pending', ?, ?)""",
+                (self.id, source['generation_version'], source['revision'], stamp, stamp))
+        self.assertEqual(generation_review.resolve_pending(), 1)
+        after = self.transcript()
+        self.assertEqual(after['generation_version'], 'target-v2')
+        self.assertEqual(after['segments'][0]['person_id'], self.person['id'])
+
+
+class SplitCarryOverTest(unittest.TestCase):
+    """The "How it works" case: one confirmed passage re-cut into two sentences."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
+        self.env.start()
+        self.client = TestClient(app)
+        self.id = self.client.post('/api/v1/conversations/import',
+                                   files={'file': ('split.mp3', mp3_bytes(), 'audio/mpeg')}).json()['conversation']['id']
+        stamp = datetime.now(timezone.utc).isoformat()
+        source = [{'id': 's1', 'start_ms': 0, 'end_ms': 1000, 'text': 'So here is how it works. Every time an agent commits.',
+                   'speaker_cluster_id': 'speaker-1', 'speaker_uncertain': False, 'words': []}]
+        storage.save_transcript({'conversation_id': self.id, 'revision': 1, 'pipeline_version': 'source-v1',
+                                 'language': 'en', 'segments_json': json.dumps(source), 'turns_json': '[]',
+                                 'updated_at': stamp})
+        self.person = self.client.post('/api/v1/persons', json={'name': 'Morgan'}).json()
+        self.client.put(f'/api/v1/conversations/{self.id}/person-links', json={
+            'person_id': self.person['id'], 'segment_id': 's1', 'scope': 'segment', 'expected_revision': 1})
+        self.client.post(f'/api/v1/conversations/{self.id}/highlights', json={
+            'segment_id': 's1', 'start_offset': 25, 'end_offset': 35, 'expected_revision': 1})
+        target = [{'id': 't1', 'start_ms': 0, 'end_ms': 420, 'text': 'So here is how it works.',
+                   'speaker_cluster_id': 'speaker-1', 'speaker_uncertain': False, 'words': []},
+                  {'id': 't2', 'start_ms': 420, 'end_ms': 1000, 'text': 'Every time an agent commits.',
+                   'speaker_cluster_id': 'speaker-1', 'speaker_uncertain': False, 'words': []}]
+        self.record = {'conversation_id': self.id, 'pipeline_version': 'target-v2', 'language': 'en',
+                       'segments_json': json.dumps(target), 'turns_json': '[]', 'updated_at': stamp}
+
+    def tearDown(self):
+        self.client.close()
+        self.env.stop()
+        self.temp.cleanup()
+
+    def test_confirmed_person_and_highlight_follow_the_split_without_asking(self):
+        self.assertEqual(generation_review.stage(self.record), 'applied')
+        after = self.client.get(f'/api/v1/conversations/{self.id}/transcript').json()
+        self.assertEqual([item['id'] for item in after['segments']], ['t1', 't2'])
+        self.assertEqual({item['person_id'] for item in after['segments']}, {self.person['id']})
+        self.assertEqual(after['highlights'][-1]['segment_id'], 't2')
+        self.assertEqual(after['highlights'][-1]['quote'], 'Every time')
 
 
 if __name__ == '__main__':

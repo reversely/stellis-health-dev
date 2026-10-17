@@ -192,7 +192,6 @@ class LibraryWorkflowTest(unittest.TestCase):
         listed = {item['id']: item for item in self.client.get('/api/v1/conversations').json()}
         self.assertEqual(listed[self.first]['processing_job']['state'], 'running')
         self.assertEqual(listed[self.first]['processing_job']['stage'], 'diarizing')
-        self.assertFalse(listed[self.first]['transcript_review_pending'])
         storage.update_job(job_id, state='succeeded', stage='complete', progress=1.0, updated_at=now)
         listed = {item['id']: item for item in self.client.get('/api/v1/conversations').json()}
         self.assertIsNone(listed[self.first]['processing_job'])

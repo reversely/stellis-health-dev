@@ -1,4 +1,4 @@
-"""Explicit review of user overlays before activating changed ASR boundaries."""
+"""Carry user overlays onto a changed ASR generation (ADR 0054)."""
 
 from __future__ import annotations
 
@@ -32,12 +32,39 @@ def _candidates(source: dict[str, object], targets: list[dict[str, object]]) -> 
     return sorted(overlapping or ranked, key=lambda item: (-item["score"], item["start_ms"]))[:5]
 
 
-def stage(record: dict[str, object]) -> bool:
-    """Retain a candidate and old transcript when changed IDs would hide overlays."""
+def _automatic_targets(item: dict[str, object]) -> list[str] | None:
+    """Target passages for an overlay whose new home is unambiguous, else None."""
+    start, end = int(item["source_start_ms"]), int(item["source_end_ms"])
+    duration = max(1, end - start)
+    candidates = [candidate for candidate in item["candidates"] if float(candidate["overlap"]) > 0]
+
+    def inside(candidate: dict[str, object]) -> float:
+        length = max(1, int(candidate["end_ms"]) - int(candidate["start_ms"]))
+        return float(candidate["overlap"]) * duration / length
+
+    if item["kind"] in {"person", "speaker"}:
+        # A split or re-cut passage: every new piece lies within the old passage's time.
+        pieces = [candidate for candidate in candidates if inside(candidate) >= .8]
+        if pieces and sum(float(candidate["overlap"]) for candidate in pieces) >= .8:
+            return [str(candidate["segment_id"]) for candidate in pieces]
+        return None
+    if item["kind"] == "text":
+        same = [candidate for candidate in candidates if float(candidate["overlap"]) >= .8 and
+                inside(candidate) >= .8 and float(candidate["text_similarity"]) >= .95]
+        return [str(same[0]["segment_id"])] if len(same) == 1 and len(candidates) == 1 else None
+    quoted = [candidate for candidate in candidates if str(candidate["text"]).count(str(item["value"])) == 1]
+    return [str(quoted[0]["segment_id"])] if len(quoted) == 1 else None
+
+
+def stage(record: dict[str, object]) -> str | None:
+    """Activate a changed ASR generation, carrying user overlays over without asking.
+
+    Returns "applied" when the new transcript was activated with overlays carried
+    over, or None when nothing depended on the changed passages (the caller saves it)."""
     conversation_id = str(record["conversation_id"])
     current = storage.get_transcript(conversation_id)
     if current is None:
-        return False
+        return None
     source = json.loads(str(current["segments_json"]))
     targets = json.loads(str(record["segments_json"]))
     target_ids = {str(item["id"]) for item in targets}
@@ -46,10 +73,10 @@ def stage(record: dict[str, object]) -> bool:
     changed_clusters = {str(item["id"]) for item in source if str(item["id"]) in target_by_id and
                         item.get("speaker_cluster_id") != target_by_id[str(item["id"])].get("speaker_cluster_id")}
     if not removed and not changed_clusters:
-        return False
+        return None
     display = storage.get_display_transcript(conversation_id)
     if display is None:
-        return False
+        return None
     source_by_id = {str(item["id"]): item for item in display["segments"]}
     machine_by_id = {str(item["id"]): item for item in source}
     overlays: list[dict[str, object]] = []
@@ -79,26 +106,36 @@ def stage(record: dict[str, object]) -> bool:
                          "value": image["quote"], "source_image_id": image["id"]})
     for link in people:
         overlays.append({"kind": "person", "source_segment_id": link["segment_id"], "value": link["person_id"]})
-    items = []
-    for index, overlay in enumerate(overlays):
-        source_id = str(overlay["source_segment_id"])
-        if (source_id not in removed and source_id not in changed_clusters and not overlay.get("cluster_label")) or source_id not in source_by_id:
-            continue
-        segment = source_by_id[source_id]
-        candidates = _candidates(machine_by_id[source_id], targets)
-        best = candidates[0] if candidates else None
-        high_confidence = bool(len(candidates) == 1 and best and best["overlap"] >= .8 and
-                               best["text_similarity"] >= .8)
-        boundary = "split" if len(candidates) > 1 else "missing" if not candidates else (
-            "merge" if int(candidates[0]["end_ms"]) - int(candidates[0]["start_ms"]) >
-            1.6 * max(1, int(segment["end_ms"]) - int(segment["start_ms"])) else "single")
-        items.append({"id": f"overlay-{index}", **overlay, "source_text": segment["text"],
-                      "source_start_ms": segment["start_ms"], "source_end_ms": segment["end_ms"],
-                      "source_speaker": segment["speaker_display_name"], "candidates": candidates,
-                      "suggestion": best["segment_id"] if high_confidence else None,
-                      "boundary_change": boundary})
-    if not items:
-        return False
+    targets = [dict(item) for item in targets]
+    kept: set[str] = set()
+    while True:
+        items, unresolved = _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by_id, targets)
+        newly = {str(item["source_segment_id"]) for item in items if item["auto_targets"] is None} - kept
+        if not newly:
+            break
+        kept |= newly
+        targets = _keep_edited_passages(targets, [machine_by_id[segment_id] for segment_id in kept])
+    if not items and not kept:
+        return None
+    expanded, decisions, used = [], {}, set()
+    for item in items:
+        source_id = str(item["source_segment_id"])
+        if source_id in kept:
+            # The passage itself is kept with its old ID, so its overlays stay put; only
+            # cluster-wide names must become passage names before cluster labels are reset.
+            auto = [source_id] if item.get("cluster_label") else []
+        else:
+            auto = item["auto_targets"]
+        for position, target in enumerate(auto):
+            key = (item["kind"], target)
+            if item["kind"] not in {"comment", "image"} and key in used:
+                continue
+            used.add(key)
+            entry = {key_: value for key_, value in item.items() if key_ != "auto_targets"}
+            entry["id"] = f"{item['id']}-{position}"
+            expanded.append(entry)
+            decisions[entry["id"]] = target
+    record = {**record, "segments_json": json.dumps(targets)}
     stamp = _now()
     with storage.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
@@ -106,20 +143,81 @@ def stage(record: dict[str, object]) -> bool:
                             (conversation_id,)).fetchone()
         if live is None or live["revision"] != current["revision"] or live["generation_version"] != current["generation_version"]:
             raise RuntimeError("Transcript changed during retranscription; retry the job")
-        conn.execute("""INSERT OR IGNORE INTO transcript_generations
+        conn.execute("""INSERT OR REPLACE INTO transcript_generations
             (conversation_id, pipeline_version, revision, language, segments_json, turns_json, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (conversation_id, record["pipeline_version"], int(current["revision"]) + 1,
              record["language"], record["segments_json"], record["turns_json"], record["updated_at"]))
         conn.execute("""INSERT INTO transcript_reviews
             (conversation_id, source_version, target_version, source_revision, items_json, decisions_json,
-             state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '{}', 'pending', ?, ?)
+             state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
             ON CONFLICT(conversation_id) DO UPDATE SET source_version=excluded.source_version,
             target_version=excluded.target_version, source_revision=excluded.source_revision,
-            items_json=excluded.items_json, decisions_json='{}', state='pending', updated_at=excluded.updated_at""",
+            items_json=excluded.items_json, decisions_json=excluded.decisions_json, state='pending',
+            updated_at=excluded.updated_at""",
             (conversation_id, current["generation_version"], record["pipeline_version"],
-             current["revision"], json.dumps(items), stamp, stamp))
-    return True
+             current["revision"], json.dumps(expanded), json.dumps(decisions), stamp, stamp))
+    activate(conversation_id)
+    return "applied"
+
+
+def _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by_id, targets):
+    items = []
+    for index, overlay in enumerate(overlays):
+        source_id = str(overlay["source_segment_id"])
+        if (source_id not in removed and source_id not in changed_clusters and not overlay.get("cluster_label")) \
+                or source_id not in source_by_id:
+            continue
+        segment = source_by_id[source_id]
+        item = {"id": f"overlay-{index}", **overlay, "source_text": segment["text"],
+                "source_start_ms": segment["start_ms"], "source_end_ms": segment["end_ms"],
+                "candidates": _candidates(machine_by_id[source_id], targets)}
+        item["auto_targets"] = _automatic_targets(item)
+        items.append(item)
+    return items, [item for item in items if item["auto_targets"] is None]
+
+
+def _keep_edited_passages(targets: list[dict[str, object]], kept: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Put each kept old passage back in place of the new passages centred inside it."""
+    result = list(targets)
+    for old in kept:
+        start, end = int(old["start_ms"]), int(old["end_ms"])
+        inside = [item for item in result if str(item["id"]) != str(old["id"]) and
+                  start <= (int(item["start_ms"]) + int(item["end_ms"])) / 2 < end]
+        if not any(str(item["id"]) == str(old["id"]) for item in result):
+            covering = max(inside, key=lambda item: min(end, int(item["end_ms"])) - max(start, int(item["start_ms"])),
+                           default=None)
+            restored = dict(old)
+            if covering is not None:
+                # Keep the new speaker grouping so names stay consistent across the conversation.
+                for field in ("speaker_cluster_id", "speaker_uncertain", "speaker_match_source", "speaker_margin"):
+                    if field in covering:
+                        restored[field] = covering[field]
+            result = [item for item in result if item not in inside] + [restored]
+    return sorted(result, key=lambda item: (int(item["start_ms"]), int(item["end_ms"])))
+
+
+def resolve_pending() -> int:
+    """Finish reviews staged by the old flow by re-running the automatic carry-over."""
+    with storage.connect() as conn:
+        pending = conn.execute("SELECT conversation_id, target_version FROM transcript_reviews "
+                               "WHERE state = 'pending'").fetchall()
+    resolved = 0
+    for row in pending:
+        target = storage.get_transcript_generation(str(row["conversation_id"]), str(row["target_version"]))
+        if target is None:
+            continue
+        with storage.connect() as conn:
+            conn.execute("DELETE FROM transcript_reviews WHERE conversation_id = ? AND state = 'pending'",
+                         (row["conversation_id"],))
+        record = {"conversation_id": row["conversation_id"], "pipeline_version": target["pipeline_version"],
+                  "language": target["language"], "segments_json": target["segments_json"],
+                  "turns_json": target["turns_json"], "updated_at": _now()}
+        try:
+            resolved += stage(record) == "applied"
+        except (LookupError, RuntimeError):
+            continue
+    return resolved
 
 
 def get_review(conversation_id: str) -> dict[str, object] | None:
@@ -135,37 +233,6 @@ def get_review(conversation_id: str) -> dict[str, object] | None:
             "target_version": row["target_version"], "source_revision": row["source_revision"],
             "state": row["state"], "items": json.loads(str(row["items_json"])),
             "decisions": json.loads(str(row["decisions_json"])), "updated_at": row["updated_at"]}
-
-
-def list_history(conversation_id: str) -> list[dict[str, object]]:
-    with storage.connect() as conn:
-        rows = conn.execute("""SELECT source_version, target_version, source_revision, items_json,
-            decisions_json, outcome, decided_at FROM transcript_review_history
-            WHERE conversation_id = ? ORDER BY decided_at DESC""", (conversation_id,)).fetchall()
-    return [{"source_version": row["source_version"], "target_version": row["target_version"],
-             "source_revision": row["source_revision"], "outcome": row["outcome"],
-             "decided_at": row["decided_at"], "items": json.loads(str(row["items_json"])),
-             "decisions": json.loads(str(row["decisions_json"]))} for row in rows]
-
-
-def decide(conversation_id: str, item_id: str, target_segment_id: str | None) -> dict[str, object]:
-    with storage.connect() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        row = conn.execute("SELECT * FROM transcript_reviews WHERE conversation_id = ? AND state = 'pending'",
-                           (conversation_id,)).fetchone()
-        if row is None:
-            raise LookupError("No pending transcript review")
-        items = json.loads(str(row["items_json"]))
-        item = next((value for value in items if value["id"] == item_id), None)
-        if item is None:
-            raise LookupError("Review item not found")
-        if target_segment_id is not None and target_segment_id not in {value["segment_id"] for value in item["candidates"]}:
-            raise ValueError("Choose a listed candidate passage")
-        decisions = json.loads(str(row["decisions_json"]))
-        decisions[item_id] = target_segment_id
-        conn.execute("UPDATE transcript_reviews SET decisions_json = ?, updated_at = ? WHERE conversation_id = ?",
-                     (json.dumps(decisions), _now(), conversation_id))
-    return {"item_id": item_id, "target_segment_id": target_segment_id}
 
 
 def activate(conversation_id: str) -> dict[str, object]:
@@ -238,6 +305,16 @@ def activate(conversation_id: str) -> dict[str, object]:
                     end_offset = ?, media_position_ms = ?, updated_at = ? WHERE id = ? AND conversation_id = ?""",
                     (target_id, start, start + len(quote), target_segments[target_id]["start_ms"],
                      stamp, item["source_image_id"], conversation_id))
+        # Rows on passages that no longer exist were carried over above or are not
+        # carryable; leaving them would double-count names and highlights.
+        live_ids = list(target_segments)
+        marks = ",".join("?" * len(live_ids)) or "NULL"
+        for table, column in (("transcript_edits", "segment_id"), ("person_links", "segment_id"),
+                              ("transcript_highlights", "segment_id")):
+            conn.execute(f"DELETE FROM {table} WHERE conversation_id = ? AND {column} NOT IN ({marks})",
+                         (conversation_id, *live_ids))
+        conn.execute(f"DELETE FROM speaker_labels WHERE conversation_id = ? AND scope = 'segment' AND target_id NOT IN ({marks})",
+                     (conversation_id, *live_ids))
         conn.execute("""UPDATE transcripts SET revision = ?, generation_version = ?, language = ?,
             segments_json = ?, turns_json = ?, updated_at = ? WHERE conversation_id = ?""",
             (int(current["revision"]) + 1, target["pipeline_version"], target["language"],
@@ -251,19 +328,3 @@ def activate(conversation_id: str) -> dict[str, object]:
              review["items_json"], review["decisions_json"], stamp))
     return {"generation_version": target["pipeline_version"], "migrated": len(mappings),
             "unresolved": len(items) - len(mappings)}
-
-
-def keep_source(conversation_id: str) -> dict[str, object]:
-    with storage.connect() as conn:
-        conn.execute("BEGIN IMMEDIATE")
-        review = conn.execute("SELECT * FROM transcript_reviews WHERE conversation_id = ? AND state = 'pending'",
-                              (conversation_id,)).fetchone()
-        if review is None:
-            raise LookupError("No pending transcript review")
-        conn.execute("""INSERT OR REPLACE INTO transcript_review_history
-            (conversation_id, target_version, source_version, source_revision, items_json,
-             decisions_json, outcome, decided_at) VALUES (?, ?, ?, ?, ?, ?, 'kept_source', ?)""",
-            (conversation_id, review["target_version"], review["source_version"], review["source_revision"],
-             review["items_json"], review["decisions_json"], _now()))
-        conn.execute("DELETE FROM transcript_reviews WHERE conversation_id = ?", (conversation_id,))
-    return {"kept_source": True}

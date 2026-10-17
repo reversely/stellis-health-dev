@@ -1,6 +1,6 @@
 # ADR 0017: Review user changes before activating changed ASR boundaries
 
-Status: accepted, 2026-10-16. Ticket: #55.
+Status: superseded by [ADR 0054](0054-carry-overlays-without-review.md), 2026-10-17. Originally accepted 2026-10-16, ticket #55.
 
 ## Decision
 

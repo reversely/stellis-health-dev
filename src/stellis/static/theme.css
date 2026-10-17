@@ -551,14 +551,6 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 .trash-row strong { flex: 1; min-width: 160px; }
 .trash-expiry { color: var(--muted); font-size: .88rem; }
 .trash-row button:last-child { color: var(--failure); }
-.generation-review { margin: 0 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.generation-review h2 { margin: 0 0 8px; }
-.generation-review-row { display: grid; gap: 8px; padding: 16px 0; border-top: 1px solid var(--line); }
-.generation-review-row p { margin: 0; overflow-wrap: anywhere; }
-.generation-review-candidate { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
-.generation-review-candidate p { flex: 1; }
-.generation-review-row select { width: 100%; min-width: 0; }
-.generation-review-row small { color: var(--muted); }
 .person-list-row { display: block; padding: 10px 0; color: var(--accent); border-top: 1px solid var(--line-soft); }
 #people-panel summary, #person-merge-panel summary { color: var(--accent); cursor: pointer; font-weight: 650; }
 #person-view { padding-top: 4px; }

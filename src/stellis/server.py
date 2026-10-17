@@ -308,11 +308,6 @@ class PersonMove(BaseModel):
     target_id: str
 
 
-class GenerationReviewDecision(BaseModel):
-    item_id: str
-    target_segment_id: str | None = None
-
-
 class HighlightSelection(BaseModel):
     segment_id: str
     start_offset: int = Field(ge=0)
@@ -403,6 +398,7 @@ def start_speech_worker() -> None:
     categorization.fail_interrupted()
     enhanced_notes.fail_interrupted()
     recording_ai.fail_interrupted()
+    generation_review.resolve_pending()
     processing.start_worker()
     if _retention_thread is None or not _retention_thread.is_alive():
         _retention_stop.clear()
@@ -550,12 +546,9 @@ def conversations() -> list[dict[str, object]]:
 
 
 def _processing_state(conversation_id: str) -> dict[str, object]:
-    """Let the library show work started anywhere: queued, running, stopped, or awaiting review."""
-    from stellis import generation_review
+    """Let the library show work started anywhere: queued, running, or stopped."""
     job = storage.get_latest_job_for_conversation(conversation_id)
-    review = generation_review.get_review(conversation_id)
-    return {"processing_job": processing.public_job(job) if job and job["state"] != "succeeded" else None,
-            "transcript_review_pending": bool(review and review["state"] == "pending")}
+    return {"processing_job": processing.public_job(job) if job and job["state"] != "succeeded" else None}
 
 
 class NotebookCreate(BaseModel):
@@ -1338,53 +1331,6 @@ def job(job_id: str) -> dict[str, object]:
     if record is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return processing.public_job(record)
-
-
-@api.get("/conversations/{conversation_id}/transcript/review")
-def transcript_review(conversation_id: str) -> dict[str, object] | None:
-    if storage.get_conversation(conversation_id) is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    return generation_review.get_review(conversation_id)
-
-
-@api.get("/conversations/{conversation_id}/transcript/review/history")
-def transcript_review_history(conversation_id: str) -> list[dict[str, object]]:
-    if storage.get_conversation(conversation_id) is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    return generation_review.list_history(conversation_id)
-
-
-@api.put("/conversations/{conversation_id}/transcript/review/decisions")
-def decide_transcript_review(conversation_id: str, request: GenerationReviewDecision) -> dict[str, object]:
-    try:
-        return generation_review.decide(conversation_id, request.item_id, request.target_segment_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@api.post("/conversations/{conversation_id}/transcript/review/activate")
-def activate_transcript_review(conversation_id: str) -> dict[str, object]:
-    try:
-        result = generation_review.activate(conversation_id)
-        try:
-            categorization.request(conversation_id)
-        except (RuntimeError, LookupError):
-            pass
-        return result
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@api.post("/conversations/{conversation_id}/transcript/review/keep-source")
-def keep_review_source(conversation_id: str) -> dict[str, object]:
-    try:
-        return generation_review.keep_source(conversation_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @api.get("/conversations/{conversation_id}/transcript")
