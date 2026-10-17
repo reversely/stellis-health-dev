@@ -49,6 +49,17 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
         with TestClient(app, base_url="http://example.com:8765") as client:
             self.assertEqual(client.get("/api/v1/calendar/google/authorize").status_code, 400)
 
+    def test_existing_google_oauth_configuration_is_reused(self):
+        values = {"GOOGLE_OAUTH_CLIENT_ID":"existing-app-id",
+                  "GOOGLE_OAUTH_CLIENT_SECRET":"existing-app-secret"}
+        with patch.object(calendar, "_setting", side_effect=lambda name: values.get(name)):
+            self.assertEqual(calendar.client_id("google"), "existing-app-id")
+            self.assertEqual(calendar._google_secret(), "existing-app-secret")
+        values["STELLIS_GOOGLE_CALENDAR_CLIENT_ID"] = "desktop-id"
+        with patch.object(calendar, "_setting", side_effect=lambda name: values.get(name)):
+            self.assertEqual(calendar.client_id("google"), "desktop-id")
+            self.assertIsNone(calendar._google_secret())
+
     async def test_exchange_refresh_events_and_disconnect(self):
         calls = []
 

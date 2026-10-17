@@ -10,6 +10,7 @@ import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlencode, urlparse
 
 import httpx
@@ -40,7 +41,28 @@ class CalendarError(Exception):
 def client_id(provider: str) -> str | None:
     if provider not in PROVIDERS:
         raise CalendarError("Unknown calendar provider")
-    return os.environ.get(f"STELLIS_{provider.upper()}_CALENDAR_CLIENT_ID", "").strip() or None
+    configured = _setting(f"STELLIS_{provider.upper()}_CALENDAR_CLIENT_ID")
+    if configured or provider != "google":
+        return configured
+    return _setting("GOOGLE_OAUTH_CLIENT_ID")
+
+
+def _setting(name: str) -> str | None:
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+    path = Path(__file__).resolve().parents[2] / ".env"
+    if path.is_file():
+        for line in path.read_text().splitlines():
+            if line.startswith(f"{name}="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'") or None
+    return None
+
+
+def _google_secret() -> str | None:
+    if _setting("STELLIS_GOOGLE_CALENDAR_CLIENT_ID"):
+        return _setting("STELLIS_GOOGLE_CALENDAR_CLIENT_SECRET")
+    return _setting("GOOGLE_OAUTH_CLIENT_SECRET")
 
 
 def _connect() -> sqlite3.Connection:
@@ -118,6 +140,8 @@ def _save(provider: str, response: dict, existing_refresh: str = "") -> None:
 async def exchange(provider: str, code: str, verifier: str, uri: str) -> None:
     data = {"client_id": client_id(provider), "grant_type": "authorization_code",
             "code": code, "redirect_uri": uri, "code_verifier": verifier}
+    if provider == "google" and (secret := _google_secret()):
+        data["client_secret"] = secret
     async with httpx.AsyncClient(timeout=15) as client:
         try:
             response = await client.post(_TOKEN[provider], data=data)
@@ -146,6 +170,8 @@ async def _access_token(provider: str) -> str | None:
         return row["access_token"]
     data = {"client_id": client_id(provider), "grant_type": "refresh_token",
             "refresh_token": row["refresh_token"]}
+    if provider == "google" and (secret := _google_secret()):
+        data["client_secret"] = secret
     if provider == "microsoft":
         data["scope"] = _SCOPE[provider]
     async with httpx.AsyncClient(timeout=15) as client:

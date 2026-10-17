@@ -8,6 +8,8 @@ Connect Google Calendar and Microsoft Outlook/Microsoft 365 from the loopback de
 
 Tokens are in a separate private local SQLite file with `0600` permissions. They are plaintext on the local device, like current local recordings and notes; they never enter the separate encrypted sync service. Event bodies, attendees, locations, and meeting links are discarded by normalization. The displayed event list is held in browser memory and fetched again on refresh. Calendar content is not included in Nebius requests. Disconnect deletes local tokens; provider-side grants must be revoked in provider account settings.
 
+The Google adapter reads the existing `GOOGLE_OAUTH_CLIENT_ID` and optional `GOOGLE_OAUTH_CLIENT_SECRET` from the ignored repository `.env` or environment. A dedicated `STELLIS_GOOGLE_CALENDAR_CLIENT_ID` overrides it when the existing client cannot use the loopback redirect. OAuth clients identify the app/platform; they are not specific to the Calendar API.
+
 ## Evidence and boundaries
 
 - Google documents [desktop loopback PKCE](https://developers.google.com/identity/protocols/oauth2/native-app), [read-only event scope](https://developers.google.com/workspace/calendar/api/auth), and [event pagination](https://developers.google.com/workspace/calendar/api/v3/reference/events/list). These establish provider protocol support, not a live Stellis connection test.
