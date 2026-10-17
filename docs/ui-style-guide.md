@@ -29,6 +29,8 @@ The **desktop home left rail** is a WebGL fill (`static/rail-shader.js`) of five
 ## Controls and states
 
 - Style every interactive element explicitly. A primary button has a filled surface, clear text, at least a 44px touch target, and a visible hover, keyboard focus, and disabled state. The auth submit button is 48px tall. A secondary button is visibly quieter but still reads as a control. Never leave a browser default button in a finished screen.
+- An **inverted** control fills with the theme's text colour and draws its glyph in the colour of the surface behind it, in both themes; it is not a flat accent fill. Summary regenerate is a 44px inverted icon button with no text button beside it.
+- The theme switch is a bare 44px sun or moon icon in the header with no border, fill, or text. Take new UI icons from Tabler Icons (MIT, outline, 2px stroke) and record each in `static/icons.NOTICES.txt`.
 - Keep Record, Import, Pause, and Stop visually related within the solid recording rail. Use the wine fill for Stop. Do not give Record a competing bright accent.
 - Label inputs directly. Use a semantic `button` with an explicit type when it sits in a form. Icon-only buttons need an accessible name. Errors appear close to the action and describe what the user can do next.
 - Show live recording and transcription where the user is working; make interruption and recovery states explicit. Match the status text to the actual recording state.
