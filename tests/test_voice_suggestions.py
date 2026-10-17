@@ -108,6 +108,15 @@ class VoiceSuggestionTest(unittest.TestCase):
         self.assertEqual(origins, {"known.mp3-0": "propagated", "known.mp3-1": "propagated",
                                    "known.mp3-2": "propagated", "known.mp3-5": "manual"})
 
+    def test_a_recording_with_no_speech_indexes_without_failing(self) -> None:
+        from stellis import processing
+        storage.save_transcript({"conversation_id": self.fresh, "revision": 2, "pipeline_version": "test",
+                                 "language": "en", "segments_json": "[]", "turns_json": "[]",
+                                 "updated_at": datetime.now(timezone.utc).isoformat()})
+        job = processing.request_voice_index(self.fresh)
+        processing.run_voice_index_job(str(job["id"]))
+        self.assertEqual(storage.get_job(str(job["id"]))["state"], "succeeded")
+
     def test_deleting_a_conversation_removes_its_voices(self) -> None:
         self._index(self.known, SHEREEN, OTHER)
         self.client.post(f"/api/v1/conversations/{self.known}/trash")

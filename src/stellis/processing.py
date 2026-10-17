@@ -258,7 +258,8 @@ def index_missing_voices() -> int:
         latest = storage.get_latest_job_for_conversation(conversation_id)
         if latest and latest["kind"] == "speech" and latest["state"] in ("queued", "running"):
             continue  # The speech job stores fingerprints of its own new passages.
-        if storage.get_transcript(conversation_id) is not None and not voices.has_index(conversation_id):
+        failed_index = bool(latest and latest["kind"] == "voice_index" and latest["state"] == "failed")
+        if storage.get_transcript(conversation_id) is not None and (failed_index or not voices.has_index(conversation_id)):
             try:
                 request_voice_index(conversation_id)
                 queued += 1
@@ -279,13 +280,18 @@ def run_voice_index_job(job_id: str) -> None:
         transcript = storage.get_transcript(conversation_id)
         if conversation is None or transcript is None:
             raise RuntimeError("Transcript is not ready")
+        segments = json.loads(str(transcript["segments_json"]))
+        if not segments:
+            # A recording with no speech has nothing to fingerprint.
+            storage.update_job(job_id, state="succeeded", stage="complete", progress=1.0,
+                               metrics_json=json.dumps({"indexed_passages": 0}), error=None, updated_at=now())
+            return
         embedding_model = model_paths()[2]
         if not embedding_model.is_file():
             raise RuntimeError("Speaker embedding model is unavailable")
         media = storage.data_dir() / "media" / str(conversation["audio_filename"])
         if not media.is_file():
             raise RuntimeError("Source audio is missing")
-        segments = json.loads(str(transcript["segments_json"]))
         with tempfile.TemporaryDirectory(prefix="stellis-voices-", dir=storage.data_dir()) as temporary:
             wav = Path(temporary) / "audio.wav"
             _stage(job_id, "decoding for voice matching", 0.1)
