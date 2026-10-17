@@ -1,0 +1,62 @@
+# Publishes a reviewed release of stellis-dev to the public stellis repository.
+# Run it by hand from the Actions tab after the release notes in docs/releases/<version>.md are approved.
+name: Publish public release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, for example 0.1.0 (needs docs/releases/<version>.md)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-public
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: macos-15
+    env:
+      VERSION: ${{ inputs.version }}
+      PUBLIC_REPO: reversely/stellis
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Check the version and its release notes
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version must look like 1.2.3"; exit 1; }
+          test -s "docs/releases/$VERSION.md" || { echo "Write and approve docs/releases/$VERSION.md first"; exit 1; }
+
+      - uses: astral-sh/setup-uv@v6.1.0
+
+      - name: Install FFmpeg for the tests
+        run: brew install ffmpeg
+
+      - name: Build, scan, and test the public tree
+        run: python3 release/build_public.py "$RUNNER_TEMP/public" --test
+
+      - name: Push the release to the public repository
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${PUBLIC_REPO}.git" "$RUNNER_TEMP/target"
+          cd "$RUNNER_TEMP/target"
+          if git rev-parse --verify --quiet "refs/tags/v$VERSION"; then echo "v$VERSION is already published"; exit 1; fi
+          first=$([ -z "$(git rev-parse --verify --quiet HEAD)" ] && echo yes || echo no)
+          rsync -a --delete --exclude .git "$RUNNER_TEMP/public/" ./
+          git config user.name "stellis-release"
+          git config user.email "stellis-release@users.noreply.github.com"
+          git add -A
+          if [ "$first" = yes ]; then git commit -q -m "initial commit"; else git commit -q -m "Release v$VERSION"; fi
+          git branch -M main
+          git tag -a "v$VERSION" -m "Stellis $VERSION"
+          git push origin main "v$VERSION"
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: gh release create "v$VERSION" --repo "$PUBLIC_REPO" --title "Stellis $VERSION" --notes-file "docs/releases/$VERSION.md"
