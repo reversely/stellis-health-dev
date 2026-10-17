@@ -165,6 +165,19 @@ class SplitCarryOverTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
+    def test_a_name_on_a_recut_passage_moves_instead_of_keeping_the_old_text(self):
+        # New passages overrun the old one's edges, so neither lies 80% inside it.
+        target = [{'id': 't1', 'start_ms': 0, 'end_ms': 700, 'text': 'So here is how it works. Every time',
+                   'speaker_cluster_id': 'speaker-1', 'speaker_uncertain': False, 'words': []},
+                  {'id': 't2', 'start_ms': 700, 'end_ms': 1300, 'text': 'an agent commits. And then more.',
+                   'speaker_cluster_id': 'speaker-1', 'speaker_uncertain': False, 'words': []}]
+        self.client.delete(f'/api/v1/conversations/{self.id}/highlights/{self.client.get(f"/api/v1/conversations/{self.id}/transcript").json()["highlights"][0]["id"]}')
+        self.record['segments_json'] = json.dumps(target)
+        self.assertEqual(generation_review.stage(self.record), 'applied')
+        after = self.client.get(f'/api/v1/conversations/{self.id}/transcript').json()
+        self.assertEqual([item['id'] for item in after['segments']], ['t1', 't2'])
+        self.assertEqual({item['person_id'] for item in after['segments']}, {self.person['id']})
+
     def test_confirmed_person_and_highlight_follow_the_split_without_asking(self):
         self.assertEqual(generation_review.stage(self.record), 'applied')
         after = self.client.get(f'/api/v1/conversations/{self.id}/transcript').json()
