@@ -1,7 +1,8 @@
 [project]
 name = "stellis"
 version = "0.1.0"
-description = "Local interview memory workspace with on-device speech processing"
+description = "Record, transcribe, and search conversations on your Mac"
+license = "Apache-2.0"
 authors = [
     { name = "Shereen L.", email = "105625351+reversely@users.noreply.github.com" }
 ]

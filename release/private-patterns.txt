@@ -1,0 +1,13 @@
+# Case-insensitive patterns that must not appear in the public tree. One regular expression per line.
+shereen
+shireen
+matlock
+\bjay\b
+cifar
+hackathon
+bombardier
+/users/
+andromeda
+@gmail
+otter
+granola

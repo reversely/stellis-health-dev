@@ -1,0 +1,23 @@
+# Paths in stellis-dev that never go to the public stellis repository.
+release/
+.github/
+.agents/
+AGENTS.md
+PLAN.md
+analysis/
+contracts/
+implementation/
+plans/
+docs/decisions/
+docs/refs/
+docs/validation/
+docs/development.md
+docs/current-architecture.md
+docs/contrast-workspace-experiment.md
+docs/granola-hierarchy-and-home-memo.md
+docs/granola-ui-reference.md
+docs/otter-ui-reference.md
+docs/ui-style-guide.md
+docs/progress/
+scripts/prepare_otter_migration.py
+scripts/evaluate_reference.py

@@ -1,0 +1,36 @@
+Stellis
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Stellis downloads or calls the following third-party components. They are not
+part of this repository and keep their own licences.
+
+Speech models, downloaded by scripts/setup_models.sh
+- Whisper "small.en" in ggml format, from whisper.cpp (MIT).
+  https://github.com/ggml-org/whisper.cpp
+- Pyannote segmentation 3.0, ONNX export distributed by sherpa-onnx (MIT).
+  https://huggingface.co/pyannote/segmentation-3.0
+- NVIDIA NeMo TitaNet small speaker model, ONNX export distributed by
+  sherpa-onnx. Licensed under Creative Commons Attribution 4.0 International
+  (CC BY 4.0). https://creativecommons.org/licenses/by/4.0/
+
+Native tools, installed separately by the user
+- FFmpeg (https://ffmpeg.org). Builds such as Homebrew's are licensed under
+  the GNU General Public License version 3. Stellis runs FFmpeg as a separate
+  program and does not include or link it.
+- whisper.cpp command-line tool (MIT).
+
+Libraries
+- sherpa-onnx (Apache License 2.0).
+- Python and JavaScript dependencies listed in pyproject.toml, uv.lock,
+  package.json, and package-lock.json, under their own licences.
+- Inter and Piazzolla fonts (SIL Open Font License 1.1), bundled with their
+  licence files in src/stellis/static/fonts.
+
+Sample meetings, downloaded by scripts/load_samples.py
+- AMI Meeting Corpus, University of Edinburgh. Licensed under Creative Commons
+  Attribution 4.0 International (CC BY 4.0).
+  https://groups.inf.ed.ac.uk/ami/corpus/license.shtml
+  The samples are not part of this repository.
+
+Test fixture
+- tests/fixtures/jfk.wav is the speech sample distributed with whisper.cpp (MIT).

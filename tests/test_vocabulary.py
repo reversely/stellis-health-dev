@@ -33,11 +33,11 @@ class VocabularyWorkspaceTest(unittest.TestCase):
             conn.execute("CREATE TABLE vocabulary (id TEXT PRIMARY KEY, term TEXT NOT NULL, "
                          "normalized TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)")
             conn.execute("INSERT INTO vocabulary VALUES (?, ?, ?, ?, ?)",
-                         ("existing-id", "CIFAR", "cifar", "2026-01-01", "2026-01-01"))
+                         ("existing-id", "ORBIT", "orbit", "2026-01-01", "2026-01-01"))
         listed = self.client.get("/api/v1/vocabulary").json()
         self.assertEqual([(term["id"], term["term"], term["kind"]) for term in listed],
-                         [("existing-id", "CIFAR", "other")])
-        self.assertEqual(processing.vocabulary_snapshot(), ["CIFAR"])
+                         [("existing-id", "ORBIT", "other")])
+        self.assertEqual(processing.vocabulary_snapshot(), ["ORBIT"])
 
     def test_batch_add_move_delete_and_atomic_validation(self) -> None:
         base = "/api/v1/vocabulary"
@@ -46,15 +46,15 @@ class VocabularyWorkspaceTest(unittest.TestCase):
         self.assertEqual([term["term"] for term in added.json()["added"]], ["CubeSat", "LiDAR"])
         self.assertEqual(added.json()["skipped"], ["cubesat"])
         ids = [term["id"] for term in added.json()["added"]]
-        self.assertEqual(self.client.post(f"{base}/batch", json={"kind": "name", "terms": ["Shereen", ""]}).status_code, 400)
+        self.assertEqual(self.client.post(f"{base}/batch", json={"kind": "name", "terms": ["Riley", ""]}).status_code, 400)
         self.assertEqual(len(self.client.get(base).json()), 2)
-        name = self.client.post(f"{base}/batch", json={"kind": "name", "terms": ["Shereen"]}).json()["added"][0]
+        name = self.client.post(f"{base}/batch", json={"kind": "name", "terms": ["Riley"]}).json()["added"][0]
         moved = self.client.post(f"{base}/move", json={"kind": "name", "ids": ids})
         self.assertEqual(moved.json(), {"moved": 2})
         self.assertEqual({item["term"] for item in self.client.get(base, params={"kind": "name"}).json()},
-                         {"CubeSat", "LiDAR", "Shereen"})
+                         {"CubeSat", "LiDAR", "Riley"})
         self.assertEqual(self.client.get(base, params={"kind": "other"}).json(), [])
-        self.assertEqual(set(processing.vocabulary_snapshot()), {"CubeSat", "LiDAR", "Shereen"})
+        self.assertEqual(set(processing.vocabulary_snapshot()), {"CubeSat", "LiDAR", "Riley"})
         missing = self.client.post(f"{base}/delete", json={"ids": [ids[0], "missing"]})
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(len(self.client.get(base).json()), 3)

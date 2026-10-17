@@ -23,7 +23,7 @@ class LocalAuthTest(unittest.TestCase):
                                         "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": ""})
         self.env.start()
         self.client = TestClient(app, follow_redirects=False)
-        self.credentials = {"username": "Shereen", "password": "correct horse battery staple"}
+        self.credentials = {"username": "Riley", "password": "correct horse battery staple"}
 
     def tearDown(self):
         self.client.close()
