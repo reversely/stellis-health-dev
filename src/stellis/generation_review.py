@@ -99,13 +99,14 @@ def stage(record: dict[str, object]) -> str | None:
     with storage.connect() as conn:
         anchored_images = conn.execute("""SELECT id, segment_id, quote FROM conversation_images
             WHERE conversation_id = ? AND quote IS NOT NULL""", (conversation_id,)).fetchall()
-        people = conn.execute("SELECT segment_id, person_id FROM person_links WHERE conversation_id = ?",
+        people = conn.execute("SELECT segment_id, person_id, origin FROM person_links WHERE conversation_id = ?",
                               (conversation_id,)).fetchall()
     for image in anchored_images:
         overlays.append({"kind": "image", "source_segment_id": image["segment_id"],
                          "value": image["quote"], "source_image_id": image["id"]})
     for link in people:
-        overlays.append({"kind": "person", "source_segment_id": link["segment_id"], "value": link["person_id"]})
+        overlays.append({"kind": "person", "source_segment_id": link["segment_id"], "value": link["person_id"],
+                         "origin": link["origin"] or "manual"})
     targets = [dict(item) for item in targets]
     kept: set[str] = set()
     while True:
@@ -280,10 +281,12 @@ def activate(conversation_id: str) -> dict[str, object]:
                     VALUES (?, 'segment', ?, ?, ?) ON CONFLICT(conversation_id, scope, target_id) DO UPDATE SET
                     name=excluded.name, updated_at=excluded.updated_at""", (conversation_id, target_id, item["value"], stamp))
             elif item["kind"] == "person":
-                conn.execute("""INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at)
-                    VALUES (?, ?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
-                    person_id=excluded.person_id, start_ms=excluded.start_ms, confirmed_at=excluded.confirmed_at""",
-                    (conversation_id, target_id, item["value"], target_segments[target_id]["start_ms"], stamp))
+                conn.execute("""INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at, origin)
+                    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
+                    person_id=excluded.person_id, start_ms=excluded.start_ms, confirmed_at=excluded.confirmed_at,
+                    origin=excluded.origin""",
+                    (conversation_id, target_id, item["value"], target_segments[target_id]["start_ms"], stamp,
+                     item.get("origin", "manual")))
             elif item["kind"] == "highlight":
                 quote = str(item["value"])
                 start = str(target_segments[target_id]["text"]).index(quote)

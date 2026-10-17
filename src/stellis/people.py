@@ -182,10 +182,12 @@ def confirm_person(conversation_id: str, segment_id: str, person_id: str | None,
             if item["id"] in manual_ids and existing.get(item["id"]) not in (None, person_id):
                 skipped += 1
                 continue
-            conn.execute("""INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at)
-                VALUES (?, ?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
-                person_id = excluded.person_id, start_ms = excluded.start_ms, confirmed_at = excluded.confirmed_at""",
-                (conversation_id, item["id"], person_id, item["start_ms"], stamp))
+            origin = "manual" if item["id"] == segment_id or item["id"] in manual_ids else "propagated"
+            conn.execute("""INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at, origin)
+                VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(conversation_id, segment_id) DO UPDATE SET
+                person_id = excluded.person_id, start_ms = excluded.start_ms, confirmed_at = excluded.confirmed_at,
+                origin = excluded.origin""",
+                (conversation_id, item["id"], person_id, item["start_ms"], stamp, origin))
             confirmed += 1
         promoted = 0
         for label in manual_labels:

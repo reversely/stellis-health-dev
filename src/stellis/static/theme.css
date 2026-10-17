@@ -817,6 +817,9 @@ html[data-theme='light'] {
   --focus: #4E4357;
   --shadow: 0 16px 38px #2A252F1c;
   --waveform: #335C63;
+  --check-bg: #4E4357;
+  --check-ink: #ffffff;
+  --speaker-auto: #7A6E7C;
   color-scheme: light;
 }
 html[data-theme='dark'] {
@@ -837,6 +840,9 @@ html[data-theme='dark'] {
   --focus: #DED0DA;
   --shadow: 0 16px 38px #2B2630A0;
   --waveform: #335C63;
+  --check-bg: #fff8ff;
+  --check-ink: #4E4357;
+  --speaker-auto: #A99BAB;
   color-scheme: dark;
 }
 body, html[data-theme='light'] body {
@@ -1575,3 +1581,11 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
   .integration-row { grid-template-columns: auto minmax(0, 1fr); }
   .integration-row button { grid-column: 1 / -1; justify-content: center; }
 }
+
+/* Speaker names (#210): grey when filled in automatically, ink when set by the user,
+   with a check circle on passages the user labelled themselves. */
+.turn-heading button.speaker-name { display: inline-flex; align-items: center; gap: 6px; }
+.turn-heading button.speaker-auto { color: var(--speaker-auto); font-weight: 600; }
+.turn-heading button.speaker-set { color: var(--ink); }
+.turn-heading .speaker-check { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--check-bg); color: var(--check-ink); flex: none; }

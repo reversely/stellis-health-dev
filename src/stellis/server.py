@@ -400,6 +400,7 @@ def start_speech_worker() -> None:
     recording_ai.fail_interrupted()
     generation_review.resolve_pending()
     processing.start_worker()
+    processing.index_missing_voices()
     if _retention_thread is None or not _retention_thread.is_alive():
         _retention_stop.clear()
         _retention_thread = threading.Thread(target=_retention_loop, name="stellis-retention", daemon=True)

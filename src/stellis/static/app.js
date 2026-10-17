@@ -1402,7 +1402,7 @@ async function loadSpeech(id) {
     if (!processButton.hidden) processButton.textContent = 'Reprocess transcript';
     return; }
   if (existing?.state === 'queued' || existing?.state === 'running') {
-    if (existing.kind === 'word_alignment') await showTranscript(id);
+    if (existing.kind === 'word_alignment' || existing.kind === 'voice_index') await showTranscript(id);
     watchJob(existing); return;
   }
   if (!capabilities.features.transcribe || !capabilities.features.diarize) {
@@ -1414,8 +1414,9 @@ async function loadSpeech(id) {
     setTranscriptLoading(false);
     if (existing.kind === 'rematch') { await showTranscript(id); rematchButton.hidden = false; rematchButton.textContent = 'Retry speaker rematch'; }
     else if (existing.kind === 'word_alignment') { await showTranscript(id); alignWordsButton.hidden = false; alignWordsButton.textContent = 'Retry word timing'; }
+    else if (existing.kind === 'voice_index') await showTranscript(id);
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
-    processingStatus.textContent = `${existing.kind === 'rematch' ? 'Speaker rematch' : existing.kind === 'word_alignment' ? 'Word timing' : 'Processing'} stopped: ${existing.error || 'Unknown error'}`;
+    processingStatus.textContent = `${existing.kind === 'rematch' ? 'Speaker rematch' : existing.kind === 'word_alignment' ? 'Word timing' : existing.kind === 'voice_index' ? 'Voice matching' : 'Processing'} stopped: ${existing.error || 'Unknown error'}`;
     return;
   }
   await beginProcessing(id);
@@ -1457,18 +1458,27 @@ function watchJob(job) {
   }, 1500);
 }
 const PROVISIONAL_SPEAKER_SOURCES = new Set(['embedding_fallback', 'nearest_turn', 'nearest_passage', 'single_speaker']);
+async function confirmSpeakerSuggestion(button, segment, suggestion) {
+  button.disabled = true;
+  try {
+    await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/person-links`, {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({person_id: suggestion.person_id, segment_id: segment.id, scope: 'cluster',
+        expected_revision: currentTranscript.revision}),
+    }));
+    await showTranscript(activeConversationId);
+  } catch (error) { button.disabled = false; processingStatus.textContent = error.message; }
+}
 function groupTranscriptSegments(segments) {
   const turns = [];
   for (const segment of segments) {
     const current = turns.at(-1);
     const previous = current?.at(-1);
-    // A passage given a provisional speaker stays its own turn even under a
-    // named group, so the guess remains visible until someone confirms it.
-    const resolved = item => item.person_id || item.speaker_label_source === 'manual_segment' ||
-      (item.speaker_label_source === 'manual_cluster' && !PROVISIONAL_SPEAKER_SOURCES.has(item.speaker_match_source)) ||
-      (item.speaker_cluster_id && !item.speaker_uncertain);
-    const sameTurn = previous && resolved(previous) && resolved(segment) &&
+    // Back-to-back passages under the same name read as one turn. Whether a name is
+    // automatic or the user's shows in its colour (#210), not in extra headings.
+    const sameTurn = previous &&
       previous.speaker_display_name === segment.speaker_display_name &&
+      (previous.speaker_suggestion?.person_id || null) === (segment.speaker_suggestion?.person_id || null) &&
       (previous.person_id || segment.person_id ? previous.person_id === segment.person_id : true) &&
       segment.start_ms - previous.end_ms <= 1500;
     if (sameTurn) current.push(segment);
@@ -1612,9 +1622,26 @@ async function showTranscript(id) {
     const firstSegment = visible[0];
     const turnSpeaker = document.createElement('button');
     turnSpeaker.type = 'button';
-    turnSpeaker.textContent = visible[0].speaker_display_name;
-    turnSpeaker.setAttribute('aria-label', `Tag speaker for turn at ${time(visible[0].start_ms / 1000)}`);
-    turnSpeaker.addEventListener('click', () => showSpeakerPicker(turnSpeaker, turn.querySelector('.segment'), firstSegment));
+    const suggestion = firstSegment.speaker_suggestion;
+    if (suggestion) {
+      // Grey: a voice match the user has not confirmed. One click confirms it for this speaker.
+      turnSpeaker.textContent = suggestion.name;
+      turnSpeaker.className = 'speaker-name speaker-auto';
+      turnSpeaker.title = `Confirm ${suggestion.name} for this speaker`;
+      turnSpeaker.setAttribute('aria-label', `Confirm ${suggestion.name} for this speaker`);
+      turnSpeaker.addEventListener('click', () => confirmSpeakerSuggestion(turnSpeaker, firstSegment, suggestion));
+    } else {
+      turnSpeaker.textContent = firstSegment.speaker_display_name;
+      const manual = visible.some(segment => segment.speaker_label_origin === 'manual');
+      turnSpeaker.className = `speaker-name ${firstSegment.speaker_label_origin === 'automatic' ? 'speaker-auto' : 'speaker-set'}`;
+      if (manual) {
+        const check = document.createElement('span'); check.className = 'speaker-check'; check.setAttribute('aria-hidden', 'true');
+        check.innerHTML = '<svg viewBox="0 0 12 12" width="12" height="12"><path d="M3 6.2 5.1 8.3 9 4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        turnSpeaker.append(check);
+      }
+      turnSpeaker.setAttribute('aria-label', `Tag speaker for turn at ${time(visible[0].start_ms / 1000)}${manual ? ', labelled by you' : ''}`);
+      turnSpeaker.addEventListener('click', () => showSpeakerPicker(turnSpeaker, turn.querySelector('.segment'), firstSegment));
+    }
     const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? `–${time(visible.at(-1).end_ms / 1000)}` : ''}`;
     heading.append(turnSpeaker, range);
     turn.append(heading);
