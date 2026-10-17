@@ -349,9 +349,10 @@ def _canonical_sources(values: object, allowed_ids: set[str]) -> list[str]:
         if not isinstance(value, str):
             raise AIError("invalid_source", "The model returned invalid source references")
         label = value.strip().strip("[]")
-        span = re.fullmatch(r"s(\d+)\s*[-–]\s*s?(\d+)", label)
+        # Nemotron sometimes drops the "s" prefix ("75" for "s75") within one list.
+        span = re.fullmatch(r"s?(\d+)\s*[-–]\s*s?(\d+)", label)
         expanded = ([f"s{index}" for index in range(int(span.group(1)), int(span.group(2)) + 1)]
-                    if span else [label])
+                    if span else [f"s{label}" if label.isdigit() else label])
         if not expanded or len(expanded) > 100 or any(item not in allowed_ids for item in expanded):
             raise AIError("invalid_source", "The model cited a passage outside its evidence")
         canonical.extend(expanded)

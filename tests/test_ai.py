@@ -306,6 +306,9 @@ class AIWorkflowTest(unittest.TestCase):
         self.assertEqual([len(chunk) for chunk in ai._chunks(segments)], [2])
         self.assertEqual(ai._canonical_sources(["[s1]", "s1"], {"s1"}), ["s1"])
         self.assertEqual(ai._canonical_sources(["s1-s3"], {"s1", "s2", "s3"}), ["s1", "s2", "s3"])
+        self.assertEqual(ai._canonical_sources(["s1", "3", "1-2"], {"s1", "s2", "s3"}), ["s1", "s3", "s2"])
+        with self.assertRaises(ai.AIError):
+            ai._canonical_sources(["4"], {"s1", "s2", "s3"})
 
     def test_short_overlapping_tail_does_not_force_an_unsupported_point(self) -> None:
         segments = storage.get_display_transcript(self.conversation_id)["segments"]
