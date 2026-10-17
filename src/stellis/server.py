@@ -679,6 +679,18 @@ def remove_nebius_key() -> dict[str, object]:
     return ai.remove_key()
 
 
+@api.get("/samples")
+def sample_status() -> dict[str, object]:
+    from stellis import samples
+    return samples.status()
+
+
+@api.post("/samples")
+def add_samples() -> dict[str, object]:
+    from stellis import samples
+    return samples.start()
+
+
 @api.get("/setup")
 def setup_status() -> dict[str, object]:
     from stellis import models

@@ -37,14 +37,7 @@ To use AI features, open **Account settings → AI features** and paste your Neb
 
 ### Sample meetings
 
-To try Stellis before using any recordings of yours, add three sample meetings from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/) while the app is stopped:
-
-```sh
-uv run python scripts/load_samples.py
-uv run stellis
-```
-
-The script downloads about 110 MB, checks each file, and imports the meetings. They transcribe when the app starts, and each card on the home page shows its progress. The AMI corpus is licensed under CC BY 4.0; each sample's notes credit it.
+To try Stellis before using any recordings of yours, click **Add sample meetings** on the home page (or in **Account settings**). Stellis downloads three meetings from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/), about 110 MB, checks each file, and imports them under Meetings. Each card shows its transcription progress. The AMI corpus is licensed under CC BY 4.0; each sample's notes credit it.
 
 ## Everyday use
 
