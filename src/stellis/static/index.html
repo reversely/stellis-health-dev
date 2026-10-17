@@ -53,6 +53,13 @@
             <p id="setup-status" role="status" aria-live="polite"></p>
             <progress id="setup-progress" max="1" value="0"></progress>
           </section>
+          <section id="samples-card" class="setup-card samples-panel" aria-labelledby="samples-card-title" hidden>
+            <h2 id="samples-card-title">Sample meetings</h2>
+            <p class="samples-note">Three recorded design meetings from the AMI Meeting Corpus (CC BY 4.0), about 110 MB. They transcribe on this device like any import.</p>
+            <p class="samples-status" role="status" aria-live="polite"></p>
+            <progress class="samples-progress" max="1" value="0" hidden></progress>
+            <button class="samples-add" type="button">Add sample meetings</button>
+          </section>
           <section id="calendar-card" class="calendar-card" aria-labelledby="calendar-title" hidden>
             <div class="calendar-heading"><h2 id="calendar-title">Coming up</h2><button id="calendar-refresh" class="icon-button" type="button" aria-label="Refresh meetings" title="Refresh meetings"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button><div class="calendar-views" role="group" aria-label="Meeting view"><button id="calendar-view-list" class="icon-button" type="button" aria-pressed="true" aria-label="List" title="List"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></button><button id="calendar-view-days" class="icon-button" type="button" aria-pressed="false" aria-label="Next 3 days" title="Next 3 days"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg></button></div></div>
             <p id="calendar-status" role="status" aria-live="polite"></p>
@@ -116,6 +123,13 @@
             <div class="settings-actions"><button id="nebius-key-save" type="submit">Save key</button><button id="nebius-key-remove" type="button" hidden>Remove key</button></div>
             <p id="nebius-key-status" role="status" aria-live="polite"></p>
           </form>
+        </section>
+        <section id="settings-samples" class="settings-section samples-panel" aria-labelledby="settings-samples-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><h3 id="settings-samples-title">Sample meetings</h3></div>
+            <p class="samples-note">Three recorded design meetings from the AMI Meeting Corpus (CC BY 4.0), about 110 MB. They transcribe on this device like any import.</p>
+            <p class="samples-status" role="status" aria-live="polite"></p>
+            <progress class="samples-progress" max="1" value="0" hidden></progress>
+            <button class="samples-add" type="button">Add sample meetings</button>
         </section>
         <section class="settings-section" aria-labelledby="settings-integrations-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-plug-connected"/></svg><h3 id="settings-integrations-title">Integrations</h3></div>
