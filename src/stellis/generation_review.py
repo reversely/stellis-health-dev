@@ -54,7 +54,7 @@ def _automatic_targets(item: dict[str, object]) -> list[str] | None:
             return [str(candidate["segment_id"]) for candidate in mostly]
         if candidates:
             return [str(max(candidates, key=lambda candidate: float(candidate["overlap"]))["segment_id"])]
-        return None
+        return []  # No new speech covers this time, so the name has nothing left to label.
     if item["kind"] == "text":
         same = [candidate for candidate in candidates if float(candidate["overlap"]) >= .8 and
                 inside(candidate) >= .8 and float(candidate["text_similarity"]) >= .95]
@@ -115,9 +115,11 @@ def stage(record: dict[str, object]) -> str | None:
         overlays.append({"kind": "person", "source_segment_id": link["segment_id"], "value": link["person_id"],
                          "origin": link["origin"] or "manual"})
     targets = [dict(item) for item in targets]
+    transcribed = list(targets)
     kept: set[str] = set()
     while True:
-        items, unresolved = _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by_id, targets)
+        items, unresolved = _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by_id, targets,
+                                           transcribed)
         newly = {str(item["source_segment_id"]) for item in items if item["auto_targets"] is None} - kept
         if not newly:
             break
@@ -169,7 +171,7 @@ def stage(record: dict[str, object]) -> str | None:
     return "applied"
 
 
-def _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by_id, targets):
+def _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by_id, targets, transcribed):
     items = []
     for index, overlay in enumerate(overlays):
         source_id = str(overlay["source_segment_id"])
@@ -181,6 +183,11 @@ def _overlay_items(overlays, removed, changed_clusters, source_by_id, machine_by
                 "source_start_ms": segment["start_ms"], "source_end_ms": segment["end_ms"],
                 "candidates": _candidates(machine_by_id[source_id], targets)}
         item["auto_targets"] = _automatic_targets(item)
+        if item["auto_targets"] == [] and any(
+                min(int(segment["end_ms"]), int(item["source_end_ms"])) > max(int(segment["start_ms"]), int(item["source_start_ms"]))
+                for segment in transcribed):
+            # New speech was here, but a passage kept for the user's edit replaced it: keep this one too.
+            item["auto_targets"] = None
         items.append(item)
     return items, [item for item in items if item["auto_targets"] is None]
 
