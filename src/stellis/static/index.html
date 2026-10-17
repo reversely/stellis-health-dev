@@ -101,6 +101,16 @@
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-abc"/></svg><h3 id="settings-vocabulary-title">Custom vocabulary</h3></div>
           <div class="settings-row"><p id="settings-vocabulary-count"></p><a class="settings-button" href="/vocabulary">Open custom vocabulary</a></div>
         </section>
+        <section class="settings-section" aria-labelledby="settings-ai-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg><h3 id="settings-ai-title">AI features</h3></div>
+          <p class="settings-note">Summaries, chat, and automatic categories send the transcript text they need to Nebius with your API key. Recordings and audio stay on this device.</p>
+          <form id="nebius-key-form" class="settings-form">
+            <label for="nebius-key-input">Nebius API key</label>
+            <input id="nebius-key-input" type="password" autocomplete="off" spellcheck="false" maxlength="512" placeholder="Paste your key" />
+            <div class="settings-actions"><button id="nebius-key-save" type="submit">Save key</button><button id="nebius-key-remove" type="button" hidden>Remove key</button></div>
+            <p id="nebius-key-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
         <section class="settings-section" aria-labelledby="settings-integrations-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-plug-connected"/></svg><h3 id="settings-integrations-title">Integrations</h3></div>
           <p class="settings-note">Stellis reads upcoming events on this device and never syncs calendar details</p><div id="settings-calendars" class="integration-list"></div><p id="settings-calendar-status" role="status" aria-live="polite"></p>

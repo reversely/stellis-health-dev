@@ -57,7 +57,48 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _key_file() -> Path:
+    return storage.data_dir() / "nebius-api-key"
+
+
+def _saved_key() -> str | None:
+    try:
+        return _key_file().read_text().strip() or None
+    except FileNotFoundError:
+        return None
+
+
+def key_status() -> dict[str, object]:
+    """Whether a key is available and where it comes from; never the key itself."""
+    if _saved_key():
+        return {"configured": True, "source": "saved"}
+    return {"configured": bool(_key()), "source": "environment" if _key() else None}
+
+
+def save_key(value: str) -> dict[str, object]:
+    key = value.strip()
+    if not 16 <= len(key) <= 512 or any(character.isspace() for character in key):
+        raise ValueError("Enter the API key exactly as Nebius shows it")
+    path = _key_file()
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    # Owner-only from creation, so the key is never briefly readable by others.
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(key)
+    os.replace(temporary, path)
+    return key_status()
+
+
+def remove_key() -> dict[str, object]:
+    _key_file().unlink(missing_ok=True)
+    return key_status()
+
+
 def _key() -> str | None:
+    saved = _saved_key()
+    if saved:
+        return saved
     value = os.environ.get("NEBIUS_API_KEY")
     if value:
         return value
