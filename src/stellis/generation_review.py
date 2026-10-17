@@ -47,6 +47,13 @@ def _automatic_targets(item: dict[str, object]) -> list[str] | None:
         pieces = [candidate for candidate in candidates if inside(candidate) >= .8]
         if pieces and sum(float(candidate["overlap"]) for candidate in pieces) >= .8:
             return [str(candidate["segment_id"]) for candidate in pieces]
+        # A name never holds an old passage in place: it moves to the new passages that
+        # sit mostly inside the old one's time, or else to the one overlapping it most.
+        mostly = [candidate for candidate in candidates if inside(candidate) >= .5]
+        if mostly:
+            return [str(candidate["segment_id"]) for candidate in mostly]
+        if candidates:
+            return [str(max(candidates, key=lambda candidate: float(candidate["overlap"]))["segment_id"])]
         return None
     if item["kind"] == "text":
         same = [candidate for candidate in candidates if float(candidate["overlap"]) >= .8 and
