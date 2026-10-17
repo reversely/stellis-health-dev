@@ -16,7 +16,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from stellis.server import app
-from stellis import storage
+from stellis import storage, tools
 
 
 def wav_bytes() -> bytes:
@@ -31,7 +31,7 @@ def wav_bytes() -> bytes:
 
 def mp3_bytes(content: bytes | None = None) -> bytes:
     return subprocess.run(
-        ["ffmpeg", "-v", "error", "-f", "wav", "-i", "pipe:0", "-f", "mp3", "pipe:1"],
+        [tools.ffmpeg(), "-v", "error", "-f", "wav", "-i", "pipe:0", "-f", "mp3", "pipe:1"],
         input=content if content is not None else wav_bytes(), capture_output=True, check=True,
     ).stdout
 

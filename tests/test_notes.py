@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from stellis import tools
 import os
 import subprocess
 import tempfile
@@ -28,7 +29,7 @@ class NotesWorkflowTest(unittest.TestCase):
             self.assertEqual(client.get(endpoint).json()["markdown"], "# Interview\n- Follow up")
 
             media = Path(directory) / "sample.webm"
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+            subprocess.run([tools.ffmpeg(), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
                             "-i", "sine=frequency=440:duration=2", "-c:a", "libopus", str(media)],
                            check=True, timeout=20)
             encoded = media.read_bytes()

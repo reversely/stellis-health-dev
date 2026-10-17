@@ -13,7 +13,7 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from stellis import storage
+from stellis import storage, tools
 from stellis.importer import ImportFailure, MAX_AUDIO_BYTES, import_upload
 
 MAX_CHUNK_BYTES = 8_000_000
@@ -222,7 +222,7 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
         os.close(remux_descriptor)
         remuxed = Path(remux_name)
         try:
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(joined),
+            subprocess.run([tools.ffmpeg(), "-hide_banner", "-loglevel", "error", "-y", "-i", str(joined),
                             "-c", "copy", str(remuxed)], check=True, capture_output=True, timeout=300)
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             raise ImportFailure("The saved browser audio could not be assembled") from exc

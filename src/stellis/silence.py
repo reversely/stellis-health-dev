@@ -6,6 +6,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from stellis import tools
+
 THRESHOLD_DB = -35
 MIN_DETECT_SECONDS = 1.2
 EDGE_SECONDS = 0.2
@@ -19,7 +21,7 @@ _END = re.compile(r"silence_end:\s*([0-9.]+)")
 def measured_spans(path: Path, duration_ms: int) -> list[dict[str, int]]:
     """Scan audio energy with ffmpeg and retain bounded, speech-safe gaps."""
     completed = subprocess.run(
-        ["ffmpeg", "-hide_banner", "-nostdin", "-nostats", "-loglevel", "info",
+        [tools.ffmpeg(), "-hide_banner", "-nostdin", "-nostats", "-loglevel", "info",
          "-i", str(path), "-vn", "-ac", "1",
          "-af", f"silencedetect=noise={THRESHOLD_DB}dB:d={MIN_DETECT_SECONDS}",
          "-f", "null", "-"],

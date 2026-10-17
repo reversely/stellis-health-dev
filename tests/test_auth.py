@@ -100,7 +100,18 @@ class LocalAuthTest(unittest.TestCase):
     def test_cli_serve_requires_login_by_default(self):
         with patch.dict(os.environ):
             os.environ.pop('STELLIS_AUTH_MODE', None)
-            with patch('sys.argv', ['stellis', 'serve', '--port', '8899']), patch.object(cli.uvicorn, 'run') as run:
+            with patch('sys.argv', ['stellis', 'serve', '--port', '8899']), patch.object(cli.uvicorn, 'run') as run, \
+                 patch.object(cli.models, 'ensure_in_background') as download:
                 cli.main()
                 self.assertEqual(os.environ['STELLIS_AUTH_MODE'], 'required')
                 run.assert_called_once()
+                download.assert_called_once()
+
+    def test_plain_stellis_starts_the_app(self):
+        with patch.dict(os.environ):
+            os.environ.pop('STELLIS_AUTH_MODE', None)
+            with patch('sys.argv', ['stellis']), patch.object(cli.uvicorn, 'run') as run, \
+                 patch.object(cli.models, 'ensure_in_background'):
+                cli.main()
+                self.assertEqual(run.call_args.kwargs['port'], 8765)
+                self.assertEqual(run.call_args.args[0], 'stellis.server:app')

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import re
 import shutil
@@ -16,7 +15,7 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from stellis import storage
+from stellis import storage, tools
 
 MAX_UPLOAD_BYTES = 1_000_000_000
 MAX_AUDIO_BYTES = 1_000_000_000
@@ -36,26 +35,14 @@ def _new_temp(root: Path) -> Path:
 
 def _duration_ms(path: Path) -> int:
     try:
-        completed = subprocess.run(
-            [
-                "ffprobe", "-v", "error", "-show_entries", "format=duration:stream=codec_type",
-                "-of", "json", str(path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=45,
-            check=True,
-        )
-        metadata = json.loads(completed.stdout)
-        if not any(stream.get("codec_type") == "audio" for stream in metadata.get("streams", [])):
+        metadata = tools.probe(path)
+        if "audio" not in metadata["streams"]:
             raise ImportFailure("The file has no audio stream.")
-        duration = round(float(metadata["format"]["duration"]) * 1000)
+        duration = round(float(metadata["duration"] or 0) * 1000)
         if duration <= 0:
             raise ImportFailure("The audio duration is invalid.")
         return duration
-    except FileNotFoundError as exc:
-        raise ImportFailure("ffprobe is unavailable on this device.") from exc
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, KeyError, ValueError) as exc:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, KeyError, ValueError, TypeError) as exc:
         raise ImportFailure("The audio file could not be decoded.") from exc
 
 

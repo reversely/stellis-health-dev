@@ -4,7 +4,7 @@ Licensed under the Apache License, Version 2.0 (see LICENSE).
 Stellis downloads or calls the following third-party components. They are not
 part of this repository and keep their own licences.
 
-Speech models, downloaded by scripts/setup_models.sh
+Speech models, downloaded on first start
 - Whisper "small.en" in ggml format, from whisper.cpp (MIT).
   https://github.com/ggml-org/whisper.cpp
 - Pyannote segmentation 3.0, ONNX export distributed by sherpa-onnx (MIT).
@@ -13,11 +13,12 @@ Speech models, downloaded by scripts/setup_models.sh
   sherpa-onnx. Licensed under Creative Commons Attribution 4.0 International
   (CC BY 4.0). https://creativecommons.org/licenses/by/4.0/
 
-Native tools, installed separately by the user
-- FFmpeg (https://ffmpeg.org). Builds such as Homebrew's are licensed under
-  the GNU General Public License version 3. Stellis runs FFmpeg as a separate
-  program and does not include or link it.
-- whisper.cpp command-line tool (MIT).
+Native tools, installed by uv as Python packages
+- FFmpeg, from the imageio-ffmpeg package (BSD 2-Clause wrapper). The FFmpeg
+  executable it carries is built with GPL components and is licensed under the
+  GNU General Public License version 3 (https://ffmpeg.org/legal.html).
+  Stellis runs FFmpeg as a separate program and does not link it.
+- whisper.cpp, through the pywhispercpp package (MIT).
 
 Libraries
 - sherpa-onnx (Apache License 2.0).

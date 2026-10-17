@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 import threading
@@ -13,20 +12,14 @@ from pathlib import Path
 
 import soundfile as sf
 
-from stellis import processing, recording, storage
+from stellis import processing, recording, storage, tools
 
 WINDOW_CHUNKS = 20
 _LOCK = threading.Lock()
 
 
 def _packets(path: Path) -> list[float]:
-    completed = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "packet=pts_time",
-         "-of", "csv=p=0", str(path)],
-        capture_output=True, text=True, timeout=30, check=True,
-    )
-    return [float(value) for line in completed.stdout.splitlines()
-            if (value := line.split(",", 1)[0]) and value != "N/A"]
+    return tools.packet_times(path)
 
 
 def _snapshot(recording_id: str) -> tuple[list[dict[str, object]], int]:
@@ -67,8 +60,7 @@ def generate(recording_id: str) -> dict[str, object]:
         if through < 2 or through <= int(prior.get("through_sequence", -1)) + 3:
             return prior
         model = processing.model_paths()[0]
-        if not (shutil.which("ffmpeg") and shutil.which("ffprobe")
-                and shutil.which("whisper-cli") and model.is_file()):
+        if not model.is_file():
             raise RuntimeError("Local transcription model unavailable")
         directory = recording._directory(recording_id)
         selected = rows if len(rows) <= WINDOW_CHUNKS + 1 else [rows[0], *rows[-WINDOW_CHUNKS:]]
@@ -98,7 +90,7 @@ def generate(recording_id: str) -> dict[str, object]:
                 start_seconds = max(start_seconds, tail)
             wav = temp / "window.wav"
             subprocess.run(
-                ["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{start_seconds:.3f}",
+                [tools.ffmpeg(), "-nostdin", "-v", "error", "-y", "-ss", f"{start_seconds:.3f}",
                  "-i", str(joined), "-ar", "16000", "-ac", "1", str(wav)],
                 check=True, capture_output=True, timeout=60,
             )
@@ -109,17 +101,9 @@ def generate(recording_id: str) -> dict[str, object]:
             elif float((audio * audio).mean()) < 0.000001:
                 segments = []
             else:
-                result_base = temp / "words"
-                command = ["whisper-cli", "-m", str(model), "-f", str(wav), "-l", "en",
-                           "-t", "4", "-ojf", "-of", str(result_base), "-np"]
-                vocabulary = processing.vocabulary_snapshot()
-                if vocabulary:
-                    command.extend(["--prompt", "Vocabulary: " + ", ".join(vocabulary)])
-                subprocess.run(command, check=True, stdout=subprocess.DEVNULL,
-                               stderr=subprocess.PIPE, timeout=180)
-                payload = json.loads(result_base.with_suffix(".json").read_text())
+                passages = processing._run_asr(wav, model, processing.vocabulary_snapshot())
                 segments = []
-                for item in payload.get("transcription", []):
+                for item in passages:
                     start_ms = round(start_seconds * 1000) + int(item["offsets"]["from"])
                     end_ms = min(window_end_ms, round(start_seconds * 1000) + int(item["offsets"]["to"]))
                     text = str(item.get("text", "")).strip()
