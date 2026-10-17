@@ -175,7 +175,7 @@ class ProcessingWorkflowTest(unittest.TestCase):
 
     def test_public_real_speech_fixture_with_installed_whisper(self) -> None:
         model = processing.model_paths()[0]
-        if not model.is_file() or not shutil.which("whisper-cli"):
+        if not model.is_file():
             self.skipTest("Local whisper.cpp model is not installed")
         audio = Path(__file__).parent / "fixtures" / "jfk.wav"
         segments = processing._transcribe(audio, model, Path(self.temp.name, "jfk"), [])
@@ -184,37 +184,26 @@ class ProcessingWorkflowTest(unittest.TestCase):
         self.assertLessEqual(max(int(item["end_ms"]) for item in segments), 11000)
 
     def test_vocabulary_reaches_whisper_initial_prompt(self) -> None:
-        output = Path(self.temp.name, "transcript")
-        audio_path = Path(self.temp.name, "audio.wav")
-        audio_path.write_bytes(wav_bytes())
-        observed: list[str] = []
-
-        def native_command(command: list[str], timeout: int) -> None:
-            observed.extend(command)
-            output.with_suffix(".json").write_text(json.dumps({"transcription": [
-                {"offsets": {"from": 0, "to": 1000}, "text": "ORBIT"}
-            ]}))
-
-        with patch.object(processing, "_command", side_effect=native_command):
-            result = processing._transcribe(audio_path, Path("/model.bin"), output, ["ORBIT"])
-        self.assertEqual(result[0]["text"], "ORBIT")
-        self.assertIn("--prompt", observed)
-        self.assertIn("Vocabulary: ORBIT", observed)
+        from stellis import asr
+        self.assertEqual(asr._params(["ORBIT", "CubeSat"], None, 4)["initial_prompt"], "Vocabulary: ORBIT, CubeSat")
+        self.assertNotIn("initial_prompt", asr._params([], None, 4))
+        self.assertNotIn("n_max_text_ctx", asr._params(["ORBIT"], None, 4))
+        self.assertEqual(asr._params([], 0, 4)["n_max_text_ctx"], 0)
+        # Beam search with five beams matches whisper-cli's defaults.
+        self.assertEqual(asr._params([], None, 4)["beam_search"]["beam_size"], 5)
 
     def test_native_asr_times_cannot_outlive_source_audio(self) -> None:
         audio_path = Path(self.temp.name, "audio.wav")
         audio_path.write_bytes(wav_bytes())
         output = Path(self.temp.name, "bounded")
 
-        def native_command(command: list[str], timeout: int) -> None:
-            output.with_suffix(".json").write_text(json.dumps({"transcription": [
-                {"offsets": {"from": 0, "to": 30000}, "text": " Test", "tokens": [
-                    {"text": " Test", "offsets": {"from": 100, "to": 30000}, "p": .8},
-                ]},
-                {"offsets": {"from": 1200, "to": 30000}, "text": "Beyond audio"},
-            ]}))
-
-        with patch.object(processing, "_command", side_effect=native_command):
+        passages = [
+            {"offsets": {"from": 0, "to": 30000}, "text": " Test", "tokens": [
+                {"text": " Test", "offsets": {"from": 100, "to": 30000}, "p": .8},
+            ]},
+            {"offsets": {"from": 1200, "to": 30000}, "text": "Beyond audio"},
+        ]
+        with patch.object(processing, "_run_asr", return_value=passages):
             result = processing._transcribe(audio_path, Path("/model.bin"), output, [])
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["end_ms"], 1000)

@@ -15,7 +15,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from PIL import Image, PngImagePlugin
 
-from stellis import storage
+from stellis import storage, tools
 from stellis.server import app
 from test_import import wav_bytes, mp3_bytes
 
@@ -163,7 +163,7 @@ class ImageWorkflowTest(unittest.TestCase):
         image = self._upload(owner, 700).json()
         self.assertEqual(len(self.client.get(f"/api/v1/{owner}/images").json()), 1)
         path = Path(self.temp.name) / "sample.webm"
-        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+        subprocess.run([tools.ffmpeg(), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
                         "-i", "sine=frequency=440:duration=2", "-c:a", "libopus", str(path)],
                        check=True, timeout=20)
         self.client.put(f"/api/v1/{owner}/chunks/0", content=path.read_bytes())

@@ -9,7 +9,6 @@ import queue
 import re
 from bisect import bisect_left, bisect_right
 from difflib import SequenceMatcher
-import shutil
 import signal
 import subprocess
 import sys
@@ -22,7 +21,7 @@ from pathlib import Path
 
 import soundfile as sf
 
-from stellis import silence, storage
+from stellis import silence, storage, tools
 
 PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v10"
 REMATCH_VERSION = "speaker-embedding-v1"
@@ -54,7 +53,7 @@ def model_paths() -> tuple[Path, Path, Path]:
 def capabilities() -> dict[str, object]:
     """Report actual installed engine readiness to any client."""
     whisper, segmentation, embedding = model_paths()
-    asr_ready = bool(shutil.which("whisper-cli") and whisper.is_file() and shutil.which("ffmpeg"))
+    asr_ready = whisper.is_file()
     diar_ready = segmentation.is_file() and embedding.is_file()
     return {
         "pipeline_version": pipeline_version(),
@@ -295,7 +294,7 @@ def run_voice_index_job(job_id: str) -> None:
         with tempfile.TemporaryDirectory(prefix="stellis-voices-", dir=storage.data_dir()) as temporary:
             wav = Path(temporary) / "audio.wav"
             _stage(job_id, "decoding for voice matching", 0.1)
-            _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(media),
+            _command([tools.ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(media),
                       "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
             _stage(job_id, "indexing voices", 0.4)
             vectors, valid = rematch.extract_embeddings(wav, embedding_model, segments)
@@ -394,18 +393,23 @@ def _transcribe(audio_path: Path, model: Path, output_base: Path,
     return [segment for segment in segments if not is_non_speech(str(segment["text"]))]
 
 
+def _run_asr(audio_path: Path, model: Path, vocabulary: list[str],
+             max_context: int | None = None) -> list[dict[str, object]]:
+    """Passages from whisper.cpp in whisper-cli's JSON shape (see asr.py)."""
+    from stellis import asr
+
+    audio, rate = sf.read(audio_path, dtype="float32", always_2d=True)
+    if rate != 16000:
+        raise RuntimeError("Decoded audio must be 16 kHz")
+    return asr.transcribe(audio[:, 0], model, vocabulary, max_context=max_context)
+
+
 def _decode(audio_path: Path, model: Path, output_base: Path, vocabulary: list[str],
-            extra: list[str] | None = None, offset_ms: int = 0) -> list[dict[str, object]]:
+            max_context: int | None = None, offset_ms: int = 0) -> list[dict[str, object]]:
     audio_info = sf.info(audio_path)
     duration_ms = round(audio_info.frames / audio_info.samplerate * 1000)
-    command = ["whisper-cli", "-m", str(model), "-f", str(audio_path), "-l", "en",
-               "-t", "4", "-ojf", "-of", str(output_base), "-np", *(extra or [])]
-    if vocabulary:
-        command.extend(["--prompt", "Vocabulary: " + ", ".join(vocabulary)])
-    _command(command, timeout=7200)
-    result = json.loads(output_base.with_suffix(".json").read_text())
     segments: list[dict[str, object]] = []
-    for item in result["transcription"]:
+    for item in _run_asr(audio_path, model, vocabulary, max_context):
         start = max(0, int(item["offsets"]["from"]))
         end = min(duration_ms, int(item["offsets"]["to"]))
         if end > start and str(item["text"]).strip():
@@ -458,9 +462,9 @@ def _repair_loops(audio_path: Path, model: Path, output_base: Path, vocabulary: 
         clip = window.with_suffix(".wav")
         sf.write(clip, audio[start * rate // 1000:end * rate // 1000], rate)
         replacement = None
-        for terms, extra in ((vocabulary, []), ([], ["--max-context", "0"])):
+        for terms, max_context in ((vocabulary, None), ([], 0)):
             try:
-                attempt = _decode(clip, model, window, terms, extra, offset_ms=start)
+                attempt = _decode(clip, model, window, terms, max_context, offset_ms=start)
             except RuntimeError:
                 continue
             if attempt and not any(is_looping(str(item["text"])) for item in attempt):
@@ -821,7 +825,7 @@ def run_word_alignment_job(job_id: str) -> None:
                 workspace = Path(temporary)
                 wav = workspace / "audio.wav"
                 _stage(job_id, "decoding", 0.05)
-                _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(source_audio),
+                _command([tools.ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(source_audio),
                           "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
                 _stage(job_id, "measuring words", 0.2)
                 measured = _transcribe(wav, model, workspace / "transcript", vocabulary_snapshot())
@@ -902,7 +906,7 @@ def run_job(job_id: str) -> None:
             workspace = Path(temporary)
             wav = workspace / "audio.wav"
             _stage(job_id, "decoding", 0.02)
-            _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(source),
+            _command([tools.ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(source),
                       "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
             _stage(job_id, "transcribing", 0.12)
             vocabulary = json.loads(str(job["vocabulary_json"]))
@@ -986,7 +990,7 @@ def run_rematch_job(job_id: str) -> None:
         with tempfile.TemporaryDirectory(prefix="stellis-rematch-", dir=storage.data_dir()) as temporary:
             wav = Path(temporary) / "audio.wav"
             _stage(job_id, "decoding for speaker rematch", 0.05)
-            _command(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(media),
+            _command([tools.ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(media),
                       "-ac", "1", "-ar", "16000", str(wav)], timeout=1800)
             _stage(job_id, "matching acoustic speakers", 0.35)
             embeddings, valid = rematch.extract_embeddings(wav, embedding_model, segments)

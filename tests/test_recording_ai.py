@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import ai, recording, recording_ai
+from stellis import ai, recording, recording_ai, tools
 from stellis.server import app
 
 
@@ -43,7 +43,7 @@ class RecordingChatWorkflowTest(unittest.TestCase):
             self.assertEqual(result["source_starts"][result["result"]["source_segment_ids"][0]], 500)
 
             media = Path(directory) / "sample.webm"
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+            subprocess.run([tools.ffmpeg(), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
                             "-i", "sine=frequency=440:duration=2", "-c:a", "libopus", str(media)],
                            check=True, timeout=20)
             encoded = media.read_bytes()

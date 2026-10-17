@@ -649,6 +649,12 @@ def remove_nebius_key() -> dict[str, object]:
     return ai.remove_key()
 
 
+@api.get("/setup")
+def setup_status() -> dict[str, object]:
+    from stellis import models
+    return {**models.status(), "missing": models.missing()}
+
+
 @api.get("/category-groups")
 def category_groups() -> list[dict[str, object]]:
     return notebooks.category_groups()

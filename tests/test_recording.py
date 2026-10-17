@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from stellis import tools
 import os
 import subprocess
 import tempfile
@@ -28,7 +29,7 @@ class RecordingWorkflowTest(unittest.TestCase):
 
     def _webm(self) -> bytes:
         path = Path(self.temp.name) / "sample.webm"
-        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+        subprocess.run([tools.ffmpeg(), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
                         "-i", "sine=frequency=440:duration=2", "-c:a", "libopus", str(path)],
                        check=True, timeout=20)
         return path.read_bytes()

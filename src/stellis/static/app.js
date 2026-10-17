@@ -803,6 +803,7 @@ async function showList() {
   libraryNotebooks = books.notebooks; notebookPalette = books.palette;
   renderNotebooks();
   renderCategoryGroups();
+  watchSetup();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
   document.querySelector('#auto-categories').checked = automation.enabled;
@@ -1418,7 +1419,7 @@ async function loadSpeech(id) {
   }
   if (!capabilities.features.transcribe || !capabilities.features.diarize) {
     setTranscriptLoading(false);
-    processingStatus.textContent = 'Local speech models are unavailable. Install them to transcribe this recording on this device.';
+    processingStatus.textContent = 'The speech models are still downloading. This recording transcribes as soon as they are ready.';
     return;
   }
   if (existing?.state === 'failed') {
@@ -3498,6 +3499,22 @@ document.addEventListener('keydown', event => {
   const filter = document.querySelector('#rail-filter');
   if (event.key === 'Escape' && filter.open) { filter.open = false; filter.querySelector('summary').focus(); }
 });
+let setupTimer;
+async function watchSetup() {
+  // First run downloads the speech models; recordings transcribe once they are in place.
+  clearTimeout(setupTimer);
+  const card = document.querySelector('#setup-card');
+  let state;
+  try { state = await json(await fetch(`${API}/setup`)); } catch { card.hidden = true; return; }
+  card.hidden = state.state === 'ready';
+  if (card.hidden) return;
+  const percent = Math.round((state.progress || 0) * 100);
+  document.querySelector('#setup-progress').value = state.progress || 0;
+  document.querySelector('#setup-status').textContent = state.state === 'failed'
+    ? `The speech models could not be downloaded (${state.error}). Check your connection and restart Stellis.`
+    : `Downloading the speech models, about 500 MB: ${percent}%. Recordings and imports transcribe as soon as this finishes.`;
+  if (state.state !== 'failed') setupTimer = setTimeout(watchSetup, 2000);
+}
 function renderCategoryGroups() {
   const section = document.querySelector('#category-groups');
   section.hidden = !libraryCategoryGroups.length;

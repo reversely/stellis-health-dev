@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import recording_preview
+from stellis import recording_preview, tools
 from stellis.server import app
 
 
@@ -22,7 +22,7 @@ class RecordingPreviewTest(unittest.TestCase):
             client = TestClient(app)
             session = client.post("/api/v1/recordings", json={"title": "Preview", "media_type": "audio/webm"}).json()
             path = Path(directory) / "sample.webm"
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+            subprocess.run([tools.ffmpeg(), "-hide_banner", "-loglevel", "error", "-f", "lavfi",
                             "-i", "sine=frequency=440:duration=2", "-c:a", "libopus", str(path)],
                            check=True, timeout=20)
             data = path.read_bytes()
@@ -33,20 +33,9 @@ class RecordingPreviewTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
             model = Path(directory) / "model.bin"
             model.write_bytes(b"model fixture")
-            native_run = subprocess.run
-
-            def run(command, *args, **kwargs):
-                if command[0] == "whisper-cli":
-                    output = Path(command[command.index("-of") + 1]).with_suffix(".json")
-                    output.write_text(json.dumps({"transcription": [
-                        {"offsets": {"from": 0, "to": 30000}, "text": "spoken sample"},
-                    ]}))
-                    return subprocess.CompletedProcess(command, 0)
-                return native_run(command, *args, **kwargs)
-
+            passages = [{"offsets": {"from": 0, "to": 30000}, "text": "spoken sample"}]
             with patch.object(recording_preview.processing, "model_paths", return_value=(model, model, model)), \
-                 patch.object(recording_preview.shutil, "which", return_value="/bin/true"), \
-                 patch.object(recording_preview.subprocess, "run", side_effect=run):
+                 patch.object(recording_preview.processing, "_run_asr", return_value=passages):
                 response = client.post(f"/api/v1/recordings/{session['id']}/preview")
             self.assertEqual(response.status_code, 200, response.text)
             result = response.json()

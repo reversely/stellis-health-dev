@@ -48,6 +48,11 @@
           </section>
           <a id="live-recording-card" class="live-recording-card" href="/recording" hidden><span id="live-recording-state" class="live-recording-state">Live</span><strong id="live-recording-title">New recording</strong><small id="live-recording-time">0:00</small><div class="live-recording-preview"><span id="live-recording-preview-status">Listening for speech</span><div id="live-recording-preview-lines"></div></div><span class="live-recording-arrow" aria-hidden="true">→</span></a>
           <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
+          <section id="setup-card" class="setup-card" aria-labelledby="setup-title" hidden>
+            <h2 id="setup-title">Getting transcription ready</h2>
+            <p id="setup-status" role="status" aria-live="polite"></p>
+            <progress id="setup-progress" max="1" value="0"></progress>
+          </section>
           <section id="calendar-card" class="calendar-card" aria-labelledby="calendar-title" hidden>
             <div class="calendar-heading"><h2 id="calendar-title">Coming up</h2><button id="calendar-refresh" class="icon-button" type="button" aria-label="Refresh meetings" title="Refresh meetings"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></div>
             <p id="calendar-status" role="status" aria-live="polite"></p>

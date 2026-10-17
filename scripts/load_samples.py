@@ -22,7 +22,7 @@ from pathlib import Path
 
 from starlette.datastructures import UploadFile
 
-from stellis import importer, library, notes, processing, storage
+from stellis import importer, library, notes, processing, storage, tools
 
 SOURCE = "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/{id}/audio/{id}.Mix-Headset.wav"
 SAMPLES = (
@@ -50,7 +50,7 @@ def _download(meeting: str, digest: str, cache: Path) -> Path:
 
 
 def _to_mp3(source: Path, target: Path) -> None:
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(source), "-ac", "1", "-q:a", "4", str(target)],
+    subprocess.run([tools.ffmpeg(), "-nostdin", "-v", "error", "-y", "-i", str(source), "-ac", "1", "-q:a", "4", str(target)],
                    check=True)
 
 
@@ -92,7 +92,7 @@ def main() -> None:
             added += 1
             print(f"Added {title}.")
     if added and not (ready["transcribe"] and ready["diarize"]):
-        print("Install the speech models (scripts/setup_models.sh), then open each sample to transcribe it.")
+        print("Start Stellis with `uv run stellis`; the samples transcribe once the speech models finish downloading.")
     elif added:
         print("Open Stellis to watch the samples transcribe; each card shows its progress.")
 

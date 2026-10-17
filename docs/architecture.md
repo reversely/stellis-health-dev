@@ -9,8 +9,8 @@ flowchart LR
   S --> F[(Recordings and images)]
   S --> Q[Job queue]
   Q --> W[Speech worker]
-  W -->|decode audio| FF[FFmpeg]
-  W -->|transcribe| WH[whisper.cpp]
+  W -->|decode audio| FF[FFmpeg from imageio-ffmpeg]
+  W -->|transcribe| WH[whisper.cpp through pywhispercpp]
   W -->|speech turns and voice fingerprints| SO[sherpa-onnx models]
   W --> DB
   S -->|transcript text for AI features| N[Nebius API]
@@ -23,14 +23,15 @@ flowchart LR
 | --- | --- | --- |
 | Browser interface | Records audio, plays recordings, shows transcripts, notes, speakers, and search | `src/stellis/static/` |
 | Device service | Signs you in, stores conversations, serves the interface and `/api/v1`, and starts jobs | `src/stellis/server.py`, `storage.py` |
-| Speech worker | Transcribes recordings, groups speakers, and fingerprints voices, one job at a time in a separate process | `processing.py`, `worker.py` |
+| Speech worker | Transcribes recordings, groups speakers, and fingerprints voices, one job at a time in a separate process | `processing.py`, `asr.py`, `worker.py` |
+| Setup | Downloads and verifies the speech models on first start, with progress on the home page | `models.py`, `tools.py` |
 | AI features | Summaries with transcript links, answers, cleanup, and automatic categories through Nebius | `ai.py`, `enhanced_notes.py`, `categorization.py` |
 | Calendars | Reads upcoming events from one connected calendar | `calendar.py` |
 
 ## Processing a recording
 
-1. **Decode:** FFmpeg converts the recording to 16 kHz mono audio.
-2. **Transcribe:** whisper.cpp writes English passages with word timings, using your custom vocabulary as a hint. A stretch where Whisper repeats one phrase is transcribed again by itself, and passages that contain only sound tags are dropped.
+1. **Decode:** FFmpeg, installed with Stellis as a Python package, converts the recording to 16 kHz mono audio.
+2. **Transcribe:** whisper.cpp, through its Python binding, writes English passages with word timings, using your custom vocabulary as a hint. A stretch where Whisper repeats one phrase is transcribed again by itself, and passages that contain only sound tags are dropped.
 3. **Find speech turns:** sherpa-onnx with the Pyannote segmentation model marks where each voice speaks.
 4. **Group speakers:** each passage gets a TitaNet voice fingerprint, and spectral clustering groups passages by voice. The number of speakers is estimated, never assumed. Short recordings use the speech turns instead.
 5. **Suggest people:** a speaker whose voice closely matches someone you named in other conversations shows that name in grey until you confirm it.

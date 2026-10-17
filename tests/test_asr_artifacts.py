@@ -38,10 +38,7 @@ class TranscribeFilterTest(unittest.TestCase):
         self.temp.cleanup()
 
     def _run(self, items: list[dict[str, object]]) -> list[dict[str, object]]:
-        def native_command(command: list[str], timeout: int) -> None:
-            self.output.with_suffix(".json").write_text(json.dumps({"transcription": items}))
-
-        with patch.object(processing, "_command", side_effect=native_command):
+        with patch.object(processing, "_run_asr", return_value=items):
             return processing._transcribe(self.audio, Path("/model.bin"), self.output, [])
 
     def test_tag_only_passages_are_dropped(self) -> None:
@@ -53,18 +50,12 @@ class TranscribeFilterTest(unittest.TestCase):
     def test_only_tags_gives_an_empty_transcript_not_an_error(self) -> None:
         self.assertEqual(self._run([{"offsets": {"from": 0, "to": 900}, "text": " [BLANK_AUDIO]"}]), [])
 
-    def test_decoding_options_are_unchanged(self) -> None:
-        commands: list[list[str]] = []
-
-        def native_command(command: list[str], timeout: int) -> None:
-            commands.append(command)
-            self.output.with_suffix(".json").write_text(json.dumps({"transcription": [
-                {"offsets": {"from": 0, "to": 500}, "text": " Hello."}]}))
-
-        with patch.object(processing, "_command", side_effect=native_command):
+    def test_the_vocabulary_reaches_the_decoder_with_full_context(self) -> None:
+        passages = [{"offsets": {"from": 0, "to": 500}, "text": " Hello."}]
+        with patch.object(processing, "_run_asr", return_value=passages) as run:
             processing._transcribe(self.audio, Path("/model.bin"), self.output, ["CubeSat"])
-        self.assertNotIn("--suppress-nst", commands[0])
-        self.assertIn("Vocabulary: CubeSat", commands[0])
+        self.assertEqual(run.call_args.args[2], ["CubeSat"])
+        self.assertIsNone(run.call_args.args[3])
 
     def test_no_output_still_raises_for_the_vocabulary_fallback(self) -> None:
         with self.assertRaises(RuntimeError):

@@ -15,30 +15,23 @@ Stellis runs as a small local web app: a service on your computer, opened in you
 
 ## Requirements
 
-- macOS with Python 3.12 and [uv](https://docs.astral.sh/uv/)
-- FFmpeg and whisper.cpp: `brew install ffmpeg whisper.cpp`
-- About 1 GB of disk space for the speech models
+- macOS on Apple silicon, and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- About 1.5 GB of free disk space for the app and its speech models
 - Optional: a [Nebius](https://nebius.com) API key for summaries, chat, and categories
 
-## Install
-
-```sh
-git clone https://github.com/reversely/stellis.git
-cd stellis
-uv sync --locked
-scripts/setup_models.sh
-uv run --locked stellis doctor
-```
-
-`scripts/setup_models.sh` downloads the speech models to `~/Library/Application Support/Stellis/models` and checks each file's SHA-256 digest. `stellis doctor` reports whether FFmpeg, whisper.cpp, and every model are ready.
+uv installs Python 3.12, FFmpeg, and whisper.cpp for Stellis, so nothing else needs installing.
 
 ## Run
 
 ```sh
-uv run --locked stellis serve
+git clone https://github.com/reversely/stellis.git
+cd stellis
+uv run stellis
 ```
 
-Open <http://127.0.0.1:8765/>. The first visit asks you to **Sign up**: this creates the one account for this computer's Stellis data. Later visits use **Sign in**, and a sign-in lasts seven days. Passwords need at least 12 characters, and there is no password reset, so keep yours safe.
+Open <http://127.0.0.1:8765/>. The first start downloads the speech models (about 500 MB) and checks each file's SHA-256 digest; the home page shows the progress, and recordings transcribe as soon as it finishes. `uv run stellis setup` downloads them in advance, and `uv run stellis doctor` reports what is installed.
+
+The first visit asks you to **Sign up**: this creates the one account for this computer's Stellis data. Later visits use **Sign in**, and a sign-in lasts seven days. Passwords need at least 12 characters, and there is no password reset, so keep yours safe.
 
 To use AI features, open **Account settings → AI features** and paste your Nebius API key. Stellis saves it in its private data folder, readable only by your user account, and never shows it again.
 
@@ -47,8 +40,8 @@ To use AI features, open **Account settings → AI features** and paste your Neb
 To try Stellis before using any recordings of yours, add three sample meetings from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/) while the app is stopped:
 
 ```sh
-uv run --locked python scripts/load_samples.py
-uv run --locked stellis serve
+uv run python scripts/load_samples.py
+uv run stellis
 ```
 
 The script downloads about 110 MB, checks each file, and imports the meetings. They transcribe when the app starts, and each card on the home page shows its progress. The AMI corpus is licensed under CC BY 4.0; each sample's notes credit it.
@@ -89,5 +82,5 @@ Everything lives in `~/Library/Application Support/Stellis`. Set `STELLIS_DATA_D
 ## More
 
 - [How Stellis works](docs/architecture.md)
-- Run the tests with `uv run --locked python -m unittest discover -s tests`.
+- Run the tests with `uv run python -m unittest discover -s tests`.
 - Licensed under the [Apache License 2.0](LICENSE). Third-party models, tools, and sample data are listed in [NOTICE](NOTICE).
