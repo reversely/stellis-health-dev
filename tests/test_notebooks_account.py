@@ -87,7 +87,7 @@ class NotebookAccountTest(unittest.TestCase):
                 VALUES ('run', ?, 'h', 1, 'h', 0, 'h', 'm', 'p', 'succeeded', 'done', ?, ?, '{}', 'a', 'a')""",
                 (latest["id"], json.dumps({"overview": [{"text": "Generated overview"}], "topics": [],
                                            "decisions": [{"text": "Ship the cutover"}], "action_items": []}),
-                 "## Overview\n\n- Edited overview\n\n## Decisions\n\n- Freeze writes\n\n## Action proposals\n\n- Rehearse rollback\n"))
+                 "## Overview\n\n- Edited overview\n\n## Topics\n\n- Cutover timing\n\n## Decisions\n\n- Freeze writes\n\n## Action proposals\n\n- Rehearse rollback\n"))
 
         listing = self.client.get("/api/v1/notebooks").json()
         self.assertEqual(listing["palette"][0], "#495575")
@@ -98,6 +98,10 @@ class NotebookAccountTest(unittest.TestCase):
         lines = {item["id"]: item["summary_line"] for item in self.client.get("/api/v1/conversations").json()}
         self.assertEqual(lines[latest["id"]], "Edited overview")
         self.assertIsNone(lines[first["id"]])
+        # The rail previews the first topic, which is shorter than the overview.
+        topics = {item["id"]: item["topic_line"] for item in self.client.get("/api/v1/conversations").json()}
+        self.assertEqual(topics[latest["id"]], "Cutover timing")
+        self.assertIsNone(topics[first["id"]])
         # A notebook created today leads one whose newest meeting is older.
         self.assertEqual([item["id"] for item in listing["notebooks"]], [second["id"], book["id"]])
 

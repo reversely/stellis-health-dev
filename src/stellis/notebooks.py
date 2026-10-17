@@ -49,7 +49,7 @@ def _markdown_sections(markdown: str) -> dict[str, list[str]]:
 
 
 def summary_points(conversation_ids: list[str]) -> dict[str, dict[str, object]]:
-    """Return a one-line summary and up to three progress points from each latest successful Summary."""
+    """Return the overview line, the rail topic line, and up to three progress points from each latest successful Summary."""
     if not conversation_ids:
         return {}
     marks = ",".join("?" for _ in conversation_ids)
@@ -67,9 +67,11 @@ def summary_points(conversation_ids: list[str]) -> dict[str, dict[str, object]]:
                       for key in _SECTIONS.values()}
         progress = (fields.get("decisions", []) + fields.get("action_items", [])) or fields.get("topics", [])
         overview = fields.get("overview", [])
+        # Topics are short noun phrases, so the first one previews a conversation in the narrow rail.
+        topic = (fields.get("topics") or overview or [None])[0]
         # Later rows overwrite earlier ones, so the newest successful run wins.
         points[str(row["conversation_id"])] = {"summary_line": overview[0] if overview else None,
-                                               "progress": progress[:3]}
+                                               "topic_line": topic, "progress": progress[:3]}
     return points
 
 

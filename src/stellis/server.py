@@ -544,6 +544,7 @@ def conversations() -> list[dict[str, object]]:
     lines = notebooks.summary_points([str(item["id"]) for item in items])
     return [{**item, "category_ids": assigned.get(str(item["id"]), []),
              "summary_line": lines.get(str(item["id"]), {}).get("summary_line"),
+             "topic_line": lines.get(str(item["id"]), {}).get("topic_line"),
              **_processing_state(str(item["id"]))} for item in items]
 
 
