@@ -627,6 +627,28 @@ def categories() -> list[dict[str, object]]:
     return library.categories()
 
 
+class NebiusKey(BaseModel):
+    key: str = Field(min_length=1, max_length=512)
+
+
+@api.get("/settings/nebius-key")
+def nebius_key_status() -> dict[str, object]:
+    return ai.key_status()
+
+
+@api.put("/settings/nebius-key")
+def save_nebius_key(request: NebiusKey) -> dict[str, object]:
+    try:
+        return ai.save_key(request.key)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.delete("/settings/nebius-key")
+def remove_nebius_key() -> dict[str, object]:
+    return ai.remove_key()
+
+
 @api.get("/category-groups")
 def category_groups() -> list[dict[str, object]]:
     return notebooks.category_groups()

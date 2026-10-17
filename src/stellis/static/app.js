@@ -3719,7 +3719,32 @@ async function showSettings() {
   document.querySelector('#settings-vocabulary-count').textContent =
     `${names} ${names === 1 ? 'name' : 'names'} and ${terms.length - names} other ${terms.length - names === 1 ? 'term' : 'terms'}`;
   await loadSettingsCalendars().catch(error => { document.querySelector('#settings-calendar-status').textContent = error.message; });
+  await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
   captureControls();
 }
+function showNebiusKey(state) {
+  // The saved key is never sent back; the page only learns whether one exists.
+  document.querySelector('#nebius-key-input').value = '';
+  document.querySelector('#nebius-key-remove').hidden = state.source !== 'saved';
+  document.querySelector('#nebius-key-save').textContent = state.source === 'saved' ? 'Replace key' : 'Save key';
+  document.querySelector('#nebius-key-status').textContent = state.source === 'saved' ? 'A key is saved on this device.' :
+    state.source === 'environment' ? 'Using the key from this computer\'s environment.' : 'No key saved. AI features are off until you add one.';
+}
+async function loadNebiusKey() { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`))); }
+document.querySelector('#nebius-key-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = document.querySelector('#nebius-key-input');
+  if (!input.value.trim()) { document.querySelector('#nebius-key-status').textContent = 'Paste your Nebius API key first.'; return; }
+  const save = document.querySelector('#nebius-key-save'); save.disabled = true;
+  try {
+    showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'PUT',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: input.value})})));
+  } catch (error) { document.querySelector('#nebius-key-status').textContent = error.message; }
+  finally { save.disabled = false; }
+});
+document.querySelector('#nebius-key-remove').addEventListener('click', async () => {
+  try { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'DELETE'}))); }
+  catch (error) { document.querySelector('#nebius-key-status').textContent = error.message; }
+});
 
 route().catch(error => setStatus(error.message));
