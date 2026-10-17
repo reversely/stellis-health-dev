@@ -409,6 +409,7 @@ def start_speech_worker() -> None:
 @app.on_event("shutdown")
 def stop_retention_worker() -> None:
     _retention_stop.set()
+    processing.stop_worker()
 
 
 def _public(record: dict[str, object]) -> dict[str, object]:

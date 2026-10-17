@@ -53,7 +53,8 @@ class ProcessingWorkflowTest(unittest.TestCase):
                 pass
 
         with patch.object(processing, "_QUEUE", OneJobQueue()), \
-             patch.object(processing.subprocess, "run", return_value=SimpleNamespace(returncode=0)), \
+             patch.object(processing.subprocess, "Popen",
+                          return_value=SimpleNamespace(pid=0, wait=lambda timeout=None: 0, poll=lambda: 0)), \
              patch("stellis.categorization.request"), \
              patch("stellis.enhanced_notes.request") as summary:
             with self.assertRaises(KeyboardInterrupt):

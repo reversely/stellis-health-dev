@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import fcntl
+import os
+import signal
 import sys
+import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -14,6 +18,16 @@ def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("Expected one job ID")
     job_id = str(uuid.UUID(sys.argv[1]))
+    # SIGTERM unwinds normally so temporary audio folders are removed.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    parent = os.getppid()
+
+    def exit_with_parent() -> None:
+        while os.getppid() == parent:
+            time.sleep(1)
+        os.killpg(os.getpgid(0), signal.SIGTERM)
+
+    threading.Thread(target=exit_with_parent, name="parent-watch", daemon=True).start()
     lock_dir = storage.data_dir() / "job-locks"
     lock_dir.mkdir(mode=0o700, exist_ok=True)
     lock_path = lock_dir / f"{job_id}.lock"
