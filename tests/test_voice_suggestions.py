@@ -17,7 +17,7 @@ from stellis.server import app
 from test_import import mp3_bytes, wav_bytes
 
 RNG = np.random.default_rng(7)
-SHEREEN, OTHER = RNG.normal(size=192), RNG.normal(size=192)
+RILEY, OTHER = RNG.normal(size=192), RNG.normal(size=192)
 
 
 def voice(center: np.ndarray, noise: float = 0.15) -> np.ndarray:
@@ -63,28 +63,28 @@ class VoiceSuggestionTest(unittest.TestCase):
         return self.client.get(f"/api/v1/conversations/{conversation}/transcript").json()
 
     def test_speaker_wide_confirmation_marks_only_the_clicked_passage_as_manual(self) -> None:
-        after = self._confirm_speaker(self.known, "known.mp3-2", "Shereen Lee")
+        after = self._confirm_speaker(self.known, "known.mp3-2", "Riley Quinn")
         origins = {item["id"]: item.get("speaker_label_origin") for item in after["segments"][:4]}
         self.assertEqual(origins["known.mp3-2"], "manual")
         self.assertEqual({origins[key] for key in origins if key != "known.mp3-2"}, {"propagated"})
         self.assertEqual(after["segments"][5]["speaker_label_origin"], "automatic")
 
     def test_a_group_mostly_named_for_one_person_shows_that_name_throughout(self) -> None:
-        after = self._confirm_speaker(self.known, "known.mp3-0", "Shereen Lee")
+        after = self._confirm_speaker(self.known, "known.mp3-0", "Riley Quinn")
         person = after["segments"][0]["person_id"]
         with storage.connect() as conn:
             conn.execute("DELETE FROM person_links WHERE conversation_id = ? AND segment_id = 'known.mp3-3'", (self.known,))
         segments = self.client.get(f"/api/v1/conversations/{self.known}/transcript").json()["segments"]
-        self.assertEqual(segments[3]["speaker_display_name"], "Shereen Lee")
+        self.assertEqual(segments[3]["speaker_display_name"], "Riley Quinn")
         self.assertEqual(segments[3]["speaker_label_origin"], "propagated")
         self.assertNotIn("person_id", segments[3])
         self.assertEqual(segments[5]["speaker_display_name"], "Speaker 2")
         self.assertEqual(self.client.get(f"/api/v1/persons/{person}").json()["total_link_count"], 3)
 
     def test_a_known_voice_is_suggested_and_one_click_confirms_it(self) -> None:
-        self._index(self.known, SHEREEN, OTHER)
-        self._index(self.fresh, OTHER, SHEREEN)
-        person = self._confirm_speaker(self.known, "known.mp3-0", "Shereen Lee")["segments"][0]["person_id"]
+        self._index(self.known, RILEY, OTHER)
+        self._index(self.fresh, OTHER, RILEY)
+        person = self._confirm_speaker(self.known, "known.mp3-0", "Riley Quinn")["segments"][0]["person_id"]
         fresh = self.client.get(f"/api/v1/conversations/{self.fresh}/transcript").json()["segments"]
         self.assertEqual({item.get("speaker_suggestion", {}).get("person_id") for item in fresh[4:]}, {person})
         self.assertTrue(all("speaker_suggestion" not in item for item in fresh[:4]))
@@ -100,9 +100,9 @@ class VoiceSuggestionTest(unittest.TestCase):
         self.assertTrue(all("speaker_suggestion" not in item for item in after))
 
     def test_an_unfamiliar_voice_gets_no_suggestion(self) -> None:
-        self._index(self.known, SHEREEN, OTHER)
+        self._index(self.known, RILEY, OTHER)
         self._index(self.fresh, RNG.normal(size=192), RNG.normal(size=192))
-        self._confirm_speaker(self.known, "known.mp3-0", "Shereen Lee")
+        self._confirm_speaker(self.known, "known.mp3-0", "Riley Quinn")
         fresh = self.client.get(f"/api/v1/conversations/{self.fresh}/transcript").json()["segments"]
         self.assertTrue(all("speaker_suggestion" not in item for item in fresh))
 
@@ -110,7 +110,7 @@ class VoiceSuggestionTest(unittest.TestCase):
         stamp = datetime.now(timezone.utc).isoformat()
         with storage.connect() as conn:
             person = conn.execute("INSERT INTO persons (id, name, name_key, created_at, updated_at) "
-                                  "VALUES ('p', 'Jay', 'jay', ?, ?) RETURNING id", (stamp, stamp)).fetchone()["id"]
+                                  "VALUES ('p', 'Devon', 'devon', ?, ?) RETURNING id", (stamp, stamp)).fetchone()["id"]
             for index, when in [(0, "batch"), (1, "batch"), (2, "batch"), (5, "alone")]:
                 conn.execute("INSERT INTO person_links (conversation_id, segment_id, person_id, start_ms, confirmed_at, origin) "
                              "VALUES (?, ?, ?, 0, ?, NULL)", (self.known, f"known.mp3-{index}", person, when))
@@ -130,7 +130,7 @@ class VoiceSuggestionTest(unittest.TestCase):
         self.assertEqual(storage.get_job(str(job["id"]))["state"], "succeeded")
 
     def test_deleting_a_conversation_removes_its_voices(self) -> None:
-        self._index(self.known, SHEREEN, OTHER)
+        self._index(self.known, RILEY, OTHER)
         self.client.post(f"/api/v1/conversations/{self.known}/trash")
         self.assertEqual(self.client.delete(f"/api/v1/trash/{self.known}").status_code, 200)
         self.assertFalse(voices.has_index(self.known))

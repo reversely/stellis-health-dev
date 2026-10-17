@@ -143,7 +143,7 @@ class ProcessingWorkflowTest(unittest.TestCase):
             [{**segment, "words": [{**words[0], "start_offset": 1}, *words[1:]]}], turns)), 1)
 
     def test_short_vocabulary_prompt_cannot_drop_spoken_opening(self) -> None:
-        storage.add_vocabulary("Shereen")
+        storage.add_vocabulary("Riley")
         job = processing.request_processing(self.conversation_id)
         model = Path(self.temp.name, "model.bin")
         model.write_bytes(b"model")
@@ -192,14 +192,14 @@ class ProcessingWorkflowTest(unittest.TestCase):
         def native_command(command: list[str], timeout: int) -> None:
             observed.extend(command)
             output.with_suffix(".json").write_text(json.dumps({"transcription": [
-                {"offsets": {"from": 0, "to": 1000}, "text": "CIFAR"}
+                {"offsets": {"from": 0, "to": 1000}, "text": "ORBIT"}
             ]}))
 
         with patch.object(processing, "_command", side_effect=native_command):
-            result = processing._transcribe(audio_path, Path("/model.bin"), output, ["CIFAR"])
-        self.assertEqual(result[0]["text"], "CIFAR")
+            result = processing._transcribe(audio_path, Path("/model.bin"), output, ["ORBIT"])
+        self.assertEqual(result[0]["text"], "ORBIT")
         self.assertIn("--prompt", observed)
-        self.assertIn("Vocabulary: CIFAR", observed)
+        self.assertIn("Vocabulary: ORBIT", observed)
 
     def test_native_asr_times_cannot_outlive_source_audio(self) -> None:
         audio_path = Path(self.temp.name, "audio.wav")

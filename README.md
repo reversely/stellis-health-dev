@@ -1,77 +1,93 @@
 # Stellis
 
-Stellis is a local browser workspace for recording, transcribing, reviewing, and finding interviews. It runs on macOS today. Audio and speech processing stay on the device; AI features send bounded transcript text to Nebius when configured.
+Stellis records and imports conversations, transcribes them on your Mac, and keeps them searchable with speakers, notes, and summaries. Recordings, audio, and transcription stay on your computer. Summaries, chat, and automatic categories use the Nebius API with a key you provide, and only the transcript text those features need is sent.
 
-The browser is the current product interface. Flutter is planned for iOS and the shared Android/desktop client; it is not part of the running app. The detailed [current architecture](docs/current-architecture.md), [device API contract](contracts/v1.md), and [implementation plan](plans/Personal_AI_Assistant_Implementation_Plan.md) separate shipped behavior from future work.
+Stellis runs as a small local web app: a service on your computer, opened in your browser at `http://127.0.0.1:8765`.
 
-## What works today
+## What you can do
 
-- **Capture and library:** Import MP3 files up to 1 GB or record with the microphone. Recording saves chunks as they arrive, supports pause/resume, provisional local transcription, My Notes, and AI Chat against a saved preview. A recording interrupted by a closed tab can be recovered from acknowledged chunks. The library supports search, categories, optional AI categorization, and Recently Deleted with restore and automatic deletion after 30 days.
-- **Local transcription:** `ffmpeg`, whisper.cpp, and sherpa-onnx produce English passages, measured word times, and provisional speaker groups. Rematch speakers uses the saved audio without retranscribing. A new transcription that changes passage IDs while user edits exist waits for explicit review before activation.
-- **Listen and correct:** The fixed player supports scrubbing, speed, five-second skips, and optional Skip Silence. Clicking a passage or measured word seeks the recording; playback follows the transcript. Search within a conversation, highlight or comment on selected text, edit multiple passages in one session, and compare an Edited Transcript with the source. Speaker tagging creates reusable Person profiles; speaker names and passage links persist across reloads.
-- **Vocabulary:** Separate [Names of people and Other vocabulary pages](docs/decisions/0049-vocabulary-workspace-and-prompt-budget.md) support batch entry, alphabet navigation, editing, moving, and deletion. The stored list can grow; each speech job uses a bounded snapshot of recently changed terms in its Whisper prompt.
-- **Notes and AI:** My Notes autosaves during recording and after import. Images can be pasted into notes or attached to a transcript time. A versioned Summary is generated after transcription and can be edited or regenerated. Nebius Nemotron also provides source-linked answers and a reviewable clean transcript. AI output can be wrong; use its source links to check the audio before quoting.
-- **Access and sharing:** A local single-workspace sign-in protects the device service by default. Selected transcript text can be copied or downloaded with a device-local source link. An optional, separate loopback account service stores browser-encrypted note entries and one-way encrypted conversation snapshots with audio for read-only access from another signed-in browser.
+- **Capture:** record from the microphone, or import MP3 files up to 1 GB. A live provisional transcript appears while you record.
+- **Transcribe:** English transcription with word timings, and speakers grouped by voice. Stellis suggests a known person when a speaker sounds like someone you have named before; one click confirms it.
+- **Review:** play from any word, search inside a conversation, highlight, comment, edit the transcript, and name speakers. Skip Silence shortens playback.
+- **Organise:** conversations are grouped by type (Meetings, Interviews, Workshops, Briefings, Calls) on the home page, and you can collect them into notebooks for each project. Search covers every conversation.
+- **Notes and AI:** write notes while recording or after. With a Nebius key, Stellis writes a summary with links back to the transcript, answers questions about a conversation, and can sort conversations into types automatically.
+- **Calendar:** connect a Google or Outlook calendar to see upcoming meetings on the home page and start a recording from one.
 
-## Architecture
+## Requirements
 
-```mermaid
-flowchart LR
-  B[Browser UI] -->|JSON, uploads, audio ranges| D[Loopback FastAPI device service]
-  D --> S[(Private SQLite and media)]
-  D --> W[Local speech worker]
-  W -->|decode and transcribe| M[ffmpeg, whisper.cpp, sherpa-onnx]
-  D -->|bounded text for AI actions| N[Nebius]
-  B -.->|optional encrypted copy| A[Separate loopback account service]
-  A --> C[(Ciphertext storage)]
-  F[Planned Flutter client] -.->|versioned device API| D
-```
+- macOS with Python 3.12 and [uv](https://docs.astral.sh/uv/)
+- FFmpeg and whisper.cpp: `brew install ffmpeg whisper.cpp`
+- About 1 GB of disk space for the speech models
+- Optional: a [Nebius](https://nebius.com) API key for summaries, chat, and categories
 
-The device service serves the browser files and `/api/v1`, owns local authentication, stores media and revisioned records, and starts isolated speech jobs. Original audio does not go to Nebius. Summary, answer, clean-transcript, recording-chat, and optional categorization requests send selected transcript or note text; results, source IDs, and provider metadata are stored locally. The optional account service has its own login and ciphertext database. Its current sync path is a one-way copy, without edit replay, deletion propagation, or recovery. The [architecture document](docs/current-architecture.md) records components, data flows, verification, and limits in more detail.
-
-## Install and run
-
-Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. With Homebrew, install the native tools using `brew install ffmpeg whisper.cpp`. The services bind to loopback.
+## Install
 
 ```sh
+git clone https://github.com/reversely/stellis.git
+cd stellis
 uv sync --locked
 scripts/setup_models.sh
 uv run --locked stellis doctor
+```
+
+`scripts/setup_models.sh` downloads the speech models to `~/Library/Application Support/Stellis/models` and checks each file's SHA-256 digest. `stellis doctor` reports whether FFmpeg, whisper.cpp, and every model are ready.
+
+## Run
+
+```sh
 uv run --locked stellis serve
 ```
 
-Open <http://127.0.0.1:8765/>. `scripts/setup_models.sh` downloads and verifies the English Whisper and two sherpa-onnx model files in private local storage. `stellis doctor` reports model and tool readiness. You can set `STELLIS_WHISPER_MODEL`, `STELLIS_SEGMENTATION_MODEL`, or `STELLIS_EMBEDDING_MODEL` to use other local model paths. Use `--port` to change the loopback port.
+Open <http://127.0.0.1:8765/>. The first visit asks you to **Sign up**: this creates the one account for this computer's Stellis data. Later visits use **Sign in**, and a sign-in lasts seven days. Passwords need at least 12 characters, and there is no password reset, so keep yours safe.
 
-On first launch, **Sign up** creates the one account for that local data directory. Later, **Sign in**; sessions last seven days. Normal account passwords require at least 12 characters. There is no local password reset. For an explicitly open development workspace, set `STELLIS_AUTH_MODE=open`. For a development account without normal signup, set `STELLIS_DEV_ACCOUNT=1` and `STELLIS_DEV_PASSWORD`, then sign in as `dev`. Keep the same `STELLIS_DATA_DIR` across restarts to retain data and credentials; its default is `~/Library/Application Support/Stellis`.
+To use AI features, open **Account settings → AI features** and paste your Nebius API key. Stellis saves it in its private data folder, readable only by your user account, and never shows it again.
 
-Set `NEBIUS_API_KEY` in the environment or in an ignored `.env` file to use summaries, questions, clean transcript, recording AI Chat, or optional AI categorization. Import and local transcription work without the key.
+### Sample meetings
 
-## Use the browser workspace
+To try Stellis before using any recordings of yours, add three sample meetings from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/) while the app is stopped:
 
-Choose **Import recording** for an MP3 or **Record** for microphone capture. A completed import or recording starts local transcription when the models are ready. Reimporting the same audio opens its existing conversation. To migrate a browser-downloaded Otter ZIP, run `scripts/prepare_otter_migration.py` outside the app, import its MP3, and attach the exported text as a reference; that text does not replace the machine transcript.
+```sh
+uv run --locked python scripts/load_samples.py
+uv run --locked stellis serve
+```
 
-Open a conversation to play or scrub its audio. **Notes** contains My Notes and the generated Summary. **Transcript** contains the source wording; **Edited Transcript** appears as a third tab after cleanup. Use the transcript's selection controls for highlights, comments, and sharing, or **Edit transcript** to save wording changes together. Use **More options** for rematching, reprocessing, summary regeneration, and deletion. Open **Custom vocabulary** from **Account settings** to manage speech hints for future processing.
+The script downloads about 110 MB, checks each file, and imports the meetings. They transcribe when the app starts, and each card on the home page shows its progress. The AMI corpus is licensed under CC BY 4.0; each sample's notes credit it.
 
-Group conversations into **Notebooks**, one per project. Each notebook card shows its newest meeting, up to three progress points from that meeting's Summary, and earlier meetings. Use a card's **+** to record, import, or move a conversation into it, or **Move to notebook** in a conversation's **More options**. The home rail lists recent conversations newest first by when they were recorded. **Account settings** changes your name, email, username, and password, connects calendars, and deletes the account with every conversation on this device.
+## Everyday use
 
-## Optional calendars
+- **Record** or **Import** from the home page. Transcription starts by itself once the recording is saved.
+- Open a conversation for its **Notes** (your notes and the summary) and **Transcript**. Click a speaker name to name that speaker or confirm a suggestion. **Edit transcript** saves wording changes.
+- The **⋯** menu in a conversation reprocesses the recording, rematches speakers, moves it to a notebook, or deletes it. Reprocessing keeps your names, edits, highlights, and comments.
+- **Account settings** manages your profile and password, custom vocabulary (names and terms that help transcription), AI features, calendars, and account deletion.
+- Deleted conversations stay in **Recently Deleted** for 30 days.
 
-The home page can show the next 14 days from a connected Google or Outlook primary/default calendar and start a local recording titled from an event. It does not write events, record automatically, send reminders, or send calendar details to Nebius or the encrypted account service. Provider tokens are stored in `calendar_tokens.sqlite3` under the private local data directory with file mode `0600`; they are not encrypted at rest. **Disconnect** deletes local tokens but does not revoke the provider grant.
+## Calendars
 
-For Google, enable the Calendar API in the project that owns your OAuth client. Stellis reads the existing `GOOGLE_OAUTH_CLIENT_ID` and optional `GOOGLE_OAUTH_CLIENT_SECRET` from the ignored `.env` file or process environment. A dedicated `STELLIS_GOOGLE_CALENDAR_CLIENT_ID` can override it. The local callback is `http://127.0.0.1:<port>/api/v1/calendar/google/callback`; an existing Web client must allow that exact redirect, while a [Desktop client](https://developers.google.com/identity/protocols/oauth2/native-app) supports the loopback flow. No Calendar-specific client is required.
+Stellis reads the next 14 days from one Google or Outlook calendar. It never writes events or sends calendar details anywhere. Connecting needs an OAuth client that you create:
 
-For Outlook, register a [Microsoft desktop public client](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration) for the intended account types. Add the mobile/desktop redirect `http://localhost/api/v1/calendar/microsoft/callback`, enable public client flows, and set `STELLIS_MICROSOFT_CALENDAR_CLIENT_ID` to its application ID. Microsoft ignores the port when matching a localhost redirect but matches the path. A work or school tenant may require administrator consent. The connection requests `Calendars.ReadBasic` and `offline_access`.
+- **Google:** create a [Desktop OAuth client](https://developers.google.com/identity/protocols/oauth2/native-app) with the Calendar API enabled, then start Stellis with `GOOGLE_OAUTH_CLIENT_ID` (and `GOOGLE_OAUTH_CLIENT_SECRET` if the client has one) set in the environment.
+- **Outlook:** register a [Microsoft desktop public client](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration) with the redirect `http://localhost/api/v1/calendar/microsoft/callback`, then set `STELLIS_MICROSOFT_CALENDAR_CLIENT_ID`.
 
-Both connections use authorization code with PKCE. The callback returns to the browser address where the connection began. A device must be running to refresh meetings. Revoke access in the Google or Microsoft account settings if you also want the provider grant removed.
+Calendar tokens are stored in the private data folder. **Disconnect** deletes them; revoke access in your Google or Microsoft account to remove the grant too.
 
-## Optional encrypted account prototype
+## Your data
 
-Start the separate service with `uv run --locked stellis sync-serve --port 8769` and open <http://127.0.0.1:8769/>. It has independent development accounts and a vault passphrase that the service cannot recover. Browser Web Crypto encrypts note entries before upload and queues them in IndexedDB while offline.
+Everything lives in `~/Library/Application Support/Stellis`. Set `STELLIS_DATA_DIR` to use another folder, and keep it the same across restarts. The service listens only on `127.0.0.1`, so other computers cannot reach it.
 
-To copy a transcribed conversation, start the account service with `STELLIS_DEVICE_ORIGIN=http://127.0.0.1:8765` and the device service with `STELLIS_SYNC_ORIGIN=http://127.0.0.1:8769`. Sign in and unlock the vault on the account page. In the device conversation, choose **More options → Sync conversation** and enter the same passphrase. The browser encrypts transcript parts and up to 128 MiB of audio; another browser signed into that account can decrypt the read-only copy. Source links to the device work only while that machine's loopback service is reachable. This prototype has no bidirectional edits, deletion sync, device revocation of existing ciphertext, or vault recovery.
+| Data | Where it goes |
+| --- | --- |
+| Audio, recordings, transcripts, notes, speaker voices | Stays on this computer |
+| Transcript and note text for summaries, chat, and categories | Sent to Nebius with your key, when you use those features |
+| Calendar events | Read from your calendar provider; stays on this computer |
 
-## Local data and limits
+## Limits
 
-`.env`, `data/`, `.private/`, private recordings, and generated environments are excluded from Git. Do not put recordings or API keys in issues, pull requests, or tests. The current speech models are English-only. Speaker assignments remain suggestions until confirmed; word times and AI citations should be checked against the recording. The [real-interview speech](docs/validation/real-interview-speech.md) and [word-timing](docs/validation/real-interview-word-timing.md) records describe measured results and remaining gaps.
+- Transcription and speaker models are English only.
+- Speaker groups and suggestions are automatic and can be wrong; names you confirm stay fixed.
+- AI summaries can be wrong. Use their links to check the transcript and audio before you rely on them.
 
-The [UI style guide](docs/ui-style-guide.md) covers interface decisions. [Architecture decisions](docs/decisions/) explain consequential forks. Run `uv run --locked --with pytest pytest -q` for the project test suite.
+## More
+
+- [How Stellis works](docs/architecture.md)
+- Run the tests with `uv run --locked python -m unittest discover -s tests`.
+- Licensed under the [Apache License 2.0](LICENSE). Third-party models, tools, and sample data are listed in [NOTICE](NOTICE).

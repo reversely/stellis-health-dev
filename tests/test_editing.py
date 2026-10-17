@@ -117,8 +117,8 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(self.client.get(f"{self.base}/transcript").json()["revision"], 2)
 
     def test_group_tag_preserves_a_different_confirmed_person(self) -> None:
-        first = self.client.post('/api/v1/persons', json={'name': 'Shereen'}).json()
-        second = self.client.post('/api/v1/persons', json={'name': 'Jay'}).json()
+        first = self.client.post('/api/v1/persons', json={'name': 'Riley'}).json()
+        second = self.client.post('/api/v1/persons', json={'name': 'Devon'}).json()
         endpoint = f'{self.base}/person-links'
         self.assertEqual(self.client.put(endpoint, json={
             'person_id': first['id'], 'segment_id': 'segment-2',
@@ -129,7 +129,7 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(tagged.status_code, 200)
         self.assertEqual(tagged.json()['preserved_other_people'], 1)
         segments = self.client.get(f'{self.base}/transcript').json()['segments']
-        self.assertEqual([item['speaker_display_name'] for item in segments], ['Jay', 'Shereen'])
+        self.assertEqual([item['speaker_display_name'] for item in segments], ['Devon', 'Riley'])
         with storage.connect() as conn:
             links = conn.execute('SELECT segment_id, person_id FROM person_links WHERE conversation_id = ? ORDER BY segment_id',
                                  (self.conversation_id,)).fetchall()
@@ -137,23 +137,23 @@ class EditingWorkflowTest(unittest.TestCase):
         with TestClient(app) as reloaded:
             names = [item['speaker_display_name'] for item in
                      reloaded.get(f'{self.base}/transcript').json()['segments']]
-        self.assertEqual(names, ['Jay', 'Shereen'])
+        self.assertEqual(names, ['Devon', 'Riley'])
 
     def test_new_speaker_tag_is_atomic_on_revision_conflict(self) -> None:
         endpoint = f'{self.base}/person-links'
         failed = self.client.put(endpoint, json={
-            'name': 'Jay', 'segment_id': 'segment-1', 'scope': 'cluster', 'expected_revision': 2})
+            'name': 'Devon', 'segment_id': 'segment-1', 'scope': 'cluster', 'expected_revision': 2})
         self.assertEqual(failed.status_code, 409)
         self.assertEqual(self.client.get('/api/v1/persons').json(), [])
         tagged = self.client.put(endpoint, json={
-            'name': 'Jay', 'segment_id': 'segment-1', 'scope': 'cluster', 'expected_revision': 1})
+            'name': 'Devon', 'segment_id': 'segment-1', 'scope': 'cluster', 'expected_revision': 1})
         self.assertEqual(tagged.status_code, 200)
         self.assertEqual(tagged.json()['confirmed_passages'], 2)
         self.assertEqual([item['speaker_display_name'] for item in
-                          self.client.get(f'{self.base}/transcript').json()['segments']], ['Jay', 'Jay'])
+                          self.client.get(f'{self.base}/transcript').json()['segments']], ['Devon', 'Devon'])
 
     def test_repeated_legacy_labels_become_one_saved_person(self) -> None:
-        segments = [{"id": f"jay-{i}", "start_ms": i * 1000, "end_ms": (i + 1) * 1000,
+        segments = [{"id": f"devon-{i}", "start_ms": i * 1000, "end_ms": (i + 1) * 1000,
                      "text": "Hello.", "speaker_cluster_id": f"cluster-{i}", "words": []}
                     for i in range(74)]
         segments.append({"id": "other", "start_ms": 74000, "end_ms": 75000,
@@ -161,25 +161,25 @@ class EditingWorkflowTest(unittest.TestCase):
         storage.save_transcript({"conversation_id": self.conversation_id, "revision": 2,
                                  "language": "en", "segments_json": json.dumps(segments),
                                  "turns_json": "[]", "updated_at": datetime.now(timezone.utc).isoformat()})
-        shereen = self.client.post('/api/v1/persons', json={'name': 'Shereen'}).json()
+        riley = self.client.post('/api/v1/persons', json={'name': 'Riley'}).json()
         self.assertEqual(self.client.put(f'{self.base}/person-links', json={
-            'person_id': shereen['id'], 'segment_id': 'other', 'scope': 'segment',
+            'person_id': riley['id'], 'segment_id': 'other', 'scope': 'segment',
             'expected_revision': 2}).status_code, 200)
         with storage.connect() as conn:
             conn.executemany('''INSERT INTO speaker_labels (conversation_id, scope, target_id, name, updated_at)
-                VALUES (?, 'segment', ?, 'Jay Matlock', ?)''',
-                [(self.conversation_id, f'jay-{i}', datetime.now(timezone.utc).isoformat()) for i in range(74)])
+                VALUES (?, 'segment', ?, 'Devon Hart', ?)''',
+                [(self.conversation_id, f'devon-{i}', datetime.now(timezone.utc).isoformat()) for i in range(74)])
         response = self.client.put(f'{self.base}/person-links', json={
-            'name': '  Jay   Matlock ', 'segment_id': 'jay-0', 'scope': 'segment',
+            'name': '  Devon   Hart ', 'segment_id': 'devon-0', 'scope': 'segment',
             'expected_revision': 2})
         self.assertEqual(response.status_code, 200, response.text)
         person_id = response.json()['person_id']
         self.assertEqual(response.json()['promoted_labels'], 74)
         again = self.client.put(f'{self.base}/person-links', json={
-            'name': 'jay matlock', 'segment_id': 'jay-1', 'scope': 'segment',
+            'name': 'devon hart', 'segment_id': 'devon-1', 'scope': 'segment',
             'expected_revision': 2})
         self.assertEqual(again.json()['person_id'], person_id)
-        self.assertEqual(self.client.post('/api/v1/persons', json={'name': 'JAY MATLOCK'}).json()['id'], person_id)
+        self.assertEqual(self.client.post('/api/v1/persons', json={'name': 'DEVON HART'}).json()['id'], person_id)
         with storage.connect() as conn:
             people = conn.execute('SELECT id, name, name_key FROM persons ORDER BY name').fetchall()
             links = conn.execute('SELECT person_id, COUNT(*) AS n FROM person_links WHERE conversation_id = ? GROUP BY person_id',
@@ -187,41 +187,41 @@ class EditingWorkflowTest(unittest.TestCase):
             labels = conn.execute('SELECT * FROM speaker_labels WHERE conversation_id = ?',
                                   (self.conversation_id,)).fetchall()
         self.assertEqual(len(people), 2)
-        self.assertEqual({row['name_key'] for row in people}, {'jay matlock', 'shereen'})
+        self.assertEqual({row['name_key'] for row in people}, {'devon hart', 'riley'})
         with self.assertRaises(sqlite3.IntegrityError):
             with storage.connect() as conn:
                 conn.execute('''INSERT INTO persons (id, name, name_key, created_at, updated_at)
-                    VALUES ('duplicate-jay', 'JAY MATLOCK', 'jay matlock', 'now', 'now')''')
+                    VALUES ('duplicate-devon', 'DEVON HART', 'devon hart', 'now', 'now')''')
         with self.assertRaises(sqlite3.IntegrityError):
             with storage.connect() as conn:
                 conn.execute('''INSERT INTO persons (id, name, created_at, updated_at)
-                    VALUES ('missing-key', 'Jay Matlock', 'now', 'now')''')
-        self.assertEqual({row['person_id']: row['n'] for row in links}, {person_id: 74, shereen['id']: 1})
+                    VALUES ('missing-key', 'Devon Hart', 'now', 'now')''')
+        self.assertEqual({row['person_id']: row['n'] for row in links}, {person_id: 74, riley['id']: 1})
         self.assertEqual(labels, [])
         with TestClient(app) as reloaded:
             transcript = reloaded.get(f'{self.base}/transcript').json()
             self.assertEqual({item['person_id'] for item in transcript['segments'][:74]}, {person_id})
-            self.assertEqual({item['speaker_display_name'] for item in transcript['segments'][:74]}, {'Jay Matlock'})
-            self.assertEqual(transcript['segments'][-1]['person_id'], shereen['id'])
-        conflict = self.client.patch(f'/api/v1/persons/{shereen["id"]}', json={'name': ' Jay Matlock '})
+            self.assertEqual({item['speaker_display_name'] for item in transcript['segments'][:74]}, {'Devon Hart'})
+            self.assertEqual(transcript['segments'][-1]['person_id'], riley['id'])
+        conflict = self.client.patch(f'/api/v1/persons/{riley["id"]}', json={'name': ' Devon Hart '})
         self.assertEqual(conflict.status_code, 400)
 
     def test_promoting_cluster_name_respects_passage_override(self) -> None:
         labels = f'{self.base}/speakers/label'
         self.client.put(labels, json={'scope':'cluster', 'target_id':'speaker-1',
-                                      'name':'Jay', 'expected_revision':1})
+                                      'name':'Devon', 'expected_revision':1})
         self.client.put(labels, json={'scope':'segment', 'target_id':'segment-2',
                                       'name':'Sam', 'expected_revision':2})
         result = self.client.put(f'{self.base}/person-links', json={
-            'name':'Jay', 'segment_id':'segment-1', 'scope':'segment', 'expected_revision':3})
+            'name':'Devon', 'segment_id':'segment-1', 'scope':'segment', 'expected_revision':3})
         self.assertEqual(result.status_code, 200, result.text)
         display = self.client.get(f'{self.base}/transcript').json()['segments']
-        self.assertEqual([item['speaker_display_name'] for item in display], ['Jay', 'Sam'])
+        self.assertEqual([item['speaker_display_name'] for item in display], ['Devon', 'Sam'])
         self.assertIsNotNone(display[0]['person_id'])
         self.assertIsNone(display[1].get('person_id'))
 
     def test_hiding_person_only_changes_tag_suggestions(self) -> None:
-        person = self.client.post('/api/v1/persons', json={'name':'Jay'}).json()
+        person = self.client.post('/api/v1/persons', json={'name':'Devon'}).json()
         self.client.put(f'{self.base}/person-links', json={
             'person_id':person['id'], 'segment_id':'segment-1',
             'scope':'segment', 'expected_revision':1})
@@ -229,7 +229,7 @@ class EditingWorkflowTest(unittest.TestCase):
         self.assertEqual(hidden.status_code, 200)
         self.assertTrue(next(item for item in self.client.get('/api/v1/persons').json()
                              if item['id'] == person['id'])['hidden_at'])
-        self.assertEqual(self.client.get(f'{self.base}/transcript').json()['segments'][0]['speaker_display_name'], 'Jay')
+        self.assertEqual(self.client.get(f'{self.base}/transcript').json()['segments'][0]['speaker_display_name'], 'Devon')
         self.assertEqual(self.client.get(f'/api/v1/persons/{person["id"]}').json()['total_link_count'], 1)
         self.client.patch(f'/api/v1/persons/{person["id"]}/visibility', json={'hidden':False})
         self.assertIsNone(next(item for item in self.client.get('/api/v1/persons').json()
@@ -265,17 +265,17 @@ class EditingWorkflowTest(unittest.TestCase):
 
     def test_vocabulary_changes_only_future_job_snapshot(self) -> None:
         existing = processing.request_processing(self.conversation_id)
-        first = self.client.post("/api/v1/vocabulary", json={"term":"CIFAR"})
+        first = self.client.post("/api/v1/vocabulary", json={"term":"ORBIT"})
         self.assertEqual(first.status_code, 200)
         term = first.json()
-        self.assertEqual(self.client.get("/api/v1/vocabulary").json()[0]["term"], "CIFAR")
+        self.assertEqual(self.client.get("/api/v1/vocabulary").json()[0]["term"], "ORBIT")
         self.assertEqual(self.client.get(f"{self.base}/transcript").json()["revision"], 1)
         later = processing.request_processing(self.conversation_id)
         self.assertNotEqual(later["id"], existing["id"])
-        self.assertEqual(json.loads(later["vocabulary_json"]), ["CIFAR"])
+        self.assertEqual(json.loads(later["vocabulary_json"]), ["ORBIT"])
         self.assertEqual(self.client.get(f"{self.base}/processing-job").json()["id"], later["id"])
-        renamed = self.client.patch(f"/api/v1/vocabulary/{term['id']}", json={"term":"CIFAR Alliance"})
-        self.assertEqual(renamed.json()["term"], "CIFAR Alliance")
+        renamed = self.client.patch(f"/api/v1/vocabulary/{term['id']}", json={"term":"ORBIT Alliance"})
+        self.assertEqual(renamed.json()["term"], "ORBIT Alliance")
         self.assertEqual(self.client.delete(f"/api/v1/vocabulary/{term['id']}").status_code, 200)
         self.assertEqual(self.client.get("/api/v1/vocabulary").json(), [])
 

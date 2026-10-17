@@ -29,9 +29,9 @@ class PersonMigrationTest(unittest.TestCase):
                 conn.execute("""INSERT INTO conversations VALUES
                     ('conversation', 'Test', 'hash', 'test.wav', 'audio/wav', 1000, '2020-01-01')""")
                 conn.executemany("INSERT INTO persons VALUES (?, ?, ?, ?, ?)", [
-                    ("old-hidden", " Jay   Matlock ", "2020-01-01", "2020-01-01", "2020-01-02"),
-                    ("active", "jay matlock", "2021-01-01", "2021-01-01", None),
-                    ("other", "Shereen", "2020-01-01", "2020-01-01", None),
+                    ("old-hidden", " Devon   Hart ", "2020-01-01", "2020-01-01", "2020-01-02"),
+                    ("active", "devon hart", "2021-01-01", "2021-01-01", None),
+                    ("other", "Riley", "2020-01-01", "2020-01-01", None),
                 ])
                 conn.executemany("INSERT INTO person_links VALUES ('conversation', ?, ?, 0, '2020-01-01')", [
                     ("first", "old-hidden"), ("second", "active"), ("third", "other"),
@@ -41,7 +41,7 @@ class PersonMigrationTest(unittest.TestCase):
                     people = conn.execute("SELECT id, name_key FROM persons ORDER BY id").fetchall()
                     links = conn.execute("SELECT segment_id, person_id FROM person_links ORDER BY segment_id").fetchall()
                     self.assertEqual({tuple(row) for row in people},
-                                     {("active", "jay matlock"), ("other", "shereen")})
+                                     {("active", "devon hart"), ("other", "riley")})
                     self.assertEqual({tuple(row) for row in links},
                                      {("first", "active"), ("second", "active"), ("third", "other")})
                     self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
