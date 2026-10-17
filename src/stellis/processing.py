@@ -10,6 +10,7 @@ import re
 from bisect import bisect_left, bisect_right
 from difflib import SequenceMatcher
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -33,6 +34,7 @@ _QUEUE: queue.Queue[str] = queue.Queue()
 _WORKER_LOCK = threading.Lock()
 _REQUEST_LOCK = threading.Lock()
 _WORKER: threading.Thread | None = None
+_CHILD: subprocess.Popen | None = None
 
 
 def now() -> str:
@@ -222,12 +224,21 @@ def request_silence_scan(conversation_id: str) -> dict[str, object]:
 def _worker_loop() -> None:
     while True:
         job_id = _QUEUE.get()
+        global _CHILD
         try:
-            completed = subprocess.run(
-                [sys.executable, "-m", "stellis.worker", job_id],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=14400,
-            )
-            if completed.returncode:
+            # Its own process group, so shutdown can stop the worker and its native tools together.
+            _CHILD = subprocess.Popen([sys.executable, "-m", "stellis.worker", job_id],
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            try:
+                returncode = _CHILD.wait(timeout=14400)
+            except subprocess.TimeoutExpired:
+                _stop_child(_CHILD)
+                returncode = -1
+            finally:
+                _CHILD = None
+            if returncode in (-signal.SIGTERM, -signal.SIGKILL) and _STOPPING.is_set():
+                continue  # Server shutdown: the job stays running and resumes on the next start.
+            if returncode:
                 storage.update_job(job_id, state="failed", stage="failed",
                                    error="Speech worker exited unexpectedly", updated_at=now())
             else:
@@ -251,6 +262,30 @@ def _worker_loop() -> None:
                 pass
         finally:
             _QUEUE.task_done()
+
+
+_STOPPING = threading.Event()
+
+
+def _stop_child(child: subprocess.Popen, grace: float = 5.0) -> None:
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(child.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            child.wait(timeout=grace)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
+def stop_worker() -> None:
+    """Stop the running speech job's process group; it resumes on the next start."""
+    _STOPPING.set()
+    child = _CHILD
+    if child is not None and child.poll() is None:
+        _stop_child(child)
 
 
 def _stage(job_id: str, name: str, progress: float) -> None:
