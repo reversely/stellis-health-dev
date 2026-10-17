@@ -23,9 +23,12 @@ import soundfile as sf
 
 from stellis import silence, storage
 
-PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v4"
+PIPELINE_VERSION = "whisper-small-en-sherpa-pyannote3-titanet-words-v5"
 REMATCH_VERSION = "speaker-embedding-v1"
 WORD_ALIGNMENT_VERSION = "word-align-v1"
+# Whisper writes bracketed sound tags such as "(scissors snipping)" or
+# "[BLANK_AUDIO]" for non-speech audio; a passage of only tags is not speech.
+_SOUND_TAG = re.compile(r"[\(\[\*][^\)\]\*]*[\)\]\*]")
 _QUEUE: queue.Queue[str] = queue.Queue()
 _WORKER_LOCK = threading.Lock()
 _REQUEST_LOCK = threading.Lock()
@@ -291,7 +294,12 @@ def _transcribe(audio_path: Path, model: Path, output_base: Path,
                              "words": words})
     if not segments:
         raise RuntimeError("The on-device model returned no speech segments")
-    return segments
+    return [segment for segment in segments if not is_non_speech(str(segment["text"]))]
+
+
+def is_non_speech(text: str) -> bool:
+    """True when a passage holds only sound tags, music marks, or punctuation."""
+    return not re.search(r"[A-Za-z0-9]", _SOUND_TAG.sub(" ", text))
 
 
 def _speech_turn_coverage(segments: list[dict[str, object]],
