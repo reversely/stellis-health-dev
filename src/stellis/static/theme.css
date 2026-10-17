@@ -112,7 +112,7 @@ header {
 .header-note, p, .conversation-row small, .player-heading, .segment-time,
 .turn-heading span, .seek-controls span, .highlight-controls span,
 .vocabulary-card summary span, .ai-privacy { color: var(--muted); }
-#theme-toggle {
+#theme-toggle, #logout-button {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--raised);
@@ -123,7 +123,7 @@ header {
   font-weight: 650;
   white-space: nowrap;
 }
-#theme-toggle:hover { border-color: var(--accent); }
+#theme-toggle:hover, #logout-button:hover { border-color: var(--accent); }
 h1, .transcript-heading h2, .ai-heading h2 {
   color: var(--ink);
   font-family: Piazzolla, Georgia, serif;
@@ -674,7 +674,8 @@ body:has(#list-view:not([hidden])) #vocabulary-panel[open] summary { margin: 0; 
   .capture-header-controls { gap: 4px; margin-right: 6px; }
   .capture-header-controls button { width: 36px; height: 36px; }
   #capture-header-timer { min-width: 37px; font-size: 12px; }
-  #theme-toggle { padding: 7px 10px; }
+  #theme-toggle, #logout-button { padding: 7px 10px; }
+  #logout-button { margin-right: 6px; }
   h1 { font-size: clamp(35px, 9vw, 44px); }
   .transcript-heading h2, .ai-heading h2 { font-size: 25px; }
   .transcript-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
@@ -830,7 +831,8 @@ html[data-theme='dark'] body::before { display: none; }
   body:has(#list-view:not([hidden])) header { backdrop-filter: none; }
   body.recording-page header { background: #27222B; backdrop-filter: none; }
   body:has(#list-view:not([hidden])) header .brand, body.recording-page header .brand { color: #F7F5F6; }
-  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle {
+  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle,
+  body:has(#list-view:not([hidden])) header #logout-button, body.recording-page header #logout-button {
     border-color: #605465;
     background: #37303D;
     color: #F7F5F6;
@@ -1022,7 +1024,8 @@ html[data-theme='dark'] body::before { display: none; }
     border: 0;
   }
   body:has(#list-view:not([hidden])) header .brand, body.recording-page header .brand { color: #F7F5F6; }
-  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle { background: #37303D; color: #F7F5F6; border-color: #605465; }
+  body:has(#list-view:not([hidden])) header #theme-toggle, body.recording-page header #theme-toggle,
+  body:has(#list-view:not([hidden])) header #logout-button, body.recording-page header #logout-button { background: #37303D; color: #F7F5F6; border-color: #605465; }
   body:has(#list-view:not([hidden])) main, body.recording-page main { max-width: none; padding: 0; }
   body:has(#list-view:not([hidden])) .heading {
     display: grid;
