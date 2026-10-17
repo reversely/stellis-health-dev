@@ -40,21 +40,21 @@ def _public(row) -> dict[str, object]:
                                       "conversation_id", "created_at", "updated_at")}
 
 
-def create_session(title: str, media_type: str) -> dict[str, object]:
+def create_session(title: str, media_type: str, notebook_id: str | None = None) -> dict[str, object]:
     """Start a recoverable local recording before microphone capture begins."""
     if media_type not in RECORDING_TYPES:
         raise ValueError("This browser recording format is unsupported")
     cleaned = title.strip()[:180] or "New recording"
     stamp = _stamp()
     record = {"id": str(uuid.uuid4()), "title": cleaned, "media_type": media_type,
-              "state": "recording", "conversation_id": None,
+              "state": "recording", "conversation_id": None, "notebook_id": notebook_id,
               "created_at": stamp, "updated_at": stamp}
     _directory(record["id"])
     with storage.connect() as conn:
         conn.execute(
             """INSERT INTO recording_sessions
-               (id, title, media_type, state, conversation_id, created_at, updated_at)
-               VALUES (:id, :title, :media_type, :state, :conversation_id, :created_at, :updated_at)""",
+               (id, title, media_type, state, conversation_id, notebook_id, created_at, updated_at)
+               VALUES (:id, :title, :media_type, :state, :conversation_id, :notebook_id, :created_at, :updated_at)""",
             record,
         )
     return record
@@ -228,7 +228,9 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
             raise ImportFailure("The saved browser audio could not be assembled") from exc
         with remuxed.open("rb") as source:
             upload = UploadFile(file=source, filename=f"{session['title']}{suffix}")
-            conversation, duplicate = await import_upload(upload, browser_recording=True)
+            conversation, duplicate = await import_upload(
+                upload, browser_recording=True, recorded_at=str(session["created_at"]),
+                notebook_id=session.get("notebook_id"))
         from stellis import notes
         notes.attach_to_conversation(recording_id, str(conversation["id"]))
         from stellis import images

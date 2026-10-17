@@ -67,7 +67,8 @@ def _title(filename: str) -> str:
     return cleaned[:180] or "Untitled recording"
 
 
-async def import_upload(upload: UploadFile, *, browser_recording: bool = False) -> tuple[dict[str, object], bool]:
+async def import_upload(upload: UploadFile, *, browser_recording: bool = False, recorded_at: str | None = None,
+                        notebook_id: str | None = None) -> tuple[dict[str, object], bool]:
     """Import public MP3 audio or a finalized in-app browser recording."""
     root = storage.data_dir()
     incoming = _new_temp(root)
@@ -119,6 +120,8 @@ async def import_upload(upload: UploadFile, *, browser_recording: bool = False) 
             "audio_media_type": MEDIA_TYPES[suffix],
             "duration_ms": duration_ms,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "recorded_at": recorded_at,
+            "notebook_id": notebook_id,
         }
         try:
             storage.add_conversation(record)

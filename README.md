@@ -50,7 +50,9 @@ Set `NEBIUS_API_KEY` in the environment or in an ignored `.env` file to use summ
 
 Choose **Import recording** for an MP3 or **Record** for microphone capture. A completed import or recording starts local transcription when the models are ready. Reimporting the same audio opens its existing conversation. To migrate a browser-downloaded Otter ZIP, run `scripts/prepare_otter_migration.py` outside the app, import its MP3, and attach the exported text as a reference; that text does not replace the machine transcript.
 
-Open a conversation to play or scrub its audio. **Notes** contains My Notes and the generated Summary. **Transcript** contains the source wording; **Edited Transcript** appears as a third tab after cleanup. Use the transcript's selection controls for highlights, comments, and sharing, or **Edit transcript** to save wording changes together. Use **More options** for rematching, reprocessing, summary regeneration, and deletion. Open **Vocabulary** from the library to manage speech hints for future processing.
+Open a conversation to play or scrub its audio. **Notes** contains My Notes and the generated Summary. **Transcript** contains the source wording; **Edited Transcript** appears as a third tab after cleanup. Use the transcript's selection controls for highlights, comments, and sharing, or **Edit transcript** to save wording changes together. Use **More options** for rematching, reprocessing, summary regeneration, and deletion. Open **Custom vocabulary** from **Account settings** to manage speech hints for future processing.
+
+Group conversations into **Notebooks**, one per project. Each notebook card shows its newest meeting, up to three progress points from that meeting's Summary, and earlier meetings. Use a card's **+** to record, import, or move a conversation into it, or **Move to notebook** in a conversation's **More options**. The home rail lists recent conversations newest first by when they were recorded. **Account settings** changes your name, email, username, and password, connects calendars, and deletes the account with every conversation on this device.
 
 ## Optional calendars
 
