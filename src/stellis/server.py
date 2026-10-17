@@ -545,7 +545,17 @@ def conversations() -> list[dict[str, object]]:
     items = storage.list_conversations()
     lines = notebooks.summary_points([str(item["id"]) for item in items])
     return [{**item, "category_ids": assigned.get(str(item["id"]), []),
-             "summary_line": lines.get(str(item["id"]), {}).get("summary_line")} for item in items]
+             "summary_line": lines.get(str(item["id"]), {}).get("summary_line"),
+             **_processing_state(str(item["id"]))} for item in items]
+
+
+def _processing_state(conversation_id: str) -> dict[str, object]:
+    """Let the library show work started anywhere: queued, running, stopped, or awaiting review."""
+    from stellis import generation_review
+    job = storage.get_latest_job_for_conversation(conversation_id)
+    review = generation_review.get_review(conversation_id)
+    return {"processing_job": processing.public_job(job) if job and job["state"] != "succeeded" else None,
+            "transcript_review_pending": bool(review and review["state"] == "pending")}
 
 
 class NotebookCreate(BaseModel):

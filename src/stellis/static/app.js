@@ -99,6 +99,7 @@ let librarySearchTotal = 0;
 let librarySearchLimited = false;
 let libraryCategories = [];
 let libraryConversations = [];
+let libraryJobTimer;
 let activePersonId = null;
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
@@ -832,11 +833,27 @@ function renderConversationList() {
     const title = document.createElement('strong'); title.textContent = item.title;
     const date = document.createElement('time'); date.dateTime = capturedAt(item); date.textContent = shortDate(capturedAt(item));
     row.append(dot, title, date);
-    if (item.summary_line) {
+    const job = item.processing_job;
+    const progress = job && (job.state === 'queued' ? 'Queued' : job.state === 'running' ?
+      `${job.stage.charAt(0).toUpperCase() + job.stage.slice(1)}: ${Math.round(job.progress * 100)}%` :
+      job.state === 'failed' ? 'Processing stopped' : '');
+    const state = progress || (item.transcript_review_pending ? 'New transcript ready to review' : '');
+    if (state) {
+      const line = document.createElement('small'); line.className = 'recent-processing'; line.textContent = state;
+      row.append(line);
+    } else if (item.summary_line) {
       const line = document.createElement('small'); line.textContent = item.summary_line; row.append(line);
     }
     list.append(row);
   }
+  clearTimeout(libraryJobTimer);
+  if (conversations.some(item => ['queued', 'running'].includes(item.processing_job?.state)))
+    libraryJobTimer = setTimeout(refreshLibraryJobs, 3000);
+}
+async function refreshLibraryJobs() {
+  if (listView.hidden) return;
+  try { libraryConversations = await json(await fetch(`${API}/conversations`)); renderConversationList(); }
+  catch { libraryJobTimer = setTimeout(refreshLibraryJobs, 10000); }
 }
 function renderCategoryControls() {
   const picker = document.querySelector('#category-filter');

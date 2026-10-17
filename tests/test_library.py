@@ -182,6 +182,21 @@ class LibraryWorkflowTest(unittest.TestCase):
             self.assertEqual(len(seeded), 5)
             self.assertEqual(library.categories(), seeded)
 
+    def test_library_lists_each_conversations_unfinished_processing(self):
+        now = datetime.now(timezone.utc).isoformat()
+        job_id = str(uuid.uuid4())
+        storage.add_job({'id': job_id, 'conversation_id': self.first, 'pipeline_version': 'listed-test',
+                         'kind': 'speech', 'state': 'running', 'stage': 'diarizing', 'progress': 0.55,
+                         'error': None, 'metrics_json': None, 'vocabulary_json': '[]',
+                         'created_at': now, 'updated_at': now})
+        listed = {item['id']: item for item in self.client.get('/api/v1/conversations').json()}
+        self.assertEqual(listed[self.first]['processing_job']['state'], 'running')
+        self.assertEqual(listed[self.first]['processing_job']['stage'], 'diarizing')
+        self.assertFalse(listed[self.first]['transcript_review_pending'])
+        storage.update_job(job_id, state='succeeded', stage='complete', progress=1.0, updated_at=now)
+        listed = {item['id']: item for item in self.client.get('/api/v1/conversations').json()}
+        self.assertIsNone(listed[self.first]['processing_job'])
+
     def test_pending_job_blocks_permanent_delete_until_settled(self):
         now = datetime.now(timezone.utc).isoformat()
         job_id = str(uuid.uuid4())
