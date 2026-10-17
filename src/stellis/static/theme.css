@@ -1359,6 +1359,7 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 .recent-row strong { min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .recent-row time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .recent-row small { grid-column: 2 / -1; overflow: hidden; color: var(--muted); font-size: 12.5px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.recent-row .recent-processing { color: var(--ink); font-variant-numeric: tabular-nums; }
 .recent-empty { color: var(--muted); font-size: 14px; }
 .home-rail .recent-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, #F7F5F6 60%, transparent); }
 .settings-link {
