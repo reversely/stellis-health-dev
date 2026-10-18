@@ -5,7 +5,7 @@ description: Work on the Stellis repository and its browser-first interview prod
 
 # Stellis workflow
 
-Apply this skill only to `/Users/slee/Repos/stellis` or `reversely/stellis`. Read the repository's `AGENTS.md`, `plans/`, `docs/otter-ui-reference.md`, and `docs/current-architecture.md` as relevant. The user may replace the implementation plan when a significant reason is documented.
+Apply this skill to `/Users/slee/Repos/stellis-dev` or `reversely/stellis-dev`. The separate `/Users/slee/Repos/stellis` checkout is the public repository; follow `release/README.md` for publishing app releases and syncing direct public documentation edits. Read the development repository's `AGENTS.md`, `plans/`, `docs/otter-ui-reference.md`, and `docs/current-architecture.md` as relevant. The user may replace the implementation plan when a significant reason is documented.
 
 ## Product requirements
 
