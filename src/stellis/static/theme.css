@@ -2163,3 +2163,7 @@ a.todo-suggestion:hover { text-decoration: underline; text-underline-offset: 3px
 @media (max-width: 639px) { .tour-card { left: 16px !important; width: calc(100vw - 32px); max-height: 62vh; } }
 @media (prefers-reduced-motion: reduce) { .tour-spot { transition: none; } }
 /* === end First-run tour (#301) === */
+
+/* Closed menus take no layout space and cannot be hit. */
+details.more-menu:not([open]) > .more-menu-items { display: none; }
+#playback-speed-menu:not([open]) > .speed-options { display: none; }
