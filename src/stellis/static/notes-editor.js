@@ -5,6 +5,8 @@ import {
 } from 'lexical';
 import {$insertNodeToNearestRoot} from '@lexical/utils';
 import {$createHeadingNode, HeadingNode, QuoteNode, registerRichText} from '@lexical/rich-text';
+import {CodeNode} from '@lexical/code-core';
+import {$createHorizontalRuleNode, $isHorizontalRuleNode, HorizontalRuleNode} from '@lexical/extension';
 import {
   INSERT_CHECK_LIST_COMMAND, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND,
   ListItemNode, ListNode, registerCheckList, registerList,
@@ -20,9 +22,23 @@ import {
 } from '@lexical/table';
 import {
   $convertFromMarkdownString, $convertToMarkdownString,
-  BOLD_ITALIC_STAR, BOLD_STAR, CHECK_LIST, HEADING, ITALIC_STAR, LINK,
-  ORDERED_LIST, UNORDERED_LIST, registerMarkdownShortcuts,
+  BOLD_ITALIC_STAR, BOLD_STAR, CHECK_LIST, CODE, HEADING, INLINE_CODE, ITALIC_STAR, LINK,
+  ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
+
+// A line of `---`, `***` or `___` is a divider; it is written back as `---`.
+const HR = {
+  dependencies:[HorizontalRuleNode],
+  export:node => $isHorizontalRuleNode(node) ? '---' : null,
+  regExp:/^(---|\*\*\*|___)\s?$/,
+  replace(parent, children, match, isImport) {
+    const line = $createHorizontalRuleNode();
+    if (isImport || parent.getNextSibling() != null) parent.replace(line);
+    else parent.insertBefore(line);
+    line.selectNext();
+  },
+  type:'element',
+};
 
 const IMAGE_MARKDOWN = /^!\[([^\]\n]*)\]\(stellis-image:([0-9a-f-]{36})\)$/i;
 
@@ -117,12 +133,13 @@ function $restorePoint(point, saved) {
   point.set(leaf.getKey(), 0, 'element');
 }
 
-export const NOTES_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
+export const NOTES_NODES = [HeadingNode, QuoteNode, CodeNode, HorizontalRuleNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
   TableNode, TableRowNode, TableCellNode, MeetingImageNode];
 export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two',h3:'note-heading-three'},
   list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
     listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
-  text:{bold:'note-bold',italic:'note-italic'}, table:'note-table',
+  text:{bold:'note-bold',italic:'note-italic',strikethrough:'note-strike',code:'note-code'},
+  quote:'note-quote', code:'note-code-block', hr:'note-divider', table:'note-table',
   tableCell:'note-table-cell', tableCellHeader:'note-table-header'};
 
 // The Markdown dialect shared by the editor and the headless round-trip test.
@@ -155,8 +172,8 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
         return [true, line - 1];
       }},
     // CHECK_LIST must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
-    HEADING, CHECK_LIST, UNORDERED_LIST, ORDERED_LIST,
-    BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, LINK,
+    HEADING, QUOTE, CODE, HR, CHECK_LIST, UNORDERED_LIST, ORDERED_LIST,
+    INLINE_CODE, BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, STRIKETHROUGH, LINK,
   ];
 }
 

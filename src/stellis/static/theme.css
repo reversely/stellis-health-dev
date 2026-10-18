@@ -1889,3 +1889,10 @@ a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 .list-widget-head h2 a { color: inherit; text-decoration: none; }
 .list-widget-head h2 a:hover { text-decoration: underline; text-underline-offset: 4px; }
+/* ===== Notes editor dialect (#274, #276). Kept in one block so it merges cleanly with other work. ===== */
+.notes-editor .note-quote { margin: 0 0 10px; padding: 2px 0 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+.notes-editor .note-code-block { display: block; margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--raised); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-x: auto; tab-size: 4; }
+.notes-editor .note-code { padding: 1px 5px; border-radius: 4px; background: var(--raised); font: .9em ui-monospace, SFMono-Regular, Menlo, monospace; }
+.notes-editor .note-strike { text-decoration: line-through; }
+.notes-editor .note-divider { height: 0; margin: 16px 0; border: 0; border-top: 1px solid var(--line); }
+.notes-editor .note-divider.selected, .notes-editor hr.selected { border-top-color: var(--focus); }
