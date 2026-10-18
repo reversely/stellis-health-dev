@@ -15,7 +15,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from PIL import Image, PngImagePlugin
 
-from stellis import storage, tools
+from stellis import images, storage, tools
 from stellis.server import app
 from test_import import wav_bytes, mp3_bytes
 
@@ -97,6 +97,28 @@ class ImageWorkflowTest(unittest.TestCase):
                                             data={"media_position_ms": "0"})
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual((response.json()["width"], response.json()["height"]), (16, 12))
+
+    def test_animated_gif_and_webp_keep_their_frames_within_limits(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        frames = [Image.effect_noise((64, 48), 80).convert("RGB").point(lambda v, i=i: (v + i * 70) % 256) for i in range(3)]
+        buffers = {}
+        for fmt in ("GIF", "WEBP"):
+            buffers[fmt] = io.BytesIO()
+            frames[0].save(buffers[fmt], format=fmt, save_all=True, append_images=frames[1:], duration=80, loop=0)
+        for fmt, mime in (("GIF", "image/gif"), ("WEBP", "image/webp")):
+            with self.subTest(fmt=fmt):
+                response = self.client.post(f"/api/v1/{owner}/images", data={"media_position_ms": "0"},
+                                            files={"file": ("a." + fmt.lower(), buffers[fmt].getvalue(), mime)})
+                self.assertEqual(response.status_code, 200, response.text)
+                served = self.client.get(f"/api/v1/{owner}/images/{response.json()['id']}/file")
+                with Image.open(io.BytesIO(served.content)) as stored:
+                    self.assertEqual((stored.format, stored.n_frames, stored.size), (served.headers["content-type"][6:].upper(), 3, (64, 48)))
+        with patch.object(images, "MAX_FRAMES", 2):
+            too_many = self.client.post(f"/api/v1/{owner}/images", data={"media_position_ms": "0"},
+                                        files={"file": ("a.gif", buffers["GIF"].getvalue(), "image/gif")})
+        self.assertEqual(too_many.status_code, 400)
+        self.assertIn("at most 2 frames", too_many.json()["detail"])
+        self.assertEqual(len(list((Path(self.temp.name) / "images").iterdir())), 2)
 
     def test_selected_passage_keeps_audio_time_after_new_generation(self) -> None:
         owner = f"conversations/{self.conversation_id}"

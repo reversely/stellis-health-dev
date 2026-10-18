@@ -19,3 +19,9 @@ Recently Deleted hides the conversation and its images through the same owner ch
 ## Consequences
 
 Image time remains stable across transcript edits and reprocessing, while exact transcript placement may move when boundaries change. The selected passage ID is a placement hint, not a claim that the image has spoken-word timing. Captions are short local text. Only the normalized WebP is retained, so download does not reproduce the original file's format or metadata. The current transcript sync bridge sends encrypted text snapshots only; images remain on the recording device. Table cells currently serialize plain text; rich styling inside a cell does not survive Markdown round-trip. This is a documented limit of the portable table subset.
+
+## Amendment, 2026-10-18: animated GIF and animated WebP
+
+Notes support GIFs (#290, part of #260), so an upload that Pillow reports as animated is no longer rejected. Every frame is decoded to validate it. Limits: the existing 12 MB upload size, 8192-pixel side, and 20 MP per frame, plus at most 300 frames and at most 60 million decoded pixels in total (frames x width x height). The total bounds decode memory; 300 frames of 450 x 450 fit. Stills are unchanged.
+
+An animated WebP is stored as uploaded. An animated GIF is also encoded as lossless animated WebP with its frame durations and loop count, and the WebP replaces the GIF only when it is smaller. The row's `media_type` is `image/webp` or `image/gif` and the file extension follows it; the file route serves that type. A single-frame GIF is still rejected. An animation is stored byte for byte unless the WebP re-encode wins, so metadata inside an animated WebP or a GIF comment block is not stripped, unlike stills. The editor shows the animation through the existing image block; that display is a frontend change tracked separately.
