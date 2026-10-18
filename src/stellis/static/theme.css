@@ -2062,3 +2062,53 @@ a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 .note-paste-menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); font: 14px Inter, sans-serif; text-align: left; cursor: pointer; }
 .note-paste-menu button:hover, .note-paste-menu button.active, .note-paste-menu button:focus-visible { background: var(--raised); }
 .note-paste-menu .icon { width: 16px; height: 16px; }
+
+/* === Agent suggestions (#270) === */
+/* The cards stand beside the editor and stack under it at narrow widths. Every edge is straight. */
+.notes-suggest-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.notes-suggest-layout > * { min-width: 0; }
+@media (min-width: 900px) {
+  .note-view.has-suggestions { max-width: 1180px; }
+  .notes-suggest-layout:has(.suggestions-column:not([hidden])) { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+.suggestions-column { display: grid; gap: 12px; align-content: start; }
+.suggestions-column[hidden] { display: none; }
+.suggestions-head { display: grid; grid-template-columns: 1fr repeat(4, 44px); align-items: center; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.suggestions-count { margin: 0; font: 600 15px Inter, sans-serif; }
+.suggestions-note { margin: 0; color: var(--muted); font-size: 13px; }
+.suggestions-note:empty { display: none; }
+.suggestion-cards { display: grid; gap: 12px; }
+.suggestion-card { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); text-align: left; }
+.suggestion-card:focus-visible, .suggestion-card:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+.suggestion-author { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.agent-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-strong); }
+.agent-avatar .icon { width: 14px; height: 14px; }
+.agent-name { font-weight: 600; color: var(--ink); }
+.suggestion-words { margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.suggestion-quote { margin: 0; padding: 0 0 0 10px; border-left: 2px solid var(--line); border-radius: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.suggestion-quote p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.suggestion-time { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--accent-strong); font: 600 13px Inter, sans-serif; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.suggestion-time .icon { width: 14px; height: 14px; }
+.suggestion-actions { display: flex; gap: 2px; margin-left: -10px; }
+.suggestion-actions button, .suggestions-head button { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.suggestions-head button:hover, .suggestion-actions button:hover { background: var(--raised); }
+.suggestions-head button:focus-visible, .suggestion-actions button:focus-visible, .suggestion-time:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.suggestion-accept { color: var(--success) !important; }
+.suggestions-head .icon, .suggestion-actions .icon { width: 20px; height: 20px; }
+.suggestions-column[aria-busy="true"] { opacity: 0.6; pointer-events: none; }
+.agent-status { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.agent-status[hidden] { display: none; }
+.agent-status .icon { width: 16px; height: 16px; }
+.suggested-todos { margin: 4px 0 12px; }
+.suggested-todos[hidden] { display: none; }
+.suggested-todos-label { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; color: var(--success); font: 600 13px Inter, sans-serif; }
+.suggested-todos-label .icon { width: 16px; height: 16px; }
+.suggested-lines { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.suggested-line { display: flex; align-items: center; gap: 8px; padding: 0 8px; background: color-mix(in srgb, var(--success) 12%, transparent); box-shadow: inset 2px 0 0 var(--success); border-radius: 0; color: var(--success); }
+.suggested-line .icon { flex: none; width: 18px; height: 18px; }
+.suggested-line-input { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; outline: none; }
+.suggested-line:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+.notes-editor .suggested-change { background: color-mix(in srgb, var(--success) 12%, transparent); box-shadow: inset 2px 0 0 var(--success); }
+a.todo-suggestion { text-decoration: none; }
+a.todo-suggestion:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* === end Agent suggestions (#270) === */

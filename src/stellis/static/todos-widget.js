@@ -119,7 +119,9 @@
       text.append(sourceLabel);
       if (item.pending_suggestions?.length) {
         const count = item.pending_suggestions.length;
-        const mark = el('span', 'todo-suggestion'); mark.title = 'An agent suggested a change to this to-do';
+        // The label opens the note or meeting that holds the suggestion's cards.
+        const mark = el('a', 'todo-suggestion'); mark.title = 'An agent suggested a change to this to-do';
+        mark.href = `/${source.kind === 'conversation' ? 'conversation' : 'page'}/${encodeURIComponent(source.id)}`;
         mark.append(icon('sparkles'), el('span', '', count === 1 ? 'Suggested change' : `${count} suggested changes`));
         text.append(mark);
       }

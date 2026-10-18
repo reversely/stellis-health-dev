@@ -500,6 +500,49 @@ async function loadNotes(scope, id) {
   if (recovered) state.timer = setTimeout(() => flushNotes(state), 500);
   return state;
 }
+// Agent suggestions stand beside the editor, never inside its document (ADR 0059, #270).
+function mountSuggestions(scope, kind, panel, toolbar, currentId) {
+  return StellisSuggestions.mount({
+    api:API, icon, kind, panel, toolbar, saveLine:panel.querySelector('.notes-save-line'),
+    editorRoot:notesElements(scope).root, id:currentId, setStatus,
+    savedMarkdown:() => notesStates[scope]?.savedMarkdown || '',
+    flush:() => flushNotes(notesStates[scope]),
+    // The server wrote the accepted lines; read the notes again so they and their new IDs appear.
+    reload:async () => {
+      const old = notesStates[scope];
+      if (old) clearTimeout(old.timer);
+      await loadNotes(scope, currentId());
+    },
+    resolveSegment:(segmentId, suggestion) => suggestion.source_kind === 'conversation' && suggestion.source_id === activeConversationId
+      ? transcriptSegments.find(segment => segment.id === segmentId) || null : null,
+    openEvidence:openSuggestionEvidence,
+  });
+}
+// The evidence link seeks the transcript. A segment id that does not resolve (sample meetings are not transcribed)
+// opens the transcript at its top and leaves the quote on the card.
+async function openSuggestionEvidence(suggestion, evidence) {
+  if (suggestion.source_kind !== 'conversation') return;
+  if (suggestion.source_id !== activeConversationId) {
+    history.pushState({}, '', `/conversation/${encodeURIComponent(suggestion.source_id)}?at=${encodeURIComponent(evidence.segment_id)}`);
+    await route().catch(error => setStatus(error.message));
+    return;
+  }
+  try {
+    highlightsOnly = false; showConversationTab('transcript');
+    await showTranscript(activeConversationId);
+  } catch (error) { setStatus(error.message); }
+  const segment = transcriptSegments.find(item => item.id === evidence.segment_id);
+  if (!segment) { document.querySelector('#transcript-card').scrollIntoView({block:'start'}); return; }
+  const seek = () => { player.currentTime = segment.start_ms / 1000; };
+  if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once:true});
+  transcriptView.querySelector(`[data-segment-id="${CSS.escape(segment.id)}"]`)?.scrollIntoView({block:'center'});
+}
+const suggestionsUi = {
+  conversation:mountSuggestions('conversation', 'conversation', document.querySelector('#my-notes-panel'),
+    document.querySelector('#conversation-notes-toolbar'), () => activeConversationId),
+  page:mountSuggestions('page', 'page', document.querySelector('#page-view'),
+    document.querySelector('#page-notes-toolbar'), () => activeNoteId),
+};
 // Due dates the editor holds that the server does not yet, by task ID; null clears a date. Lines without an ID wait for one.
 function changedDates(state) {
   const changes = {};
@@ -1300,8 +1343,9 @@ async function showDetail(id) {
     importReference.hidden = false;
   }
   const notes = await loadNotes('conversation', id);
+  await suggestionsUi.conversation.load().catch(() => {});
   showConversationTab('summary');
-  showNotesChoice(notes.pendingMarkdown.trim() ? 'my' : 'enhanced');
+  showNotesChoice(notes.pendingMarkdown.trim() || suggestionsUi.conversation.count ? 'my' : 'enhanced');
   await loadAIRuns(id);
   await loadSavedRecordingChat(id);
   await loadCleanRuns(id);
@@ -2596,6 +2640,7 @@ async function showVocabulary(section = null) {
   await flushNotes(notesStates.conversation);
   await leaveNote();
   await flushEnhanced();
+  suggestionsUi.conversation.clear();
   document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
   recordingPanel.hidden = true;
   if (conversationCategoriesDialog.open) conversationCategoriesDialog.close();
@@ -4326,6 +4371,7 @@ async function openNote(id) {
 }
 async function leaveNote() {
   const state = notesStates.page;
+  suggestionsUi.page.clear();
   if (!state) return;
   await flushNotes(state);
   clearTimeout(state.timer);
@@ -4374,6 +4420,7 @@ async function showNote(id) {
   await loadImages('page', id);
   if (request !== noteRequest) return;
   await loadNotes('page', id);
+  suggestionsUi.page.load().catch(() => {});
   if (page.title === 'Untitled' && !page.markdown) noteTitle.select(); else notesEditors.page?.focus();
   captureControls();
 }
