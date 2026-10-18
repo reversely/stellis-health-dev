@@ -54,7 +54,8 @@ def page_tags(conn, page_ids: list[str] | None = None) -> dict[str, list[str]]:
 
 
 def _full(conn, page_id: str) -> dict[str, object]:
-    return {**dict(_active(conn, page_id)), "category_ids": page_tags(conn, [page_id]).get(page_id, [])}
+    return {**dict(_active(conn, page_id)), "category_ids": page_tags(conn, [page_id]).get(page_id, []),
+            "todo_dates": todos.due_dates(conn, "page", page_id)}
 
 
 def _with_tags(conn, rows) -> list[dict[str, object]]:

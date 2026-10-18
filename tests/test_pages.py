@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import library, pages, storage
+from stellis import library, pages, storage, todos
 from stellis.server import app
 
 API = "/api/v1"
@@ -47,6 +47,19 @@ class PagesTest(unittest.TestCase):
         fetched = self.client.get(f"{API}/pages/{page['id']}").json()
         self.assertEqual((fetched["markdown"], fetched["revision"]), ("# Hi", 1))
         self.assertEqual(self.client.get(f"{API}/pages/missing").status_code, 404)
+
+    def test_save_returns_and_reads_todo_dates(self) -> None:
+        page = self.client.post(f"{API}/pages", json={"markdown": "- [ ] a"}).json()
+        task_id = todos.parse_tasks(page["markdown"])[0].id
+        due = {"due_date": "2026-11-02", "due_time": "09:30"}
+        saved = self.client.put(f"{API}/pages/{page['id']}/markdown", json={
+            "markdown": page["markdown"], "expected_revision": page["revision"], "todo_dates": {task_id: due, "tzzzzzz": due}})
+        self.assertEqual(saved.status_code, 200, saved.text)
+        self.assertEqual(saved.json()["todo_dates"], {task_id: due})
+        self.assertEqual(self.client.get(f"{API}/pages/{page['id']}").json()["todo_dates"], {task_id: due})
+        cleared = self.client.put(f"{API}/pages/{page['id']}/markdown", json={
+            "markdown": page["markdown"], "expected_revision": saved.json()["revision"], "todo_dates": {task_id: None}})
+        self.assertEqual(cleared.json()["todo_dates"], {})
 
     def test_notebook_filter_assign_and_delete(self) -> None:
         notebook = self.client.post(f"{API}/notebooks", json={"name": "Work"}).json()

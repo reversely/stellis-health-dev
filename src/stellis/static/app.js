@@ -122,13 +122,17 @@ async function json(response) {
   if (!response.ok) throw new Error(data.detail || 'The request failed.');
   return data;
 }
-const notesStates = {recording:null, conversation:null};
-const notesEditors = {recording:null, conversation:null};
+const notesStates = {recording:null, conversation:null, page:null};
+const notesEditors = {recording:null, conversation:null, page:null};
 let notesModulePromise = null;
 function notesEndpoint(scope, id) {
+  if (scope === 'page') return `${API}/pages/${encodeURIComponent(id)}/markdown`;
   return `${API}/${scope === 'recording' ? 'recordings' : 'conversations'}/${encodeURIComponent(id)}/notes`;
 }
+// A note's own GET returns the whole page; the other scopes read from the same URL they write to.
+const notesReadUrl = (scope, id) => scope === 'page' ? `${API}/pages/${encodeURIComponent(id)}` : notesEndpoint(scope, id);
 let conversationImages = [];
+let pageImages = [];
 let recordingImages = [];
 let imageDialogOwner = null;
 let pendingImageFiles = [];
@@ -138,7 +142,7 @@ const imageDialog = document.querySelector('#image-dialog');
 const imageStatus = document.querySelector('#image-status');
 
 function imageEndpoint(scope, id) {
-  return `${API}/${scope === 'recording' ? 'recordings' : 'conversations'}/${encodeURIComponent(id)}/images`;
+  return `${API}/${scope === 'recording' ? 'recordings' : scope === 'page' ? 'pages' : 'conversations'}/${encodeURIComponent(id)}/images`;
 }
 function imageFileUrl(scope, id, imageId, download = false) {
   return `${imageEndpoint(scope, id)}/${encodeURIComponent(imageId)}/file${download ? '?download=true' : ''}`;
@@ -247,7 +251,9 @@ function renderRecordingImages() {
 }
 async function loadImages(scope, id) {
   const items = await json(await fetch(imageEndpoint(scope, id)));
-  if (scope === 'recording') {
+  if (scope === 'page') {
+    if (notesStates.page?.id === id) pageImages = items;
+  } else if (scope === 'recording') {
     if (capture?.session.id !== id && notesStates.recording?.id !== id) return;
     recordingImages = items; renderRecordingImages();
   } else if (activeConversationId === id) {
@@ -304,13 +310,14 @@ async function saveNotesImage(scope, id, file, selection) {
   const status = notesElements(scope).status;
   const form = new FormData();
   form.append('file', file, file.name || 'screenshot.png');
-  form.append('media_position_ms', String(scope === 'recording' ? Math.round(captureElapsedMs()) :
+  if (scope !== 'page') form.append('media_position_ms', String(scope === 'recording' ? Math.round(captureElapsedMs()) :
     Math.round(player.currentTime * 1000)));
   status.textContent = 'Adding image…';
   try {
     const image = await json(await fetch(imageEndpoint(scope, id), {method:'POST', body:form}));
     if (notesStates[scope]?.id !== id) return;
     const editor = await ensureNotesEditor(scope);
+    if (scope === 'page') pageImages = [...pageImages, image];
     editor.insertImage(image.id, image.caption, selection);
     await loadImages(scope, id);
   } catch (error) {status.textContent = error.message;}
@@ -336,6 +343,9 @@ document.querySelector('#recording-notes-editor').addEventListener('paste', even
 }, true);
 document.querySelector('#conversation-notes-editor').addEventListener('paste', event => {
   pasteNotesImage(event, 'conversation');
+}, true);
+document.querySelector('#page-notes-editor').addEventListener('paste', event => {
+  pasteNotesImage(event, 'page');
 }, true);
 document.querySelector('#notes-image-file').addEventListener('change', event => {
   if (!notesImageChoice) return;
@@ -408,8 +418,12 @@ function notesElements(scope) {
     status:document.querySelector(`#${scope}-notes-status`),
     retry:document.querySelector(`#${scope}-notes-retry`)};
 }
-async function ensureNotesEditor(scope) {
-  if (notesEditors[scope]) return notesEditors[scope];
+// Two routes can ask for the same editor at once (the app routes twice at start); one editor per root, built once.
+const notesEditorBuilds = {};
+function ensureNotesEditor(scope) {
+  return notesEditorBuilds[scope] ||= buildNotesEditor(scope);
+}
+async function buildNotesEditor(scope) {
   notesModulePromise ||= import('/static/notes-editor.bundle.js');
   const {createNotesEditor} = await notesModulePromise;
   const elements = notesElements(scope);
@@ -418,6 +432,7 @@ async function ensureNotesEditor(scope) {
     if (!state) return;
     state.pendingMarkdown = markdown; state.pendingDates = dates;
     if (scope === 'recording') renderRecordingImages();
+    if (scope === 'page') adoptForeignImages(state);
     try { localStorage.setItem(notesDraftKey(scope, state.id), JSON.stringify({markdown, revision:state.revision})); } catch {}
     elements.status.textContent = 'Unsaved'; elements.retry.hidden = true;
     clearTimeout(state.timer);
@@ -430,15 +445,38 @@ async function ensureNotesEditor(scope) {
       expanded.src = src; expanded.alt = alt; viewer.showModal();
     },
     onPickImage:selection => chooseNotesImage(scope, selection),
-    todoDates:scope === 'conversation',
+    todoDates:scope === 'conversation' || scope === 'page',
   });
   notesEditors[scope] = editor;
   elements.retry.addEventListener('click', () => retryNotes(scope));
   return editor;
 }
+// A note keeps its own copy of every image. An image pasted in from another note, meeting, or recording still names
+// its first owner, so each such reference is copied to this note and the Markdown is rewritten to the copy.
+const copyingImages = new Set();
+async function adoptForeignImages(state) {
+  const owned = new Set(pageImages.map(item => item.id));
+  const foreign = [...new Set([...state.pendingMarkdown.matchAll(/stellis-image:([0-9a-f-]{36})/gi)].map(match => match[1]))]
+    .filter(id => !owned.has(id) && !copyingImages.has(id));
+  if (!foreign.length) return;
+  for (const id of foreign) copyingImages.add(id);
+  try {
+    for (const id of foreign) {
+      const copy = await json(await fetch(`${API}/images/${encodeURIComponent(id)}/copy`, {method:'POST',
+        headers:{'Content-Type':'application/json'}, body:JSON.stringify({scope:'page', owner_id:state.id})}));
+      if (notesStates.page !== state) return;
+      pageImages = [...pageImages, {id:copy.id}];
+      state.pendingMarkdown = state.pendingMarkdown.split(id).join(copy.id);
+      notesEditors.page.setMarkdown(state.pendingMarkdown, {keepSelection:true, dates:state.savedDates,
+        onLoaded:() => {state.pendingDates = notesEditors.page.getTodoDates();}});
+    }
+    clearTimeout(state.timer); state.timer = setTimeout(() => flushNotes(state), 600);
+  } catch (error) { notesElements('page').status.textContent = error.message; }
+  finally { for (const id of foreign) copyingImages.delete(id); }
+}
 async function loadNotes(scope, id) {
   const editor = await ensureNotesEditor(scope);
-  const remote = await json(await fetch(notesEndpoint(scope, id)));
+  const remote = await json(await fetch(notesReadUrl(scope, id)));
   let markdown = remote.markdown;
   let recovered = false;
   try {
@@ -514,7 +552,7 @@ async function retryNotes(scope) {
   const state = notesStates[scope];
   if (!state) return;
   try {
-    const remote = await json(await fetch(notesEndpoint(scope, state.id)));
+    const remote = await json(await fetch(notesReadUrl(scope, state.id)));
     if (remote.revision !== state.revision) {
       const merged = StellisNotesMerge.mergeWithRemote(remote.markdown, state.pendingMarkdown);
       state.pendingMarkdown = merged.markdown;
@@ -997,8 +1035,8 @@ function railPage(page) {
   const date = document.createElement('time'); date.dateTime = page.updated_at; date.textContent = shortDate(page.updated_at);
   const line = document.createElement('small'); line.append(date);
   row.append(railIcon('file-text'), title, line);
-  // Notes have no page of their own yet; the row selects and drags like a meeting.
-  row.addEventListener('click', () => setStatus(`${page.title} opens here in a later update`));
+  row.addEventListener('click', () => openNote(page.id));
+  row.addEventListener('keydown', event => { if (event.key === 'Enter') openNote(page.id); });
   row.addEventListener('dragstart', event => { event.dataTransfer.setData(PAGE_DRAG, page.id); event.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging'); });
   row.addEventListener('dragend', () => row.classList.remove('dragging'));
   wrap.append(row, moveButton(page.title, () => openMovePage(page)));
@@ -1190,6 +1228,7 @@ async function showPerson(id) {
 }
 async function showDetail(id) {
   await flushNotes(notesStates.conversation);
+  await leaveNote();
   await flushEnhanced();
   await refreshAI();
   document.body.classList.remove('profile-page', 'recording-page');
@@ -2555,6 +2594,7 @@ async function loadVocabulary() {
 }
 async function showVocabulary(section = null) {
   await flushNotes(notesStates.conversation);
+  await leaveNote();
   await flushEnhanced();
   document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
   recordingPanel.hidden = true;
@@ -2600,6 +2640,7 @@ async function route() {
     await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname === '/settings') await showSettings();
   else if (location.pathname === '/todos') await showTodos();
+  else if (location.pathname.match(/^\/page\/([^/]+)$/)) await showNote(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
     await showNotebook(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
@@ -3283,7 +3324,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href^="/page/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3539,14 +3580,16 @@ function paintNotebook(element, notebook) {
   element.style.setProperty('--notebook-ink', NOTEBOOK_DARK_INK.has(notebook.color.toUpperCase()) ? '#27222B' : '#F7F5F6');
 }
 function hideAppPages() {
+  document.querySelector('#page-view').hidden = true;
   document.querySelector('#settings-view').hidden = true;
   document.querySelector('#notebook-view').hidden = true;
   document.querySelector('#todos-view').hidden = true;
-  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page');
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
   await flushNotes(notesStates.conversation);
+  await leaveNote();
   await flushEnhanced();
   document.body.classList.remove('profile-page', 'conversation-page', 'recording-page');
   recordingPanel.hidden = true;
@@ -3608,13 +3651,13 @@ function notebookCard(notebook) {
   return card;
 }
 function cardItem({kind, item, at}, className) {
-  // A meeting links to its page; a note has no page of its own yet, so it reports that, as the sidebar does.
+  // A meeting and a note each link to their own page.
   const row = document.createElement(kind === 'conversation' ? 'a' : 'button'); row.className = `${className} card-item`;
   if (kind === 'conversation') row.href = `/conversation/${encodeURIComponent(item.id)}`; else row.type = 'button';
   const title = document.createElement('span'); title.textContent = item.title;
   const date = document.createElement('time'); date.dateTime = at; date.textContent = window.StellisListDate.formatListDate(at);
   row.append(icon(kind === 'conversation' ? 'microphone' : 'file-text'), title, date);
-  if (kind === 'page') row.addEventListener('click', () => setStatus(`${item.title} opens here in a later update`));
+  if (kind === 'page') row.addEventListener('click', () => openNote(item.id));
   row.draggable = true;
   row.addEventListener('dragstart', event => {
     event.dataTransfer.setData(kind === 'conversation' ? CONVERSATION_DRAG : PAGE_DRAG, item.id);
@@ -3961,10 +4004,8 @@ document.querySelector('#notebook-add-import').addEventListener('click', () => {
 document.querySelector('#home-new-note').addEventListener('click', async () => {
   const button = document.querySelector('#home-new-note'); button.disabled = true;
   try {
-    // Notes get their own page in a later update; until then the new note is created and named in the status line.
     const page = await json(await fetch(`${API}/pages`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}));
-    setStatus(`Created the note ${page.title}. Notes open here in a later update.`, true);
-    await reloadLibrary();
+    await openNote(page.id);
   } catch (error) { setStatus(error.message); }
   finally { button.disabled = false; }
 });
@@ -4093,6 +4134,93 @@ function mountTodos(host, {scope = 'all', linkTitle = false} = {}) {
     // Adding a to-do can create the To-dos note, so the sidebar and cards reload; the widget has already refreshed itself.
     onChange: () => { if (!listView.hidden) loadLibrary().then(() => { renderNotebooks(); renderRailTags(); renderConversationList(); }).catch(() => {}); }});
 }
+// A note (a page, ADR 0058) opens at /page/<id>: title, notebook, tags, and the shared notes editor.
+const noteTitle = document.querySelector('#note-title');
+const noteStatus = document.querySelector('#note-status');
+let activeNoteId = null; let activeNoteTags = [];
+async function openNote(id) {
+  history.pushState({}, '', `/page/${encodeURIComponent(id)}`);
+  await route().catch(error => setStatus(error.message));
+}
+async function leaveNote() {
+  const state = notesStates.page;
+  if (!state) return;
+  await flushNotes(state);
+  clearTimeout(state.timer);
+  notesStates.page = null; activeNoteId = null; pageImages = [];
+}
+function renderNoteTags() {
+  const host = document.querySelector('#note-tags'); host.replaceChildren();
+  for (const tag of libraryCategories) {
+    const pill = document.createElement('button'); pill.type = 'button'; pill.className = 'note-tag';
+    pill.setAttribute('aria-pressed', String(activeNoteTags.includes(tag.id)));
+    pill.append(icon('tag'), document.createTextNode(tag.name));
+    pill.addEventListener('click', async () => {
+      const next = activeNoteTags.includes(tag.id) ? activeNoteTags.filter(id => id !== tag.id) : [...activeNoteTags, tag.id];
+      try {
+        const saved = await putJson(`/pages/${encodeURIComponent(activeNoteId)}/categories`, {category_ids: next});
+        activeNoteTags = saved.category_ids; renderNoteTags(); noteStatus.textContent = '';
+        reloadLibrary().catch(() => {});
+      } catch (error) { noteStatus.textContent = error.message; }
+    });
+    host.append(pill);
+  }
+  if (!libraryCategories.length) { const none = document.createElement('small'); none.textContent = 'Create tags from the ⋯ menu on Home'; host.append(none); }
+}
+let noteRequest = 0;
+async function showNote(id) {
+  const request = ++noteRequest;
+  await leaveForAppPage('note-page', 'Note');
+  if (request !== noteRequest) return;
+  let page;
+  try { page = await json(await fetch(`${API}/pages/${encodeURIComponent(id)}`)); }
+  catch {
+    history.replaceState({}, '', '/'); await showList(); setStatus('That note no longer exists'); return;
+  }
+  const [books, categories] = await Promise.all([fetch(`${API}/notebooks`).then(json), fetch(`${API}/categories`).then(json)]);
+  if (request !== noteRequest) return;
+  libraryNotebooks = books.notebooks; libraryCategories = categories;
+  activeNoteId = id; activeNoteTags = page.category_ids;
+  noteTitle.value = page.title; noteStatus.textContent = '';
+  document.querySelector('#page-title').textContent = page.title;
+  const select = document.querySelector('#note-notebook');
+  select.replaceChildren(new Option('No notebook', ''), ...libraryNotebooks.map(book => new Option(book.name, book.id)));
+  select.value = page.notebook_id || '';
+  renderNoteTags();
+  document.querySelector('#page-view').hidden = false;
+  notesStates.page = {id}; // claims the note before the editor loads, so late image uploads know their owner
+  await loadImages('page', id);
+  if (request !== noteRequest) return;
+  await loadNotes('page', id);
+  if (page.title === 'Untitled' && !page.markdown) noteTitle.select(); else notesEditors.page?.focus();
+  captureControls();
+}
+noteTitle.addEventListener('change', async () => {
+  if (!activeNoteId) return;
+  try {
+    const page = await json(await fetch(`${API}/pages/${encodeURIComponent(activeNoteId)}`, {method:'PATCH',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({title: noteTitle.value})}));
+    noteTitle.value = page.title; document.querySelector('#page-title').textContent = page.title; noteStatus.textContent = '';
+    reloadLibrary().catch(() => {});
+  } catch (error) { noteStatus.textContent = error.message; }
+});
+noteTitle.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); notesEditors.page?.focus(); } });
+document.querySelector('#note-notebook').addEventListener('change', async event => {
+  if (!activeNoteId) return;
+  try {
+    await putJson(`/pages/${encodeURIComponent(activeNoteId)}/notebook`, {notebook_id: event.target.value || null});
+    noteStatus.textContent = ''; reloadLibrary().catch(() => {});
+  } catch (error) { noteStatus.textContent = error.message; }
+});
+document.querySelector('#note-delete').addEventListener('click', async () => {
+  if (!activeNoteId || !window.confirm('Delete this note? You can restore it from Recently Deleted for 30 days.')) return;
+  try {
+    await flushNotes(notesStates.page);
+    await json(await fetch(`${API}/pages/${encodeURIComponent(activeNoteId)}/trash`, {method:'POST'}));
+    try { localStorage.removeItem(notesDraftKey('page', activeNoteId)); } catch {}
+    history.pushState({}, '', '/'); await showList();
+  } catch (error) { noteStatus.textContent = error.message; }
+});
 async function showTodos() {
   await leaveForAppPage('todos-page', 'To-dos');
   const books = await json(await fetch(`${API}/notebooks`)); libraryNotebooks = books.notebooks;
