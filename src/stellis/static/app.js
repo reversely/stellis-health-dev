@@ -266,8 +266,8 @@ function chooseImageFile(file) {
   pendingImageFiles = [];
   document.querySelector('#save-image').disabled = true;
   if (files.length > 10) { imageStatus.textContent = 'Choose up to 10 images.'; return; }
-  if (files.some(item => !['image/png', 'image/jpeg', 'image/webp'].includes(item.type))) {
-    imageStatus.textContent = 'Use a PNG, JPEG, or WebP image.'; return;
+  if (files.some(item => !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(item.type))) {
+    imageStatus.textContent = 'Use a PNG, JPEG, WebP, or GIF image.'; return;
   }
   if (files.some(item => item.size > 12_000_000)) {imageStatus.textContent = 'Image must be smaller than 12 MB.'; return;}
   if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
@@ -2206,7 +2206,7 @@ function inspectSelection() {
     if (!excerpt) return;
     hideSelectionToolbar(); selection.removeAllRanges();
     const input = document.createElement('input'); input.id = 'selected-image-file';
-    input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp'; input.multiple = true;
+    input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp,image/gif'; input.multiple = true;
     input.hidden = true; document.body.append(input);
     input.addEventListener('change', () => {
       const files = [...(input.files || [])]; input.remove();
