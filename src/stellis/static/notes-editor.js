@@ -27,6 +27,9 @@ import {
 } from '@lexical/markdown';
 import {CalloutNode, $insertCallout, calloutTransformer, registerCallouts} from './notes-callouts.js';
 import {EMBED_NODES, $insertBookmark, configureEmbeds, embedTransformers, httpUrl, registerEmbedPaste} from './notes-embeds.js';
+import {
+  $insertColumns, $insertToggle, CONTAINER_NODES, columnsTransformer, registerContainers, toggleTransformer,
+} from './notes-containers.js';
 import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
@@ -143,7 +146,7 @@ function $restorePoint(point, saved) {
 }
 
 export const NOTES_NODES = [HeadingNode, QuoteNode, CodeNode, HorizontalRuleNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
-  TableNode, TableRowNode, TableCellNode, MeetingImageNode, CalloutNode, ...EMBED_NODES];
+  TableNode, TableRowNode, TableCellNode, MeetingImageNode, CalloutNode, ...CONTAINER_NODES, ...EMBED_NODES];
 export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two',h3:'note-heading-three'},
   list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
     listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
@@ -156,6 +159,8 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
   // A callout reads and writes its body with the same list, so it asks for it when it runs.
   const transformers = [
     calloutTransformer(() => transformers),
+    toggleTransformer(() => transformers),
+    columnsTransformer(() => transformers),
     {dependencies:[MeetingImageNode], export:node => node instanceof MeetingImageNode ?
       `![${node.__caption.replace(/[\]\\]/g, '')}](stellis-image:${node.__imageId})` : null,
       regExp:IMAGE_MARKDOWN, type:'element', replace(parent, children, match) {
@@ -209,6 +214,7 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
   editor.setRootElement(root);
   // Dates are tracked only where the server indexes to-dos (saved conversations).
   unregister.push(registerCallouts(editor));
+  unregister.push(registerContainers(editor));
   unregister.push(registerEmbedPaste(editor, root));
   unregister.push(registerCleanCopy(editor, {nodes:NOTES_NODES, theme:NOTES_THEME, transformers:markdown}));
   unregister.push(registerTasks(editor, root, {dates:!!options.todoDates}));
@@ -237,6 +243,8 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     else if (action === 'undo') editor.dispatchCommand(UNDO_COMMAND, undefined);
     else if (action === 'redo') editor.dispatchCommand(REDO_COMMAND, undefined);
     else if (action === 'table') editor.dispatchCommand(INSERT_TABLE_COMMAND, {rows:'2',columns:'2',includeHeaders:{rows:true,columns:false}});
+    else if (action === 'toggle') editor.update(() => $insertToggle());
+    else if (action === 'columns') editor.update(() => $insertColumns(2));
     else if (action.startsWith('callout-')) editor.update(() => $insertCallout(action.slice(8)));
     else if (action === 'bookmark') {
       const url = httpUrl((window.prompt('Link card URL') || '').trim());
