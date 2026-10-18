@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from stellis import storage
+from stellis import storage, todos
 from stellis.notes import MAX_MARKDOWN
 
 COLUMNS = "id, title, markdown, revision, notebook_id, created_at, updated_at"
@@ -52,6 +52,7 @@ def create(title: str | None = None, notebook_id: str | None = None, markdown: s
     page_id = str(uuid.uuid4())
     with storage.connect() as conn:
         _check_notebook(conn, notebook_id)
+        markdown = todos.reindex(conn, "page", page_id, markdown)
         conn.execute("INSERT INTO pages (id, title, markdown, notebook_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                      (page_id, name, markdown, notebook_id, stamp, stamp))
         return dict(_active(conn, page_id))
@@ -83,7 +84,7 @@ def rename(page_id: str, title: str | None) -> dict[str, object]:
         return dict(_active(conn, page_id))
 
 
-def save(page_id: str, markdown: str, expected_revision: int) -> dict[str, object]:
+def save(page_id: str, markdown: str, expected_revision: int, todo_dates: dict | None = None) -> dict[str, object]:
     """Save a whole document with optimistic revision protection, as notes.save does."""
     _check_markdown(markdown)
     if expected_revision < 0:
@@ -93,6 +94,7 @@ def save(page_id: str, markdown: str, expected_revision: int) -> dict[str, objec
         row = _active(conn, page_id)
         if int(row["revision"]) != expected_revision:
             raise RuntimeError("Notes changed in another tab")
+        markdown = todos.reindex(conn, "page", page_id, markdown, todo_dates)
         conn.execute("UPDATE pages SET markdown = ?, revision = ?, updated_at = ? WHERE id = ?",
                      (markdown, expected_revision + 1, _stamp(), page_id))
         return dict(_active(conn, page_id))
@@ -134,6 +136,8 @@ def delete_permanently(page_id: str, *, expired_before: str | None = None) -> di
     with storage.connect() as conn:
         deleted = conn.execute("DELETE FROM pages WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?)",
                                (page_id, expired_before, expired_before)).rowcount
+        if deleted:
+            todos.delete_source(conn, "page", page_id)
     if not deleted:
         raise LookupError("Page not found in Recently Deleted")
     return {"id": page_id, "deleted": True}
@@ -144,6 +148,8 @@ def delete_expired(cutoff: str) -> list[str]:
         ids = [str(row["id"]) for row in conn.execute(
             "SELECT id FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))]
         conn.execute("DELETE FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))
+        for page_id in ids:
+            todos.delete_source(conn, "page", page_id)
     return ids
 
 

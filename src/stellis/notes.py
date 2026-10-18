@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from stellis import storage
+from stellis import storage, todos
 
 MAX_MARKDOWN = 200_000
 
@@ -40,7 +40,8 @@ def get(scope: str, item_id: str) -> dict[str, object]:
     return _public(row)
 
 
-def save(scope: str, item_id: str, markdown: str, expected_revision: int) -> dict[str, object]:
+def save(scope: str, item_id: str, markdown: str, expected_revision: int,
+         todo_dates: dict | None = None) -> dict[str, object]:
     """Save a whole document with optimistic revision protection."""
     if not isinstance(markdown, str) or len(markdown.encode("utf-8")) > MAX_MARKDOWN:
         raise ValueError("Notes are too large")
@@ -65,6 +66,8 @@ def save(scope: str, item_id: str, markdown: str, expected_revision: int) -> dic
         if current_revision != expected_revision:
             raise RuntimeError("Notes changed in another tab")
         stamp = _stamp()
+        if scope == "conversation":
+            markdown = todos.reindex(conn, "conversation", item_id, markdown, todo_dates)
         if row:
             conn.execute("UPDATE meeting_notes SET markdown = ?, revision = ?, updated_at = ? WHERE id = ?",
                          (markdown, current_revision + 1, stamp, row["id"]))
@@ -84,8 +87,9 @@ def attach_to_conversation(recording_id: str, conversation_id: str) -> None:
             return
         existing = conn.execute("SELECT * FROM meeting_notes WHERE conversation_id = ?", (conversation_id,)).fetchone()
         if existing is None:
-            conn.execute("UPDATE meeting_notes SET recording_id = NULL, conversation_id = ?, updated_at = ? WHERE id = ?",
-                         (conversation_id, _stamp(), captured["id"]))
+            indexed = todos.reindex(conn, "conversation", conversation_id, str(captured["markdown"]))
+            conn.execute("UPDATE meeting_notes SET recording_id = NULL, conversation_id = ?, markdown = ?, updated_at = ? WHERE id = ?",
+                         (conversation_id, indexed, _stamp(), captured["id"]))
             return
         captured_text = str(captured["markdown"]).strip()
         if captured_text:
@@ -93,6 +97,7 @@ def attach_to_conversation(recording_id: str, conversation_id: str) -> None:
             combined = f"{existing_text}\n\n---\n\n{captured_text}" if existing_text else captured_text
             if len(combined.encode("utf-8")) > MAX_MARKDOWN:
                 raise ValueError("Combined notes exceed the size limit")
+            combined = todos.reindex(conn, "conversation", conversation_id, combined)
             conn.execute("UPDATE meeting_notes SET markdown = ?, revision = revision + 1, updated_at = ? WHERE id = ?",
                          (combined, _stamp(), existing["id"]))
         conn.execute("DELETE FROM meeting_notes WHERE id = ?", (captured["id"],))

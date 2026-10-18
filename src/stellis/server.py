@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, todos
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -344,9 +344,19 @@ class RecordingEvent(BaseModel):
     media_position_ms: int = Field(ge=0)
 
 
+class TodoDue(BaseModel):
+    due_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    due_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+
+
 class NotesWrite(BaseModel):
     markdown: str = Field(max_length=200_000)
     expected_revision: int = Field(ge=0)
+    todo_dates: dict[str, TodoDue | None] | None = None
+
+
+class TodoStatus(BaseModel):
+    status: Literal["open", "done", "canceled"]
 
 
 class PageCreate(BaseModel):
@@ -362,6 +372,7 @@ class PageRename(BaseModel):
 class PageWrite(BaseModel):
     markdown: str
     expected_revision: int = Field(ge=0)
+    todo_dates: dict[str, TodoDue | None] | None = None
 
 
 class ImageCaption(BaseModel):
@@ -1161,9 +1172,16 @@ def _read_notes(scope: str, item_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+def _dates(request) -> dict | None:
+    """The editor's resolved due dates by task ID; a null entry clears the date."""
+    if request.todo_dates is None:
+        return None
+    return {key: value.model_dump() if value else None for key, value in request.todo_dates.items()}
+
+
 def _write_notes(scope: str, item_id: str, request: NotesWrite) -> dict[str, object]:
     try:
-        return notes.save(scope, item_id, request.markdown, request.expected_revision)
+        return notes.save(scope, item_id, request.markdown, request.expected_revision, _dates(request))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -1207,7 +1225,7 @@ def rename_page(page_id: str, request: PageRename) -> dict[str, object]:
 
 @api.put("/pages/{page_id}/markdown")
 def save_page(page_id: str, request: PageWrite) -> dict[str, object]:
-    return _page_call(pages.save, page_id, request.markdown, request.expected_revision)
+    return _page_call(pages.save, page_id, request.markdown, request.expected_revision, _dates(request))
 
 
 @api.put("/pages/{page_id}/notebook")
@@ -1218,6 +1236,19 @@ def assign_page_notebook(page_id: str, request: NotebookAssignment) -> dict[str,
 @api.post("/pages/{page_id}/trash")
 def trash_page(page_id: str) -> dict[str, object]:
     return _page_call(pages.move_to_trash, page_id)
+
+
+@api.get("/todos")
+def gather_todos(notebook_id: str = "all", status: Literal["open", "done", "canceled"] = "open") -> dict[str, object]:
+    return todos.gather(notebook_id, status)
+
+
+@api.patch("/todos/{todo_id}")
+def update_todo(todo_id: str, request: TodoStatus) -> dict[str, object]:
+    try:
+        return todos.set_status(todo_id, request.status)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @api.get("/recordings/{recording_id}/notes")
