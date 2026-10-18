@@ -375,6 +375,11 @@ class PageWrite(BaseModel):
     todo_dates: dict[str, TodoDue | None] | None = None
 
 
+class ImageCopy(BaseModel):
+    scope: Literal["page", "conversation", "recording"]
+    owner_id: str
+
+
 class ImageCaption(BaseModel):
     caption: str = Field(max_length=280)
 
@@ -1412,6 +1417,54 @@ async def add_conversation_image(conversation_id: str, file: UploadFile = File(.
                                  end_offset: int | None = Form(None), expected_revision: int | None = Form(None)) -> dict[str, object]:
     return await _add_image("conversation", conversation_id, file, media_position_ms, segment_id, caption,
                             start_offset, end_offset, expected_revision)
+
+
+@api.get("/pages/{page_id}/images")
+def page_images(page_id: str) -> list[dict[str, object]]:
+    return _list_images("page", page_id)
+
+
+@api.post("/pages/{page_id}/images")
+async def add_page_image(page_id: str, file: UploadFile = File(...), caption: str = Form("")) -> dict[str, object]:
+    try:
+        data = await file.read(images.MAX_UPLOAD_BYTES + 1)
+        if len(data) > images.MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Image must be smaller than 12 MB")
+        return images._public(images.add_page_image(page_id, data, caption))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=507, detail="Could not save image locally") from exc
+
+
+@api.get("/pages/{page_id}/images/{image_id}/file")
+def page_image_file(page_id: str, image_id: str, download: bool = False) -> FileResponse:
+    return _image_file("page", page_id, image_id, download)
+
+
+@api.patch("/pages/{page_id}/images/{image_id}")
+def edit_page_image(page_id: str, image_id: str, request: ImageCaption) -> dict[str, object]:
+    return _update_image_caption("page", page_id, image_id, request.caption)
+
+
+@api.delete("/pages/{page_id}/images/{image_id}")
+def remove_page_image(page_id: str, image_id: str) -> dict[str, bool]:
+    return _delete_image("page", page_id, image_id)
+
+
+@api.post("/images/{image_id}/copy", status_code=201)
+def copy_image(image_id: str, request: ImageCopy) -> dict[str, object]:
+    """Copy an image to another owner when a `stellis-image` reference is pasted there."""
+    try:
+        return {"id": images.copy(image_id, request.scope, request.owner_id)["id"]}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=507, detail="Could not save image locally") from exc
 
 
 @api.get("/recordings/{recording_id}/images/{image_id}/file")

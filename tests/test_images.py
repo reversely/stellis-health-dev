@@ -179,6 +179,41 @@ class ImageWorkflowTest(unittest.TestCase):
         with storage.connect() as conn:
             self.assertFalse(conn.execute("SELECT 1 FROM conversation_images WHERE recording_id = ?", (discarded["id"],)).fetchone())
 
+    def test_page_images_survive_startup_copy_to_other_owners_and_delete_with_page(self) -> None:
+        from stellis import images, library
+        page = self.client.post("/api/v1/pages", json={"title": "Visual"}).json()
+        owner = f"pages/{page['id']}"
+        upload = self.client.post(f"/api/v1/{owner}/images", files={"file": ("a.png", png_bytes(), "image/png")},
+                                  data={"caption": "Diagram"})
+        self.assertEqual(upload.status_code, 200)
+        image = upload.json()
+        self.assertNotIn("media_position_ms", image)
+        self.assertEqual(self.client.patch(f"/api/v1/{owner}/images/{image['id']}", json={"caption": "Chart"}).json()["caption"], "Chart")
+        images.recover_orphans()
+        self.assertEqual(self.client.get(f"/api/v1/{owner}/images/{image['id']}/file").status_code, 200)
+
+        copied = self.client.post(f"/api/v1/images/{image['id']}/copy",
+                                  json={"scope": "conversation", "owner_id": self.conversation_id})
+        self.assertEqual(copied.status_code, 201)
+        copy_id = copied.json()["id"]
+        self.assertNotEqual(copy_id, image["id"])
+        listed = self.client.get(f"/api/v1/conversations/{self.conversation_id}/images").json()
+        self.assertEqual([(item["id"], item["caption"]) for item in listed], [(copy_id, "Chart")])
+        other = self.client.post("/api/v1/pages", json={"title": "Other"}).json()
+        self.assertEqual(self.client.post(f"/api/v1/images/{copy_id}/copy",
+                                          json={"scope": "page", "owner_id": other["id"]}).status_code, 201)
+        self.assertEqual(self.client.get(f"/api/v1/pages/{other['id']}/images/{image['id']}/file").status_code, 404)
+        self.assertEqual(self.client.post(f"/api/v1/images/{copy_id}/copy",
+                                          json={"scope": "page", "owner_id": "missing"}).status_code, 404)
+
+        self.client.post(f"/api/v1/pages/{page['id']}/trash")
+        self.assertEqual(self.client.delete(f"/api/v1/trash/{page['id']}").status_code, 200)
+        self.assertFalse((Path(self.temp.name) / "images" / f"{image['id']}.webp").exists())
+        library.erase_all()
+        with storage.connect() as conn:
+            self.assertFalse(conn.execute("SELECT 1 FROM page_images").fetchone())
+        self.assertEqual(list((Path(self.temp.name) / "images").glob("*.webp")), [])
+
 
 if __name__ == "__main__":
     unittest.main()

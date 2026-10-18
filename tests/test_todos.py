@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 import unittest
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -28,6 +30,13 @@ class PureFunctionsTest(unittest.TestCase):
     def test_empty_task_lines_are_not_tasks_and_ids_stay_off_text(self) -> None:
         tasks = todos.parse_tasks("- [ ] \n- [ ] ^tabc123\n- [ ] a ^tabc123 b\n- [ ] c ^tabc123")
         self.assertEqual([(t.line, t.text, t.id) for t in tasks], [(3, "a ^tabc123 b", None), (4, "c", "tabc123")])
+
+    def test_shared_fixture_cases(self) -> None:
+        fixture = json.loads((Path(__file__).parent / "fixtures" / "markdown_plain.json").read_text(encoding="utf-8"))
+        for case in fixture["plain_markdown"]:
+            self.assertEqual(todos.plain_markdown(case["input"]), case["expected"], case["name"])
+        for case in fixture["inline_text"]:
+            self.assertEqual(todos.markdown_inline_text(case["input"]), case["expected"], case["name"])
 
     def test_plain_markdown(self) -> None:
         source = ("- [ ] call ^tabc123\n<bookmark url=\"https://a.example\">Site</bookmark>\n<bookmark url=\"https://b.example\"></bookmark>\n"

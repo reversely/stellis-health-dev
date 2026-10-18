@@ -9,7 +9,7 @@ import re
 import threading
 import uuid
 
-from stellis import ai, notes, storage
+from stellis import ai, notes, storage, todos
 
 PROMPT_VERSION = "conversation-summary-v1"
 MAX_INPUT_NOTES = 8_000
@@ -19,8 +19,9 @@ _IMAGE_REFERENCE = re.compile(r"!\[([^\]\n]*)\]\(stellis-image:[0-9a-f-]{36}\)",
 
 
 def _notes_for_prompt(markdown: str) -> str:
-    """Keep authored context while withholding local image identifiers."""
-    return _IMAGE_REFERENCE.sub(lambda match: f"[Image: {match.group(1)}]" if match.group(1) else "[Image]", markdown)
+    """Keep authored context while withholding local image identifiers, task IDs, and layout tags."""
+    return _IMAGE_REFERENCE.sub(lambda match: f"[Image: {match.group(1)}]" if match.group(1) else "[Image]",
+                                todos.plain_markdown(markdown))
 
 
 def _row(run_id: str):
@@ -46,7 +47,8 @@ def _source(conversation_id: str) -> tuple[dict[str, object], dict[str, object],
     if display is None or not display["segments"]:
         raise LookupError("Transcript is not ready")
     raw = notes.get("conversation", conversation_id)
-    if len(str(raw["markdown"]).encode("utf-8")) > MAX_INPUT_NOTES:
+    # The limit counts what the model receives; the hash below still covers the stored text.
+    if len(_notes_for_prompt(str(raw["markdown"])).encode("utf-8")) > MAX_INPUT_NOTES:
         raise ValueError("My Notes exceeds the summary input limit")
     identity_hash = ai._identity_hash(display)
     notes_hash = hashlib.sha256(str(raw["markdown"]).encode()).hexdigest()

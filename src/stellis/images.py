@@ -44,18 +44,32 @@ def _owner(conn, scope: str, item_id: str):
                            (item_id,)).fetchone()
         if not row:
             raise LookupError("Conversation not found")
+    elif scope == "page":
+        row = conn.execute("SELECT id FROM pages WHERE id = ? AND trashed_at IS NULL", (item_id,)).fetchone()
+        if not row:
+            raise LookupError("Page not found")
     else:
         raise ValueError("Invalid image scope")
     return row
 
 
 def _field(scope: str) -> str:
-    return "recording_id" if scope == "recording" else "conversation_id"
+    return {"recording": "recording_id", "page": "page_id"}.get(scope, "conversation_id")
+
+
+def _table(scope: str) -> str:
+    # Page images are a separate table so conversation_images keeps its owner constraint (ADR 0058).
+    return "page_images" if scope == "page" else "conversation_images"
+
+
+_PUBLIC_KEYS = ("id", "media_position_ms", "segment_id", "start_offset", "end_offset", "quote", "caption",
+                "width", "height", "size_bytes", "created_at", "updated_at")
 
 
 def _public(row) -> dict[str, object]:
-    return {key: row[key] for key in ("id", "media_position_ms", "segment_id", "start_offset", "end_offset", "quote", "caption",
-                                      "width", "height", "size_bytes", "created_at", "updated_at")}
+    # A page image row has no time or passage columns, so those keys are left out of its public form.
+    columns = set(row.keys())
+    return {key: row[key] for key in _PUBLIC_KEYS if key in columns}
 
 
 def _normalize(data: bytes) -> tuple[bytes, int, int]:
@@ -85,9 +99,43 @@ def _normalize(data: bytes) -> tuple[bytes, int, int]:
 def list_images(scope: str, item_id: str) -> list[dict[str, object]]:
     with storage.connect() as conn:
         _owner(conn, scope, item_id)
-        rows = conn.execute(f"""SELECT * FROM conversation_images WHERE {_field(scope)} = ?
-            ORDER BY media_position_ms, created_at, id""", (item_id,)).fetchall()
+        order = "created_at, id" if scope == "page" else "media_position_ms, created_at, id"
+        rows = conn.execute(f"SELECT * FROM {_table(scope)} WHERE {_field(scope)} = ? ORDER BY {order}",
+                            (item_id,)).fetchall()
     return [_public(row) for row in rows]
+
+
+def add_page_image(page_id: str, data: bytes, caption: str = "") -> dict[str, object]:
+    if len(caption.strip()) > MAX_CAPTION:
+        raise ValueError("Caption is too long")
+    normalized, width, height = _normalize(data)
+    image_id = str(uuid.uuid4())
+    directory = _directory()
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".image-", dir=directory)
+    temporary = Path(temporary_name)
+    destination = directory / f"{image_id}.webp"
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(normalized)
+            output.flush()
+            os.fsync(output.fileno())
+        temporary.chmod(0o600)
+        with storage.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            _owner(conn, "page", page_id)
+            stamp = _stamp()
+            os.replace(temporary, destination)
+            conn.execute("""INSERT INTO page_images
+                (id, page_id, caption, filename, media_type, size_bytes, width, height, sha256, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?)""",
+                (image_id, page_id, caption.strip(), destination.name, len(normalized), width, height,
+                 hashlib.sha256(normalized).hexdigest(), stamp, stamp))
+        return get("page", page_id, image_id)
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def add(scope: str, item_id: str, data: bytes, media_position_ms: int,
@@ -160,7 +208,7 @@ def add(scope: str, item_id: str, data: bytes, media_position_ms: int,
 def get(scope: str, item_id: str, image_id: str) -> dict[str, object]:
     with storage.connect() as conn:
         _owner(conn, scope, item_id)
-        row = conn.execute(f"SELECT * FROM conversation_images WHERE id = ? AND {_field(scope)} = ?",
+        row = conn.execute(f"SELECT * FROM {_table(scope)} WHERE id = ? AND {_field(scope)} = ?",
                            (image_id, item_id)).fetchone()
     if row is None:
         raise LookupError("Image not found")
@@ -178,7 +226,7 @@ def update_caption(scope: str, item_id: str, image_id: str, caption: str) -> dic
         raise ValueError("Caption is too long")
     with storage.connect() as conn:
         _owner(conn, scope, item_id)
-        changed = conn.execute(f"""UPDATE conversation_images SET caption = ?, updated_at = ?
+        changed = conn.execute(f"""UPDATE {_table(scope)} SET caption = ?, updated_at = ?
             WHERE id = ? AND {_field(scope)} = ?""", (value, _stamp(), image_id, item_id)).rowcount
     if not changed:
         raise LookupError("Image not found")
@@ -188,8 +236,32 @@ def update_caption(scope: str, item_id: str, image_id: str, caption: str) -> dic
 def delete(scope: str, item_id: str, image_id: str) -> None:
     record = get(scope, item_id, image_id)
     with storage.connect() as conn:
-        conn.execute(f"DELETE FROM conversation_images WHERE id = ? AND {_field(scope)} = ?", (image_id, item_id))
+        conn.execute(f"DELETE FROM {_table(scope)} WHERE id = ? AND {_field(scope)} = ?", (image_id, item_id))
     path_for(record).unlink(missing_ok=True)
+
+
+def copy(image_id: str, scope: str, item_id: str) -> dict[str, object]:
+    """Copy an image into another owner (a pasted `stellis-image` reference) and return the new image."""
+    uuid.UUID(image_id)
+    with storage.connect() as conn:
+        source = None
+        for table in ("conversation_images", "page_images"):
+            source = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (image_id,)).fetchone()
+            if source:
+                break
+        if source is None:
+            raise LookupError("Image not found")
+        owner = _owner(conn, scope, item_id)
+    path = path_for({"id": image_id})
+    if not path.is_file():
+        raise LookupError("Image file is missing")
+    caption = str(source["caption"])
+    if scope == "page":
+        return add_page_image(item_id, path.read_bytes(), caption)
+    position = int(source["media_position_ms"]) if "media_position_ms" in source.keys() else 0
+    if scope == "conversation":
+        position = min(position, int(owner["duration_ms"]))
+    return add(scope, item_id, path.read_bytes(), position, caption=caption)
 
 
 def attach_to_conversation(recording_id: str, conversation_id: str, duration_ms: int) -> None:
@@ -207,7 +279,8 @@ def remove_files(image_ids: list[str]) -> None:
 
 def recover_orphans() -> None:
     with storage.connect() as conn:
-        known = {str(row["id"]) for row in conn.execute("SELECT id FROM conversation_images")}
+        known = {str(row["id"]) for table in ("conversation_images", "page_images")
+                 for row in conn.execute(f"SELECT id FROM {table}")}
     for file in _directory().iterdir():
         if file.name.startswith(".image-") or (file.suffix == ".webp" and file.stem not in known):
             file.unlink(missing_ok=True)

@@ -249,8 +249,12 @@ def erase_all() -> dict[str, int]:
     for recording_id in captures:
         recording.discard_session(recording_id)
     with storage.connect() as conn:
+        page_image_ids = [str(row["id"]) for row in conn.execute("SELECT id FROM page_images")]
+        conn.execute("DELETE FROM page_images")
         for table in ("vocabulary", "persons", "page_categories", "pages", "todo_items", "suggestions", "notebooks", "collections", "category_automation", "categories", "event_notes", "link_previews"):
             conn.execute(f"DELETE FROM {table}")
         # Seed the default categories again for the next account.
         conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")
+    from stellis import images
+    images.remove_files(page_image_ids)
     return {"conversations": len(conversation_ids), "recordings": len(captures)}
