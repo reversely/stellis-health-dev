@@ -20,7 +20,7 @@ import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BINARY = {".png", ".wav", ".woff2", ".bin", ".onnx", ".jpg", ".webp", ".ico"}
+BINARY = {".png", ".gif", ".wav", ".woff2", ".bin", ".onnx", ".jpg", ".webp", ".ico"}
 LOCKFILES = {"uv.lock", "package-lock.json"}
 FORBIDDEN_FILES = (".env", "*.sqlite3", "*.mp3", "*.m4a", "*.webm", "*.zip")
 
