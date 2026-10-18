@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from stellis import storage, suggestions
 
 PALETTE = ("#495575", "#56465C", "#594F4F", "#547980", "#45ADA8")
+# Seven added swatches; each holds white text at 4.5:1 or better (ratios in docs/current-architecture.md).
+PRESETS = PALETTE + ("#5B5F97", "#6B4E71", "#4F6F52", "#8A5A44", "#3F6C8C", "#7A4E5E", "#5E6B3F")
+_HEX = re.compile(r"#[0-9A-Fa-f]{6}")
 _SECTIONS = {"overview": "overview", "topics": "topics", "decisions": "decisions", "action proposals": "action_items"}
 
 
@@ -28,9 +31,10 @@ def _name(value: str) -> str:
 def _color(value: str | None, fallback_index: int) -> str:
     if value is None:
         return PALETTE[fallback_index % len(PALETTE)]
-    if value.upper() not in {color.upper() for color in PALETTE}:
-        raise ValueError("Choose one of the notebook colours")
-    return next(color for color in PALETTE if color.upper() == value.upper())
+    # Every preset is a #RRGGBB value, so one rule covers presets and custom colours.
+    if not isinstance(value, str) or not _HEX.fullmatch(value):
+        raise ValueError("Choose a preset colour or a #RRGGBB hex value")
+    return value.upper()
 
 
 def _markdown_sections(markdown: str) -> dict[str, list[str]]:
