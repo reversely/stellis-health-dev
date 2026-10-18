@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from stellis import storage, todos
 
-MAX_MARKDOWN = 200_000
+MAX_MARKDOWN = todos.MAX_MARKDOWN
 
 
 def _stamp() -> str:

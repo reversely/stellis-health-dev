@@ -7,12 +7,9 @@ from datetime import datetime, timezone
 
 from stellis import storage, suggestions, todos
 from stellis.notes import MAX_MARKDOWN
+from stellis.todos import TooLarge
 
 COLUMNS = "id, title, markdown, revision, notebook_id, created_at, updated_at"
-
-
-class TooLarge(ValueError):
-    """The Markdown body exceeds the byte cap."""
 
 
 def _stamp() -> str:

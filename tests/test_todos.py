@@ -25,6 +25,10 @@ class PureFunctionsTest(unittest.TestCase):
             (1, "", "open", "open one", "tabc123"), (2, "  ", "done", "done", None),
             (3, "", "done", "Done two", None), (4, "", "canceled", "canceled", None), (9, "", "open", "last", None)])
 
+    def test_empty_task_lines_are_not_tasks_and_ids_stay_off_text(self) -> None:
+        tasks = todos.parse_tasks("- [ ] \n- [ ] ^tabc123\n- [ ] a ^tabc123 b\n- [ ] c ^tabc123")
+        self.assertEqual([(t.line, t.text, t.id) for t in tasks], [(3, "a ^tabc123 b", None), (4, "c", "tabc123")])
+
     def test_plain_markdown(self) -> None:
         source = ("- [ ] call ^tabc123\n<bookmark url=\"https://a.example\">Site</bookmark>\n<bookmark url=\"https://b.example\"></bookmark>\n"
                   "<columns>\n<column>\nleft\n</column>\n<column>\nright\n</column>\n</columns>\n```\n- [ ] keep ^tabc123\n```\n")
@@ -80,6 +84,15 @@ class TodoIndexTest(unittest.TestCase):
         # A pasted ID owned by another source is replaced.
         other = self.page(f"- [ ] copied ^{ids[0]}")
         self.assertNotIn(ids[0], other["markdown"])
+
+    def test_size_limit_counts_the_added_ids(self) -> None:
+        # 16,000 short tasks fit under the limit as typed and exceed it once each line gains " ^tXXXXXX".
+        markdown = "\n".join(["- [ ] aaaaa"] * 16_000)
+        self.assertLessEqual(len(markdown.encode()), todos.MAX_MARKDOWN)
+        response = self.client.post(f"{API}/pages", json={"markdown": markdown})
+        self.assertEqual(response.status_code, 413, response.text)
+        self.assertEqual(self.client.get(f"{API}/pages").json(), [])
+        self.assertEqual(self.items(), [])
 
     def test_conversation_notes_index_and_dates(self) -> None:
         conversation_id = self.conversation()
