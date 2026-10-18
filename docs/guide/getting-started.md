@@ -2,7 +2,7 @@
 
 ## Start Stellis
 
-Stellis needs macOS on Apple silicon and [uv](https://docs.astral.sh/uv/getting-started/installation/). From the repository folder, run:
+Stellis needs [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs Python 3.12 and every other dependency. From the repository folder, run:
 
 ```sh
 uv run stellis
