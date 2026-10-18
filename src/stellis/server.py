@@ -62,7 +62,7 @@ async def development_cache_policy(request: Request, call_next):
     elif path.startswith(("/api/v1/calendar/", "/api/calendar/")):
         response.headers["Cache-Control"] = "no-store"
     elif (path in {"/", "/auth", "/recording", "/vocabulary", "/settings", "/todos"} or
-          path.startswith(("/conversation/", "/person/", "/vocabulary/", "/notebook/"))):
+          path.startswith(("/conversation/", "/person/", "/vocabulary/", "/notebook/", "/page/"))):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -585,7 +585,8 @@ def recording_page() -> FileResponse:
 
 
 @app.get("/person/{person_id}", include_in_schema=False)
-def person_page(person_id: str) -> FileResponse:
+@app.get("/page/{page_id}", include_in_schema=False)
+def person_page(person_id: str | None = None, page_id: str | None = None) -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
