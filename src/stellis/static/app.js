@@ -413,10 +413,10 @@ async function ensureNotesEditor(scope) {
   notesModulePromise ||= import('/static/notes-editor.bundle.js');
   const {createNotesEditor} = await notesModulePromise;
   const elements = notesElements(scope);
-  const editor = createNotesEditor(elements.root, elements.toolbar, markdown => {
+  const editor = createNotesEditor(elements.root, elements.toolbar, (markdown, dates) => {
     const state = notesStates[scope];
     if (!state) return;
-    state.pendingMarkdown = markdown;
+    state.pendingMarkdown = markdown; state.pendingDates = dates;
     if (scope === 'recording') renderRecordingImages();
     try { localStorage.setItem(notesDraftKey(scope, state.id), JSON.stringify({markdown, revision:state.revision})); } catch {}
     elements.status.textContent = 'Unsaved'; elements.retry.hidden = true;
@@ -430,6 +430,7 @@ async function ensureNotesEditor(scope) {
       expanded.src = src; expanded.alt = alt; viewer.showModal();
     },
     onPickImage:selection => chooseNotesImage(scope, selection),
+    todoDates:scope === 'conversation',
   });
   notesEditors[scope] = editor;
   elements.retry.addEventListener('click', () => retryNotes(scope));
@@ -450,9 +451,10 @@ async function loadNotes(scope, id) {
     }
   } catch {}
   const state = {scope,id,revision:remote.revision,savedMarkdown:remote.markdown,
-    pendingMarkdown:markdown,timer:null,savePromise:null};
+    pendingMarkdown:markdown,timer:null,savePromise:null,
+    savedDates:remote.todo_dates || {}, pendingDates:{}};
   notesStates[scope] = state;
-  editor.setMarkdown(markdown);
+  editor.setMarkdown(markdown, {dates:state.savedDates, onLoaded:() => {state.pendingDates = editor.getTodoDates();}});
   if (scope === 'recording') renderRecordingImages();
   const elements = notesElements(scope);
   elements.status.textContent = recovered ? 'Recovered draft' : '';
@@ -460,27 +462,42 @@ async function loadNotes(scope, id) {
   if (recovered) state.timer = setTimeout(() => flushNotes(state), 500);
   return state;
 }
+// Due dates the editor holds that the server does not yet, by task ID; null clears a date. Lines without an ID wait for one.
+function changedDates(state) {
+  const changes = {};
+  for (const [id, due] of Object.entries(state.pendingDates || {})) {
+    const saved = state.savedDates?.[id] || null;
+    if (JSON.stringify(due) !== JSON.stringify(saved && {due_date:saved.due_date, due_time:saved.due_time ?? null})) changes[id] = due;
+  }
+  return changes;
+}
 async function flushNotes(state) {
   if (!state || state.savePromise) return state?.savePromise || true;
   clearTimeout(state.timer);
-  if (state.pendingMarkdown === state.savedMarkdown) return true;
+  if (state.pendingMarkdown === state.savedMarkdown && !Object.keys(changedDates(state)).length) return true;
   const elements = notesElements(state.scope);
   state.savePromise = (async () => {
-    while (state.pendingMarkdown !== state.savedMarkdown) {
+    while (state.pendingMarkdown !== state.savedMarkdown || Object.keys(changedDates(state)).length) {
       const markdown = state.pendingMarkdown;
+      const todoDates = changedDates(state);
       elements.status.textContent = 'Saving…';
       try {
         const saved = await json(await fetch(notesEndpoint(state.scope, state.id), {
           method:'PUT',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({markdown,expected_revision:state.revision}),
+          body:JSON.stringify({markdown,expected_revision:state.revision,
+            ...(Object.keys(todoDates).length ? {todo_dates:todoDates} : {})}),
         }));
-        state.revision = saved.revision; state.savedMarkdown = saved.markdown;
+        state.revision = saved.revision; state.savedMarkdown = saved.markdown; state.savedDates = saved.todo_dates || {};
         // The server adds task IDs. When that is the only difference, adopt its text so the loop ends.
         if (state.pendingMarkdown !== saved.markdown && StellisNotesMerge.sameIgnoringIds(state.pendingMarkdown, saved.markdown)) {
           state.pendingMarkdown = saved.markdown;
-          if (notesStates[state.scope] === state) notesEditors[state.scope]?.setMarkdown(saved.markdown, {keepSelection:true});
+          // Wait for the reload so dates carried onto the new IDs are counted before the loop decides to stop.
+          const editor = notesStates[state.scope] === state ? notesEditors[state.scope] : null;
+          if (editor) await new Promise(resolve => editor.setMarkdown(saved.markdown, {
+            keepSelection:true, dates:state.savedDates,
+            onLoaded:() => {state.pendingDates = editor.getTodoDates(); resolve();}}));
         }
-        if (state.pendingMarkdown === state.savedMarkdown) {
+        if (state.pendingMarkdown === state.savedMarkdown && !Object.keys(changedDates(state)).length) {
           try {localStorage.removeItem(notesDraftKey(state.scope, state.id));} catch {}
           elements.status.textContent = 'Saved'; elements.retry.hidden = true;
         }
@@ -501,8 +518,9 @@ async function retryNotes(scope) {
     if (remote.revision !== state.revision) {
       const merged = StellisNotesMerge.mergeWithRemote(remote.markdown, state.pendingMarkdown);
       state.pendingMarkdown = merged.markdown;
-      notesEditors[scope].setMarkdown(state.pendingMarkdown, {keepSelection:true});
-      state.revision = remote.revision; state.savedMarkdown = remote.markdown;
+      state.revision = remote.revision; state.savedMarkdown = remote.markdown; state.savedDates = remote.todo_dates || {};
+      notesEditors[scope].setMarkdown(state.pendingMarkdown, {keepSelection:true, dates:state.savedDates,
+        onLoaded:() => {state.pendingDates = notesEditors[scope].getTodoDates();}});
       if (merged.action === 'adopt') {
         try {localStorage.removeItem(notesDraftKey(scope, state.id));} catch {}
         const elements = notesElements(scope);

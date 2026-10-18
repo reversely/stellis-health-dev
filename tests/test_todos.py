@@ -136,11 +136,13 @@ class TodoIndexTest(unittest.TestCase):
         self.assertEqual((item["completed_at"], item["canceled_at"]), (None, None))
 
         dates = {task_id: {"due_date": "2026-11-02", "due_time": "09:30"}, "tzzzzzz": {"due_date": "2026-01-01"}}
-        put(reopened, 5, todo_dates=dates)
+        with_dates = put(reopened, 5, todo_dates=dates)
+        self.assertEqual(with_dates["todo_dates"], {task_id: {"due_date": "2026-11-02", "due_time": "09:30"}})
+        self.assertEqual(self.client.get(url).json()["todo_dates"], with_dates["todo_dates"])
         item = next(i for i in self.items() if i["id"] == task_id)
         self.assertEqual((item["due_date"], item["due_time"]), ("2026-11-02", "09:30"))
         self.assertEqual(len(self.items()), 2)
-        put(reopened, 6, todo_dates={task_id: None})
+        self.assertEqual(put(reopened, 6, todo_dates={task_id: None})["todo_dates"], {})
         item = next(i for i in self.items() if i["id"] == task_id)
         self.assertEqual((item["due_date"], item["due_time"]), (None, None))
         put("no tasks", 7)

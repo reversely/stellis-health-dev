@@ -5,6 +5,8 @@ import {
 } from 'lexical';
 import {$insertNodeToNearestRoot} from '@lexical/utils';
 import {$createHeadingNode, HeadingNode, QuoteNode, registerRichText} from '@lexical/rich-text';
+import {CodeNode} from '@lexical/code-core';
+import {$createHorizontalRuleNode, $isHorizontalRuleNode, HorizontalRuleNode} from '@lexical/extension';
 import {
   INSERT_CHECK_LIST_COMMAND, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND,
   ListItemNode, ListNode, registerCheckList, registerList,
@@ -20,9 +22,24 @@ import {
 } from '@lexical/table';
 import {
   $convertFromMarkdownString, $convertToMarkdownString,
-  BOLD_ITALIC_STAR, BOLD_STAR, CHECK_LIST, HEADING, ITALIC_STAR, LINK,
-  ORDERED_LIST, UNORDERED_LIST, registerMarkdownShortcuts,
+  BOLD_ITALIC_STAR, BOLD_STAR, CODE, HEADING, INLINE_CODE, ITALIC_STAR, LINK,
+  ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
+import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
+
+// A line of `---`, `***` or `___` is a divider; it is written back as `---`.
+const HR = {
+  dependencies:[HorizontalRuleNode],
+  export:node => $isHorizontalRuleNode(node) ? '---' : null,
+  regExp:/^(---|\*\*\*|___)\s?$/,
+  replace(parent, children, match, isImport) {
+    const line = $createHorizontalRuleNode();
+    if (isImport || parent.getNextSibling() != null) parent.replace(line);
+    else parent.insertBefore(line);
+    line.selectNext();
+  },
+  type:'element',
+};
 
 const IMAGE_MARKDOWN = /^!\[([^\]\n]*)\]\(stellis-image:([0-9a-f-]{36})\)$/i;
 
@@ -117,12 +134,13 @@ function $restorePoint(point, saved) {
   point.set(leaf.getKey(), 0, 'element');
 }
 
-export const NOTES_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
+export const NOTES_NODES = [HeadingNode, QuoteNode, CodeNode, HorizontalRuleNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
   TableNode, TableRowNode, TableCellNode, MeetingImageNode];
 export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two',h3:'note-heading-three'},
   list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
     listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
-  text:{bold:'note-bold',italic:'note-italic'}, table:'note-table',
+  text:{bold:'note-bold',italic:'note-italic',strikethrough:'note-strike',code:'note-code'},
+  quote:'note-quote', code:'note-code-block', hr:'note-divider', table:'note-table',
   tableCell:'note-table-cell', tableCellHeader:'note-table-header'};
 
 // The Markdown dialect shared by the editor and the headless round-trip test.
@@ -154,9 +172,9 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
         rootNode.append(table);
         return [true, line - 1];
       }},
-    // CHECK_LIST must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
-    HEADING, CHECK_LIST, UNORDERED_LIST, ORDERED_LIST,
-    BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, LINK,
+    // The task list must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
+    HEADING, QUOTE, CODE, HR, taskListTransformer(), UNORDERED_LIST, ORDERED_LIST,
+    INLINE_CODE, BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, STRIKETHROUGH, LINK,
   ];
 }
 
@@ -176,9 +194,11 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     registerHistory(editor, createEmptyHistoryState(), 300), registerMarkdownShortcuts(editor, markdown)];
   root.contentEditable = 'true'; root.setAttribute('role','textbox'); root.setAttribute('aria-multiline','true');
   editor.setRootElement(root);
+  // Dates are tracked only where the server indexes to-dos (saved conversations).
+  unregister.push(registerTasks(editor, root, {dates:!!options.todoDates}));
   unregister.push(editor.registerUpdateListener(({editorState, dirtyElements, dirtyLeaves, tags}) => {
     if (tags.has('notes-load') || (!dirtyElements.size && !dirtyLeaves.size)) return;
-    editorState.read(() => onChange($convertToMarkdownString(markdown)));
+    editorState.read(() => onChange($convertToMarkdownString(markdown), $collectDates()));
   }));
   const captureSelection = () => {
     let snapshot = null;
@@ -234,19 +254,23 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
   });
   return {
     // keepSelection puts the caret back where it was after the reload, for a server-side text change.
-    setMarkdown(value, {keepSelection = false} = {}) {
+    // dates is the server's {id: {due_date, due_time}}; unsaved dates on the same text are carried across a keepSelection reload.
+    setMarkdown(value, {keepSelection = false, dates = {}, onLoaded} = {}) {
       editor.update(() => {
+        const carried = keepSelection && options.todoDates ? $captureDates() : [];
         const before = keepSelection ? $getSelection() : null;
         const anchor = $isRangeSelection(before) ? $capturePoint(before.anchor) : null;
         const focus = anchor && $isRangeSelection(before) ? $capturePoint(before.focus) : null;
         $convertFromMarkdownString(value || '', markdown);
+        if (options.todoDates) $restoreDates(dates, carried);
         if (!anchor || !focus) return;
         const selection = $createRangeSelection();
         $restorePoint(selection.anchor, anchor); $restorePoint(selection.focus, focus);
         $setSelection(selection);
-      }, {tag:keepSelection ? ['notes-load', 'history-merge'] : 'notes-load'});
+      }, {tag:keepSelection ? ['notes-load', 'history-merge'] : 'notes-load', onUpdate:onLoaded});
     },
     getMarkdown() {let value=''; editor.getEditorState().read(() => {value=$convertToMarkdownString(markdown);}); return value;},
+    getTodoDates() {let value={}; editor.getEditorState().read(() => {value=$collectDates();}); return value;},
     captureSelection,
     insertImage(imageId, caption = '', snapshot = null) {
       editor.update(() => {

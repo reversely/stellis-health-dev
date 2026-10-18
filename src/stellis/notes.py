@@ -37,7 +37,8 @@ def get(scope: str, item_id: str) -> dict[str, object]:
         if owner is None:
             raise LookupError("Recording or conversation not found")
         row = conn.execute(f"SELECT * FROM meeting_notes WHERE {field} = ?", (item_id,)).fetchone()
-    return _public(row)
+        dates = todos.due_dates(conn, "conversation", item_id) if scope == "conversation" else {}
+    return _public(row) | {"todo_dates": dates}
 
 
 def save(scope: str, item_id: str, markdown: str, expected_revision: int,
@@ -75,7 +76,8 @@ def save(scope: str, item_id: str, markdown: str, expected_revision: int,
             conn.execute(f"INSERT INTO meeting_notes (id, {field}, markdown, revision, updated_at) VALUES (?, ?, ?, 1, ?)",
                          (str(uuid.uuid4()), item_id, markdown, stamp))
         updated = conn.execute(f"SELECT * FROM meeting_notes WHERE {field} = ?", (item_id,)).fetchone()
-    return _public(updated)
+        dates = todos.due_dates(conn, "conversation", item_id) if scope == "conversation" else {}
+    return _public(updated) | {"todo_dates": dates}
 
 
 def attach_to_conversation(recording_id: str, conversation_id: str) -> None:
