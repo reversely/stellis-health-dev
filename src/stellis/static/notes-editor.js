@@ -1,6 +1,6 @@
 import {
-  $createParagraphNode, $createTextNode, $getSelection,
-  $isRangeSelection, $setSelection, createEditor, DecoratorNode,
+  $createParagraphNode, $createRangeSelection, $createTextNode, $getRoot, $getSelection,
+  $isElementNode, $isRangeSelection, $setSelection, createEditor, DecoratorNode,
   COMMAND_PRIORITY_EDITOR, FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND,
 } from 'lexical';
 import {$insertNodeToNearestRoot} from '@lexical/utils';
@@ -75,6 +75,48 @@ function tableMarkdown(node) {
     ...rows.slice(1).map(row => render(Array.from({length:width}, (_, i) => row[i] || '')))].join('\n');
 }
 
+// Leaf blocks are the elements that directly hold text (paragraph, heading, list item, table cell paragraph).
+function leafBlocks(node, out = []) {
+  if (!$isElementNode(node)) return out;
+  const children = node.getChildren();
+  if (children.some(child => $isElementNode(child) && !child.isInline())) children.forEach(child => leafBlocks(child, out));
+  else out.push(node);
+  return out;
+}
+// A caret is kept as (leaf block number, characters before the end of the block's visible text).
+// Measuring from the end survives both a task ID appended to the line and a prefix that the
+// reload rewrites, such as a typed `[ ] ` becoming a check box. The server's ID is not visible text.
+const TRAILING_TASK_ID = / \^t[0-9a-z]{6}$/;
+const visibleLength = block => block.getTextContent().replace(TRAILING_TASK_ID, '').length;
+function $capturePoint(point) {
+  const leaves = leafBlocks($getRoot());
+  let node = point.getNode();
+  while (node && !leaves.includes(node)) node = node.getParent();
+  if (!node) return null;
+  let offset = 0;
+  if (point.type === 'text') {
+    for (const text of node.getAllTextNodes()) {
+      if (text.is(point.getNode())) {offset += point.offset; break;}
+      offset += text.getTextContentSize();
+    }
+  } else if (point.getNode().is(node)) {
+    offset = node.getChildren().slice(0, point.offset).reduce((sum, child) => sum + child.getTextContentSize(), 0);
+  }
+  return {block:leaves.indexOf(node), fromEnd:Math.max(0, visibleLength(node) - offset)};
+}
+function $restorePoint(point, saved) {
+  const leaves = leafBlocks($getRoot());
+  const leaf = leaves[Math.min(saved.block, leaves.length - 1)];
+  if (!leaf) return;
+  let remaining = Math.max(0, visibleLength(leaf) - saved.fromEnd);
+  for (const text of leaf.getAllTextNodes()) {
+    const size = text.getTextContentSize();
+    if (remaining <= size) {point.set(text.getKey(), remaining, 'text'); return;}
+    remaining -= size;
+  }
+  point.set(leaf.getKey(), 0, 'element');
+}
+
 export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
   const imageUrlForId = options.imageUrlForId || (() => '');
   const onOpenImage = options.onOpenImage || (() => {});
@@ -105,7 +147,8 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
         rootNode.append(table);
         return [true, line - 1];
       }},
-    HEADING, UNORDERED_LIST, ORDERED_LIST, CHECK_LIST,
+    // CHECK_LIST must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
+    HEADING, CHECK_LIST, UNORDERED_LIST, ORDERED_LIST,
     BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, LINK,
   ];
   const editor = createEditor({
@@ -182,7 +225,19 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     event.target.closest('.notes-table-actions')?.removeAttribute('open');
   });
   return {
-    setMarkdown(value) {editor.update(() => $convertFromMarkdownString(value || '', markdown), {tag:'notes-load'});},
+    // keepSelection puts the caret back where it was after the reload, for a server-side text change.
+    setMarkdown(value, {keepSelection = false} = {}) {
+      editor.update(() => {
+        const before = keepSelection ? $getSelection() : null;
+        const anchor = $isRangeSelection(before) ? $capturePoint(before.anchor) : null;
+        const focus = anchor && $isRangeSelection(before) ? $capturePoint(before.focus) : null;
+        $convertFromMarkdownString(value || '', markdown);
+        if (!anchor || !focus) return;
+        const selection = $createRangeSelection();
+        $restorePoint(selection.anchor, anchor); $restorePoint(selection.focus, focus);
+        $setSelection(selection);
+      }, {tag:keepSelection ? ['notes-load', 'history-merge'] : 'notes-load'});
+    },
     getMarkdown() {let value=''; editor.getEditorState().read(() => {value=$convertToMarkdownString(markdown);}); return value;},
     captureSelection,
     insertImage(imageId, caption = '', snapshot = null) {

@@ -441,9 +441,10 @@ async function loadNotes(scope, id) {
   try {
     const draft = JSON.parse(localStorage.getItem(notesDraftKey(scope, id)) || 'null');
     if (draft?.markdown !== undefined && draft.markdown !== remote.markdown) {
-      markdown = draft.revision === remote.revision || draft.markdown.includes(remote.markdown) ? draft.markdown :
-        `${remote.markdown}\n\n---\n\n${draft.markdown}`;
-      recovered = true;
+      const merged = StellisNotesMerge.mergeWithRemote(remote.markdown, draft.markdown, draft.revision === remote.revision);
+      markdown = merged.markdown;
+      recovered = merged.action !== 'adopt';
+      if (!recovered) localStorage.removeItem(notesDraftKey(scope, id));
     }
   } catch {}
   const state = {scope,id,revision:remote.revision,savedMarkdown:remote.markdown,
@@ -472,6 +473,11 @@ async function flushNotes(state) {
           body:JSON.stringify({markdown,expected_revision:state.revision}),
         }));
         state.revision = saved.revision; state.savedMarkdown = saved.markdown;
+        // The server adds task IDs. When that is the only difference, adopt its text so the loop ends.
+        if (state.pendingMarkdown !== saved.markdown && StellisNotesMerge.sameIgnoringIds(state.pendingMarkdown, saved.markdown)) {
+          state.pendingMarkdown = saved.markdown;
+          if (notesStates[state.scope] === state) notesEditors[state.scope]?.setMarkdown(saved.markdown, {keepSelection:true});
+        }
         if (state.pendingMarkdown === state.savedMarkdown) {
           try {localStorage.removeItem(notesDraftKey(state.scope, state.id));} catch {}
           elements.status.textContent = 'Saved'; elements.retry.hidden = true;
@@ -491,10 +497,15 @@ async function retryNotes(scope) {
   try {
     const remote = await json(await fetch(notesEndpoint(scope, state.id)));
     if (remote.revision !== state.revision) {
-      const local = state.pendingMarkdown;
-      state.pendingMarkdown = local.includes(remote.markdown) ? local : `${remote.markdown}\n\n---\n\n${local}`;
-      notesEditors[scope].setMarkdown(state.pendingMarkdown);
+      const merged = StellisNotesMerge.mergeWithRemote(remote.markdown, state.pendingMarkdown);
+      state.pendingMarkdown = merged.markdown;
+      notesEditors[scope].setMarkdown(state.pendingMarkdown, {keepSelection:true});
       state.revision = remote.revision; state.savedMarkdown = remote.markdown;
+      if (merged.action === 'adopt') {
+        try {localStorage.removeItem(notesDraftKey(scope, state.id));} catch {}
+        const elements = notesElements(scope);
+        elements.status.textContent = 'Saved'; elements.retry.hidden = true;
+      }
     }
     await flushNotes(state);
   } catch (error) {notesElements(scope).status.textContent = error.message;}
@@ -505,11 +516,10 @@ async function recoverNotesDraft(recordingId) {
   try {draft = JSON.parse(localStorage.getItem(key) || 'null');} catch {return;}
   if (typeof draft?.markdown !== 'string') return;
   const remote = await json(await fetch(notesEndpoint('recording', recordingId)));
-  if (remote.markdown === draft.markdown) {localStorage.removeItem(key); return;}
-  const markdown = draft.markdown.includes(remote.markdown) ? draft.markdown :
-    `${remote.markdown}\n\n---\n\n${draft.markdown}`;
+  const merged = StellisNotesMerge.mergeWithRemote(remote.markdown, draft.markdown);
+  if (merged.action === 'adopt') {localStorage.removeItem(key); return;}
   await json(await fetch(notesEndpoint('recording', recordingId), {method:'PUT',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({markdown,expected_revision:remote.revision})}));
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({markdown:merged.markdown,expected_revision:remote.revision})}));
   localStorage.removeItem(key);
 }
 const enhancedFields = [['overview','Overview'],['topics','Topics'],['decisions','Decisions'],['action_items','Action proposals']];
