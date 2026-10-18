@@ -1969,10 +1969,12 @@ async function showTranscript(id) {
 function renderHighlightedText(container, value, highlights, timedWords = [], comments = []) {
   const valid = highlights.filter(item => value.slice(item.start_offset, item.end_offset) === item.quote);
   const anchoredComments = comments.filter(item => value.slice(item.start_offset, item.end_offset) === item.quote);
+  const cleanup = window.StellisTranscriptFillers.fillerCleanup(value);
   const measured = timedWords.map((word, index) => ({...word, index})).filter(word => value.slice(word.start_offset, word.end_offset) === word.text && word.end_ms > word.start_ms);
   const edges = [...new Set([0, value.length, ...valid.flatMap(item => [item.start_offset, item.end_offset]),
     ...anchoredComments.flatMap(item => [item.start_offset, item.end_offset]),
-    ...measured.flatMap(word => [word.start_offset, word.end_offset])])].sort((a, b) => a - b);
+    ...measured.flatMap(word => [word.start_offset, word.end_offset]),
+    ...cleanup.hidden.flat(), ...cleanup.upper.flatMap(index => [index, index + 1])])].sort((a, b) => a - b);
   let currentWord = null;
   let currentWordIndex = -1;
   for (let i = 0; i < edges.length - 1; i++) {
@@ -2002,6 +2004,10 @@ function renderHighlightedText(container, value, highlights, timedWords = [], co
       });
       anchor.append(node); node = anchor;
     }
+    // hidden, not removed: selection offsets
+    const cleanupClass = cleanup.hidden.some(([from, to]) => from <= start && to >= end) ? 'transcript-filler'
+      : cleanup.upper.includes(start) ? 'transcript-cap' : null;
+    if (cleanupClass) { const wrap = document.createElement('span'); wrap.className = cleanupClass; wrap.append(node); node = wrap; }
     (currentWord || container).append(node);
   }
   if (highlights.length) {
