@@ -3867,6 +3867,7 @@ async function showSettings() {
   document.querySelector('#settings-vocabulary-count').textContent =
     `${names} ${names === 1 ? 'name' : 'names'} and ${terms.length - names} other ${terms.length - names === 1 ? 'term' : 'terms'}`;
   await loadSettingsCalendars().catch(error => { document.querySelector('#settings-calendar-status').textContent = error.message; });
+  loadDateFormat();
   await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
   watchSamples();
   captureControls();
@@ -3892,6 +3893,21 @@ function showNebiusKey(state) {
     state.source === 'environment' ? 'Using the key from this computer\'s environment.' : 'No key saved. AI features are off until you add one.';
 }
 async function loadNebiusKey() { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`))); }
+function showDateFormatExample() {
+  const {formatListDate, getDateFormat} = window.StellisListDate;
+  const tomorrow = new Date(Date.now() + 86400000);
+  const inFiveDays = new Date(Date.now() + 5 * 86400000);
+  const inTwoWeeks = new Date(Date.now() + 14 * 86400000);
+  document.querySelector('#date-format-example').textContent =
+    `Example: ${[tomorrow, inFiveDays, inTwoWeeks].map(date => formatListDate(date.toISOString(), {format:getDateFormat()})).join(', ')}`;
+}
+document.querySelector('#date-format-select').addEventListener('change', event => {
+  window.StellisListDate.setDateFormat(event.target.value); showDateFormatExample();
+});
+function loadDateFormat() {
+  document.querySelector('#date-format-select').value = window.StellisListDate.getDateFormat();
+  showDateFormatExample();
+}
 document.querySelector('#nebius-key-form').addEventListener('submit', async event => {
   event.preventDefault();
   const input = document.querySelector('#nebius-key-input');

@@ -12,6 +12,7 @@
     <script src="/shared/sync-crypto.js" defer></script>
     <script src="/shared/snapshot-format.js" defer></script>
     <script src="/shared/notes-merge.js" defer></script>
+    <script src="/shared/list-date.js" defer></script>
     <script src="/static/app.js" defer></script>
     <script src="/static/calendar.js" defer></script>
     <script src="/static/conversation-sync.js" defer></script>
@@ -123,6 +124,15 @@
             <div class="settings-actions"><button id="nebius-key-save" type="submit">Save key</button><button id="nebius-key-remove" type="button" hidden>Remove key</button></div>
             <p id="nebius-key-status" role="status" aria-live="polite"></p>
           </form>
+        </section>
+        <section class="settings-section" aria-labelledby="settings-dates-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><h3 id="settings-dates-title">Date format</h3></div>
+          <div class="settings-form">
+            <label for="date-format-select">Dates in lists</label>
+            <select id="date-format-select"><option value="relative">Relative</option><option value="short">Short date</option><option value="iso">ISO</option></select>
+            <small id="date-format-example"></small>
+          </div>
+          <p class="settings-note">Saved in this browser only.</p>
         </section>
         <section id="settings-samples" class="settings-section samples-panel" aria-labelledby="settings-samples-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><h3 id="settings-samples-title">Sample meetings</h3></div>

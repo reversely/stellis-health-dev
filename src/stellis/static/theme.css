@@ -211,9 +211,6 @@ main { max-width: 1100px; }
 .recording-workspace-grid > * { padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .recording-workspace-grid h2 { margin: 0 0 22px; font-size: 24px; }
 .recording-workspace-grid p { color: var(--quiet); }
-.recording-view-tabs { display: flex; gap: 8px; margin: -8px 0 22px; }
-.recording-view-tabs button, .conversation-tabs button { border: 1px solid transparent; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font: inherit; font-weight: 650; cursor: pointer; }
-.recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .recording-live-peek { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; margin: -7px 0 18px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--raised); color: var(--ink); text-align: left; cursor: pointer; }
 .recording-live-peek[hidden] { display: none; }
 .recording-live-peek strong { flex: none; font-size: 12px; color: #ef7770; }
@@ -245,8 +242,19 @@ main { max-width: 1100px; }
 .notes-editor p { margin: 0 0 10px; color: var(--ink); }
 .notes-editor .note-heading-one { font-size: 26px; font-weight: 700; }
 .notes-editor .note-heading-two { font-size: 21px; font-weight: 700; }
+.notes-editor .note-heading-three { font-size: 17px; font-weight: 700; }
 .notes-editor ul, .notes-editor ol { padding-left: 25px; }
 .notes-editor .note-check-done { text-decoration: line-through; color: var(--quiet); }
+/* Checklist items draw a box in place of the bullet marker. */
+.notes-editor .note-check-open, .notes-editor .note-check-done { list-style: none; position: relative; }
+.notes-editor .note-check-open::before, .notes-editor .note-check-done::before {
+  content: ''; position: absolute; left: -22px; top: .32em; width: 15px; height: 15px; box-sizing: border-box;
+  border: 1.5px solid var(--muted); border-radius: 4px; background: transparent; cursor: pointer; text-decoration: none;
+}
+.notes-editor .note-check-done::before {
+  border-color: var(--ink); background: var(--ink)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23808080' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
 .notes-editor a { color: var(--accent-strong); text-decoration: underline; }
 .notes-save-line { display: flex; align-items: center; gap: 12px; min-height: 24px; }
 .notes-save-line p { margin: 0; color: var(--quiet); font-size: 13px; }
@@ -431,12 +439,6 @@ input::placeholder, textarea::placeholder { color: var(--quiet); }
 #status.success { color: var(--success); }
 .ai-stale, .recovery-row { color: var(--warning); background: var(--warning-bg); }
 .ai-privacy { color: var(--quiet); }
-.conversation-tabs button { color: var(--muted); }
-.conversation-tabs button[aria-selected='true'] {
-  color: var(--accent-ink);
-  border-color: var(--accent);
-  background: var(--accent);
-}
 .segment-text mark, .timed-word mark { color: var(--ink); background: #766338; }
 .segment-text::selection, .segment-text *::selection { color: var(--ink); background: var(--selection); }
 .timed-word:hover, .timed-word.active-word {
@@ -1142,82 +1144,62 @@ body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) .
   body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) #list-view { min-height: calc(100vh - 112px); }
 }
 
-/* Folder tabs keep the primary document views attached to their page. */
-.recording-view-tabs, .conversation-tabs {
+/* View tabs: small top corners. Selected is inverted (text-colour fill, surface-colour label) and joins the
+   page's rule below it. `.view-tabs` is the same shape for notebook views. */
+.recording-view-tabs, .conversation-tabs, .view-tabs {
   display: flex;
   align-items: flex-end;
-  gap: 18px;
-  min-height: 76px;
+  gap: 4px;
   margin: 0 0 20px;
-  padding: 7px 20px 0;
-  border-bottom: 3px solid #37303D;
+  padding: 0;
+  border-bottom: 2px solid var(--ink);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  scrollbar-color: #605465 transparent;
 }
 .conversation-tabs { margin: 24px 0 0; }
-.recording-view-tabs button, .conversation-tabs button,
-.recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'] {
-  --tab: #37303D;
-  position: relative;
-  isolation: isolate;
+.recording-view-tabs button, .conversation-tabs button, .view-tabs button,
+.recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'],
+.view-tabs button[aria-selected='true'] {
   flex: 0 0 auto;
-  min-width: 150px;
-  min-height: 56px;
-  margin: 0;
-  padding: 13px 22px 14px;
-  border: 0;
-  border-radius: 20px 20px 0 0;
-  background: var(--tab);
-  color: #fff8ff;
-  box-shadow: inset 0 2px #ffffff1f;
-  font-size: 16px;
+  min-width: 120px;
+  min-height: 44px;
+  margin: 0 0 -2px;
+  padding: 10px 20px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  background: var(--raised);
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
   line-height: 1.2;
   text-align: center;
   white-space: nowrap;
-  transform: translateY(6px);
-  transition: transform 150ms ease, background-color 150ms ease;
+  cursor: pointer;
+  transform: none;
+  transition: background-color 150ms ease, color 150ms ease;
 }
-.recording-view-tabs button:nth-child(2), .conversation-tabs button:nth-child(2) { --tab: #38303D; }
-.conversation-tabs button:nth-child(3) { --tab: #41313D; }
-.recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'] {
-  --tab: #413A48;
-  z-index: 2;
-  box-shadow: inset 0 3px #CDBBA7;
+.recording-view-tabs button:hover, .conversation-tabs button:hover, .view-tabs button:hover { color: var(--ink); }
+.recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'],
+.view-tabs button[aria-selected='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface);
   font-weight: 750;
-  transform: translateY(0);
 }
-.recording-view-tabs button:hover, .conversation-tabs button:hover { transform: translateY(1px); }
-.recording-view-tabs button::before, .conversation-tabs button::before,
-.recording-view-tabs button::after, .conversation-tabs button::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  z-index: -1;
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
+.recording-view-tabs button:focus-visible, .conversation-tabs button:focus-visible, .view-tabs button:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: -3px;
 }
-.recording-view-tabs button::before, .conversation-tabs button::before {
-  left: -20px;
-  background: radial-gradient(circle at 0 0, transparent 20px, var(--tab) 20.5px);
-}
-.recording-view-tabs button::after, .conversation-tabs button::after {
-  right: -20px;
-  background: radial-gradient(circle at 100% 0, transparent 20px, var(--tab) 20.5px);
-}
+.recording-view-tabs button::before, .conversation-tabs button::before, .view-tabs button::before,
+.recording-view-tabs button::after, .conversation-tabs button::after, .view-tabs button::after { content: none; }
 .conversation-tabs ~ #ai-card, .conversation-tabs ~ #edited-card,
 .conversation-tabs ~ #transcript-card { margin-top: 0; }
 @media (max-width: 600px) {
-  .recording-view-tabs, .conversation-tabs { gap: 14px; padding-inline: 19px; }
-  .recording-view-tabs button, .conversation-tabs button,
-  .recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'] {
-    min-width: 130px;
-    min-height: 54px;
-    padding-inline: 16px;
-    font-size: 14px;
-  }
+  .recording-view-tabs button, .conversation-tabs button, .view-tabs button,
+  .recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'],
+  .view-tabs button[aria-selected='true'] { min-width: 0; padding-inline: 14px; font-size: 14px; }
 }
 @media (max-width: 1000px) {
   body:has(#list-view:not([hidden])) .heading,
@@ -1231,7 +1213,6 @@ body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) .
   border-top: 0;
   border-radius: 0;
 }
-#detail-view .conversation-tabs { border-bottom-color: #413A48; }
 #detail-view .player-card { border-radius: 6px; }
 #list-view .conversation-row, #list-view .live-recording-card,
 #list-view .recovery-row { border-radius: 6px; }
@@ -1531,6 +1512,7 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 .settings-section > p, .settings-note { margin: 0; color: var(--muted); font-size: 14px; }
 .settings-form { display: grid; gap: 6px; max-width: 440px; }
 .settings-form + .settings-form { margin-top: 18px; padding-top: 22px; border-top: 1px dashed var(--line-soft); }
+.settings-form select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; font: 16px Inter, sans-serif; }
 .settings-form label { margin-top: 8px; color: var(--ink); font-size: 13px; font-weight: 650; }
 .settings-form input {
   min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
@@ -1642,7 +1624,7 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 /* Narrow home: actions and notebooks first, then the recent list on a solid dark band. */
 @media (max-width: 1000px) {
   body:has(#list-view:not([hidden])) .heading { display: none; }
-  #list-view { display: flex; flex-direction: column; }
+  #list-view:not([hidden]) { display: flex; flex-direction: column; }
   #list-view .home-rail { order: 2; margin: 36px -20px -45px; padding: 28px 20px 32px; background: #27222B; }
   .home-topbar { flex-wrap: wrap; margin-bottom: 28px; }
   .home-search { max-width: none; }
@@ -1728,3 +1710,14 @@ body.no-ai.recording-page .recording-workspace-grid { grid-template-columns: min
 .samples-panel .samples-add:disabled { opacity: .5; cursor: default; }
 .settings-section.samples-panel { display: grid; gap: 12px; }
 .setup-card[hidden], .samples-panel [hidden] { display: none; }
+
+/* List widget: a heading row and plain rows on the page surface. No card box; a hairline sits only between rows.
+   A row's date is right-aligned plain text (see formatListDate), never a pill. */
+.list-widget { display: grid; gap: 4px; background: transparent; border: 0; box-shadow: none; }
+.list-widget-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.list-widget-head h2, .list-widget-head h3 { margin: 0; color: var(--ink); font-size: 18px; }
+.list-widget-rows { display: grid; margin: 0; padding: 0; list-style: none; }
+.list-widget-row { display: flex; align-items: baseline; gap: 12px; min-height: 40px; padding: 8px 0; color: var(--ink); }
+.list-widget-row + .list-widget-row { border-top: 1px solid var(--line-soft); }
+.list-widget-row .list-widget-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.list-widget-row .list-widget-date { flex: 0 0 auto; margin-left: auto; color: var(--muted); font-size: 13px; text-align: right; white-space: nowrap; }
