@@ -186,7 +186,7 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
                     conn.execute("DELETE FROM recording_chunks WHERE recording_id = ?", (session_id,))
                     conn.execute("DELETE FROM recording_events WHERE recording_id = ?", (session_id,))
                     conn.execute("DELETE FROM recording_ai_runs WHERE recording_id = ?", (session_id,))
-                for table in ("category_decisions", "enhanced_notes_runs", "meeting_notes", "recording_sessions", "clean_runs", "ai_runs", "transcript_comments", "transcript_highlights",
+                for table in ("category_decisions", "enhanced_notes_runs", "transcript_agent_runs", "meeting_notes", "recording_sessions", "clean_runs", "ai_runs", "transcript_comments", "transcript_highlights",
                               "speaker_label_events", "speaker_labels", "transcript_edit_events",
                               "transcript_edits", "transcript_generations", "transcripts", "processing_jobs",
                               "conversation_categories", "person_links", "passage_voices", "transcript_reviews",
@@ -237,7 +237,7 @@ def delete_expired(*, now: datetime | None = None) -> dict[str, object]:
 def erase_all() -> dict[str, int]:
     """Remove every conversation, capture, and library record on this device for account deletion."""
     with storage.connect() as conn:
-        for table in ("processing_jobs", "ai_runs", "clean_runs", "enhanced_notes_runs", "recording_ai_runs"):
+        for table in ("processing_jobs", "ai_runs", "clean_runs", "enhanced_notes_runs", "transcript_agent_runs", "recording_ai_runs"):
             if conn.execute(f"SELECT 1 FROM {table} WHERE state IN ('queued', 'running') LIMIT 1").fetchone():
                 raise RuntimeError("Wait for processing to finish before deleting your account")
         conn.execute("UPDATE conversations SET trashed_at = ? WHERE trashed_at IS NULL", (_now(),))

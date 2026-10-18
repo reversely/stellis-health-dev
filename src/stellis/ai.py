@@ -36,6 +36,19 @@ ANSWER_SCHEMA = {"type": "object", "properties": {
     "insufficient_evidence": {"type": "boolean"}},
     "required": ["answer", "source_segment_ids", "insufficient_evidence"],
     "additionalProperties": False}
+AGENT_SCHEMA = {"type": "object", "properties": {
+    "adds": {"type": "array", "maxItems": 12, "items": {"type": "object", "properties": {
+        "item": {"type": "integer"},
+        "text": {"type": "string", "maxLength": 120},
+        "existing_todo_id": {"type": ["string", "null"]}},
+        "required": ["item", "text", "existing_todo_id"], "additionalProperties": False}},
+    "closes": {"type": "array", "maxItems": 50, "items": {"type": "object", "properties": {
+        "todo_id": {"type": "string"},
+        "status": {"type": "string", "enum": ["done", "canceled"]},
+        "segment_id": {"type": "string"},
+        "quote": {"type": "string", "maxLength": 200}},
+        "required": ["todo_id", "status", "segment_id", "quote"], "additionalProperties": False}}},
+    "required": ["adds", "closes"], "additionalProperties": False}
 CLEAN_SCHEMA = {"type": "object", "properties": {
     "segments": {"type": "array", "maxItems": 22, "items": {"type": "object", "properties": {
         "source_segment_id": {"type": "string"},
@@ -422,7 +435,7 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
     key = _key()
     if not key:
         raise AIError("not_configured", "Nebius API key is unavailable")
-    schema = ANSWER_SCHEMA if kind == "answer" else CLEAN_SCHEMA if kind == "clean" else SUMMARY_SCHEMA
+    schema = {"answer": ANSWER_SCHEMA, "clean": CLEAN_SCHEMA, "agent": AGENT_SCHEMA}.get(kind, SUMMARY_SCHEMA)
     body = {"model": MODEL_ID, "messages": messages,
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": f"stellis_{kind}", "schema": schema, "strict": True}},

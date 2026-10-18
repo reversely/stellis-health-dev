@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, suggestions, todos
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, suggestions, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -425,6 +425,7 @@ def start_speech_worker() -> None:
     storage.fail_interrupted_clean_runs()
     categorization.fail_interrupted()
     enhanced_notes.fail_interrupted()
+    transcript_agent.fail_interrupted()
     recording_ai.fail_interrupted()
     generation_review.resolve_pending()
     processing.start_worker()
@@ -1477,6 +1478,14 @@ def conversation_recording_chat(conversation_id: str) -> list[dict[str, object]]
 def recording_chat_run(run_id: str) -> dict[str, object]:
     try:
         return recording_ai.get_run(run_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.get("/conversations/{conversation_id}/agent-runs")
+def list_agent_runs(conversation_id: str) -> list[dict[str, object]]:
+    try:
+        return transcript_agent.list_runs(conversation_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
