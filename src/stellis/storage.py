@@ -358,6 +358,18 @@ def connect() -> Iterator[sqlite3.Connection]:
         updated_at TEXT NOT NULL,
         CHECK ((conversation_id IS NOT NULL) != (recording_id IS NOT NULL))
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS link_previews (
+        url TEXT PRIMARY KEY,
+        final_url TEXT,
+        title TEXT,
+        description TEXT,
+        site_name TEXT,
+        image_url TEXT,
+        icon_url TEXT,
+        status TEXT NOT NULL CHECK (status IN ('ok', 'failed')),
+        error TEXT,
+        fetched_at TEXT NOT NULL
+    )""")
     conn.execute("CREATE INDEX IF NOT EXISTS conversation_images_by_conversation ON conversation_images(conversation_id, media_position_ms)")
     conn.execute("CREATE INDEX IF NOT EXISTS conversation_images_by_recording ON conversation_images(recording_id, media_position_ms)")
     image_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversation_images)")}
