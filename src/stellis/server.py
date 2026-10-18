@@ -978,7 +978,7 @@ def trash() -> list[dict[str, object]]:
     return [{**item, "category_ids": assigned.get(str(item["id"]), []),
              "expires_at": library.expires_at(str(item["trashed_at"])), "kind": "conversation"}
             for item in storage.list_conversations(trashed=True)] + [
-        {**item, "category_ids": [], "expires_at": library.expires_at(str(item["trashed_at"])), "kind": "page"}
+        {**item, "expires_at": library.expires_at(str(item["trashed_at"])), "kind": "page"}
         for item in pages.trashed()]
 
 
@@ -1192,6 +1192,10 @@ def _write_notes(scope: str, item_id: str, request: NotesWrite) -> dict[str, obj
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+class PageCategories(BaseModel):
+    category_ids: list[str] = Field(max_length=200)
+
+
 def _page_call(call, *args):
     try:
         return call(*args)
@@ -1233,6 +1237,11 @@ def save_page(page_id: str, request: PageWrite) -> dict[str, object]:
 @api.put("/pages/{page_id}/notebook")
 def assign_page_notebook(page_id: str, request: NotebookAssignment) -> dict[str, object]:
     return _page_call(pages.assign_notebook, page_id, request.notebook_id)
+
+
+@api.put("/pages/{page_id}/categories")
+def set_page_categories(page_id: str, request: PageCategories) -> dict[str, object]:
+    return _page_call(pages.set_categories, page_id, request.category_ids)
 
 
 @api.post("/pages/{page_id}/trash")

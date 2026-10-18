@@ -412,6 +412,11 @@ def connect() -> Iterator[sqlite3.Connection]:
             trashed_at TEXT
         )"""
     )
+    conn.execute("""CREATE TABLE IF NOT EXISTS page_categories (
+        page_id TEXT NOT NULL REFERENCES pages(id),
+        category_id TEXT NOT NULL REFERENCES categories(id),
+        PRIMARY KEY(page_id, category_id)
+    )""")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS todo_items (
             id TEXT PRIMARY KEY,

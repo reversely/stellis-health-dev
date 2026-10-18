@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from stellis import library, people, storage
+from stellis import library, pages, people, storage, todos
 
 
 def _excerpt(value: str, query: str, width: int = 120) -> str:
@@ -13,6 +13,18 @@ def _excerpt(value: str, query: str, width: int = 120) -> str:
     end = min(len(value), start + width)
     start = max(0, end - width)
     return ("…" if start else "") + value[start:end] + ("…" if end < len(value) else "")
+
+
+def _pages(category_id: str | None) -> list[dict[str, object]]:
+    """Active pages, narrowed like conversations by a tag ID or `uncategorized`."""
+    with storage.connect() as conn:
+        rows = conn.execute("SELECT id, title, markdown FROM pages WHERE trashed_at IS NULL "
+                            "ORDER BY updated_at DESC").fetchall()
+        tags = pages.page_tags(conn)
+    if category_id is None:
+        return [dict(row) for row in rows]
+    return [dict(row) for row in rows
+            if (not tags.get(str(row["id"])) if category_id == "uncategorized" else category_id in tags.get(str(row["id"]), []))]
 
 
 def search_library(query: str, limit: int = 150, category_id: str | None = None) -> dict[str, object]:
@@ -77,4 +89,13 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
                 total += 1
                 if len(results) < limit:
                     results.append({**common, "kind": "passage", "excerpt": _excerpt(value, query)})
+    for page in _pages(category_id):
+        title = str(page["title"])
+        body = todos.plain_markdown(str(page["markdown"]))
+        for value, in_title in ((title, True), (body, False)):
+            if needle in value.casefold():
+                total += 1
+                if len(results) < limit:
+                    results.append({"kind": "page", "page_id": page["id"], "title": title,
+                                    "excerpt": value if in_title else _excerpt(" ".join(value.split()), query)})
     return {"query": query.strip(), "total": total, "limited": total > limit, "results": results}

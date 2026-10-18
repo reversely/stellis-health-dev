@@ -25,10 +25,12 @@ def expires_at(trashed_at: str) -> str:
 
 def categories() -> list[dict[str, object]]:
     with storage.connect() as conn:
-        rows = conn.execute("""SELECT c.id, c.name, COUNT(v.id) AS conversation_count
-            FROM categories c LEFT JOIN conversation_categories cc ON cc.category_id = c.id
-            LEFT JOIN conversations v ON v.id = cc.conversation_id AND v.trashed_at IS NULL
-            GROUP BY c.id ORDER BY
+        rows = conn.execute("""SELECT c.id, c.name,
+                (SELECT COUNT(*) FROM conversation_categories cc JOIN conversations v ON v.id = cc.conversation_id
+                    WHERE cc.category_id = c.id AND v.trashed_at IS NULL) AS conversation_count,
+                (SELECT COUNT(*) FROM page_categories pc JOIN pages p ON p.id = pc.page_id
+                    WHERE pc.category_id = c.id AND p.trashed_at IS NULL) AS page_count
+            FROM categories c ORDER BY
                 CASE c.normalized WHEN 'meetings' THEN 0 WHEN 'interviews' THEN 1
                     WHEN 'workshops' THEN 2 WHEN 'briefings' THEN 3 WHEN 'calls' THEN 4 ELSE 5 END,
                 c.name COLLATE NOCASE""").fetchall()
@@ -78,6 +80,7 @@ def rename_category(category_id: str, name: str) -> dict[str, object]:
 def delete_category(category_id: str) -> bool:
     with storage.connect() as conn:
         conn.execute("DELETE FROM conversation_categories WHERE category_id = ?", (category_id,))
+        conn.execute("DELETE FROM page_categories WHERE category_id = ?", (category_id,))
         return bool(conn.execute("DELETE FROM categories WHERE id = ?", (category_id,)).rowcount)
 
 
@@ -246,7 +249,7 @@ def erase_all() -> dict[str, int]:
     for recording_id in captures:
         recording.discard_session(recording_id)
     with storage.connect() as conn:
-        for table in ("vocabulary", "persons", "pages", "todo_items", "suggestions", "notebooks", "collections", "category_automation", "categories", "event_notes", "link_previews"):
+        for table in ("vocabulary", "persons", "page_categories", "pages", "todo_items", "suggestions", "notebooks", "collections", "category_automation", "categories", "event_notes", "link_previews"):
             conn.execute(f"DELETE FROM {table}")
         # Seed the default categories again for the next account.
         conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")
