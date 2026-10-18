@@ -3766,12 +3766,12 @@ function tagCard(tag) {
 let samplesTimer;
 let samplesAdded = null;
 async function watchSamples() {
-  // Sample meetings download in the background; each appears in the library as soon as it is imported.
+  // The sample workspace's meetings download in the background; each appears in the library as soon as it is imported.
   clearTimeout(samplesTimer);
   let state;
   try { state = await json(await fetch(`${API}/samples`)); } catch { return; }
   const busy = state.state === 'downloading';
-  const complete = state.added.length === state.total;
+  const complete = state.complete;
   const home = document.querySelector('#samples-card');
   home.hidden = !(busy || state.state === 'failed' || (!libraryConversations.length && !complete));
   for (const panel of document.querySelectorAll('.samples-panel')) {
@@ -3779,11 +3779,13 @@ async function watchSamples() {
     const progress = panel.querySelector('.samples-progress');
     progress.hidden = !busy; progress.value = state.progress || 0;
     button.hidden = busy || complete;
-    button.textContent = state.state === 'failed' ? 'Try again' : 'Add sample meetings';
+    button.textContent = state.state === 'failed' ? 'Try again' : 'Add sample workspace';
+    const remove = panel.querySelector('.samples-remove');
+    if (remove) remove.hidden = busy || !state.installed;
     panel.querySelector('.samples-status').textContent = busy
       ? `Downloading ${state.meeting || 'the samples'}: ${Math.round((state.progress || 0) * 100)}%`
-      : state.state === 'failed' ? `The samples could not be added (${state.error}). Check your connection and try again.`
-      : complete ? 'The sample meetings are in your library.' : '';
+      : state.state === 'failed' ? `The sample workspace could not be added (${state.error}). Check your connection and try again.`
+      : complete ? 'The sample workspace is in your library.' : '';
   }
   if (samplesAdded !== null && state.added.length !== samplesAdded && !listView.hidden) {
     samplesAdded = state.added.length;
@@ -3796,6 +3798,13 @@ async function watchSamples() {
 for (const button of document.querySelectorAll('.samples-add')) button.addEventListener('click', async () => {
   button.disabled = true;
   try { await json(await fetch(`${API}/samples`, {method: 'POST'})); }
+  catch (error) { button.closest('.samples-panel').querySelector('.samples-status').textContent = error.message; }
+  finally { button.disabled = false; }
+  watchSamples();
+});
+document.querySelector('.samples-remove')?.addEventListener('click', async event => {
+  const button = event.currentTarget; button.disabled = true;
+  try { await json(await fetch(`${API}/samples`, {method: 'DELETE'})); await loadLibrary(); }
   catch (error) { button.closest('.samples-panel').querySelector('.samples-status').textContent = error.message; }
   finally { button.disabled = false; }
   watchSamples();

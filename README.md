@@ -35,9 +35,9 @@ The first visit asks you to **Sign up**: this creates the one account for this c
 
 To use AI features, open **Account settings → AI features** and paste your Nebius API key. Stellis saves it in its private data folder, readable only by your user account, and never shows it again.
 
-### Sample meetings
+### Sample workspace
 
-To try Stellis before using any recordings of yours, click **Add sample meetings** on the home page (or in **Account settings**). Stellis downloads three meetings from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/), about 110 MB, checks each file, and imports them under Meetings. Each card shows its transcription progress. The AMI corpus is licensed under CC BY 4.0; each sample's notes credit it.
+To try Stellis before using any recordings of yours, click **Add sample workspace** on the home page (or in **Account settings**). It adds two collections, four notebooks, notes, to-dos, tags, and suggestions to review, all invented, and downloads three meetings from the [AMI Meeting Corpus](https://groups.inf.ed.ac.uk/ami/corpus/), about 110 MB, checking each file and filing them in notebooks. The notes work without an internet connection or an AI key; the meetings need the download. Each meeting card shows its transcription progress. The AMI corpus is licensed under CC BY 4.0; each sample meeting's notes credit it. **Remove sample workspace** in **Account settings** deletes only what the sample added.
 
 ## Everyday use
 
