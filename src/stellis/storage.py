@@ -65,6 +65,11 @@ def connect() -> Iterator[sqlite3.Connection]:
     )""")
     if "collection_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(notebooks)")}:
         conn.execute("ALTER TABLE notebooks ADD COLUMN collection_id TEXT REFERENCES collections(id) ON DELETE SET NULL")
+    # Whether agents may suggest to-dos (ADR 0059): a collection is on or off, a notebook also inherits.
+    if "todo_list" not in {row["name"] for row in conn.execute("PRAGMA table_info(collections)")}:
+        conn.execute("ALTER TABLE collections ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'off'")
+    if "todo_list" not in {row["name"] for row in conn.execute("PRAGMA table_info(notebooks)")}:
+        conn.execute("ALTER TABLE notebooks ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'inherit'")
     # When the audio was captured; imports without a known capture time fall back to created_at.
     if "recorded_at" not in conversation_columns:
         conn.execute("ALTER TABLE conversations ADD COLUMN recorded_at TEXT")
@@ -424,6 +429,28 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS todo_items_source ON todo_items (source_kind, source_id)")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS suggestions (
+            id TEXT PRIMARY KEY,
+            run_id TEXT,
+            author TEXT NOT NULL,
+            target_kind TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            todo_id TEXT,
+            values_json TEXT NOT NULL,
+            original_values_json TEXT,
+            previous_json TEXT,
+            source_kind TEXT,
+            source_id TEXT,
+            evidence_json TEXT NOT NULL,
+            state TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            amended_at TEXT,
+            decided_at TEXT
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS suggestions_target ON suggestions (target_kind, target_id, state)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS meeting_notes (
             id TEXT PRIMARY KEY,

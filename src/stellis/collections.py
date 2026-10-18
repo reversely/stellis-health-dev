@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-from stellis import storage
+from stellis import storage, suggestions
 from stellis.notebooks import _color, _now
 
 
@@ -23,7 +23,7 @@ def _name(value: str) -> str:
 def list_collections() -> list[dict[str, object]]:
     """List collections by creation, each with its notebook IDs in notebook creation order."""
     with storage.connect() as conn:
-        rows = [dict(row) for row in conn.execute("SELECT id, name, color, created_at FROM collections ORDER BY created_at, rowid")]
+        rows = [dict(row) for row in conn.execute("SELECT id, name, color, created_at, todo_list FROM collections ORDER BY created_at, rowid")]
         members = conn.execute("SELECT id, collection_id FROM notebooks WHERE collection_id IS NOT NULL ORDER BY created_at, rowid")
         by_collection: dict[str, list[str]] = {}
         for row in members:
@@ -43,24 +43,29 @@ def create(name: str, color: str | None = None) -> dict[str, object]:
                          (record["id"], value, value.casefold(), record["color"], record["created_at"]))
         except sqlite3.IntegrityError as exc:
             raise NameTaken("A collection with this name already exists") from exc
-    return record | {"notebook_ids": []}
+    return record | {"todo_list": "off", "notebook_ids": []}
 
 
-def update(collection_id: str, *, name: str | None = None, color: str | None = None) -> dict[str, object]:
+def update(collection_id: str, *, name: str | None = None, color: str | None = None,
+           todo_list: str | None = None) -> dict[str, object]:
     with storage.connect() as conn:
-        row = conn.execute("SELECT id, name, color, created_at FROM collections WHERE id = ?", (collection_id,)).fetchone()
+        row = conn.execute("SELECT id, name, color, created_at, todo_list FROM collections WHERE id = ?", (collection_id,)).fetchone()
         if row is None:
             raise LookupError("Collection not found")
+        if todo_list is not None and todo_list not in suggestions.COLLECTION_TODO_LIST:
+            raise ValueError("Choose on or off for the to-do list")
+        setting = todo_list if todo_list is not None else str(row["todo_list"])
         value = _name(name) if name is not None else str(row["name"])
         tint = _color(color, 0) if color is not None else str(row["color"])
         try:
-            conn.execute("UPDATE collections SET name = ?, normalized = ?, color = ? WHERE id = ?",
-                         (value, value.casefold(), tint, collection_id))
+            conn.execute("UPDATE collections SET name = ?, normalized = ?, color = ?, todo_list = ? WHERE id = ?",
+                         (value, value.casefold(), tint, setting, collection_id))
         except sqlite3.IntegrityError as exc:
             raise NameTaken("A collection with this name already exists") from exc
         ids = [str(item["id"]) for item in conn.execute(
             "SELECT id FROM notebooks WHERE collection_id = ? ORDER BY created_at, rowid", (collection_id,))]
-    return {"id": collection_id, "name": value, "color": tint, "created_at": row["created_at"], "notebook_ids": ids}
+    return {"id": collection_id, "name": value, "color": tint, "created_at": row["created_at"], "todo_list": setting,
+            "notebook_ids": ids}
 
 
 def delete(collection_id: str) -> bool:

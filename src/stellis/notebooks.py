@@ -8,7 +8,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from stellis import storage
+from stellis import storage, suggestions
 
 PALETTE = ("#495575", "#56465C", "#594F4F", "#547980", "#45ADA8")
 _SECTIONS = {"overview": "overview", "topics": "topics", "decisions": "decisions", "action proposals": "action_items"}
@@ -78,7 +78,9 @@ def summary_points(conversation_ids: list[str]) -> dict[str, dict[str, object]]:
 def list_notebooks() -> list[dict[str, object]]:
     """List notebooks with their conversations newest first and the latest meeting's progress."""
     with storage.connect() as conn:
-        books = [dict(row) for row in conn.execute("SELECT id, name, color, created_at, collection_id FROM notebooks ORDER BY created_at")]
+        books = [dict(row) for row in conn.execute("""SELECT n.id, n.name, n.color, n.created_at, n.collection_id, n.todo_list,
+            c.todo_list AS collection_todo_list FROM notebooks n LEFT JOIN collections c ON c.id = n.collection_id
+            ORDER BY n.created_at""")]
         rows = conn.execute("""SELECT id, title, duration_ms, created_at, recorded_at, notebook_id FROM conversations
             WHERE notebook_id IS NOT NULL AND trashed_at IS NULL
             ORDER BY COALESCE(recorded_at, created_at) DESC, created_at DESC""").fetchall()
@@ -90,6 +92,7 @@ def list_notebooks() -> list[dict[str, object]]:
     latest = [items[0]["id"] for items in members.values()]
     points = summary_points([str(item) for item in latest])
     for book in books:
+        book["todo_enabled"] = suggestions.resolve_todo_list(book["todo_list"], book.pop("collection_todo_list"))
         items = members.get(str(book["id"]), [])
         book["conversations"] = items
         book["pages"] = page_groups.get(str(book["id"]), [])
@@ -134,19 +137,24 @@ def create(name: str, color: str | None = None) -> dict[str, object]:
     return record
 
 
-def update(notebook_id: str, *, name: str | None = None, color: str | None = None) -> dict[str, object]:
+def update(notebook_id: str, *, name: str | None = None, color: str | None = None,
+           todo_list: str | None = None) -> dict[str, object]:
     with storage.connect() as conn:
-        row = conn.execute("SELECT id, name, color, created_at FROM notebooks WHERE id = ?", (notebook_id,)).fetchone()
+        row = conn.execute("SELECT id, name, color, created_at, todo_list FROM notebooks WHERE id = ?", (notebook_id,)).fetchone()
         if row is None:
             raise LookupError("Notebook not found")
+        if todo_list is not None and todo_list not in suggestions.NOTEBOOK_TODO_LIST:
+            raise ValueError("Choose inherit, on, or off for the to-do list")
+        setting = todo_list if todo_list is not None else str(row["todo_list"])
         value = _name(name) if name is not None else str(row["name"])
         tint = _color(color, 0) if color is not None else str(row["color"])
         try:
-            conn.execute("UPDATE notebooks SET name = ?, normalized = ?, color = ? WHERE id = ?",
-                         (value, value.casefold(), tint, notebook_id))
+            conn.execute("UPDATE notebooks SET name = ?, normalized = ?, color = ?, todo_list = ? WHERE id = ?",
+                         (value, value.casefold(), tint, setting, notebook_id))
         except sqlite3.IntegrityError as exc:
             raise ValueError("A notebook with this name already exists") from exc
-    return {"id": notebook_id, "name": value, "color": tint, "created_at": row["created_at"]}
+    return {"id": notebook_id, "name": value, "color": tint, "created_at": row["created_at"], "todo_list": setting,
+            "todo_enabled": suggestions.todo_enabled(notebook_id)}
 
 
 def delete(notebook_id: str) -> bool:

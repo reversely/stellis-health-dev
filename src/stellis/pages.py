@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from stellis import storage, todos
+from stellis import storage, suggestions, todos
 from stellis.notes import MAX_MARKDOWN
 
 COLUMNS = "id, title, markdown, revision, notebook_id, created_at, updated_at"
@@ -138,6 +138,7 @@ def delete_permanently(page_id: str, *, expired_before: str | None = None) -> di
                                (page_id, expired_before, expired_before)).rowcount
         if deleted:
             todos.delete_source(conn, "page", page_id)
+            suggestions.delete_source(conn, "page", page_id)
     if not deleted:
         raise LookupError("Page not found in Recently Deleted")
     return {"id": page_id, "deleted": True}
@@ -150,6 +151,7 @@ def delete_expired(cutoff: str) -> list[str]:
         conn.execute("DELETE FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))
         for page_id in ids:
             todos.delete_source(conn, "page", page_id)
+            suggestions.delete_source(conn, "page", page_id)
     return ids
 
 

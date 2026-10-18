@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from stellis import storage, todos
+from stellis import storage, suggestions, todos
 
 _LOCK = threading.Lock()
 RETENTION_DAYS = 30
@@ -190,6 +190,7 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
                               "transcript_review_history"):
                     conn.execute(f"DELETE FROM {table} WHERE conversation_id = ?", (conversation_id,))
                 todos.delete_source(conn, "conversation", conversation_id)
+                suggestions.delete_source(conn, "conversation", conversation_id)
                 conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
                 conn.commit()
             except Exception:
@@ -245,7 +246,7 @@ def erase_all() -> dict[str, int]:
     for recording_id in captures:
         recording.discard_session(recording_id)
     with storage.connect() as conn:
-        for table in ("vocabulary", "persons", "pages", "todo_items", "notebooks", "collections", "category_automation", "categories", "event_notes", "link_previews"):
+        for table in ("vocabulary", "persons", "pages", "todo_items", "suggestions", "notebooks", "collections", "category_automation", "categories", "event_notes", "link_previews"):
             conn.execute(f"DELETE FROM {table}")
         # Seed the default categories again for the next account.
         conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")

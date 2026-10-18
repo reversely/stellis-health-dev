@@ -83,6 +83,12 @@ def _transition(status: str, previous, stamp: str) -> dict[str, str | None]:
             "canceled_at": keep("canceled_at", status == "canceled")}
 
 
+def _supersede(conn, item_id: str, stamp: str, *, status_only: bool = False) -> None:
+    """A user's own edit wins: close pending suggestions on a line whose status changed or that is gone."""
+    conn.execute("UPDATE suggestions SET state = 'superseded', decided_at = ? WHERE todo_id = ? AND state = 'pending'"
+                 + (" AND operation = 'set_todo_status'" if status_only else ""), (stamp, item_id))
+
+
 def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: dict | None = None) -> str:
     """Sync a source's items with its task lines inside the caller's transaction.
 
@@ -138,10 +144,13 @@ def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: d
                          (item_id, source_kind, source_id, task.text, task.status, position, stamp, stamp,
                           dates["completed_at"], dates["canceled_at"]))
         elif (previous["text"], previous["status"], previous["position"]) != (task.text, task.status, position):
+            if previous["status"] != task.status:
+                _supersede(conn, item_id, stamp, status_only=True)
             conn.execute("""UPDATE todo_items SET text = ?, status = ?, position = ?, updated_at = ?,
                 completed_at = ?, canceled_at = ? WHERE id = ?""",
                          (task.text, task.status, position, stamp, dates["completed_at"], dates["canceled_at"], item_id))
     for item_id in set(existing) - used:
+        _supersede(conn, item_id, stamp)
         conn.execute("DELETE FROM todo_items WHERE id = ?", (item_id,))
     for item_id, due in (todo_dates or {}).items():
         if item_id not in used:
@@ -172,6 +181,10 @@ def gather(notebook_id: str = "all", status: str = "open") -> dict[str, object]:
                ("page", "pages", "s.created_at"))
     groups = []
     with storage.connect() as conn:
+        pending: dict[str, list[str]] = {}
+        for row in conn.execute("SELECT id, todo_id FROM suggestions WHERE state = 'pending' AND todo_id IS NOT NULL "
+                                "ORDER BY created_at, rowid"):
+            pending.setdefault(str(row["todo_id"]), []).append(str(row["id"]))
         for kind, table, newest in sources:
             for source in conn.execute(
                     f"""SELECT s.id, s.title, s.notebook_id, {newest} AS newest FROM {table} s
@@ -183,9 +196,14 @@ def gather(notebook_id: str = "all", status: str = "open") -> dict[str, object]:
                 groups.append((str(source["newest"]), {
                     "source": {"kind": kind, "id": source["id"], "title": source["title"],
                                "notebook_id": source["notebook_id"]},
-                    "items": [dict(item) for item in items]}))
+                    "items": [dict(item) | {"pending_suggestions": pending.get(str(item["id"]), [])} for item in items]}))
     groups.sort(key=lambda group: (group[0], group[1]["source"]["id"]), reverse=True)
     return {"groups": [group for _, group in groups]}
+
+
+def set_marker(line: str, status: str) -> str:
+    """Rewrite the checkbox marker of one task line."""
+    return re.sub(r"^(\s*[-*+] \[)[ xX-](\])", lambda m: m.group(1) + MARKERS[status] + m.group(2), line, count=1)
 
 
 def set_status(item_id: str, status: str) -> dict[str, object]:
@@ -213,8 +231,7 @@ def set_status(item_id: str, status: str) -> dict[str, object]:
         task = next((task for task in parse_tasks("\n".join(lines)) if task.id == item_id), None)
         if task is None:
             raise LookupError("To-do not found")
-        lines[task.line - 1] = re.sub(r"^(\s*[-*+] \[)[ xX-](\])", lambda m: m.group(1) + MARKERS[status] + m.group(2),
-                                      lines[task.line - 1], count=1)
+        lines[task.line - 1] = set_marker(lines[task.line - 1], status)
         markdown = reindex(conn, kind, source_id, "\n".join(lines))
         conn.execute(f"UPDATE {table} SET markdown = ?, revision = ?, updated_at = ? WHERE id = ?",
                      (markdown, int(row["revision"]) + 1, _stamp(), row["id"]))
