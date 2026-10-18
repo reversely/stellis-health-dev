@@ -31,6 +31,14 @@ class PureFunctionsTest(unittest.TestCase):
         tasks = todos.parse_tasks("- [ ] \n- [ ] ^tabc123\n- [ ] a ^tabc123 b\n- [ ] c ^tabc123")
         self.assertEqual([(t.line, t.text, t.id) for t in tasks], [(3, "a ^tabc123 b", None), (4, "c", "tabc123")])
 
+    def test_task_lines_inside_quotes_and_callouts(self) -> None:
+        markdown = "> [!note] Plan\n> - [ ] in callout ^tabc123\n> > - [x] nested\n>> * [-] tight\n> - [ ] \n> plain"
+        tasks = todos.parse_tasks(markdown)
+        self.assertEqual([(t.line, t.indent, t.status, t.text, t.id) for t in tasks], [
+            (2, "> ", "open", "in callout", "tabc123"), (3, "> > ", "done", "nested", None),
+            (4, ">> ", "canceled", "tight", None)])
+        self.assertEqual(todos.set_marker("> > - [ ] nested", "done"), "> > - [x] nested")
+
     def test_shared_fixture_cases(self) -> None:
         fixture = json.loads((Path(__file__).parent / "fixtures" / "markdown_plain.json").read_text(encoding="utf-8"))
         for case in fixture["plain_markdown"]:
@@ -93,6 +101,19 @@ class TodoIndexTest(unittest.TestCase):
         # A pasted ID owned by another source is replaced.
         other = self.page(f"- [ ] copied ^{ids[0]}")
         self.assertNotIn(ids[0], other["markdown"])
+
+    def test_callout_tasks_get_ids_that_keep_the_markers(self) -> None:
+        page = self.page("> [!note] Plan\n> - [ ] call Avery\n> > - [ ] nested")
+        lines = page["markdown"].split("\n")
+        self.assertRegex(lines[1], r"^> - \[ \] call Avery \^t[0-9a-z]{6}$")
+        self.assertRegex(lines[2], r"^> > - \[ \] nested \^t[0-9a-z]{6}$")
+        self.assertEqual({item["text"] for item in self.items()}, {"call Avery", "nested"})
+        item = next(item for item in self.items() if item["text"] == "call Avery")
+        done = self.client.patch(f"{API}/todos/{item['id']}", json={"status": "done"})
+        self.assertEqual(done.status_code, 200, done.text)
+        stored = self.client.get(f"{API}/pages/{page['id']}").json()["markdown"]
+        self.assertIn("> - [x] call Avery ^", stored)
+        self.assertIn("> > - [ ] nested ^", stored)
 
     def test_size_limit_counts_the_added_ids(self) -> None:
         # 16,000 short tasks fit under the limit as typed and exceed it once each line gains " ^tXXXXXX".
