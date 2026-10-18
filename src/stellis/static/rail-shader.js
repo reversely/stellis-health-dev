@@ -63,6 +63,8 @@
   const target = {x: 0.5, y: 0.5, pull: 0}, current = {x: 0.5, y: 0.5, pull: 0};
   addEventListener('pointermove', event => {
     const box = canvas.getBoundingClientRect();
+    // A hidden rail measures 0×0; dividing by it would make the pointer NaN and the shader draw black for good.
+    if (!box.width || !box.height) return;
     const inside = event.clientX >= box.left && event.clientX <= box.right;
     target.x = (event.clientX - box.left) / box.width;
     target.y = 1 - (event.clientY - box.top) / box.height;
