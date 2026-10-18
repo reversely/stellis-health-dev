@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 
 from stellis import storage
 
@@ -20,7 +20,12 @@ MAX_STORED_BYTES = 12_000_000
 MAX_PIXELS = 20_000_000
 MAX_SIDE = 8192
 MAX_CAPTION = 280
-ACCEPTED_FORMATS = {"PNG", "JPEG", "WEBP"}
+ACCEPTED_FORMATS = {"PNG", "JPEG", "WEBP", "GIF"}
+# Animations (ADR 0040, 2026-10-18): at most this many frames, and frames x width x height at most
+# MAX_ANIMATION_PIXELS, which bounds the memory used to decode one (about 300 frames of 450 x 450).
+MAX_FRAMES = 300
+MAX_ANIMATION_PIXELS = 60_000_000
+EXTENSIONS = {"image/webp": "webp", "image/gif": "gif"}
 
 
 def _stamp() -> str:
@@ -72,16 +77,51 @@ def _public(row) -> dict[str, object]:
     return {key: row[key] for key in _PUBLIC_KEYS if key in columns}
 
 
-def _normalize(data: bytes) -> tuple[bytes, int, int]:
+def _animated(source: Image.Image, data: bytes) -> tuple[bytes, int, int, str]:
+    """Validate every frame of a GIF or WebP animation and keep its animation.
+
+    An animated WebP is stored as uploaded. A GIF is also encoded as lossless animated WebP, and that
+    replaces the GIF only when smaller.
+    """
+    width, height = source.size
+    if source.n_frames > MAX_FRAMES:
+        raise ValueError(f"Animation can have at most {MAX_FRAMES} frames")
+    if source.n_frames * width * height > MAX_ANIMATION_PIXELS:
+        raise ValueError("Animation is too large")
+    is_gif = source.format == "GIF"
+    frames: list[Image.Image] = []
+    durations: list[int] = []
+    for frame in ImageSequence.Iterator(source):
+        frame.load()
+        if is_gif:
+            frames.append(frame.convert("RGBA"))
+            durations.append(int(frame.info.get("duration", 100)))
+    if not is_gif:
+        return data, width, height, "image/webp"
+    if all(frame.getextrema()[3][0] == 255 for frame in frames):
+        frames = [frame.convert("RGB") for frame in frames]
+    output = io.BytesIO()
+    frames[0].save(output, format="WEBP", save_all=True, append_images=frames[1:], duration=durations,
+                   loop=int(source.info.get("loop", 1)), lossless=True, method=4)
+    if len(output.getvalue()) < len(data):
+        return output.getvalue(), width, height, "image/webp"
+    return data, width, height, "image/gif"
+
+
+def _normalize(data: bytes) -> tuple[bytes, int, int, str]:
+    """Return stored bytes, width, height, and media type. Stills become lossless WebP; animations keep frames."""
     if not data or len(data) > MAX_UPLOAD_BYTES:
         raise ValueError("Image must be smaller than 12 MB")
     try:
         with Image.open(io.BytesIO(data)) as source:
-            if source.format not in ACCEPTED_FORMATS or getattr(source, "is_animated", False):
-                raise ValueError("Use a PNG, JPEG, or WebP image")
+            animated = getattr(source, "is_animated", False)
+            if source.format not in ACCEPTED_FORMATS or (source.format == "GIF" and not animated):
+                raise ValueError("Use a PNG, JPEG, WebP, or animated GIF image")
             width, height = source.size
             if width < 1 or height < 1 or width > MAX_SIDE or height > MAX_SIDE or width * height > MAX_PIXELS:
                 raise ValueError("Image dimensions are too large")
+            if animated:
+                return _animated(source, data)
             source.load()
             oriented = ImageOps.exif_transpose(source)
             # Re-encode decoded pixels: uploaded metadata and embedded profiles do not survive.
@@ -91,7 +131,7 @@ def _normalize(data: bytes) -> tuple[bytes, int, int]:
             encoded = output.getvalue()
             if len(encoded) > MAX_STORED_BYTES:
                 raise ValueError("Image is too large after conversion")
-            return encoded, pixels.width, pixels.height
+            return encoded, pixels.width, pixels.height, "image/webp"
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
         raise ValueError("Image could not be opened") from exc
 
@@ -108,12 +148,12 @@ def list_images(scope: str, item_id: str) -> list[dict[str, object]]:
 def add_page_image(page_id: str, data: bytes, caption: str = "") -> dict[str, object]:
     if len(caption.strip()) > MAX_CAPTION:
         raise ValueError("Caption is too long")
-    normalized, width, height = _normalize(data)
+    normalized, width, height, media_type = _normalize(data)
     image_id = str(uuid.uuid4())
     directory = _directory()
     descriptor, temporary_name = tempfile.mkstemp(prefix=".image-", dir=directory)
     temporary = Path(temporary_name)
-    destination = directory / f"{image_id}.webp"
+    destination = directory / f"{image_id}.{EXTENSIONS[media_type]}"
     try:
         with os.fdopen(descriptor, "wb") as output:
             output.write(normalized)
@@ -127,8 +167,8 @@ def add_page_image(page_id: str, data: bytes, caption: str = "") -> dict[str, ob
             os.replace(temporary, destination)
             conn.execute("""INSERT INTO page_images
                 (id, page_id, caption, filename, media_type, size_bytes, width, height, sha256, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?)""",
-                (image_id, page_id, caption.strip(), destination.name, len(normalized), width, height,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (image_id, page_id, caption.strip(), destination.name, media_type, len(normalized), width, height,
                  hashlib.sha256(normalized).hexdigest(), stamp, stamp))
         return get("page", page_id, image_id)
     except Exception:
@@ -146,9 +186,9 @@ def add(scope: str, item_id: str, data: bytes, media_position_ms: int,
         raise ValueError("Invalid image time")
     if len(caption.strip()) > MAX_CAPTION:
         raise ValueError("Caption is too long")
-    normalized, width, height = _normalize(data)
+    normalized, width, height, media_type = _normalize(data)
     image_id = str(uuid.uuid4())
-    filename = f"{image_id}.webp"
+    filename = f"{image_id}.{EXTENSIONS[media_type]}"
     directory = _directory()
     descriptor, temporary_name = tempfile.mkstemp(prefix=".image-", dir=directory)
     temporary = Path(temporary_name)
@@ -194,9 +234,9 @@ def add(scope: str, item_id: str, data: bytes, media_position_ms: int,
             conn.execute(f"""INSERT INTO conversation_images
                 (id, {_field(scope)}, media_position_ms, segment_id, start_offset, end_offset, quote, caption, filename, media_type,
                  size_bytes, width, height, sha256, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?)""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (image_id, item_id, media_position_ms, segment_id, start_offset, end_offset, quote, caption.strip(), filename,
-                 len(normalized), width, height, hashlib.sha256(normalized).hexdigest(), stamp, stamp))
+                 media_type, len(normalized), width, height, hashlib.sha256(normalized).hexdigest(), stamp, stamp))
         return get(scope, item_id, image_id)
     except Exception:
         destination.unlink(missing_ok=True)
@@ -217,7 +257,7 @@ def get(scope: str, item_id: str, image_id: str) -> dict[str, object]:
 
 def path_for(record: dict[str, object]) -> Path:
     image_id = str(uuid.UUID(str(record["id"])))
-    return _directory() / f"{image_id}.webp"
+    return _directory() / f"{image_id}.{EXTENSIONS.get(str(record.get('media_type')), 'webp')}"
 
 
 def update_caption(scope: str, item_id: str, image_id: str, caption: str) -> dict[str, object]:
@@ -252,7 +292,7 @@ def copy(image_id: str, scope: str, item_id: str) -> dict[str, object]:
         if source is None:
             raise LookupError("Image not found")
         owner = _owner(conn, scope, item_id)
-    path = path_for({"id": image_id})
+    path = path_for(dict(source))
     if not path.is_file():
         raise LookupError("Image file is missing")
     caption = str(source["caption"])
@@ -274,7 +314,8 @@ def attach_to_conversation(recording_id: str, conversation_id: str, duration_ms:
 
 def remove_files(image_ids: list[str]) -> None:
     for image_id in image_ids:
-        (_directory() / f"{image_id}.webp").unlink(missing_ok=True)
+        for extension in EXTENSIONS.values():
+            (_directory() / f"{image_id}.{extension}").unlink(missing_ok=True)
 
 
 def recover_orphans() -> None:
@@ -282,5 +323,5 @@ def recover_orphans() -> None:
         known = {str(row["id"]) for table in ("conversation_images", "page_images")
                  for row in conn.execute(f"SELECT id FROM {table}")}
     for file in _directory().iterdir():
-        if file.name.startswith(".image-") or (file.suffix == ".webp" and file.stem not in known):
+        if file.name.startswith(".image-") or (file.suffix[1:] in EXTENSIONS.values() and file.stem not in known):
             file.unlink(missing_ok=True)

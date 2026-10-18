@@ -1372,7 +1372,7 @@ def _image_file(scope: str, item_id: str, image_id: str, download: bool) -> File
     path = images.path_for(record)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Image file is missing")
-    return FileResponse(path, media_type="image/webp", filename=f"meeting-image-{image_id}.webp",
+    return FileResponse(path, media_type=str(record["media_type"]), filename=f"meeting-image-{image_id}.{path.suffix[1:]}",
                         content_disposition_type="attachment" if download else "inline",
                         headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
