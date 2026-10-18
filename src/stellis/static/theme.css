@@ -2167,3 +2167,21 @@ a.todo-suggestion:hover { text-decoration: underline; text-underline-offset: 3px
 /* Closed menus take no layout space and cannot be hit. */
 details.more-menu:not([open]) > .more-menu-items { display: none; }
 #playback-speed-menu:not([open]) > .speed-options { display: none; }
+/* === Notes toggles and columns (#280) === */
+.notes-editor .note-toggle { margin: 0 0 10px; --toggle-chevron: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M9 6l6 6l-6 6%22/%3E%3C/svg%3E"); }
+.notes-editor .note-toggle > :first-child { position: relative; margin-bottom: 4px; padding-left: 26px; font-weight: 650; }
+.notes-editor .note-toggle > :first-child::before {
+  content: ""; position: absolute; left: 2px; top: .35em; width: 18px; height: 18px; border-radius: 4px; background: var(--muted);
+  -webkit-mask: var(--toggle-chevron) center / contain no-repeat; mask: var(--toggle-chevron) center / contain no-repeat;
+  transform: rotate(90deg); transition: transform .12s; cursor: pointer;
+}
+.notes-editor .note-toggle > :first-child:hover::before { background: var(--ink); }
+.notes-editor .note-toggle[data-collapsed] > :first-child::before { transform: none; }
+.notes-editor .note-toggle[data-collapsed] > :not(:first-child) { display: none; }
+.notes-editor .note-toggle > :not(:first-child) { margin-left: 9px; padding-left: 17px; border-left: 2px solid var(--line); }
+.notes-editor .note-toggle > :is(ul, ol) { padding-left: 34px; }
+.notes-editor .note-toggle > :last-child { margin-bottom: 0; }
+.notes-editor .note-columns { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 14px; margin: 0 0 10px; padding: 0 3px; }
+.notes-editor .note-column { min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; }
+.notes-editor .note-column > :last-child { margin-bottom: 0; }
+@media (max-width: 640px) { .notes-editor .note-columns { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); } }

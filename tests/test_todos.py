@@ -46,6 +46,14 @@ class PureFunctionsTest(unittest.TestCase):
         for case in fixture["inline_text"]:
             self.assertEqual(todos.markdown_inline_text(case["input"]), case["expected"], case["name"])
 
+    def test_tasks_inside_toggles_and_columns_are_found(self) -> None:
+        source = ("<details>\n<summary>Plan</summary>\n\n- [ ] in a toggle ^tabc123\n\n<details>\n<summary>Deep</summary>\n\n"
+                  "- [x] nested ^tdef456\n\n</details>\n\n</details>\n\n<columns>\n<column>\n- [-] left\n</column>\n"
+                  "<column>\n- [ ] right ^tghi789\n</column>\n</columns>\n")
+        found = [(task.text, task.status, task.id) for task in todos.parse_tasks(source)]
+        self.assertEqual(found, [("in a toggle", "open", "tabc123"), ("nested", "done", "tdef456"),
+                                 ("left", "canceled", None), ("right", "open", "tghi789")])
+
     def test_plain_markdown(self) -> None:
         source = ("- [ ] call ^tabc123\n<bookmark url=\"https://a.example\">Site</bookmark>\n<bookmark url=\"https://b.example\"></bookmark>\n"
                   "<columns>\n<column>\nleft\n</column>\n<column>\nright\n</column>\n</columns>\n```\n- [ ] keep ^tabc123\n```\n")
