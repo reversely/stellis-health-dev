@@ -26,7 +26,7 @@ import {
   ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
 import {CalloutNode, $insertCallout, calloutTransformer, registerCallouts} from './notes-callouts.js';
-import {EMBED_NODES, $insertBookmark, embedTransformers, httpUrl, registerEmbedPaste} from './notes-embeds.js';
+import {EMBED_NODES, $insertBookmark, configureEmbeds, embedTransformers, httpUrl, registerEmbedPaste} from './notes-embeds.js';
 import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
@@ -193,6 +193,7 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
 export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
   const imageUrlForId = options.imageUrlForId || (() => '');
   const onOpenImage = options.onOpenImage || (() => {});
+  configureEmbeds({onOpenImage});
   const markdown = notesTransformers({imageUrlForId, onOpenImage});
   const editor = createEditor({
     namespace:'StellisNotes',

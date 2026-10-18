@@ -1,5 +1,7 @@
-// Link cards (#281) and the "Paste as" menu.
+// Link cards, video embeds and external images (#281, #282), plus the "Paste as" menu.
 //   <bookmark url="https://example.com/a">Caption</bookmark>   a link card (preview from POST /link-previews)
+//   ![caption](https://youtu.be/ID)                             a YouTube, Vimeo or Loom player
+//   ![caption](https://example.com/photo.png)                   an external image
 // Page text is only ever written with textContent, and a URL is used only after it parses as http or https.
 import {
   $createParagraphNode, $createTextNode, $getNodeByKey, $getSelection, $isRangeSelection, $isRootOrShadowRoot,
@@ -9,11 +11,13 @@ import {$createLinkNode, $isLinkNode} from '@lexical/link';
 import {$isCodeNode} from '@lexical/code-core';
 import {$findMatchingParent, $insertNodeToNearestRoot} from '@lexical/utils';
 
-const hooks = {apiBase:'/api/v1', fetchPreview:null};
+const hooks = {apiBase:'/api/v1', fetchPreview:null, onOpenImage:() => {}};
 // The app may swap the preview loader; by default the editor calls the device API itself.
 export function configureEmbeds(options = {}) {Object.assign(hooks, options);}
 
 const MAX_URL = 2048;
+const IMAGE_EXTENSION = /\.(?:png|jpe?g|gif|webp|avif|bmp|svg)$/i;
+
 // A URL that parses as http or https with no whitespace, quotes or angle brackets; null otherwise.
 export function httpUrl(raw) {
   if (typeof raw !== 'string' || raw.length > MAX_URL || /[\s"<>]/.test(raw)) return null;
@@ -22,16 +26,69 @@ export function httpUrl(raw) {
     return (url.protocol === 'https:' || url.protocol === 'http:') && url.hostname ? raw : null;
   } catch {return null;}
 }
+export const isImageUrl = raw => {
+  const url = httpUrl(raw);
+  return !!url && IMAGE_EXTENSION.test(new URL(url).pathname);
+};
+
+const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com',
+  'youtube-nocookie.com', 'www.youtube-nocookie.com']);
+const VIMEO_HOSTS = new Set(['vimeo.com', 'www.vimeo.com', 'player.vimeo.com']);
+const LOOM_HOSTS = new Set(['loom.com', 'www.loom.com']);
+const VIDEO_HOSTS = [YOUTUBE_HOSTS, VIMEO_HOSTS, LOOM_HOSTS, new Set(['youtu.be', 'www.youtu.be'])];
+const YOUTUBE_ID = /^[\w-]{11}$/;
+
+function youtubeStart(params) {
+  const raw = params.get('start') || params.get('t') || '';
+  if (/^\d+$/.test(raw)) return Number(raw);
+  const parts = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(raw);
+  return parts && raw ? Number(parts[1] || 0) * 3600 + Number(parts[2] || 0) * 60 + Number(parts[3] || 0) : 0;
+}
+
+// The host's own embed URL for a video link, or null when the host is not YouTube, Vimeo or Loom or no video ID is found.
+export function videoEmbed(raw) {
+  const href = httpUrl(raw);
+  if (!href) return null;
+  const url = new URL(href);
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.split('/').filter(Boolean);
+  if (host === 'youtu.be' || host === 'www.youtu.be' || YOUTUBE_HOSTS.has(host)) {
+    const id = host.endsWith('youtu.be') ? path[0]
+      : path[0] === 'watch' ? url.searchParams.get('v') : ['embed', 'shorts', 'live', 'v'].includes(path[0]) ? path[1] : null;
+    if (!YOUTUBE_ID.test(id || '')) return null;
+    const start = youtubeStart(url.searchParams);
+    return {provider:'youtube', src:`https://www.youtube-nocookie.com/embed/${id}${start ? `?start=${start}` : ''}`};
+  }
+  if (VIMEO_HOSTS.has(host)) {
+    const at = path[0] === 'video' ? 1 : path.findIndex(part => /^\d+$/.test(part));
+    const id = path[at];
+    if (!/^\d{1,12}$/.test(id || '')) return null;
+    const hash = /^[0-9a-f]{6,16}$/i.test(path[at + 1] || '') ? path[at + 1] : url.searchParams.get('h');
+    return {provider:'vimeo', src:`https://player.vimeo.com/video/${id}${hash && /^[0-9a-f]+$/i.test(hash) ? `?h=${hash}` : ''}`};
+  }
+  if (LOOM_HOSTS.has(host) && ['share', 'embed'].includes(path[0]) && /^[0-9a-f]{32}$/i.test(path[1] || '')) {
+    return {provider:'loom', src:`https://www.loom.com/embed/${path[1]}`};
+  }
+  return null;
+}
+const isVideoHost = raw => {
+  const href = httpUrl(raw);
+  return !!href && VIDEO_HOSTS.some(hosts => hosts.has(new URL(href).hostname.toLowerCase()));
+};
+
 // Attributes are written without quotes, angle brackets or spaces, and captions without markup characters.
 const exportUrl = url => {
   try {return new URL(url).href;} catch {return '';}
 };
 const escapeCaption = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, ' ');
 const unescapeCaption = text => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const imageCaption = text => text.replace(/[\]\\\r\n]/g, '');
 
 const ICONS = {
   link:['M9 15l6 -6', 'M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464', 'M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463'],
   bookmark:['M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4'],
+  photo:['M15 8h.01', 'M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12', 'M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5', 'M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3'],
+  video:['M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4', 'M3 8a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -8'],
   x:['M18 6l-12 12', 'M6 6l12 12'],
 };
 function icon(name) {
@@ -123,7 +180,75 @@ export class BookmarkNode extends DecoratorNode {
   static importJSON(data) {return new BookmarkNode(data.url, data.caption);}
 }
 
-export const EMBED_NODES = [BookmarkNode];
+export class VideoEmbedNode extends DecoratorNode {
+  __url; __caption;
+  static getType() {return 'video-embed';}
+  static clone(node) {return new VideoEmbedNode(node.__url, node.__caption, node.__key);}
+  constructor(url, caption = '', key) {super(key); this.__url = url; this.__caption = caption;}
+  isInline() {return false;}
+  createDOM(config, editor) {
+    const figure = document.createElement('figure'); figure.className = 'note-embed'; figure.contentEditable = 'false';
+    const embed = videoEmbed(this.__url);
+    const frame = document.createElement('div'); frame.className = 'note-embed-frame';
+    if (embed) {
+      const iframe = document.createElement('iframe');
+      iframe.src = embed.src; iframe.title = this.__caption || `${embed.provider} video`;
+      iframe.loading = 'lazy'; iframe.allowFullscreen = true;
+      iframe.setAttribute('allow', 'fullscreen; picture-in-picture; encrypted-media');
+      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
+      iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      frame.append(iframe);
+    }
+    figure.append(frame);
+    if (this.__caption) {const caption = document.createElement('figcaption'); caption.textContent = this.__caption; figure.append(caption);}
+    figure.append(removeButton(editor, this.__key, 'Remove video'));
+    return figure;
+  }
+  updateDOM() {return false;}
+  exportDOM() {
+    const link = document.createElement('a'); link.href = this.__url; link.textContent = this.__caption || this.__url;
+    return {element:link};
+  }
+  getTextContent() {return this.__caption || this.__url;}
+  exportJSON() {return {...super.exportJSON(), type:'video-embed', version:1, url:this.__url, caption:this.__caption};}
+  static importJSON(data) {return new VideoEmbedNode(data.url, data.caption);}
+}
+
+export class ExternalImageNode extends DecoratorNode {
+  __url; __caption;
+  static getType() {return 'external-image';}
+  static clone(node) {return new ExternalImageNode(node.__url, node.__caption, node.__key);}
+  constructor(url, caption = '', key) {super(key); this.__url = url; this.__caption = caption;}
+  isInline() {return false;}
+  createDOM(config, editor) {
+    const figure = document.createElement('figure'); figure.className = 'note-image note-image-external'; figure.contentEditable = 'false';
+    const button = document.createElement('button'); button.type = 'button';
+    const alt = this.__caption || 'Image';
+    button.setAttribute('aria-label', `Expand image${this.__caption ? `: ${this.__caption}` : ''}`);
+    const image = document.createElement('img'); image.alt = alt; image.loading = 'lazy'; image.referrerPolicy = 'no-referrer';
+    image.src = this.__url;
+    image.addEventListener('error', () => {
+      const note = document.createElement('p'); note.className = 'note-image-failed';
+      note.textContent = `This image couldn't be loaded from ${hostOf(this.__url)}.`;
+      button.replaceWith(note);
+    });
+    button.append(image); button.addEventListener('click', () => hooks.onOpenImage(image.currentSrc || image.src, alt));
+    figure.append(button);
+    if (this.__caption) {const caption = document.createElement('figcaption'); caption.textContent = this.__caption; figure.append(caption);}
+    figure.append(removeButton(editor, this.__key, 'Remove image'));
+    return figure;
+  }
+  updateDOM() {return false;}
+  exportDOM() {
+    const image = document.createElement('img'); image.src = this.__url; image.alt = this.__caption || 'Image';
+    return {element:image};
+  }
+  getTextContent() {return this.__caption || 'Image';}
+  exportJSON() {return {...super.exportJSON(), type:'external-image', version:1, url:this.__url, caption:this.__caption};}
+  static importJSON(data) {return new ExternalImageNode(data.url, data.caption);}
+}
+
+export const EMBED_NODES = [BookmarkNode, VideoEmbedNode, ExternalImageNode];
 
 // The importer empties the line's text before it calls replace; a transformer that declines puts the text back.
 const decline = (children, match) => {
@@ -131,6 +256,7 @@ const decline = (children, match) => {
   return false;
 };
 const BOOKMARK = /^<bookmark\s+url="(https?:\/\/[^"\s]*)"\s*>([^<]*)<\/bookmark>\s*$/;
+const MEDIA = /^!\[([^\]\n]*)\]\((https?:\/\/[^)\s]+)\)\s*$/;
 
 export function embedTransformers() {
   return [
@@ -140,6 +266,17 @@ export function embedTransformers() {
       replace(parent, children, match) {
         if (!httpUrl(match[1])) return decline(children, match);
         parent.replace(new BookmarkNode(match[1], unescapeCaption(match[2]).trim()));
+      }},
+    // Placed before LINK. A video host with no usable video ID is left as text, so it stays a link.
+    {dependencies:[VideoEmbedNode, ExternalImageNode], type:'element', regExp:MEDIA,
+      export:node => node instanceof VideoEmbedNode || node instanceof ExternalImageNode ?
+        `![${imageCaption(node.__caption)}](${exportUrl(node.__url)})` : null,
+      replace(parent, children, match) {
+        if (!httpUrl(match[2])) return decline(children, match);
+        if (isVideoHost(match[2])) {
+          if (!videoEmbed(match[2])) return decline(children, match);
+          parent.replace(new VideoEmbedNode(match[2], match[1]));
+        } else parent.replace(new ExternalImageNode(match[2], match[1]));
       }},
   ];
 }
@@ -154,6 +291,8 @@ export function $insertBookmark(url, caption = '') {
 // The "Paste as" menu: a pasted web address lands as a link first; Link keeps it, the others replace it with a block.
 function pasteChoices(url) {
   const choices = [{label:'Link', icon:'link', make:null}];
+  if (videoEmbed(url)) choices.push({label:'Embed video', icon:'video', make:() => new VideoEmbedNode(url)});
+  if (isImageUrl(url)) choices.push({label:'Embed image', icon:'photo', make:() => new ExternalImageNode(url)});
   choices.push({label:'Bookmark', icon:'bookmark', make:() => new BookmarkNode(url)});
   return choices;
 }
