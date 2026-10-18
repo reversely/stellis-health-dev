@@ -445,6 +445,9 @@ def start_speech_worker() -> None:
 @app.on_event("shutdown")
 def stop_retention_worker() -> None:
     _retention_stop.set()
+    # Wait for an in-flight sweep so it cannot touch the data directory after shutdown returns.
+    if _retention_thread is not None:
+        _retention_thread.join(timeout=30)
     processing.stop_worker()
 
 
