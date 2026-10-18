@@ -18,9 +18,10 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, suggestions, todos, transcript_agent
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, suggestions, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -644,6 +645,23 @@ async def link_preview(request: LinkPreviewRequest) -> dict[str, str | None]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@api.get("/export")
+def export_folder(scope: Literal["collection", "notebook", "all"] = "all", id: str | None = None,
+                  format: Literal["markdown", "stellis"] = "markdown") -> FileResponse:
+    """Download pages and conversations as a ZIP of Markdown files; the temporary file is deleted after sending."""
+    if scope != "all" and not id:
+        raise HTTPException(status_code=400, detail="Choose a collection or notebook to export")
+    try:
+        path = folder_export.build(scope, id, format)
+        name = folder_export.archive_name(scope, id, format)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return FileResponse(path, media_type="application/zip", filename=name,
+                        background=BackgroundTask(path.unlink, missing_ok=True))
 
 
 @api.get("/notebooks")

@@ -78,10 +78,10 @@ def _public(row) -> dict[str, object]:
 
 
 def _animated(source: Image.Image, data: bytes) -> tuple[bytes, int, int, str]:
-    """Validate every frame of a GIF or WebP animation and keep its animation.
+    """Re-encode a GIF or WebP animation frame by frame, keeping durations and loop count.
 
-    An animated WebP is stored as uploaded. A GIF is also encoded as lossless animated WebP, and that
-    replaces the GIF only when smaller.
+    Decoded frames are written to a fresh container, so EXIF, XMP, ICC, and GIF comment blocks in the
+    upload are not stored. A GIF becomes lossless animated WebP, or a re-encoded GIF when that is smaller.
     """
     width, height = source.size
     if source.n_frames > MAX_FRAMES:
@@ -89,23 +89,28 @@ def _animated(source: Image.Image, data: bytes) -> tuple[bytes, int, int, str]:
     if source.n_frames * width * height > MAX_ANIMATION_PIXELS:
         raise ValueError("Animation is too large")
     is_gif = source.format == "GIF"
+    loop = int(source.info.get("loop", 1 if is_gif else 0))
     frames: list[Image.Image] = []
     durations: list[int] = []
     for frame in ImageSequence.Iterator(source):
         frame.load()
-        if is_gif:
-            frames.append(frame.convert("RGBA"))
-            durations.append(int(frame.info.get("duration", 100)))
-    if not is_gif:
-        return data, width, height, "image/webp"
+        frames.append(frame.convert("RGBA"))
+        durations.append(int(frame.info.get("duration", 100)))
     if all(frame.getextrema()[3][0] == 255 for frame in frames):
         frames = [frame.convert("RGB") for frame in frames]
     output = io.BytesIO()
     frames[0].save(output, format="WEBP", save_all=True, append_images=frames[1:], duration=durations,
-                   loop=int(source.info.get("loop", 1)), lossless=True, method=4)
-    if len(output.getvalue()) < len(data):
-        return output.getvalue(), width, height, "image/webp"
-    return data, width, height, "image/gif"
+                   loop=loop, lossless=True, method=4, exif=b"", xmp=b"", icc_profile=None)
+    webp = output.getvalue()
+    if not is_gif:
+        return webp, width, height, "image/webp"
+    # The GIF is re-saved rather than kept, because the upload may carry comment blocks.
+    gif = io.BytesIO()
+    frames[0].save(gif, format="GIF", save_all=True, append_images=frames[1:], duration=durations,
+                   loop=loop, disposal=2)
+    if len(webp) <= len(gif.getvalue()):
+        return webp, width, height, "image/webp"
+    return gif.getvalue(), width, height, "image/gif"
 
 
 def _normalize(data: bytes) -> tuple[bytes, int, int, str]:

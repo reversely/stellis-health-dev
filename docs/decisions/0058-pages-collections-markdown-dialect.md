@@ -18,3 +18,20 @@ The user asked for Markdown pages and notebook organisation modelled on Notion, 
 ## Consequences
 
 Pages are local plaintext like notes and are not part of the encrypted account snapshot until a later decision covers notes and pages together. The stored dialect renders outside Stellis only where GitHub or Obsidian support it; link cards and columns show as tags elsewhere. Agent-written changes to databases, such as new to-do rows or tentative status changes, are a separate later decision and are not pages.
+
+## Amendment, 2026-10-18: Markdown folder export (#284)
+
+The user decided on two export options: **Export Markdown** (plain, for other tools) and **Export for Stellis** (keeps task IDs and dialect tags for a later re-import). The backend ships first; the menu action is a separate frontend ticket.
+
+### Contract
+
+`GET /api/v1/export?scope=collection|notebook|all&id=<id>&format=markdown|stellis` returns `application/zip`. `scope` defaults to `all` and `format` to `markdown`. `id` is required for `collection` and `notebook` (400 without it, 404 for an unknown ID); `all` ignores it. An invalid `scope` or `format` is 422.
+
+- **Included:** active pages and conversations (not trashed) in scope. Recordings in progress, transcripts, and audio are not exported.
+- **Layout:** `<collection>/<notebook>/<title>.md` for a notebook in a collection, `<notebook>/<title>.md` for a notebook without one, and `No notebook/<title>.md` for items without a notebook (scope `all` only). Each notebook folder holds its own `images/` folder with `<image id>.<ext>` files.
+- **Pages:** `# <title>` followed by the page Markdown.
+- **Conversations:** one file with `# <title>`, `## My Notes`, and `## Summary`. The Summary is the latest finished version, the user's edited text when it exists and otherwise the generated points under `### Overview`, `### Topics`, `### Decisions`, and `### Action proposals`. A section with no content reads `_No notes._` or `_No summary._`.
+- **`format=markdown`:** `todos.plain_markdown` strips task IDs, turns bookmarks into links, and unwraps columns; `stellis-image:` references become `images/<id>.<ext>`. A reference whose file is missing becomes its alt text.
+- **`format=stellis`:** page and note text is stored Markdown verbatim, so IDs, dialect tags, and `stellis-image:<id>` references stay. The same `images/` files are included, and `stellis-export.json` at the ZIP root maps them. The manifest has `version` (1), `format`, `scope`, `scope_id`, `exported_at`, `layout` (`title-heading`: strip the first `# ` line, and for a conversation split at the two `##` headings), `collections` and `notebooks` (ID, name, color, folder, membership), and `items` (kind, ID, title, path, notebook ID, tags as ID and name, note or page revision, created time, referenced images as ID and path, and for a conversation the Summary version ID).
+- **Names:** characters that are unsafe in a path (separators, `:*?"<>|`, control characters) become spaces, leading and trailing dots and spaces are removed, names are cut to 100 characters, an empty name is `Untitled`, and a duplicate in the same folder (ignoring case) gets ` (2)`, ` (3)`.
+- **Resources:** the ZIP is built in a temporary file in the data directory and deleted after the response is sent or if building fails. Images are streamed from disk.

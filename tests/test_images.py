@@ -120,6 +120,37 @@ class ImageWorkflowTest(unittest.TestCase):
         self.assertIn("at most 2 frames", too_many.json()["detail"])
         self.assertEqual(len(list((Path(self.temp.name) / "images").iterdir())), 2)
 
+    def test_animated_uploads_are_re_encoded_without_metadata(self) -> None:
+        owner = f"conversations/{self.conversation_id}"
+        frames = [Image.effect_noise((64, 48), 80).convert("RGB").point(lambda v, i=i: (v + i * 70) % 256) for i in range(3)]
+        exif = Image.Exif()
+        exif[0x010E] = "GPS-laden-description"
+        webp, gif = io.BytesIO(), io.BytesIO()
+        frames[0].save(webp, format="WEBP", save_all=True, append_images=frames[1:], duration=[50, 90, 120],
+                       loop=3, exif=exif.tobytes(), xmp=b"<x:xmpmeta>secret-location</x:xmpmeta>")
+        frames[0].save(gif, format="GIF", save_all=True, append_images=frames[1:], duration=80, loop=0,
+                       comment=b"secret-comment")
+        self.assertIn(b"GPS-laden-description", webp.getvalue())
+        self.assertIn(b"secret-comment", gif.getvalue())
+        for name, upload, mime in (("a.webp", webp, "image/webp"), ("a.gif", gif, "image/gif")):
+            with self.subTest(name=name):
+                response = self.client.post(f"/api/v1/{owner}/images", data={"media_position_ms": "0"},
+                                            files={"file": (name, upload.getvalue(), mime)})
+                self.assertEqual(response.status_code, 200, response.text)
+                stored = self.client.get(f"/api/v1/{owner}/images/{response.json()['id']}/file").content
+                for secret in (b"GPS-laden-description", b"secret-location", b"secret-comment", b"EXIF", b"XMP"):
+                    self.assertNotIn(secret, stored)
+                with Image.open(io.BytesIO(stored)) as image:
+                    self.assertEqual(image.n_frames, 3)
+                    if name.endswith("webp"):
+                        self.assertEqual(image.info["loop"], 3)
+                        durations = []
+                        for index in range(3):
+                            image.seek(index)
+                            image.load()
+                            durations.append(image.info["duration"])
+                        self.assertEqual(durations, [50, 90, 120])
+
     def test_selected_passage_keeps_audio_time_after_new_generation(self) -> None:
         owner = f"conversations/{self.conversation_id}"
         stamp = datetime.now(timezone.utc).isoformat()
