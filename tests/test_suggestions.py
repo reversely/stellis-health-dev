@@ -95,9 +95,13 @@ class SuggestionsTest(unittest.TestCase):
             self.add(loose, "Call Sam")
         on = self.page(notebook_id=self.notebook("On", "on"))
         for values in ({"text": ""}, {"text": "x" * 501}, {"text": "a", "due_date": "2026-13-01"},
-                       {"text": "a", "due_date": "2026-02-01", "due_time": "25:00"}, {"text": "a", "extra": 1}):
+                       {"text": "a", "due_date": "2026-02-01", "due_time": "25:00"}, {"text": "a", "extra": 1},
+                       {"text": "call ^tabc123"}, {"text": "[ ] call"}, {"text": "- [x] call"}, {"text": "call <bookmark url=\"x\">"},
+                       {"text": "## call"}, {"text": "> call"}, {"text": "1. call"}, {"text": "```js"}):
             with self.assertRaises(ValueError, msg=values):
                 suggestions.propose("transcript-agent", "page", on["id"], "add_todo", values)
+        self.assertEqual(suggestions.validate_values("add_todo", {"text": "Email a^tb, mark [x] later, 2 < 3"})["text"],
+                         "Email a^tb, mark [x] later, 2 < 3")
         with self.assertRaises(LookupError):
             self.close(on, "tmissing")
         saved = self.page("- [ ] real", on["notebook_id"])

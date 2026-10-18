@@ -45,6 +45,24 @@ def todo_enabled(notebook_id: str | None) -> bool:
         return _todo_enabled(conn, notebook_id)
 
 
+# Text that would change the line's meaning once written as `- [ ] text` (ADR 0058, ADR 0059).
+_TRAILING_ID = re.compile(r"(?:^|\s)\^t[0-9a-z]{6}$")
+_LEADING_CHECKBOX = re.compile(r"^(?:[-*+]\s+)?\[[ xX-]\](?:\s|$)")
+_DIALECT_TAG = re.compile(r"</?(?:details|summary|bookmark|columns?)\b[^>]*>", re.IGNORECASE)
+_BLOCK_PREFIX = re.compile(r"^(?:#{1,6}\s|>|[-*+]\s|\d+[.)]\s|\||```|~~~|---|\*\*\*|___)")
+
+
+def _check_todo_text(text: str) -> None:
+    if _TRAILING_ID.search(text):
+        raise ValueError("To-do text cannot end with a task ID")
+    if _LEADING_CHECKBOX.match(text):
+        raise ValueError("To-do text cannot start with a checkbox")
+    if _DIALECT_TAG.search(text):
+        raise ValueError("To-do text cannot contain page layout tags")
+    if _BLOCK_PREFIX.match(text):
+        raise ValueError("To-do text cannot start with Markdown block syntax")
+
+
 def validate_values(operation: str, values: object) -> dict[str, str]:
     """Return the normalized values for an operation, or raise ValueError."""
     if operation not in OPERATIONS:
@@ -62,6 +80,7 @@ def validate_values(operation: str, values: object) -> dict[str, str]:
     text = " ".join(text.split()) if isinstance(text, str) else ""
     if not 1 <= len(text) <= 500:
         raise ValueError("To-do text must be 1 to 500 characters")
+    _check_todo_text(text)
     result = {"text": text}
     due_date, due_time = values.get("due_date"), values.get("due_time")
     if due_date is not None:
