@@ -643,9 +643,7 @@ let enhancedState = null;
 let enhancedSaveTimer = null;
 let enhancedPollTimer = null;
 function enhancedMarkdown(result) {
-  return enhancedFields.filter(([field]) => result[field]?.length)
-    .map(([field,title]) => `## ${title}\n\n${result[field].map(item => `- ${item.text}`).join('\n')}`)
-    .join('\n\n');
+  return window.StellisSummaryText.summaryMarkdown(result, enhancedFields); // escapes model text so it cannot add blocks
 }
 async function ensureEnhancedEditor() {
   if (enhancedEditor) return enhancedEditor;
