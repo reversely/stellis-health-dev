@@ -1658,7 +1658,10 @@ a.rail-name:hover { text-decoration: underline; }
     position: fixed; z-index: 1; top: 72px; bottom: 0; left: 0; width: var(--rail-width);
     box-sizing: border-box; padding: 28px 24px 24px;
   }
-  body:has(#list-view:not([hidden])) .recent-list { flex: 1; min-height: 0; overflow-y: auto; }
+  /* The tree scrolls in its own region (#304); a short window keeps a usable height and scrolls the rail instead. */
+  body:has(#list-view:not([hidden])) .home-rail { overflow-y: auto; }
+  body:has(#list-view:not([hidden])) .recent-list { flex: 1 1 auto; min-height: 140px; overflow-y: auto; overscroll-behavior: contain; }
+  body:has(#list-view:not([hidden])) .home-rail > :not(.recent-list) { flex: none; }
   body:has(#list-view:not([hidden])) .home-rail-head { gap: 8px; }
   body:has(#list-view:not([hidden])) #list-view { padding-top: 32px; }
   body:has(#list-view:not([hidden]))::after { position: fixed; height: 100vh; opacity: .3; mix-blend-mode: overlay; }
@@ -1677,6 +1680,8 @@ a.rail-name:hover { text-decoration: underline; }
   .home-actions { width: 100%; }
   .home-actions .invert-button { flex: 1; justify-content: center; }
   .settings-link { margin-top: 10px; }
+  /* On the narrow band the tree also keeps its own scroll region (#304). */
+  #conversation-list { max-height: min(60vh, 560px); overflow-y: auto; overscroll-behavior: contain; }
 }
 @media (max-width: 560px) {
   .notebook-grid { grid-template-columns: 1fr; }
