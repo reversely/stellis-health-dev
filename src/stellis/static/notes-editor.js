@@ -30,6 +30,7 @@ import {EMBED_NODES, $insertBookmark, configureEmbeds, embedTransformers, httpUr
 import {
   $insertColumns, $insertToggle, CONTAINER_NODES, columnsTransformer, registerContainers, toggleTransformer,
 } from './notes-containers.js';
+import {escapedTextTransformer} from './notes-escapes.js';
 import {registerSlashMenu} from './notes-slash.js';
 import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
@@ -191,7 +192,7 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
       }},
     // The task list must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
     HEADING, QUOTE, CODE, HR, taskListTransformer(), UNORDERED_LIST, ORDERED_LIST,
-    INLINE_CODE, BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, STRIKETHROUGH, LINK,
+    INLINE_CODE, BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, STRIKETHROUGH, LINK, escapedTextTransformer(),
   ];
   return transformers;
 }
