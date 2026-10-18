@@ -166,6 +166,15 @@ def _generate(segments: list[dict[str, object]], raw_markdown: str,
     return ai._expand_sources(result, aliases, "summary")
 
 
+def _start_transcript_agent(conversation_id: str, run_id: str) -> None:
+    """A to-do proposal never fails the Summary it follows."""
+    from stellis import transcript_agent
+    try:
+        transcript_agent.start(conversation_id, run_id)
+    except Exception:
+        logging.getLogger(__name__).exception("Transcript Agent could not start for Summary %s", run_id)
+
+
 def _run(run_id: str) -> None:
     record = _row(run_id)
     if record is None:
@@ -188,6 +197,7 @@ def _run(run_id: str) -> None:
                 usage_json=json.dumps(metadata["usage"]),
                 provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"],
                 error_code=None, error_message=None)
+        _start_transcript_agent(str(record["conversation_id"]), run_id)
     except ai.AIError as exc:
         # The UI shows a generic retry message; keep the cause here and on the run.
         logging.getLogger(__name__).warning("Summary run %s failed (%s): %s", run_id, exc.code, exc)

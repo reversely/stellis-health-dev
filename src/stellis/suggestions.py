@@ -156,6 +156,14 @@ def propose(author: str, target_kind: str, target_id: str, operation: str, value
         return public(conn.execute("SELECT * FROM suggestions WHERE id = ?", (suggestion_id,)).fetchone())
 
 
+def supersede_pending(author: str, source_kind: str, source_id: str) -> int:
+    """Retire an author's pending suggestions from one source so a re-run replaces them."""
+    with storage.connect() as conn:
+        return conn.execute("UPDATE suggestions SET state = 'superseded', decided_at = ? WHERE state = 'pending' "
+                            "AND author = ? AND source_kind = ? AND source_id = ?",
+                            (_stamp(), author, source_kind, source_id)).rowcount
+
+
 def amend(suggestion_id: str, values: dict) -> dict[str, object]:
     """Replace a pending suggestion's values. The first amendment keeps the agent's version."""
     with storage.connect() as conn:
