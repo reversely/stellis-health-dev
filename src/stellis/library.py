@@ -215,7 +215,8 @@ def delete_expired(*, now: datetime | None = None) -> dict[str, object]:
         expired = [str(row["id"]) for row in conn.execute(
             "SELECT id FROM conversations WHERE trashed_at IS NOT NULL AND trashed_at <= ?",
             (cutoff,)).fetchall()]
-    deleted, deferred = [], []
+    from stellis import pages
+    deleted, deferred = pages.delete_expired(cutoff), []
     for conversation_id in expired:
         try:
             delete_permanently(conversation_id, expired_before=cutoff)
@@ -243,7 +244,7 @@ def erase_all() -> dict[str, int]:
     for recording_id in captures:
         recording.discard_session(recording_id)
     with storage.connect() as conn:
-        for table in ("vocabulary", "persons", "notebooks", "collections", "category_automation", "categories", "event_notes"):
+        for table in ("vocabulary", "persons", "pages", "notebooks", "collections", "category_automation", "categories", "event_notes"):
             conn.execute(f"DELETE FROM {table}")
         # Seed the default categories again for the next account.
         conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")

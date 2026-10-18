@@ -82,6 +82,8 @@ def list_notebooks() -> list[dict[str, object]]:
         rows = conn.execute("""SELECT id, title, duration_ms, created_at, recorded_at, notebook_id FROM conversations
             WHERE notebook_id IS NOT NULL AND trashed_at IS NULL
             ORDER BY COALESCE(recorded_at, created_at) DESC, created_at DESC""").fetchall()
+    from stellis import pages
+    page_groups = pages.by_notebook()
     members: dict[str, list[dict[str, object]]] = {}
     for row in rows:
         members.setdefault(str(row["notebook_id"]), []).append(dict(row))
@@ -90,6 +92,7 @@ def list_notebooks() -> list[dict[str, object]]:
     for book in books:
         items = members.get(str(book["id"]), [])
         book["conversations"] = items
+        book["pages"] = page_groups.get(str(book["id"]), [])
         book["progress"] = points.get(str(items[0]["id"]), {}).get("progress", []) if items else []
     # The most recently active notebook leads.
     books.sort(key=lambda book: str((book["conversations"][0].get("recorded_at") or book["conversations"][0]["created_at"])
@@ -151,6 +154,7 @@ def delete(notebook_id: str) -> bool:
     with storage.connect() as conn:
         conn.execute("UPDATE conversations SET notebook_id = NULL WHERE notebook_id = ?", (notebook_id,))
         conn.execute("UPDATE recording_sessions SET notebook_id = NULL WHERE notebook_id = ?", (notebook_id,))
+        conn.execute("UPDATE pages SET notebook_id = NULL WHERE notebook_id = ?", (notebook_id,))
         return conn.execute("DELETE FROM notebooks WHERE id = ?", (notebook_id,)).rowcount > 0
 
 
