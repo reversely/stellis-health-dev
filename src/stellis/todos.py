@@ -10,7 +10,14 @@ from datetime import datetime, timezone
 
 from stellis import storage
 
-TASK_LINE = re.compile(r"^(\s*)[-*+] \[( |x|X|-)\] (.*?)(?: \^(t[0-9a-z]{6}))?\s*$")
+# The ID needs a space before it, which may be the one after the checkbox, so an empty task keeps text "".
+TASK_LINE = re.compile(r"^(\s*)[-*+] \[( |x|X|-)\] (.*?)\s*(?:(?<=\s)\^(t[0-9a-z]{6}))?\s*$")
+MAX_MARKDOWN = 200_000
+
+
+class TooLarge(ValueError):
+    """A document is over the size limit."""
+
 STATUSES = {" ": "open", "x": "done", "X": "done", "-": "canceled"}
 MARKERS = {"open": " ", "done": "x", "canceled": "-"}
 SOURCE_KINDS = ("conversation", "page")
@@ -57,7 +64,7 @@ def parse_tasks(markdown: str) -> list[Task]:
     tasks = []
     for number, (line, fenced) in enumerate(zip(lines, _fence_flags(lines)), start=1):
         match = None if fenced else TASK_LINE.match(line)
-        if match:
+        if match and match.group(3):  # an empty task line is not indexed and gets no ID
             tasks.append(Task(number, match.group(1), STATUSES[match.group(2)], match.group(3), match.group(4)))
     return tasks
 
@@ -89,7 +96,8 @@ def _supersede(conn, item_id: str, stamp: str, *, status_only: bool = False) -> 
                  + (" AND operation = 'set_todo_status'" if status_only else ""), (stamp, item_id))
 
 
-def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: dict | None = None) -> str:
+def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: dict | None = None,
+            enforce_limit: bool = True) -> str:
     """Sync a source's items with its task lines inside the caller's transaction.
 
     Returns the Markdown with an ID on every task line; the caller stores that version.
@@ -158,7 +166,12 @@ def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: d
         date, time = (due.get("due_date"), due.get("due_time")) if due else (None, None)
         conn.execute("UPDATE todo_items SET due_date = ?, due_time = ?, updated_at = ? WHERE id = ?",
                      (date, time if date else None, stamp, item_id))
-    return "\n".join(lines)
+    markdown = "\n".join(lines)
+    # Checked after IDs are added, so the stored version is what stays under the limit; the caller's transaction rolls back.
+    # Moving already-accepted capture notes must not fail a recording's finalize over added IDs.
+    if enforce_limit and len(markdown.encode("utf-8")) > MAX_MARKDOWN:
+        raise TooLarge("Notes are too large")
+    return markdown
 
 
 def delete_source(conn, source_kind: str, source_id: str) -> None:

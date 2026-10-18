@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from stellis import storage, todos
 
-MAX_MARKDOWN = 200_000
+MAX_MARKDOWN = todos.MAX_MARKDOWN
 
 
 def _stamp() -> str:
@@ -87,7 +87,7 @@ def attach_to_conversation(recording_id: str, conversation_id: str) -> None:
             return
         existing = conn.execute("SELECT * FROM meeting_notes WHERE conversation_id = ?", (conversation_id,)).fetchone()
         if existing is None:
-            indexed = todos.reindex(conn, "conversation", conversation_id, str(captured["markdown"]))
+            indexed = todos.reindex(conn, "conversation", conversation_id, str(captured["markdown"]), enforce_limit=False)
             conn.execute("UPDATE meeting_notes SET recording_id = NULL, conversation_id = ?, markdown = ?, updated_at = ? WHERE id = ?",
                          (conversation_id, indexed, _stamp(), captured["id"]))
             return
