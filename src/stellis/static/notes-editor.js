@@ -25,6 +25,7 @@ import {
   BOLD_ITALIC_STAR, BOLD_STAR, CODE, HEADING, INLINE_CODE, ITALIC_STAR, LINK,
   ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
+import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
 // A line of `---`, `***` or `___` is a divider; it is written back as `---`.
@@ -62,6 +63,11 @@ class MeetingImageNode extends DecoratorNode {
     return figure;
   }
   updateDOM() {return false;}
+  // Copied HTML carries a plain image, not the expand button and its handlers.
+  exportDOM() {
+    const image = document.createElement('img'); image.src = this.__src; image.alt = this.__caption || 'Meeting screenshot';
+    return {element:image};
+  }
   getTextContent() {return this.__caption || 'Meeting screenshot';}
   exportJSON() {return {...super.exportJSON(), type:'meeting-image', version:1,
     imageId:this.__imageId, caption:this.__caption, src:this.__src};}
@@ -195,6 +201,7 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
   root.contentEditable = 'true'; root.setAttribute('role','textbox'); root.setAttribute('aria-multiline','true');
   editor.setRootElement(root);
   // Dates are tracked only where the server indexes to-dos (saved conversations).
+  unregister.push(registerCleanCopy(editor, {nodes:NOTES_NODES, theme:NOTES_THEME, transformers:markdown}));
   unregister.push(registerTasks(editor, root, {dates:!!options.todoDates}));
   unregister.push(editor.registerUpdateListener(({editorState, dirtyElements, dirtyLeaves, tags}) => {
     if (tags.has('notes-load') || (!dirtyElements.size && !dirtyLeaves.size)) return;
