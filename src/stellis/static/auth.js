@@ -47,6 +47,8 @@ form.addEventListener('submit', async event => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Sign in failed');
+    // A new account starts the first-run tour on its first load of the app.
+    if (registration) { try { window.StellisTour?.markSignup(localStorage, result.username); } catch {} }
     location.replace('/');
   } catch (problem) { error.textContent = problem.message; }
   finally { button.disabled = false; }
