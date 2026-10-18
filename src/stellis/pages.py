@@ -42,6 +42,41 @@ def _active(conn, page_id: str):
     return row
 
 
+def page_tags(conn, page_ids: list[str] | None = None) -> dict[str, list[str]]:
+    """Tag IDs per page ID, in ID order; all pages when `page_ids` is None."""
+    rows = conn.execute("SELECT page_id, category_id FROM page_categories ORDER BY category_id").fetchall()
+    wanted = None if page_ids is None else set(page_ids)
+    tags: dict[str, list[str]] = {}
+    for row in rows:
+        if wanted is None or row["page_id"] in wanted:
+            tags.setdefault(str(row["page_id"]), []).append(str(row["category_id"]))
+    return tags
+
+
+def _full(conn, page_id: str) -> dict[str, object]:
+    return {**dict(_active(conn, page_id)), "category_ids": page_tags(conn, [page_id]).get(page_id, [])}
+
+
+def _with_tags(conn, rows) -> list[dict[str, object]]:
+    tags = page_tags(conn)
+    return [{**dict(row), "category_ids": tags.get(str(row["id"]), [])} for row in rows]
+
+
+def set_categories(page_id: str, category_ids: list[str]) -> dict[str, object]:
+    """Replace a page's tags; an unknown page or tag raises LookupError."""
+    wanted = list(dict.fromkeys(category_ids))
+    with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        _active(conn, page_id)
+        for category_id in wanted:
+            if conn.execute("SELECT 1 FROM categories WHERE id = ?", (category_id,)).fetchone() is None:
+                raise LookupError("Category not found")
+        conn.execute("DELETE FROM page_categories WHERE page_id = ?", (page_id,))
+        conn.executemany("INSERT INTO page_categories (page_id, category_id) VALUES (?, ?)",
+                         [(page_id, category_id) for category_id in wanted])
+    return {"id": page_id, "category_ids": sorted(wanted)}
+
+
 def create(title: str | None = None, notebook_id: str | None = None, markdown: str = "") -> dict[str, object]:
     name = _title(title)
     _check_markdown(markdown)
@@ -52,12 +87,12 @@ def create(title: str | None = None, notebook_id: str | None = None, markdown: s
         markdown = todos.reindex(conn, "page", page_id, markdown)
         conn.execute("INSERT INTO pages (id, title, markdown, notebook_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                      (page_id, name, markdown, notebook_id, stamp, stamp))
-        return dict(_active(conn, page_id))
+        return _full(conn, page_id)
 
 
 def get(page_id: str) -> dict[str, object]:
     with storage.connect() as conn:
-        return dict(_active(conn, page_id))
+        return _full(conn, page_id)
 
 
 def list_pages(notebook_id: str | None = None) -> list[dict[str, object]]:
@@ -70,7 +105,7 @@ def list_pages(notebook_id: str | None = None) -> list[dict[str, object]]:
     with storage.connect() as conn:
         rows = conn.execute(f"SELECT id, title, notebook_id, created_at, updated_at FROM pages WHERE {where} "
                             "ORDER BY updated_at DESC, created_at DESC", args).fetchall()
-    return [dict(row) for row in rows]
+        return _with_tags(conn, rows)
 
 
 def rename(page_id: str, title: str | None) -> dict[str, object]:
@@ -78,7 +113,7 @@ def rename(page_id: str, title: str | None) -> dict[str, object]:
     with storage.connect() as conn:
         _active(conn, page_id)
         conn.execute("UPDATE pages SET title = ?, updated_at = ? WHERE id = ?", (name, _stamp(), page_id))
-        return dict(_active(conn, page_id))
+        return _full(conn, page_id)
 
 
 def save(page_id: str, markdown: str, expected_revision: int, todo_dates: dict | None = None) -> dict[str, object]:
@@ -94,7 +129,7 @@ def save(page_id: str, markdown: str, expected_revision: int, todo_dates: dict |
         markdown = todos.reindex(conn, "page", page_id, markdown, todo_dates)
         conn.execute("UPDATE pages SET markdown = ?, revision = ?, updated_at = ? WHERE id = ?",
                      (markdown, expected_revision + 1, _stamp(), page_id))
-        return dict(_active(conn, page_id))
+        return _full(conn, page_id)
 
 
 def assign_notebook(page_id: str, notebook_id: str | None) -> dict[str, object]:
@@ -118,7 +153,7 @@ def trashed() -> list[dict[str, object]]:
     with storage.connect() as conn:
         rows = conn.execute("SELECT id, title, notebook_id, created_at, updated_at, trashed_at FROM pages "
                             "WHERE trashed_at IS NOT NULL ORDER BY trashed_at DESC").fetchall()
-    return [dict(row) for row in rows]
+        return _with_tags(conn, rows)
 
 
 def restore(page_id: str) -> dict[str, object]:
@@ -131,6 +166,10 @@ def restore(page_id: str) -> dict[str, object]:
 
 def delete_permanently(page_id: str, *, expired_before: str | None = None) -> dict[str, object]:
     with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("""DELETE FROM page_categories WHERE page_id = ? AND EXISTS (
+            SELECT 1 FROM pages WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?))""",
+                     (page_id, page_id, expired_before, expired_before))
         deleted = conn.execute("DELETE FROM pages WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?)",
                                (page_id, expired_before, expired_before)).rowcount
         if deleted:
@@ -145,6 +184,8 @@ def delete_expired(cutoff: str) -> list[str]:
     with storage.connect() as conn:
         ids = [str(row["id"]) for row in conn.execute(
             "SELECT id FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))]
+        for page_id in ids:
+            conn.execute("DELETE FROM page_categories WHERE page_id = ?", (page_id,))
         conn.execute("DELETE FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))
         for page_id in ids:
             todos.delete_source(conn, "page", page_id)
@@ -157,7 +198,9 @@ def by_notebook() -> dict[str, list[dict[str, object]]]:
     with storage.connect() as conn:
         rows = conn.execute("SELECT id, title, updated_at, notebook_id FROM pages "
                             "WHERE notebook_id IS NOT NULL AND trashed_at IS NULL ORDER BY updated_at DESC").fetchall()
+        tags = page_tags(conn)
     groups: dict[str, list[dict[str, object]]] = {}
     for row in rows:
-        groups.setdefault(str(row["notebook_id"]), []).append({key: row[key] for key in ("id", "title", "updated_at")})
+        groups.setdefault(str(row["notebook_id"]), []).append(
+            {**{key: row[key] for key in ("id", "title", "updated_at")}, "category_ids": tags.get(str(row["id"]), [])})
     return groups
