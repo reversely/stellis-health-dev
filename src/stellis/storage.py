@@ -384,6 +384,18 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS pages (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            markdown TEXT NOT NULL DEFAULT '',
+            revision INTEGER NOT NULL DEFAULT 0,
+            notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            trashed_at TEXT
+        )"""
+    )
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS meeting_notes (
             id TEXT PRIMARY KEY,
             conversation_id TEXT UNIQUE REFERENCES conversations(id),

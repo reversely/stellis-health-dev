@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, notebooks, notes, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -346,6 +346,21 @@ class RecordingEvent(BaseModel):
 
 class NotesWrite(BaseModel):
     markdown: str = Field(max_length=200_000)
+    expected_revision: int = Field(ge=0)
+
+
+class PageCreate(BaseModel):
+    title: str | None = None
+    notebook_id: str | None = None
+    markdown: str = ""
+
+
+class PageRename(BaseModel):
+    title: str | None = None
+
+
+class PageWrite(BaseModel):
+    markdown: str
     expected_revision: int = Field(ge=0)
 
 
@@ -934,8 +949,10 @@ def remove_category(conversation_id: str, category_id: str) -> dict[str, object]
 def trash() -> list[dict[str, object]]:
     assigned = library.assignments()
     return [{**item, "category_ids": assigned.get(str(item["id"]), []),
-             "expires_at": library.expires_at(str(item["trashed_at"]))}
-            for item in storage.list_conversations(trashed=True)]
+             "expires_at": library.expires_at(str(item["trashed_at"])), "kind": "conversation"}
+            for item in storage.list_conversations(trashed=True)] + [
+        {**item, "category_ids": [], "expires_at": library.expires_at(str(item["trashed_at"])), "kind": "page"}
+        for item in pages.trashed()]
 
 
 @api.post("/conversations/{conversation_id}/trash")
@@ -951,7 +968,10 @@ def restore_from_trash(conversation_id: str) -> dict[str, object]:
     try:
         return library.restore(conversation_id)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        try:
+            return pages.restore(conversation_id)
+        except LookupError:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @api.delete("/trash/{conversation_id}")
@@ -959,7 +979,10 @@ def delete_from_trash(conversation_id: str) -> dict[str, object]:
     try:
         return library.delete_permanently(conversation_id)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        try:
+            return pages.delete_permanently(conversation_id)
+        except LookupError:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -1133,6 +1156,54 @@ def _write_notes(scope: str, item_id: str, request: NotesWrite) -> dict[str, obj
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+def _page_call(call, *args):
+    try:
+        return call(*args)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except pages.TooLarge as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.get("/pages")
+def list_pages(notebook_id: str | None = None) -> list[dict[str, object]]:
+    return pages.list_pages(notebook_id)
+
+
+@api.post("/pages", status_code=201)
+def create_page(request: PageCreate) -> dict[str, object]:
+    return _page_call(pages.create, request.title, request.notebook_id, request.markdown)
+
+
+@api.get("/pages/{page_id}")
+def read_page(page_id: str) -> dict[str, object]:
+    return _page_call(pages.get, page_id)
+
+
+@api.patch("/pages/{page_id}")
+def rename_page(page_id: str, request: PageRename) -> dict[str, object]:
+    return _page_call(pages.rename, page_id, request.title)
+
+
+@api.put("/pages/{page_id}/markdown")
+def save_page(page_id: str, request: PageWrite) -> dict[str, object]:
+    return _page_call(pages.save, page_id, request.markdown, request.expected_revision)
+
+
+@api.put("/pages/{page_id}/notebook")
+def assign_page_notebook(page_id: str, request: NotebookAssignment) -> dict[str, object]:
+    return _page_call(pages.assign_notebook, page_id, request.notebook_id)
+
+
+@api.post("/pages/{page_id}/trash")
+def trash_page(page_id: str) -> dict[str, object]:
+    return _page_call(pages.move_to_trash, page_id)
 
 
 @api.get("/recordings/{recording_id}/notes")
