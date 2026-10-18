@@ -25,6 +25,8 @@ import {
   BOLD_ITALIC_STAR, BOLD_STAR, CODE, HEADING, INLINE_CODE, ITALIC_STAR, LINK,
   ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
+import {CalloutNode, $insertCallout, calloutTransformer, registerCallouts} from './notes-callouts.js';
+import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
 // A line of `---`, `***` or `___` is a divider; it is written back as `---`.
@@ -62,6 +64,11 @@ class MeetingImageNode extends DecoratorNode {
     return figure;
   }
   updateDOM() {return false;}
+  // Copied HTML carries a plain image, not the expand button and its handlers.
+  exportDOM() {
+    const image = document.createElement('img'); image.src = this.__src; image.alt = this.__caption || 'Meeting screenshot';
+    return {element:image};
+  }
   getTextContent() {return this.__caption || 'Meeting screenshot';}
   exportJSON() {return {...super.exportJSON(), type:'meeting-image', version:1,
     imageId:this.__imageId, caption:this.__caption, src:this.__src};}
@@ -135,7 +142,7 @@ function $restorePoint(point, saved) {
 }
 
 export const NOTES_NODES = [HeadingNode, QuoteNode, CodeNode, HorizontalRuleNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
-  TableNode, TableRowNode, TableCellNode, MeetingImageNode];
+  TableNode, TableRowNode, TableCellNode, MeetingImageNode, CalloutNode];
 export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two',h3:'note-heading-three'},
   list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
     listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
@@ -145,7 +152,9 @@ export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two'
 
 // The Markdown dialect shared by the editor and the headless round-trip test.
 export function notesTransformers({imageUrlForId = () => '', onOpenImage = () => {}} = {}) {
-  return [
+  // A callout reads and writes its body with the same list, so it asks for it when it runs.
+  const transformers = [
+    calloutTransformer(() => transformers),
     {dependencies:[MeetingImageNode], export:node => node instanceof MeetingImageNode ?
       `![${node.__caption.replace(/[\]\\]/g, '')}](stellis-image:${node.__imageId})` : null,
       regExp:IMAGE_MARKDOWN, type:'element', replace(parent, children, match) {
@@ -176,6 +185,7 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
     HEADING, QUOTE, CODE, HR, taskListTransformer(), UNORDERED_LIST, ORDERED_LIST,
     INLINE_CODE, BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, STRIKETHROUGH, LINK,
   ];
+  return transformers;
 }
 
 export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
@@ -195,6 +205,8 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
   root.contentEditable = 'true'; root.setAttribute('role','textbox'); root.setAttribute('aria-multiline','true');
   editor.setRootElement(root);
   // Dates are tracked only where the server indexes to-dos (saved conversations).
+  unregister.push(registerCallouts(editor));
+  unregister.push(registerCleanCopy(editor, {nodes:NOTES_NODES, theme:NOTES_THEME, transformers:markdown}));
   unregister.push(registerTasks(editor, root, {dates:!!options.todoDates}));
   unregister.push(editor.registerUpdateListener(({editorState, dirtyElements, dirtyLeaves, tags}) => {
     if (tags.has('notes-load') || (!dirtyElements.size && !dirtyLeaves.size)) return;
@@ -221,6 +233,7 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     else if (action === 'undo') editor.dispatchCommand(UNDO_COMMAND, undefined);
     else if (action === 'redo') editor.dispatchCommand(REDO_COMMAND, undefined);
     else if (action === 'table') editor.dispatchCommand(INSERT_TABLE_COMMAND, {rows:'2',columns:'2',includeHeaders:{rows:true,columns:false}});
+    else if (action.startsWith('callout-')) editor.update(() => $insertCallout(action.slice(8)));
     else if (action === 'image') options.onPickImage?.(captureSelection());
     else if (['add-row','add-column','delete-row','delete-column','delete-table'].includes(action)) editor.update(() => {
       const table = inTable();
