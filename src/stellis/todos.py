@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from stellis import storage
 
 # The ID needs a space before it, which may be the one after the checkbox, so an empty task keeps text "".
-TASK_LINE = re.compile(r"^(\s*)[-*+] \[( |x|X|-)\] (.*?)\s*(?:(?<=\s)\^(t[0-9a-z]{6}))?\s*$")
+# Blockquote and callout markers (`>`, nested `> >`) may precede the list marker; they stay in group 1.
+TASK_LINE = re.compile(r"^((?:\s*>)*\s*)[-*+] \[( |x|X|-)\] (.*?)\s*(?:(?<=\s)\^(t[0-9a-z]{6}))?\s*$")
 MAX_MARKDOWN = 200_000
 
 
@@ -223,7 +224,7 @@ def gather(notebook_id: str = "all", status: str = "open") -> dict[str, object]:
 
 def set_marker(line: str, status: str) -> str:
     """Rewrite the checkbox marker of one task line."""
-    return re.sub(r"^(\s*[-*+] \[)[ xX-](\])", lambda m: m.group(1) + MARKERS[status] + m.group(2), line, count=1)
+    return re.sub(r"^((?:\s*>)*\s*[-*+] \[)[ xX-](\])", lambda m: m.group(1) + MARKERS[status] + m.group(2), line, count=1)
 
 
 def set_status(item_id: str, status: str) -> dict[str, object]:

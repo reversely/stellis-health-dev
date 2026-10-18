@@ -3,6 +3,7 @@
 //   > Body paragraph.
 //   >
 //   > - a list inside the body
+// Type words are stored in lowercase, so `[!WARNING]` is written back as `[!warning]`.
 // A callout is a container (a shadow root, like a table cell) whose first child is the title paragraph and whose
 // other children are the body. GitHub draws NOTE, TIP, IMPORTANT, WARNING and CAUTION natively; other type words
 // show as block quotes there.
@@ -27,11 +28,11 @@ export class CalloutNode extends ElementNode {
   __kind;
   static getType() {return 'callout';}
   static clone(node) {return new CalloutNode(node.__kind, node.__key);}
-  constructor(kind = 'note', key) {super(key); this.__kind = TYPE_WORD.test(kind) ? kind : 'note';}
+  constructor(kind = 'note', key) {super(key); this.__kind = TYPE_WORD.test(kind) ? kind.toLowerCase() : 'note';}
   getKind() {return this.getLatest().__kind;}
   setKind(kind) {
     if (!TYPE_WORD.test(kind)) return this;
-    const writable = this.getWritable(); writable.__kind = kind; return writable;
+    const writable = this.getWritable(); writable.__kind = kind.toLowerCase(); return writable;
   }
   createDOM() {
     const element = document.createElement('div');
@@ -44,7 +45,7 @@ export class CalloutNode extends ElementNode {
     return false;
   }
   #decorate(element) {
-    element.dataset.callout = this.__kind.toLowerCase();
+    element.dataset.callout = this.__kind;
     element.style.setProperty('--callout-title', JSON.stringify(defaultTitle(this.__kind)));
   }
   // Copied HTML is a plain block quote tagged with the type.

@@ -26,6 +26,7 @@ import {
   ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
 import {CalloutNode, $insertCallout, calloutTransformer, registerCallouts} from './notes-callouts.js';
+import {EMBED_NODES, $insertBookmark, configureEmbeds, embedTransformers, httpUrl, registerEmbedPaste} from './notes-embeds.js';
 import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
@@ -142,7 +143,7 @@ function $restorePoint(point, saved) {
 }
 
 export const NOTES_NODES = [HeadingNode, QuoteNode, CodeNode, HorizontalRuleNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
-  TableNode, TableRowNode, TableCellNode, MeetingImageNode, CalloutNode];
+  TableNode, TableRowNode, TableCellNode, MeetingImageNode, CalloutNode, ...EMBED_NODES];
 export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two',h3:'note-heading-three'},
   list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
     listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
@@ -160,6 +161,7 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
       regExp:IMAGE_MARKDOWN, type:'element', replace(parent, children, match) {
         parent.replace(new MeetingImageNode(match[2], match[1], imageUrlForId(match[2]), onOpenImage));
       }},
+    ...embedTransformers(),
     {dependencies:[TableNode, TableRowNode, TableCellNode], export:tableMarkdown,
       regExpStart:/^\|.+\|\s*$/, type:'multiline-element', replace() {},
       handleImportAfterStartMatch({lines, rootNode, startLineIndex}) {
@@ -191,6 +193,7 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
 export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
   const imageUrlForId = options.imageUrlForId || (() => '');
   const onOpenImage = options.onOpenImage || (() => {});
+  configureEmbeds({onOpenImage});
   const markdown = notesTransformers({imageUrlForId, onOpenImage});
   const editor = createEditor({
     namespace:'StellisNotes',
@@ -206,6 +209,7 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
   editor.setRootElement(root);
   // Dates are tracked only where the server indexes to-dos (saved conversations).
   unregister.push(registerCallouts(editor));
+  unregister.push(registerEmbedPaste(editor, root));
   unregister.push(registerCleanCopy(editor, {nodes:NOTES_NODES, theme:NOTES_THEME, transformers:markdown}));
   unregister.push(registerTasks(editor, root, {dates:!!options.todoDates}));
   unregister.push(editor.registerUpdateListener(({editorState, dirtyElements, dirtyLeaves, tags}) => {
@@ -234,6 +238,10 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     else if (action === 'redo') editor.dispatchCommand(REDO_COMMAND, undefined);
     else if (action === 'table') editor.dispatchCommand(INSERT_TABLE_COMMAND, {rows:'2',columns:'2',includeHeaders:{rows:true,columns:false}});
     else if (action.startsWith('callout-')) editor.update(() => $insertCallout(action.slice(8)));
+    else if (action === 'bookmark') {
+      const url = httpUrl((window.prompt('Link card URL') || '').trim());
+      if (url) editor.update(() => $insertBookmark(url)); else onError(new Error('Enter a valid http or https address.'));
+    }
     else if (action === 'image') options.onPickImage?.(captureSelection());
     else if (['add-row','add-column','delete-row','delete-column','delete-table'].includes(action)) editor.update(() => {
       const table = inTable();

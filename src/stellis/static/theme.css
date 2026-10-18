@@ -2032,3 +2032,33 @@ a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 #notebook-settings-form label[for] { margin-top: 8px; }
 #notebook-settings-form .colour-custom label { margin-top: 0; }
 /* === end Notebook page (#269) === */
+/* Link cards and the Paste as menu (#281). Small corners per the UI style guide. */
+.notes-editor .note-bookmark { position: relative; width: min(100%, 720px); margin: 14px 0; }
+/* Link cards, video embeds, external images and the Paste as menu (#281, #282). Small corners per the UI style guide. */
+.notes-editor .note-bookmark, .notes-editor .note-embed { position: relative; width: min(100%, 720px); margin: 14px 0; }
+.notes-editor .note-bookmark-card { display: flex; min-height: 96px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--ink); text-decoration: none; overflow: hidden; }
+.notes-editor .note-bookmark-card:hover { border-color: var(--quiet); }
+.notes-editor .note-bookmark-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.notes-editor .note-bookmark-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; }
+.notes-editor .note-bookmark-text strong { font-size: 15px; line-height: 1.3; }
+.notes-editor .note-bookmark-description { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.notes-editor .note-bookmark-site { display: flex; align-items: center; gap: 6px; margin-top: auto; color: var(--quiet); font-size: 12px; }
+.notes-editor .note-bookmark-site img { width: 14px; height: 14px; border-radius: 2px; }
+.notes-editor .note-bookmark-site span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-editor .note-bookmark-image { flex: 0 0 34%; max-width: 220px; width: 34%; object-fit: cover; border-left: 1px solid var(--line); }
+.notes-editor .note-embed-frame { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); overflow: hidden; }
+.notes-editor .note-embed-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.notes-editor .note-embed figcaption { margin-top: 7px; color: var(--muted); font-size: 13px; }
+.notes-editor .note-image-external { position: relative; width: min(100%, 720px); }
+.notes-editor .note-image-failed { margin: 0; padding: 18px 8px; color: var(--muted); font-size: 13px; text-align: center; }
+.notes-editor .note-embed-remove { position: absolute; top: 6px; right: 6px; display: none; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.notes-editor .note-embed-remove .icon { width: 16px; height: 16px; }
+.notes-editor .note-bookmark:hover .note-embed-remove, .notes-editor .note-embed:hover .note-embed-remove, .notes-editor .note-image-external:hover .note-embed-remove,
+.notes-editor .note-embed-remove:focus-visible { display: inline-flex; }
+@media (hover: none) { .notes-editor .note-embed-remove { display: inline-flex; } }
+@media (max-width: 520px) { .notes-editor .note-bookmark-image { display: none; } }
+.note-paste-menu { position: fixed; z-index: 60; min-width: 176px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+.note-paste-menu small { display: block; padding: 4px 8px; color: var(--quiet); font-size: 12px; }
+.note-paste-menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); font: 14px Inter, sans-serif; text-align: left; cursor: pointer; }
+.note-paste-menu button:hover, .note-paste-menu button.active, .note-paste-menu button:focus-visible { background: var(--raised); }
+.note-paste-menu .icon { width: 16px; height: 16px; }

@@ -17,7 +17,10 @@ async function load(markdown) {
 const same = async markdown => assert.equal((await load(markdown)).markdown(), markdown);
 
 test('a titled callout', () => same('> [!note] Heads up\n> Body text.'));
-test('GitHub types without a title', () => same('> [!WARNING]\n> Be careful.'));
+test('GitHub types without a title', () => same('> [!warning]\n> Be careful.'));
+test('an uppercase type word is written back in lowercase', async () => {
+  assert.equal((await load('> [!WARNING]\n> Be careful.')).markdown(), '> [!warning]\n> Be careful.');
+});
 test('any type word', () => same('> [!my-custom-type] Mine\n> Body.'));
 test('a multi-block body', () => same('> [!tip] Packing\n> First paragraph.\n>\n> - one\n> - two\n>\n> ```\n> code\n> ```\n>\n> Last paragraph.'));
 test('a to-do inside a callout keeps its ID', () => same('> [!note] Plan\n> - [ ] call Avery ^tabc123'));
