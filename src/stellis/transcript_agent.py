@@ -103,13 +103,36 @@ def _cap(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[:limit].rstrip()
 
 
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"\w{4,}", text.lower()))
+
+
+def _select(items: list[dict], known: list[dict], segments: list[dict]) -> list[dict]:
+    """Fit the transcript into the evidence cap without dropping its tail.
+
+    A transcript under the cap is sent whole. Otherwise passages cited by Summary action items come first,
+    then passages sharing words with open to-dos (most shared words first), until the cap; the result keeps
+    transcript order so the model reads a coherent, if gapped, excerpt.
+    """
+    cost = [len(str(segment["text"])) + 40 for segment in segments]
+    if sum(cost) <= MAX_EVIDENCE_CHARS:
+        return segments
+    cited = {source for item in items for source in item["source_segment_ids"]}
+    todo_words = set().union(*(_words(str(todo["text"])) for todo in known)) if known else set()
+    overlap = [len(_words(str(segment["text"])) & todo_words) for segment in segments]
+    order = ([i for i, segment in enumerate(segments) if str(segment["id"]) in cited]
+             + sorted((i for i, count in enumerate(overlap) if count and str(segments[i]["id"]) not in cited),
+                      key=lambda i: (-overlap[i], i)))
+    chosen, size = set(), 0
+    for index in order:
+        if size + cost[index] <= MAX_EVIDENCE_CHARS:
+            chosen.add(index)
+            size += cost[index]
+    return [segment for index, segment in enumerate(segments) if index in chosen]
+
+
 def _ask(items: list[dict], known: list[dict], segments: list[dict], metadata: dict) -> tuple[dict, dict[str, str]]:
-    kept, size = [], 0
-    for segment in segments:
-        size += len(str(segment["text"])) + 40
-        if size > MAX_EVIDENCE_CHARS:
-            break
-        kept.append(segment)
+    kept = _select(items, known, segments)
     evidence, aliases = ai._evidence(kept)
     listing = "\n".join(f"{index}. {item['text']}" for index, item in enumerate(items, 1)) or "(none)"
     open_list = "\n".join(f"{todo['id']}: {todo['text']}" for todo in known[:MAX_OPEN_TODOS]) or "(none)"
@@ -185,6 +208,10 @@ def _run(run_id: str) -> None:
             raise ai.AIError("source_missing", "The Summary or transcript is no longer available")
         items = json.loads(str(summary["result_json"]))["action_items"]
         known = _open_todos(str(conversation["notebook_id"]))
+        if not items and not known:
+            _update(run_id, state="skipped", stage="complete", error_code=None, error_message=None,
+                    result_json=json.dumps({"added": 0, "closed": 0, "skipped": "no_action_items_or_open_todos"}))
+            return
         _update(run_id, stage="analyzing")
         payload, aliases = _ask(items, known, display["segments"], metadata)
         by_id = {str(segment["id"]): segment for segment in display["segments"]}

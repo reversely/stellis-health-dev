@@ -35,13 +35,14 @@ class TranscriptAgentTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def setup_meeting(self, todo_list="on") -> tuple[str, str, dict[str, str]]:
+    def setup_meeting(self, todo_list="on", page=True) -> tuple[str, str, dict[str, str]]:
         notebook_id = self.client.post(f"{API}/notebooks", json={"name": f"Work {todo_list}"}).json()["id"]
         self.client.patch(f"{API}/notebooks/{notebook_id}", json={"todo_list": todo_list})
-        self.client.post(f"{API}/pages", json={"notebook_id": notebook_id, "markdown":
-                         "- [ ] Book the venue\n- [ ] Email legal\n- [ ] Order badges"})
+        if page:
+            self.client.post(f"{API}/pages", json={"notebook_id": notebook_id, "markdown":
+                             "- [ ] Book the venue\n- [ ] Email legal\n- [ ] Order badges"})
         open_todos = {item["text"]: item["id"]
-                      for item in todos.gather(notebook_id)["groups"][0]["items"]}
+                      for group in todos.gather(notebook_id)["groups"] for item in group["items"]}
         conversation_id = self.client.post(f"{API}/conversations/import",
                                            files={"file": ("talk.mp3", mp3_bytes(), "audio/mpeg")}).json()["conversation"]["id"]
         notebooks.assign(conversation_id, notebook_id)
@@ -109,3 +110,28 @@ class TranscriptAgentTest(unittest.TestCase):
         with patch.object(ai, "_key", return_value=None):
             self.assertIsNone(transcript_agent.start(conversation_id, "summary-run"))
         self.assertEqual(transcript_agent.list_runs(conversation_id), [])
+
+    def test_empty_run_is_skipped_without_a_model_call(self) -> None:
+        _, self.conversation_id, _ = self.setup_meeting(page=False)
+        with patch.object(ai, "_key", return_value="test-key"), patch.object(enhanced_notes.threading, "Thread"):
+            summary = enhanced_notes.request(self.conversation_id, force=True)
+        with patch.object(ai, "_key", return_value="test-key"), patch.object(transcript_agent.threading, "Thread") as thread, \
+                patch.object(ai, "_request", return_value={**SUMMARY, "action_items": []}):
+            enhanced_notes._run(summary["id"])
+        with patch.object(ai, "_key", return_value="test-key"), patch.object(ai, "_request") as request:
+            transcript_agent._run(thread.call_args.kwargs["args"][0])
+        request.assert_not_called()
+        run = self.client.get(f"{API}/conversations/{self.conversation_id}/agent-runs").json()[0]
+        self.assertEqual((run["state"], run["result"]["skipped"]), ("skipped", "no_action_items_or_open_todos"))
+
+    def test_long_transcript_keeps_cited_and_todo_passages(self) -> None:
+        filler = [{"id": f"f{i}", "text": "x" * 900} for i in range(40)]
+        segments = (filler[:20] + [{"id": "cite", "text": "Avery sends it"}] + filler[20:]
+                    + [{"id": "close", "text": "The venue is booked."}])
+        items = [{"text": "Send", "source_segment_ids": ["cite"]}]
+        kept = transcript_agent._select(items, [{"text": "Book the venue"}], segments)
+        ids = [segment["id"] for segment in kept]
+        self.assertIn("cite", ids)
+        self.assertEqual(ids[-1], "close")
+        self.assertEqual(ids, [segment["id"] for segment in segments if segment["id"] in ids])
+        self.assertLessEqual(sum(len(s["text"]) + 40 for s in kept), transcript_agent.MAX_EVIDENCE_CHARS)
