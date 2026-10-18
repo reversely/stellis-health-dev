@@ -26,9 +26,9 @@ a release target, not a development checkout.
   Start it from current `origin/main` after fetching, unless the task explicitly
   depends on another branch or uncommitted work.
 - Put agent-created worktrees under the existing repository's
-  `.claude/worktrees/` directory, using a short task name. Do not create a new
-  sibling folder directly under `/Users/slee/Repos/`, and do not use `/tmp` as
-  an untracked substitute for this convention.
+  `.agents/worktrees/<task-name>/` directory, beside this skill file. Do not
+  create a new sibling folder directly under `/Users/slee/Repos/`, and do not
+  use `/tmp` as a substitute for this convention.
 - Record the worktree path and branch so cleanup is part of the same task.
   Keep generated artifacts in an appropriate existing location or ask where
   they belong; do not create a new repository sibling just to hold artifacts.
