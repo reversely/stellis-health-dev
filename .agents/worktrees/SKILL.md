@@ -1,14 +1,13 @@
 ---
 name: worktrees
-description: Create, use, merge, and clean up Git worktrees for Stellis changes while preserving other checkouts and uncommitted files.
+description: Create, use, and clean up Git worktrees inside a repository's .agents/worktrees directory while preserving other checkouts and uncommitted files.
 ---
 
-# Stellis worktrees
+# Git worktrees
 
-Use this procedure when work on Stellis needs an isolated checkout or when a
-merged worktree needs cleanup. It applies to the private `reversely/stellis-dev`
-repository and its local worktrees. The public `reversely/stellis` repository is
-a release target, not a development checkout.
+Use this procedure when a task needs an isolated Git checkout or a finished
+worktree needs cleanup. Read the current repository's instructions for its
+branch, review, and test conventions before changing checkout state.
 
 ## Before changing checkout state
 
@@ -23,12 +22,15 @@ a release target, not a development checkout.
 ## Creating an isolated checkout
 
 - Create a worktree only when the current checkout cannot safely hold the task.
-  Start it from current `origin/main` after fetching, unless the task explicitly
-  depends on another branch or uncommitted work.
-- Put agent-created worktrees under the existing repository's
-  `.agents/worktrees/<task-name>/` directory, beside this skill file. Do not
-  create a new sibling folder directly under `/Users/slee/Repos/`, and do not
-  use `/tmp` as a substitute for this convention.
+  Fetch and start from the repository's current default branch, unless the task
+  explicitly depends on another branch or uncommitted work.
+- Put agent-created worktrees under the repository's
+  `.agents/worktrees/<task-name>/` directory. If working from a linked worktree,
+  locate the main checkout first so new worktrees do not nest inside that task
+  checkout. Do not create sibling folders beside the repository or use a
+  temporary directory as a substitute for this convention.
+- Ignore the task checkout subdirectories in the parent repository without
+  ignoring tracked instructions or other files in `.agents/worktrees/`.
 - Record the worktree path and branch so cleanup is part of the same task.
   Keep generated artifacts in an appropriate existing location or ask where
   they belong; do not create a new repository sibling just to hold artifacts.
