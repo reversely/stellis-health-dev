@@ -37,7 +37,9 @@ class CollectionsTest(unittest.TestCase):
         patched = self.client.patch(f"/api/v1/collections/{record['id']}", json={"name": "Flight", "color": notebooks.PALETTE[3].lower()})
         self.assertEqual((patched.json()["name"], patched.json()["color"]), ("Flight", notebooks.PALETTE[3]))
         self.assertEqual(self.client.post("/api/v1/collections", json={"name": "FLIGHT"}).status_code, 409)
-        self.assertEqual(self.client.patch(f"/api/v1/collections/{record['id']}", json={"color": "#000000"}).status_code, 400)
+        self.assertEqual(self.client.patch(f"/api/v1/collections/{record['id']}", json={"color": "#00000"}).status_code, 400)
+        custom = self.client.patch(f"/api/v1/collections/{record['id']}", json={"color": "#0a1b2c"})
+        self.assertEqual(custom.json()["color"], "#0A1B2C")
         self.assertEqual(self.client.patch("/api/v1/collections/missing", json={"name": "x"}).status_code, 404)
         with storage.connect() as conn:
             self.assertNotIn("parent_id", {row["name"] for row in conn.execute("PRAGMA table_info(collections)")})

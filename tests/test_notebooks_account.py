@@ -70,9 +70,17 @@ class NotebookAccountTest(unittest.TestCase):
         self.assertEqual(book["name"], "Migration Project")
         self.assertEqual(book["color"], "#495575")
         self.assertEqual(self.client.post("/api/v1/notebooks", json={"name": "migration project"}).status_code, 400)
-        self.assertEqual(self.client.post("/api/v1/notebooks", json={"name": "X", "color": "#FF0000"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/v1/notebooks", json={"name": "X", "color": "red"}).status_code, 400)
         second = self.client.post("/api/v1/notebooks", json={"name": "Hiring"}).json()
         self.assertEqual(second["color"], "#56465C")
+        preset = self.client.post("/api/v1/notebooks", json={"name": "Preset", "color": "#5b5f97"}).json()
+        custom = self.client.post("/api/v1/notebooks", json={"name": "Custom", "color": "#ff0000"}).json()
+        self.assertEqual((preset["color"], custom["color"]), ("#5B5F97", "#FF0000"))
+        for extra in (preset, custom):
+            self.client.delete(f"/api/v1/notebooks/{extra['id']}")
+        listing = self.client.get("/api/v1/notebooks").json()
+        self.assertEqual((listing["palette"], listing["presets"][:5], len(listing["presets"])),
+                         (["#495575", "#56465C", "#594F4F", "#547980", "#45ADA8"], ["#495575", "#56465C", "#594F4F", "#547980", "#45ADA8"], 12))
 
         first = self._import("first.mp3", 4, recorded_at="2026-09-29T10:00:00Z", notebook_id=book["id"])
         latest = self._import("latest.mp3", 5, recorded_at="2026-10-15T10:00:00Z")

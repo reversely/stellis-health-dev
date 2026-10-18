@@ -641,7 +641,7 @@ async def link_preview(request: LinkPreviewRequest) -> dict[str, str | None]:
 
 @api.get("/notebooks")
 def list_notebooks() -> dict[str, object]:
-    return {"palette": list(notebooks.PALETTE), "notebooks": notebooks.list_notebooks()}
+    return {"palette": list(notebooks.PALETTE), "presets": list(notebooks.PRESETS), "notebooks": notebooks.list_notebooks()}
 
 
 @api.post("/notebooks")
@@ -700,7 +700,7 @@ def _collection_error(exc: Exception) -> HTTPException:
 
 @api.get("/collections")
 def list_collections() -> dict[str, object]:
-    return {"palette": list(notebooks.PALETTE), "collections": collections.list_collections()}
+    return {"palette": list(notebooks.PALETTE), "presets": list(notebooks.PRESETS), "collections": collections.list_collections()}
 
 
 @api.post("/collections", status_code=201)
