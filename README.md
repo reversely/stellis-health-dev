@@ -41,6 +41,8 @@ To try Stellis before using any recordings of yours, click **Add sample workspac
 
 ## Everyday use
 
+The [user guide](docs/guide/README.md) covers every screen, the keyboard and Markdown shortcuts, and privacy.
+
 - **Record** or **Import** from the home page. Transcription starts by itself once the recording is saved.
 - Open a conversation for its **Notes** (your notes and the summary) and **Transcript**. Click a speaker name to name that speaker or confirm a suggestion. **Edit transcript** saves wording changes.
 - The **⋯** menu in a conversation reprocesses the recording, rematches speakers, moves it to a notebook, or deletes it. Reprocessing keeps your names, edits, highlights, and comments.
