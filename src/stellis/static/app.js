@@ -728,11 +728,15 @@ function renderLibrarySearch() {
   for (const item of visible) {
     const row = document.createElement('a'); row.className = 'search-result';
     row.href = item.kind === 'person' ? `/person/${encodeURIComponent(item.person_id)}` :
+      item.kind === 'page' ? `/page/${encodeURIComponent(item.page_id)}` :
       `/conversation/${encodeURIComponent(item.conversation_id)}${item.segment_id ? `?at=${encodeURIComponent(item.segment_id)}` : ''}`;
-    const heading = document.createElement('strong'); heading.textContent = item.conversation_title;
+    const heading = document.createElement('strong'); heading.textContent = item.conversation_title ?? item.title;
     const detail = document.createElement('span');
     detail.textContent = item.kind === 'conversation' ? 'Conversation' :
       item.kind === 'person' ? 'Confirmed person profile' :
+      item.kind === 'page' ? 'Note' :
+      item.kind === 'note' ? 'My Notes' :
+      item.kind === 'summary' ? 'Summary' :
       `${item.kind === 'speaker' ? 'Speaker' : 'Passage'}, ${item.speaker}, ${time(item.start_ms / 1000)}${item.speaker_uncertain ? ', uncertain speaker match' : ''}`;
     const excerpt = document.createElement('span'); excerpt.className = 'search-excerpt';
     appendSearchExcerpt(excerpt, item.excerpt, query);
