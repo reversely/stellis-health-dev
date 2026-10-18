@@ -164,12 +164,22 @@ def restore(page_id: str) -> dict[str, object]:
     return {"id": page_id, "trashed": False}
 
 
+def _remove_image_files(image_ids: list[str]) -> None:
+    if image_ids:
+        from stellis import images  # Pillow loads only when a page had images.
+        images.remove_files(image_ids)
+
+
 def delete_permanently(page_id: str, *, expired_before: str | None = None) -> dict[str, object]:
     with storage.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         conn.execute("""DELETE FROM page_categories WHERE page_id = ? AND EXISTS (
             SELECT 1 FROM pages WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?))""",
                      (page_id, page_id, expired_before, expired_before))
+        image_ids = [str(row["id"]) for row in conn.execute("""SELECT id FROM page_images WHERE page_id = ? AND EXISTS (
+            SELECT 1 FROM pages WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?))""",
+                                                              (page_id, page_id, expired_before, expired_before))]
+        conn.executemany("DELETE FROM page_images WHERE id = ?", [(image_id,) for image_id in image_ids])
         deleted = conn.execute("DELETE FROM pages WHERE id = ? AND trashed_at IS NOT NULL AND (? IS NULL OR trashed_at <= ?)",
                                (page_id, expired_before, expired_before)).rowcount
         if deleted:
@@ -177,6 +187,7 @@ def delete_permanently(page_id: str, *, expired_before: str | None = None) -> di
             suggestions.delete_source(conn, "page", page_id)
     if not deleted:
         raise LookupError("Page not found in Recently Deleted")
+    _remove_image_files(image_ids)
     return {"id": page_id, "deleted": True}
 
 
@@ -184,12 +195,16 @@ def delete_expired(cutoff: str) -> list[str]:
     with storage.connect() as conn:
         ids = [str(row["id"]) for row in conn.execute(
             "SELECT id FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))]
+        image_ids: list[str] = []
         for page_id in ids:
+            image_ids += [str(row["id"]) for row in conn.execute("SELECT id FROM page_images WHERE page_id = ?", (page_id,))]
+            conn.execute("DELETE FROM page_images WHERE page_id = ?", (page_id,))
             conn.execute("DELETE FROM page_categories WHERE page_id = ?", (page_id,))
         conn.execute("DELETE FROM pages WHERE trashed_at IS NOT NULL AND trashed_at <= ?", (cutoff,))
         for page_id in ids:
             todos.delete_source(conn, "page", page_id)
             suggestions.delete_source(conn, "page", page_id)
+    _remove_image_files(image_ids)
     return ids
 
 
