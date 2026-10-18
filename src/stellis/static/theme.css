@@ -1283,7 +1283,7 @@ body:has(#vocabulary-panel:not([hidden])) .heading { display: none; }
 /* Home rail, notebooks, notebook page, and account settings. */
 /* The HTML hidden attribute does not hide an svg element; keep the sprite out of layout. */
 .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-body.settings-page .heading, body.notebook-page .heading { display: none; }
+body.settings-page .heading, body.notebook-page .heading, body.todos-page .heading { display: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .icon { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-button {
@@ -1322,14 +1322,65 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
 @media (hover: hover) and (pointer: fine) { .recent-row:hover { background: color-mix(in srgb, #F7F5F6 9%, transparent); } }
 /* Titles and topic previews wrap in full rather than truncate; the date and dot stay on the first line. */
 .recent-row strong { min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; text-wrap: pretty; }
-.recent-row time { margin-right: 4px; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.recent-row small { color: var(--muted); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; text-wrap: pretty; }
+.recent-row time { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recent-row small { display: flex; flex-wrap: wrap; column-gap: 5px; color: var(--muted); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; text-wrap: pretty; }
 .recent-row .recent-processing { color: var(--ink); font-variant-numeric: tabular-nums; }
 .recent-empty { color: var(--muted); font-size: 14px; }
-/* Notebook headings group the rail; a row's title lines up with the notebook name. */
-.recent-group { display: flex; align-items: center; gap: 10px; margin: 18px 0 2px; padding: 0 8px; color: var(--ink); font: 650 13px/1.3 Inter, sans-serif; letter-spacing: .01em; }
-.recent-group:first-child { margin-top: 4px; }
-.recent-group small { margin-left: auto; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* Sidebar file tree: collections hold notebooks, notebooks hold meetings and notes. */
+.rail-pinned { display: grid; gap: 2px; }
+.rail-pin, .rail-new-button {
+  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 8px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink); font: 600 14px Inter, sans-serif; text-align: left; text-decoration: none; cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+.rail-pin[aria-current="page"] { background: color-mix(in srgb, #F7F5F6 14%, transparent); }
+.rail-new-button { color: var(--muted); }
+@media (hover: hover) and (pointer: fine) { .rail-pin:hover, .rail-new-button:hover { background: color-mix(in srgb, #F7F5F6 9%, transparent); } }
+.rail-pin:focus-visible, .rail-new-button:focus-visible, .rail-toggle:focus-visible, .rail-move:focus-visible, .recent-row:focus-visible,
+.rail-node a:focus-visible, .rail-new-form input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rail-node { display: flex; align-items: center; gap: 6px; min-height: 36px; padding-right: 4px; border-radius: 8px; color: var(--ink); font: 650 13px/1.3 Inter, sans-serif; letter-spacing: .01em; }
+.rail-node small { margin-left: auto; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.rail-name { flex: 0 1 auto; min-width: 0; color: inherit; text-decoration: none; overflow-wrap: anywhere; cursor: pointer; }
+a.rail-name:hover { text-decoration: underline; }
+.rail-toggle, .rail-move {
+  display: inline-grid; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) { .rail-toggle:hover, .rail-move:hover { background: color-mix(in srgb, #F7F5F6 12%, transparent); color: var(--ink); } }
+.rail-toggle .icon { width: 16px; height: 16px; transition: rotate 150ms ease-out; }
+.rail-toggle[aria-expanded="true"] .icon { rotate: 90deg; }
+.rail-icon { width: 18px; height: 18px; color: color-mix(in srgb, var(--tint, #CDBFCE) 65%, #F7F5F6); }
+.rail-node .rail-icon { flex: none; }
+.rail-move { margin-left: 2px; }
+.rail-children { margin-left: 15px; padding-left: 4px; border-left: 1px solid var(--line); }
+.recent-item { display: flex; align-items: flex-start; gap: 2px; }
+.recent-item .recent-row { position: relative; flex: 1; min-width: 0; padding-left: 32px; }
+.recent-row > .rail-icon { position: absolute; left: 8px; top: 10px; width: 16px; height: 16px; }
+.recent-page { cursor: grab; }
+.recent-item .rail-move { margin-top: 5px; }
+@media (hover: hover) and (pointer: fine) {
+  .rail-move { opacity: 0; transition: opacity 150ms ease-out, background-color 150ms ease-out; }
+  .rail-node:hover .rail-move, .recent-item:hover .rail-move, .rail-move:focus-visible { opacity: 1; }
+}
+.rail-branch.drop-target > .rail-node { background: color-mix(in srgb, #F7F5F6 18%, transparent); outline: 2px solid #F7F5F6; outline-offset: -2px; }
+.rail-node[draggable="true"] { cursor: grab; }
+.rail-node.dragging { opacity: .5; }
+.rail-new-form { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+.rail-new-form input {
+  flex: 1; min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--raised); color: var(--ink); font: 14px Inter, sans-serif;
+}
+.rail-new-form[hidden], .rail-new-button[hidden] { display: none; }
+.todos-view[hidden] { display: none; }
+.todos-view { display: grid; gap: 22px; max-width: 760px; }
+.todos-view h2 { margin: 0; font: 400 30px/1.15 Piazzolla, Georgia, serif; letter-spacing: -.02em; }
+.todos-group h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font: 650 15px/1.3 Inter, sans-serif; }
+.todos-group h3 a { color: inherit; }
+.todos-group ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.todos-group li { display: flex; align-items: center; gap: 10px; min-height: 32px; color: var(--ink); }
+.todos-group li .icon { color: var(--muted); }
+.todos-group li time { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trash-row strong .icon { margin-right: 8px; vertical-align: -4px; color: var(--muted); }
 .home-rail .recent-dot { box-shadow: 0 0 0 1.5px color-mix(in srgb, #F7F5F6 60%, transparent); }
 .settings-link {
   display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-radius: 8px;
@@ -1614,6 +1665,7 @@ body.settings-page .heading, body.notebook-page .heading { display: none; }
     box-sizing: border-box; padding: 28px 24px 24px;
   }
   body:has(#list-view:not([hidden])) .recent-list { flex: 1; min-height: 0; overflow-y: auto; }
+  body:has(#list-view:not([hidden])) .home-rail-head { gap: 8px; }
   body:has(#list-view:not([hidden])) #list-view { padding-top: 32px; }
   body:has(#list-view:not([hidden]))::after { position: fixed; height: 100vh; opacity: .3; mix-blend-mode: overlay; }
   body:has(#list-view:not([hidden])) #status:not(:empty) {
