@@ -29,7 +29,7 @@ def dev_enabled() -> bool:
 @contextmanager
 def _connect() -> Iterator[sqlite3.Connection]:
     path = storage.data_dir() / "auth.sqlite3"
-    conn = sqlite3.connect(path, timeout=30)
+    conn = sqlite3.connect(path, timeout=30, factory=storage.TolerantConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("""CREATE TABLE IF NOT EXISTS account (
         id INTEGER PRIMARY KEY CHECK(id = 1), username TEXT NOT NULL UNIQUE,
