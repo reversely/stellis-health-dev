@@ -39,7 +39,7 @@ A collection groups notebooks. A notebook groups meetings and notes for one proj
 
 A note is a titled page of Markdown with no audio. **New note** on Home or on a notebook page creates one. The title is above the text, and Enter in the title moves to the text.
 
-The toolbar above a note offers heading, paragraph, bullets, numbers, to-do list, bold, italic, **Link**, **Image**, **Table**, **Link card**, **Toggle**, **2 columns**, and **Callout** with five kinds: Note, Tip, Important, Warning, and Caution. While the cursor is in a table, **Edit table** adds or removes rows and columns or deletes the table. The editor also reads typed Markdown; see [shortcuts](shortcuts.md).
+The toolbar above a note offers heading, paragraph, bullets, numbers, to-do list, bold, italic, **Link**, **Image**, **Table**, **Link card**, **Toggle**, **2 columns**, and **Callout** with five kinds: Note, Tip, Important, Warning, and Caution. While the cursor is in a table, **Edit table** adds or removes rows and columns or deletes the table. Typing `/` on an empty line or after a space opens the slash menu with the same blocks and more. The editor also reads typed Markdown; see [shortcuts](shortcuts.md).
 
 Notes save as you type. Copying text from a note puts plain Markdown on the clipboard without to-do IDs.
 

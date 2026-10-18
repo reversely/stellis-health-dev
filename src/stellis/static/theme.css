@@ -2062,6 +2062,15 @@ a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 .note-paste-menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); font: 14px Inter, sans-serif; text-align: left; cursor: pointer; }
 .note-paste-menu button:hover, .note-paste-menu button.active, .note-paste-menu button:focus-visible { background: var(--raised); }
 .note-paste-menu .icon { width: 16px; height: 16px; }
+.note-slash-menu { position: fixed; z-index: 60; width: 320px; max-width: calc(100vw - 16px); overflow-y: auto; overscroll-behavior: contain; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+.note-slash-menu small { display: block; padding: 8px 8px 4px; color: var(--quiet); font: 12px Inter, sans-serif; }
+.note-slash-menu .note-slash-foot { position: sticky; bottom: -4px; margin: 4px -4px -4px; padding: 8px; border-top: 1px solid var(--line); background: var(--surface); }
+.note-slash-row { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 8px; border-radius: 4px; color: var(--ink); font: 14px Inter, sans-serif; cursor: pointer; }
+.note-slash-row.active { background: var(--raised); }
+.note-slash-row .icon { flex: none; width: 18px; height: 18px; }
+.note-slash-label { flex: 1; min-width: 0; }
+.note-slash-row kbd { flex: none; color: var(--quiet); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+@media (max-width: 639px) { .note-slash-row { min-height: 44px; } }
 
 /* === Agent suggestions (#270) === */
 /* The cards stand beside the editor and stack under it at narrow widths. Every edge is straight. */

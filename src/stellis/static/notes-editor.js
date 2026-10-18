@@ -30,6 +30,7 @@ import {EMBED_NODES, $insertBookmark, configureEmbeds, embedTransformers, httpUr
 import {
   $insertColumns, $insertToggle, CONTAINER_NODES, columnsTransformer, registerContainers, toggleTransformer,
 } from './notes-containers.js';
+import {registerSlashMenu} from './notes-slash.js';
 import {registerCleanCopy} from './notes-clipboard.js';
 import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
@@ -227,6 +228,7 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     editor.getEditorState().read(() => {const selected = $getSelection(); if ($isRangeSelection(selected)) snapshot = selected.clone();});
     return snapshot;
   };
+  unregister.push(registerSlashMenu(editor, root, {onPickImage:options.onPickImage, onError}));
   const inTable = () => {
     const selected = $getSelection(); let node = selected?.anchor?.getNode();
     while (node && !$isTableNode(node)) node = node.getParent();
