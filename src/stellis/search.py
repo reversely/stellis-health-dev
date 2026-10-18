@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import re
+
 from stellis import library, pages, people, storage, todos
 
 
@@ -27,6 +30,45 @@ def _pages(category_id: str | None) -> list[dict[str, object]]:
             if (not tags.get(str(row["id"])) if category_id == "uncategorized" else category_id in tags.get(str(row["id"]), []))]
 
 
+_LINE_MARK = re.compile(r"^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)*")
+
+
+def _plain(markdown: str) -> str:
+    """Readable text only: task IDs and layout tags, list and heading marks, emphasis, and link or image targets dropped."""
+    lines = (todos.markdown_inline_text(_LINE_MARK.sub("", line)) for line in todos.plain_markdown(markdown).split("\n"))
+    return "\n".join(line for line in lines if line)
+
+
+def _note_texts(ids: list[str]) -> dict[str, str]:
+    """Plain My Notes text per conversation: no task IDs, layout tags, or image references."""
+    if not ids:
+        return {}
+    with storage.connect() as conn:
+        rows = conn.execute(f"SELECT conversation_id, markdown FROM meeting_notes WHERE conversation_id IN ({','.join('?' * len(ids))})",
+                            ids).fetchall()
+    return {str(row["conversation_id"]): _plain(str(row["markdown"])) for row in rows}
+
+
+def _summary_texts(ids: list[str]) -> dict[str, str]:
+    """Plain text of each conversation's newest successful Summary: the edited version, else the generated one."""
+    if not ids:
+        return {}
+    with storage.connect() as conn:
+        rows = conn.execute(f"""SELECT conversation_id, result_json, edited_markdown FROM enhanced_notes_runs
+            WHERE state = 'succeeded' AND conversation_id IN ({','.join('?' * len(ids))}) ORDER BY created_at""",
+                            ids).fetchall()
+    texts: dict[str, str] = {}
+    for row in rows:  # the newest run overwrites earlier ones
+        if row["edited_markdown"]:
+            texts[str(row["conversation_id"])] = _plain(str(row["edited_markdown"]))
+        else:
+            result = json.loads(row["result_json"] or "{}")
+            texts[str(row["conversation_id"])] = "\n".join(
+                str(item.get("text", "")) for field in ("overview", "topics", "decisions", "action_items")
+                for item in result.get(field, []))
+    return texts
+
+
 def search_library(query: str, limit: int = 150, category_id: str | None = None) -> dict[str, object]:
     """Search effective text and labels afresh, so overlays never need a stale index."""
     needle = query.strip().casefold()
@@ -42,6 +84,8 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
         else:
             conversations = [item for item in conversations
                              if category_id in assigned.get(str(item["id"]), [])]
+    ids = [str(item["id"]) for item in conversations]
+    note_texts, summary_texts = _note_texts(ids), _summary_texts(ids)
     for person in people.list_people():
         if needle not in str(person["name"]).casefold():
             continue
@@ -71,6 +115,14 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
                                 "conversation_title": title, "revision": display["revision"] if display else None,
                                 "segment_id": None, "start_ms": 0, "speaker": None,
                                 "speaker_uncertain": False, "excerpt": title})
+        # One hit per conversation for each text, with an excerpt around the first match.
+        for kind, text in (("note", note_texts.get(conversation_id, "")), ("summary", summary_texts.get(conversation_id, ""))):
+            flat = " ".join(text.split())
+            if needle in flat.casefold():
+                total += 1
+                if len(results) < limit:
+                    results.append({"kind": kind, "conversation_id": conversation_id,
+                                    "conversation_title": title, "excerpt": _excerpt(flat, query)})
         seen_speakers: set[str] = set()
         for segment in segments:
             speaker = str(segment["speaker_display_name"])

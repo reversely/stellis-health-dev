@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import categorization, library, storage
+from stellis import ai, categorization, enhanced_notes, library, storage
 from stellis.server import app
 from test_import import wav_bytes, mp3_bytes
 
@@ -55,6 +55,26 @@ class LibraryWorkflowTest(unittest.TestCase):
         self.assertEqual(self.client.patch('/api/v1/conversations/missing', json={'title': 'Any'}).status_code, 404)
         self.client.post(f'{path}/trash')
         self.assertEqual(self.client.patch(path, json={'title': 'Hidden'}).status_code, 404)
+
+    def test_search_finds_my_notes_and_summary_text(self):
+        base = f'/api/v1/conversations/{self.first}'
+        self.client.put(f'{base}/notes', json={'markdown': '- [ ] Ping the **zebra** team ^t000001\n![shot](stellis-image:'
+                        + str(uuid.uuid4()) + ')', 'expected_revision': 0})
+        payload = {'overview': [{'text': 'Quokka plans were agreed.', 'source_segment_ids': ['s1']}],
+                   'topics': [], 'decisions': [], 'action_items': []}
+        with patch.object(ai, '_key', return_value='test-key'), patch.object(enhanced_notes.threading, 'Thread'):
+            run = self.client.post(f'{base}/enhanced-notes', json={}).json()
+        with patch.object(ai, '_key', return_value='test-key'), patch.object(ai, '_request', return_value=payload):
+            enhanced_notes._run(run['id'])
+        search = lambda q: self.client.get('/api/v1/search', params={'q': q}).json()['results']
+        note = search('zebra team')
+        self.assertEqual([(item['kind'], item['conversation_id']) for item in note], [('note', self.first)])
+        self.assertEqual(note[0]['excerpt'], 'Ping the zebra team shot')
+        self.assertEqual([item['kind'] for item in search('quokka')], ['summary'])
+        self.assertEqual(search('t000001') + search('stellis-image'), [])
+        self.client.put(f'/api/v1/enhanced-notes/{run["id"]}', json={'markdown': '## Overview\n- Wombat edit', 'expected_revision': 0})
+        self.assertEqual(search('quokka'), [])
+        self.assertEqual([item['kind'] for item in search('wombat')], ['summary'])
 
     def test_categories_trash_restore_and_permanent_delete(self):
         categories = [self.client.post('/api/v1/categories', json={'name': name}).json()
