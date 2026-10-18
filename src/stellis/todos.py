@@ -96,7 +96,8 @@ def _supersede(conn, item_id: str, stamp: str, *, status_only: bool = False) -> 
                  + (" AND operation = 'set_todo_status'" if status_only else ""), (stamp, item_id))
 
 
-def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: dict | None = None) -> str:
+def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: dict | None = None,
+            enforce_limit: bool = True) -> str:
     """Sync a source's items with its task lines inside the caller's transaction.
 
     Returns the Markdown with an ID on every task line; the caller stores that version.
@@ -167,7 +168,8 @@ def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: d
                      (date, time if date else None, stamp, item_id))
     markdown = "\n".join(lines)
     # Checked after IDs are added, so the stored version is what stays under the limit; the caller's transaction rolls back.
-    if len(markdown.encode("utf-8")) > MAX_MARKDOWN:
+    # Moving already-accepted capture notes must not fail a recording's finalize over added IDs.
+    if enforce_limit and len(markdown.encode("utf-8")) > MAX_MARKDOWN:
         raise TooLarge("Notes are too large")
     return markdown
 
