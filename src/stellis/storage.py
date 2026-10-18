@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import json
 import sqlite3
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -28,7 +29,7 @@ def data_dir() -> Path:
     return root
 
 
-class _Connection(sqlite3.Connection):
+class TolerantConnection(sqlite3.Connection):
     """Treat ADD COLUMN on an existing column as done.
 
     The migrations in connect() check the table, then alter it. Two first connections
@@ -45,14 +46,31 @@ class _Connection(sqlite3.Connection):
             raise
 
 
+def _enable_wal(conn: sqlite3.Connection) -> None:
+    """Switch to WAL, retrying while another first connection holds the lock.
+
+    SQLite does not run the busy timeout for the journal-mode switch on a new database,
+    so a racing connection fails at once with "database is locked".
+    """
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            conn.execute("PRAGMA journal_mode = WAL")
+            return
+        except sqlite3.OperationalError as error:
+            if "locked" not in str(error) or time.monotonic() > deadline:
+                raise
+            time.sleep(0.01)
+
+
 @contextmanager
 def connect() -> Iterator[sqlite3.Connection]:
     """Open and close a transaction with the current schema."""
     database = data_dir() / "stellis.sqlite3"
-    conn = sqlite3.connect(database, timeout=30, factory=_Connection)
+    conn = sqlite3.connect(database, timeout=30, factory=TolerantConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
+    _enable_wal(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS conversations (
@@ -487,6 +505,15 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS suggestions_target ON suggestions (target_kind, target_id, state)")
+    # What the sample workspace created (#300), so adding twice adds nothing and removing deletes only these.
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS sample_items (
+            key TEXT PRIMARY KEY,
+            kind TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            created INTEGER NOT NULL DEFAULT 1
+        )"""
+    )
     conn.execute(
         """CREATE TABLE IF NOT EXISTS meeting_notes (
             id TEXT PRIMARY KEY,

@@ -25,7 +25,7 @@ flowchart LR
 | Device service | Signs you in, stores conversations, serves the interface and `/api/v1`, and starts jobs | `src/stellis/server.py`, `storage.py` |
 | Speech worker | Transcribes recordings, groups speakers, and fingerprints voices, one job at a time in a separate process | `processing.py`, `asr.py`, `worker.py` |
 | Setup | Downloads and verifies the speech models on first start, with progress on the home page | `models.py`, `tools.py` |
-| Sample meetings | Downloads, verifies and imports the AMI sample meetings when the user asks, from the home page or Settings | `samples.py` |
+| Sample workspace | Adds invented collections, notebooks, notes, to-dos, tags, and pending suggestions, downloads and imports the three AMI sample meetings, and removes only what it created, from the home page or Settings | `samples.py`, `sample_content.py` |
 | AI features | Summaries with transcript links, answers, cleanup, and automatic categories through Nebius | `ai.py`, `enhanced_notes.py`, `categorization.py` |
 | Calendars | Reads upcoming events from one connected calendar | `calendar.py` |
 

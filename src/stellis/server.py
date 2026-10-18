@@ -817,6 +817,15 @@ def add_samples() -> dict[str, object]:
     return samples.start()
 
 
+@api.delete("/samples")
+def remove_samples() -> dict[str, object]:
+    from stellis import samples
+    try:
+        return samples.remove()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @api.get("/setup")
 def setup_status() -> dict[str, object]:
     from stellis import models
