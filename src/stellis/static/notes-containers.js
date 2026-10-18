@@ -136,7 +136,7 @@ export function $createColumnsNode(count = 2) {
 }
 
 // The top-level block (or the block of the enclosing container) that holds the caret. A table counts as one block.
-function $currentBlock(selection) {
+export function $currentBlock(selection) {
   const node = selection.anchor.getNode();
   const table = $findMatchingParent(node, $isTableNode);
   const start = table || node;

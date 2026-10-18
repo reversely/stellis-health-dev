@@ -1,6 +1,6 @@
 # Keyboard and Markdown shortcuts
 
-On Windows and Linux, press Ctrl where the table shows ⌘. A typed Markdown shortcut starts a line unless the table says it works inside a line. A slash menu for inserting blocks is planned.
+On Windows and Linux, press Ctrl where the table shows ⌘. A typed Markdown shortcut starts a line unless the table says it works inside a line. The slash menu inserts blocks without a typed shortcut.
 
 | Shortcut | Where | Result |
 | --- | --- | --- |
@@ -10,6 +10,9 @@ On Windows and Linux, press Ctrl where the table shows ⌘. A typed Markdown sho
 | `- `, `* `, or `+ ` | Notes | Bullet list |
 | `1. ` | Notes | Numbered list |
 | `[] ` or `[ ] ` | Notes | Open to-do |
+| `/` on an empty line or after a space | Notes | Open the slash menu: Text, Heading 1 to 3, Bulleted list, Numbered list, To-do, Quote, Callout, Toggle, Code, Divider, Table, 2 columns, Image, Video, and Link card. Each row shows its Markdown shortcut. Keep typing to filter the list. **Image** appears where the editor can upload images. |
+| ↑ and ↓, then Enter | Slash menu | Choose a block |
+| Esc | Slash menu | Close the menu and keep the typed `/` |
 | `[x] ` | Notes | Completed to-do. At the start of an existing to-do line, it completes that line. |
 | `[-] ` | Notes | Canceled to-do. At the start of an existing to-do line, it cancels that line. |
 | `---`, `***`, or `___` and a space | Notes | Divider |

@@ -26,8 +26,8 @@
       route: () => '/', targets: () => ['.home-actions']},
     {id: 'note', icon: 'note', title: 'Write a note with shortcuts',
       body: ctx => ctx.page
-        ? 'Type # and a space for a heading or - and a space for a bullet; the toolbar adds callouts, link cards, and more. Type [ ] and a space for a to-do, and add a date in words such as "Send the draft tomorrow at 3pm"; the date shows at the right of the line.'
-        : 'Press New note to open a blank note. In it, type # and a space for a heading, use the toolbar for callouts and link cards, or type [ ] and a space for a to-do with a date in words such as "tomorrow at 3pm".',
+        ? 'Type / for the block menu: headings, lists, callouts, tables, link cards, and more. Type # and a space for a heading or - and a space for a bullet. Type [ ] and a space for a to-do, and add a date in words such as "Send the draft tomorrow at 3pm"; the date shows at the right of the line.'
+        : 'Press New note to open a blank note. In it, type / for the block menu with callouts, tables, and link cards, type # and a space for a heading, or type [ ] and a space for a to-do with a date in words such as "tomorrow at 3pm".',
       dock: 'left',
       route: ctx => ctx.page ? `/page/${encodeURIComponent(ctx.page)}` : '/',
       targets: ctx => ctx.page ? ['#page-notes-toolbar', '#note-title'] : ['#home-new-note']},
