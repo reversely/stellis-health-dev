@@ -102,6 +102,8 @@ let libraryCategories = [];
 let libraryConversations = [];
 let libraryJobTimer;
 let railTags = new Set();
+let libraryCollections = [];
+let libraryPages = [];
 let activePersonId = null;
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
@@ -823,12 +825,8 @@ async function showList() {
   document.querySelector('#person-view').hidden = true;
   hideAppPages();
   document.querySelector('#page-title').textContent = 'Recent conversations';
-  const [conversations, categories, books] = await Promise.all([
-    fetch(`${API}/conversations`).then(json), fetch(`${API}/categories`).then(json), fetch(`${API}/notebooks`).then(json),
-  ]);
-  libraryConversations = conversations;
+  const [categories] = await Promise.all([fetch(`${API}/categories`).then(json), loadLibrary()]);
   libraryCategories = categories;
-  libraryNotebooks = books.notebooks; notebookPalette = books.palette;
   renderNotebooks();
   renderCategoryGroups();
   watchSetup();
@@ -844,32 +842,146 @@ async function showList() {
     await submitLibrarySearch(new Event('submit'));
   window.StellisCalendar?.refresh();
 }
+// The Home sidebar is the file structure: collections hold notebooks, notebooks hold meetings and notes.
+const RAIL_STATE_KEY = 'stellis-rail-open';
+// Collections and groups start open and notebooks start closed; the viewer's own choices are kept per browser.
+const railChoices = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(RAIL_STATE_KEY)) || {}); } catch { return []; } })());
+const railOpen = key => railChoices.has(key) ? railChoices.get(key) : !key.startsWith('notebook:');
+async function loadLibrary() {
+  // One load feeds the sidebar and the Home cards; pages come with their notebook, loose ones separately.
+  const [conversations, books, collections, loose] = await Promise.all([
+    fetch(`${API}/conversations`).then(json), fetch(`${API}/notebooks`).then(json),
+    fetch(`${API}/collections`).then(json), fetch(`${API}/pages?notebook_id=none`).then(json)]);
+  libraryConversations = conversations;
+  libraryNotebooks = books.notebooks; notebookPalette = books.palette;
+  libraryCollections = collections.collections;
+  libraryPages = [...books.notebooks.flatMap(book => book.pages.map(page => ({...page, notebook_id: book.id}))),
+    ...loose.map(page => ({...page, notebook_id: null}))];
+}
+async function reloadLibrary() {
+  await loadLibrary();
+  renderNotebooks(); renderCategoryGroups(); renderRailTags(); renderConversationList();
+}
 function renderConversationList() {
-  // Selected tag pills keep conversations carrying any of them; Untagged keeps those with none.
-  const conversations = libraryConversations.filter(item => !railTags.size ||
-    item.category_ids.some(id => railTags.has(id)) || (railTags.has('untagged') && !item.category_ids.length));
-  list.replaceChildren();
-  if (!conversations.length) {
+  // Selected tag pills keep the entries carrying any of them; Untagged keeps those with none.
+  const filtering = railTags.size > 0;
+  const keep = ids => !filtering || ids.some(id => railTags.has(id)) || (railTags.has('untagged') && !ids.length);
+  const conversations = libraryConversations.filter(item => keep(item.category_ids));
+  const pages = libraryPages.filter(page => keep(page.category_ids || []));
+  const known = new Set(libraryNotebooks.map(book => book.id));
+  const entries = (notebookId) => [
+    ...conversations.filter(item => notebookId ? item.notebook_id === notebookId : !known.has(item.notebook_id))
+      .map(item => ({at: capturedAt(item), row: () => railConversation(item)})),
+    ...pages.filter(page => page.notebook_id === notebookId)
+      .map(page => ({at: page.updated_at, row: () => railPage(page)}))]
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+  const notebookBranch = book => {
+    const items = entries(book.id);
+    return filtering && !items.length ? null : railBranch({key: `notebook:${book.id}`, count: items.length, node: book,
+      name: railLink(book), lead: railDot(book.color), children: items.map(entry => entry.row()),
+      draggable: NOTEBOOK_DRAG, accepts: {[CONVERSATION_DRAG]: id => moveConversation(conversationById(id), book),
+        [PAGE_DRAG]: id => movePage(pageById(id), book)}, move: () => openMoveNotebookToCollection(book)});
+  };
+  const placed = new Set(libraryCollections.flatMap(collection => collection.notebook_ids));
+  const byId = new Map(libraryNotebooks.map(book => [book.id, book]));
+  const branches = libraryCollections.map(collection => {
+    const children = collection.notebook_ids.map(id => byId.get(id)).filter(Boolean).map(notebookBranch).filter(Boolean);
+    return filtering && !children.length ? null : railBranch({key: `collection:${collection.id}`, name: railLabel(collection.name),
+      lead: railIcon('folder', collection.color), count: children.length, children,
+      accepts: {[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id), collection)}});
+  });
+  const loose = libraryNotebooks.filter(book => !placed.has(book.id)).map(notebookBranch).filter(Boolean);
+  if (loose.length || (libraryCollections.length && !filtering))
+    branches.push(railBranch({key: 'group:notebooks', name: railLabel('Notebooks'), lead: railIcon('notebook'), count: loose.length,
+      children: loose, accepts: {[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id), null)}}));
+  const unfiled = entries(null);
+  if (unfiled.length || !filtering)
+    branches.push(railBranch({key: 'group:none', name: railLabel('No notebook'), lead: railIcon('inbox'), count: unfiled.length,
+      children: unfiled.map(entry => entry.row()), accepts: {[CONVERSATION_DRAG]: id => moveConversation(conversationById(id), null),
+        [PAGE_DRAG]: id => movePage(pageById(id), null)}}));
+  list.replaceChildren(...branches.filter(Boolean));
+  if (!libraryConversations.length && !libraryPages.length && !filtering) {
     const empty = document.createElement('p'); empty.className = 'recent-empty';
-    empty.textContent = railTags.size ? 'No conversations with these tags' : 'Record or import your first conversation';
-    list.append(empty);
-  }
-  // Grouped by notebook in notebook order; conversations outside any notebook come last.
-  const groups = [...libraryNotebooks, null].map(notebook => ({notebook,
-    items: conversations.filter(item => notebook ? item.notebook_id === notebook.id :
-      !libraryNotebooks.some(book => book.id === item.notebook_id))})).filter(group => group.items.length);
-  for (const {notebook, items} of groups) {
-    const heading = document.createElement('h3'); heading.className = 'recent-group';
-    const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
-    if (notebook) dot.style.setProperty('--dot', notebook.color);
-    const name = document.createElement('span'); name.textContent = notebook ? notebook.name : 'No notebook';
-    const count = document.createElement('small'); count.textContent = items.length;
-    heading.append(dot, name, count); list.append(heading);
-    for (const item of items) list.append(recentRow(item));
+    empty.textContent = 'Record or import your first conversation'; list.prepend(empty);
+  } else if (filtering && !branches.some(Boolean)) {
+    const empty = document.createElement('p'); empty.className = 'recent-empty'; empty.textContent = 'No conversations with these tags';
+    list.prepend(empty);
   }
   clearTimeout(libraryJobTimer);
   if (conversations.some(item => ['queued', 'running'].includes(item.processing_job?.state)))
     libraryJobTimer = setTimeout(refreshLibraryJobs, 3000);
+}
+const conversationById = id => libraryConversations.find(item => item.id === id);
+const pageById = id => libraryPages.find(page => page.id === id);
+function railDot(color) {
+  const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
+  dot.style.setProperty('--dot', color); return dot;
+}
+function railIcon(name, color) {
+  const svg = icon(name); svg.classList.add('rail-icon');
+  if (color) svg.style.setProperty('--tint', color);
+  return svg;
+}
+function railLabel(text) { const name = document.createElement('span'); name.className = 'rail-name'; name.textContent = text; return name; }
+function railLink(book) {
+  const link = document.createElement('a'); link.className = 'rail-name'; link.textContent = book.name;
+  link.href = `/notebook/${encodeURIComponent(book.id)}`; return link;
+}
+function moveButton(label, open) {
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'rail-move';
+  button.setAttribute('aria-label', `Move ${label} to…`); button.title = 'Move to…'; button.append(icon('arrows-move'));
+  button.addEventListener('click', open); return button;
+}
+function railBranch({key, name, lead, count, children = [], accepts, draggable, node, move}) {
+  const collapsed = !railOpen(key);
+  const branch = document.createElement('div'); branch.className = 'rail-branch';
+  const head = document.createElement('div'); head.className = 'rail-node';
+  const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'rail-toggle';
+  toggle.setAttribute('aria-expanded', String(!(collapsed && !railTags.size))); toggle.append(icon('chevron-right'));
+  toggle.setAttribute('aria-label', `${collapsed ? 'Expand' : 'Collapse'} ${name.textContent}`);
+  const total = document.createElement('small'); total.textContent = count;
+  head.append(toggle, lead, name, total);
+  if (move) head.append(moveButton(name.textContent, move));
+  const body = document.createElement('div'); body.className = 'rail-children'; body.hidden = collapsed && !railTags.size;
+  body.append(...children);
+  const flip = () => {
+    // A tag filter opens every branch, so matches never hide; the stored choice returns when it clears.
+    railChoices.set(key, !railOpen(key));
+    try { localStorage.setItem(RAIL_STATE_KEY, JSON.stringify(Object.fromEntries(railChoices))); } catch {}
+    toggle.setAttribute('aria-expanded', String(railOpen(key)));
+    toggle.setAttribute('aria-label', `${railOpen(key) ? 'Collapse' : 'Expand'} ${name.textContent}`);
+    body.hidden = !railOpen(key);
+  };
+  toggle.addEventListener('click', flip);
+  if (name.tagName !== 'A') name.addEventListener('click', flip);
+  branch.append(head, body);
+  if (draggable) {
+    head.draggable = true;
+    head.addEventListener('dragstart', event => { event.dataTransfer.setData(draggable, node.id); event.dataTransfer.effectAllowed = 'move'; head.classList.add('dragging'); });
+    head.addEventListener('dragend', () => head.classList.remove('dragging'));
+  }
+  acceptDrops(branch, accepts);
+  return branch;
+}
+function railConversation(item) {
+  const wrap = document.createElement('div'); wrap.className = 'recent-item';
+  const row = recentRow(item); row.prepend(railIcon('microphone'));
+  wrap.append(row, moveButton(item.title, () => openMoveConversation(item)));
+  return wrap;
+}
+function railPage(page) {
+  const wrap = document.createElement('div'); wrap.className = 'recent-item';
+  const row = document.createElement('div'); row.className = 'recent-row recent-page'; row.tabIndex = 0; row.draggable = true;
+  const title = document.createElement('strong'); title.textContent = page.title;
+  const date = document.createElement('time'); date.dateTime = page.updated_at; date.textContent = shortDate(page.updated_at);
+  const line = document.createElement('small'); line.append(date);
+  row.append(railIcon('file-text'), title, line);
+  // Notes have no page of their own yet; the row selects and drags like a meeting.
+  row.addEventListener('click', () => setStatus(`${page.title} opens here in a later update`));
+  row.addEventListener('dragstart', event => { event.dataTransfer.setData(PAGE_DRAG, page.id); event.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging'); });
+  row.addEventListener('dragend', () => row.classList.remove('dragging'));
+  wrap.append(row, moveButton(page.title, () => openMovePage(page)));
+  return wrap;
 }
 async function refreshLibraryJobs() {
   if (listView.hidden) return;
@@ -975,8 +1087,9 @@ async function showTrash() {
   const container = document.querySelector('#trash-list'); container.replaceChildren();
   if (!items.length) { const empty = document.createElement('p'); empty.textContent = 'Recently Deleted is empty.'; container.append(empty); }
   for (const item of items) {
+    const isPage = item.kind === 'page';
     const row = document.createElement('div'); row.className = 'trash-row';
-    const title = document.createElement('strong'); title.textContent = item.title;
+    const title = document.createElement('strong'); title.append(icon(isPage ? 'file-text' : 'microphone'), item.title);
     const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = 'Restore';
     restore.addEventListener('click', async () => {
       try { await json(await fetch(`${API}/trash/${encodeURIComponent(item.id)}/restore`, {method:'POST'})); await showTrash(); }
@@ -984,7 +1097,8 @@ async function showTrash() {
     });
     const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete permanently';
     remove.addEventListener('click', async () => {
-      if (window.prompt(`Permanently delete “${item.title}” and its audio and transcript? Type DELETE to confirm.`) !== 'DELETE') return;
+      const gone = isPage ? 'and its text' : 'and its audio and transcript';
+      if (window.prompt(`Permanently delete “${item.title}” ${gone}? Type DELETE to confirm.`) !== 'DELETE') return;
       try { await json(await fetch(`${API}/trash/${encodeURIComponent(item.id)}`, {method:'DELETE'})); await showTrash(); }
       catch (error) { document.querySelector('#trash-status').textContent = error.message; }
     });
@@ -2464,6 +2578,7 @@ async function route() {
   else if (location.pathname.match(/^\/person\/([^/]+)$/))
     await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname === '/settings') await showSettings();
+  else if (location.pathname === '/todos') await showTodos();
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
     await showNotebook(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
@@ -3148,7 +3263,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3406,7 +3521,8 @@ function paintNotebook(element, notebook) {
 function hideAppPages() {
   document.querySelector('#settings-view').hidden = true;
   document.querySelector('#notebook-view').hidden = true;
-  document.body.classList.remove('settings-page', 'notebook-page');
+  document.querySelector('#todos-view').hidden = true;
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
@@ -3487,40 +3603,65 @@ function renderRailTags() {
   }
   document.querySelector('#rail-tags').replaceChildren(...pills);
 }
-// Rail rows drag onto Home cards; More options keeps the keyboard and touch route.
+// Sidebar rows and Home cards share these drops; Move to keeps the keyboard and touch route.
 const CONVERSATION_DRAG = 'application/x-stellis-conversation';
-function acceptConversationDrop(card, place) {
-  const carries = event => event.dataTransfer.types.includes(CONVERSATION_DRAG);
+const PAGE_DRAG = 'application/x-stellis-page';
+const NOTEBOOK_DRAG = 'application/x-stellis-notebook';
+function acceptDrops(target, accepts = {}) {
+  // `accepts` maps a drag type to a function that makes the move and returns the status line.
+  const types = Object.keys(accepts);
+  const carried = event => types.find(type => event.dataTransfer.types.includes(type));
   // Chromium sends dragleave with no relatedTarget when crossing child elements, so count enters and leaves.
   let depth = 0;
-  card.addEventListener('dragenter', event => {
-    if (!carries(event)) return;
-    depth += 1; card.classList.add('drop-target');
+  target.addEventListener('dragenter', event => {
+    if (!carried(event)) return;
+    depth += 1; target.classList.add('drop-target');
   });
-  card.addEventListener('dragover', event => { if (carries(event)) event.preventDefault(); });
-  card.addEventListener('dragleave', event => {
-    if (carries(event) && --depth <= 0) { depth = 0; card.classList.remove('drop-target'); }
+  target.addEventListener('dragover', event => { if (carried(event)) event.preventDefault(); });
+  target.addEventListener('dragleave', event => {
+    if (carried(event) && --depth <= 0) { depth = 0; target.classList.remove('drop-target'); }
   });
-  card.addEventListener('drop', async event => {
-    if (!carries(event)) return;
-    event.preventDefault(); depth = 0; card.classList.remove('drop-target');
-    const item = libraryConversations.find(entry => entry.id === event.dataTransfer.getData(CONVERSATION_DRAG));
-    if (!item) return;
-    try { setStatus(await place(item), true); await showList(); }
-    catch (error) { setStatus(error.message); }
+  target.addEventListener('drop', async event => {
+    const type = carried(event);
+    if (!type) return;
+    event.preventDefault(); event.stopPropagation(); depth = 0; target.classList.remove('drop-target');
+    try {
+      const message = await accepts[type](event.dataTransfer.getData(type));
+      if (message) { setStatus(message, true); await reloadLibrary(); }
+    } catch (error) { setStatus(error.message); }
   });
 }
+function acceptConversationDrop(card, place) {
+  acceptDrops(card, {[CONVERSATION_DRAG]: id => { const item = conversationById(id); return item && place(item); }});
+}
+async function putJson(path, body) {
+  return json(await fetch(`${API}${path}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}));
+}
+async function moveConversation(item, notebook) {
+  // A conversation sits in one notebook, so a drop moves it; no notebook takes it out.
+  if (!item) return '';
+  if ((item.notebook_id || null) === (notebook?.id || null)) return `${item.title} is already ${notebook ? `in ${notebook.name}` : 'without a notebook'}`;
+  await putJson(`/conversations/${encodeURIComponent(item.id)}/notebook`, {notebook_id: notebook?.id ?? null});
+  return notebook ? `Moved ${item.title} to ${notebook.name}` : `Removed ${item.title} from its notebook`;
+}
+async function movePage(page, notebook) {
+  if (!page) return '';
+  if (page.notebook_id === (notebook?.id || null)) return `${page.title} is already ${notebook ? `in ${notebook.name}` : 'without a notebook'}`;
+  await putJson(`/pages/${encodeURIComponent(page.id)}/notebook`, {notebook_id: notebook?.id ?? null});
+  return notebook ? `Moved ${page.title} to ${notebook.name}` : `Removed ${page.title} from its notebook`;
+}
+async function moveNotebook(book, collection) {
+  if (!book) return '';
+  const current = libraryCollections.find(item => item.notebook_ids.includes(book.id));
+  if ((current?.id || null) === (collection?.id || null)) return `${book.name} is already ${collection ? `in ${collection.name}` : 'outside a collection'}`;
+  await putJson(`/notebooks/${encodeURIComponent(book.id)}/collection`, {collection_id: collection?.id ?? null});
+  return collection ? `Moved ${book.name} into ${collection.name}` : `Moved ${book.name} out of ${current.name}`;
+}
+const dropOnNotebook = moveConversation;
 async function dropOnCategory(item, group) {
   if (item.category_ids.includes(group.id)) return `${item.title} is already in ${group.name}`;
   await json(await fetch(`${API}/conversations/${encodeURIComponent(item.id)}/categories/${encodeURIComponent(group.id)}`, {method:'PUT'}));
   return `Added ${item.title} to ${group.name}`;
-}
-async function dropOnNotebook(item, notebook) {
-  // A conversation sits in one notebook, so a drop moves it.
-  if (item.notebook_id === notebook.id) return `${item.title} is already in ${notebook.name}`;
-  await json(await fetch(`${API}/conversations/${encodeURIComponent(item.id)}/notebook`,
-    {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notebook_id:notebook.id})}));
-  return `Moved ${item.title} to ${notebook.name}`;
 }
 function tagCard(tag) {
   // A compact card: the tag's five newest conversations.
@@ -3753,37 +3894,92 @@ document.querySelector('#notebook-delete').addEventListener('click', async () =>
 });
 
 const moveNotebookDialog = document.querySelector('#move-notebook-dialog');
-document.querySelector('#move-to-notebook').addEventListener('click', async () => {
-  conversationMore.open = false;
-  const [books, current] = await Promise.all([fetch(`${API}/notebooks`).then(json),
-    fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}`).then(json)]);
-  libraryNotebooks = books.notebooks;
-  const choices = [{id:'', name:'No notebook', color:null}, ...libraryNotebooks];
-  document.querySelector('#move-notebook-options').replaceChildren(...choices.map(book => {
+let moveRequest = null;
+function openMoveDialog({heading, none, choices, current, empty, apply}) {
+  // One dialog serves every Move to path: a choice of destinations, or none to take the item out.
+  moveRequest = apply;
+  document.querySelector('#move-notebook-title').textContent = heading;
+  document.querySelector('#move-notebook-options').replaceChildren(...[{id:'', name:none, color:null}, ...choices].map(book => {
     const option = document.createElement('label'); option.className = 'move-notebook-option';
     const radio = document.createElement('input'); radio.type = 'radio'; radio.name = 'move-notebook'; radio.value = book.id;
-    radio.checked = (current.notebook_id || '') === book.id;
+    radio.checked = (current || '') === book.id;
     const dot = document.createElement('span'); dot.className = 'recent-dot'; dot.setAttribute('aria-hidden', 'true');
     if (book.color) dot.style.setProperty('--dot', book.color);
     const name = document.createElement('span'); name.textContent = book.name;
     option.append(radio, dot, name);
     return option;
   }));
-  document.querySelector('#move-notebook-status').textContent = libraryNotebooks.length ? '' : 'Create a notebook on the home page first';
+  document.querySelector('#move-notebook-status').textContent = choices.length ? '' : empty;
   moveNotebookDialog.showModal();
+}
+const moveToNotebook = (item, move) => openMoveDialog({heading: 'Move to notebook', none: 'No notebook', choices: libraryNotebooks,
+  current: item.notebook_id, empty: 'Create a notebook on the home page first',
+  apply: id => move(item, libraryNotebooks.find(book => book.id === id) || null)});
+const openMoveConversation = item => moveToNotebook(item, moveConversation);
+const openMovePage = page => moveToNotebook(page, movePage);
+function openMoveNotebookToCollection(book) {
+  openMoveDialog({heading: 'Move to collection', none: 'No collection', choices: libraryCollections,
+    current: libraryCollections.find(item => item.notebook_ids.includes(book.id))?.id, empty: 'Create a collection in the sidebar first',
+    apply: id => moveNotebook(book, libraryCollections.find(item => item.id === id) || null)});
+}
+document.querySelector('#move-to-notebook').addEventListener('click', async () => {
+  conversationMore.open = false;
+  const [books, current] = await Promise.all([fetch(`${API}/notebooks`).then(json),
+    fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}`).then(json)]);
+  libraryNotebooks = books.notebooks;
+  openMoveConversation(current);
 });
 document.querySelector('#move-notebook-cancel').addEventListener('click', () => moveNotebookDialog.close());
 document.querySelector('#move-notebook-form').addEventListener('submit', async event => {
   event.preventDefault();
   const value = document.querySelector('input[name="move-notebook"]:checked')?.value ?? '';
   try {
-    await json(await fetch(`${API}/conversations/${encodeURIComponent(activeConversationId)}/notebook`,
-      {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notebook_id:value || null})}));
+    const message = await moveRequest(value);
     moveNotebookDialog.close();
-    const book = libraryNotebooks.find(item => item.id === value);
-    setStatus(book ? `Moved to ${book.name}` : 'Removed from its notebook', true);
+    setStatus(message, true);
+    if (!listView.hidden) await reloadLibrary();
   } catch (error) { document.querySelector('#move-notebook-status').textContent = error.message; }
 });
+// New collection: an inline name field at the foot of the sidebar.
+const newCollectionButton = document.querySelector('#new-collection');
+const newCollectionForm = document.querySelector('#new-collection-form');
+const newCollectionName = document.querySelector('#new-collection-name');
+function closeNewCollection() { newCollectionForm.hidden = true; newCollectionButton.hidden = false; newCollectionName.value = ''; }
+newCollectionButton.addEventListener('click', () => { newCollectionButton.hidden = true; newCollectionForm.hidden = false; newCollectionName.focus(); });
+newCollectionName.addEventListener('keydown', event => { if (event.key === 'Escape') closeNewCollection(); });
+newCollectionName.addEventListener('blur', () => { if (!newCollectionName.value.trim()) closeNewCollection(); });
+newCollectionForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    const created = await json(await fetch(`${API}/collections`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:newCollectionName.value})}));
+    closeNewCollection(); setStatus(`Created the collection ${created.name}`, true); await reloadLibrary();
+  } catch (error) { setStatus(error.message); }
+});
+// To-dos: every open item grouped by the meeting or note it came from, until the full page arrives.
+async function showTodos() {
+  await leaveForAppPage('todos-page', 'To-dos');
+  const {groups} = await json(await fetch(`${API}/todos`));
+  document.querySelector('#todos-view').hidden = false;
+  const box = document.querySelector('#todos-groups');
+  box.replaceChildren(...groups.map(({source, items}) => {
+    const section = document.createElement('section'); section.className = 'todos-group';
+    const head = document.createElement('h3');
+    const name = source.kind === 'conversation' ? document.createElement('a') : document.createElement('span');
+    name.textContent = source.title;
+    if (source.kind === 'conversation') name.href = `/conversation/${encodeURIComponent(source.id)}`;
+    head.append(icon(source.kind === 'page' ? 'file-text' : 'microphone'), name);
+    const rows = document.createElement('ul');
+    rows.append(...items.map(item => {
+      const row = document.createElement('li'); const text = document.createElement('span'); text.textContent = item.text;
+      row.append(icon('circle'), text);
+      if (item.due_date) { const due = document.createElement('time'); due.textContent = item.due_date; row.append(due); }
+      return row;
+    }));
+    section.append(head, rows); return section;
+  }));
+  if (!groups.length) { const empty = document.createElement('p'); empty.textContent = 'No open to-dos'; box.append(empty); }
+  captureControls();
+}
 
 async function accountRequest(path, method, body) {
   return json(await fetch(`${API}/account${path}`, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}));

@@ -1,7 +1,7 @@
 Third-party notices for inline icons in index.html
 
-Tabler Icons 3.49.0 outline icons: abc, calendar, circle-check, file, file-text, key, list, logout, microphone, moon, notebook,
-pencil, plug-connected, plus, refresh, search, settings, sun, tag, trash, upload, user
+Tabler Icons 3.49.0 outline icons: abc, arrows-move, calendar, chevron-right, circle, circle-check, file, file-text, folder, folder-plus, inbox, key, list,
+logout, microphone, moon, notebook, pencil, plug-connected, plus, refresh, search, settings, sun, tag, trash, upload, user
 https://tabler.io/icons
 
 MIT License
