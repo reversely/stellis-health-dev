@@ -28,11 +28,28 @@ def data_dir() -> Path:
     return root
 
 
+class _Connection(sqlite3.Connection):
+    """Treat ADD COLUMN on an existing column as done.
+
+    The migrations in connect() check the table, then alter it. Two first connections
+    (a request thread and the speech worker process) can both pass the check; the loser
+    gets "duplicate column name" although the column it wanted now exists.
+    """
+
+    def execute(self, sql, *args):  # type: ignore[no-untyped-def]
+        try:
+            return super().execute(sql, *args)
+        except sqlite3.OperationalError as error:
+            if sql.lstrip().upper().startswith("ALTER TABLE") and "duplicate column name" in str(error):
+                return self.cursor()
+            raise
+
+
 @contextmanager
 def connect() -> Iterator[sqlite3.Connection]:
     """Open and close a transaction with the current schema."""
     database = data_dir() / "stellis.sqlite3"
-    conn = sqlite3.connect(database, timeout=30)
+    conn = sqlite3.connect(database, timeout=30, factory=_Connection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
