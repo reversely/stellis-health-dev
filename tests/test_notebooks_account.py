@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import auth, calendar, storage
+from stellis import auth, calendar, notebooks, storage
 from stellis.server import app
 from test_import import mp3_bytes
 
@@ -26,6 +26,12 @@ def tone_mp3(frequency_step: int) -> bytes:
         audio.setframerate(16000)
         audio.writeframes(struct.pack("<16000h", *([frequency_step * 50] * 16000)))
     return mp3_bytes(output.getvalue())
+
+
+class SummaryMarkdownTest(unittest.TestCase):
+    def test_edited_summary_bullets_read_as_plain_text(self) -> None:
+        sections = notebooks._markdown_sections("## Decisions\n- Ship **v2** with `snake_case`\n- See [the plan](https://a.example)\n")
+        self.assertEqual(sections, {"decisions": ["Ship v2 with snake_case", "See the plan"]})
 
 
 class NotebookAccountTest(unittest.TestCase):

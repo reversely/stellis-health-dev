@@ -25,6 +25,14 @@ class EnhancedNotesWorkflowTest(unittest.TestCase):
         self.assertIn("| Topic | Owner |", cleaned)
         self.assertNotIn(image_id, cleaned)
 
+    def test_prompt_text_drops_ids_and_the_limit_counts_it(self) -> None:
+        cleaned = enhanced_notes._notes_for_prompt("- [ ] call ^tabc123\n<columns>\n<column>\nleft\n</column>\n</columns>")
+        self.assertEqual(cleaned, "- [ ] call\nleft")
+        # 700 task lines are over 8,000 bytes stored, and under it once the 11-byte IDs are dropped.
+        stored = "".join(f"- [ ] t ^t{index:06d}\n" for index in range(700))
+        self.assertGreater(len(stored.encode()), enhanced_notes.MAX_INPUT_NOTES)
+        self.assertLess(len(enhanced_notes._notes_for_prompt(stored).encode()), enhanced_notes.MAX_INPUT_NOTES)
+
     def test_generate_edit_refresh_and_note_staleness(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
             client = TestClient(app)

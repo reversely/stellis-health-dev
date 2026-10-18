@@ -273,6 +273,33 @@ def plain_markdown(markdown: str) -> str:
     return "\n".join(out)
 
 
+_ESCAPABLE = "\\`*_~[]()#>!|-<"
+_ESCAPE = re.compile(r"\\([" + re.escape(_ESCAPABLE) + r"])")
+# Private-use stand-ins keep an escaped marker from being read as emphasis until the end.
+_LITERAL = {char: chr(0xE000 + index) for index, char in enumerate(_ESCAPABLE)}
+_UNLITERAL = {mark: char for char, mark in _LITERAL.items()}
+_IMAGE_OR_LINK = re.compile(r"!?\[([^\]\n]*)\]\([^)\n]*\)")
+_CODE_SPAN = re.compile(r"(`+)(.+?)\1")
+_EMPHASIS = (re.compile(r"\*\*(.+?)\*\*|__(.+?)__|~~(.+?)~~"),
+             re.compile(r"\*(.+?)\*|(?<![0-9A-Za-z])_(.+?)_(?![0-9A-Za-z])"))
+
+
+def markdown_inline_text(text: str) -> str:
+    """Reduce one line of Markdown to its readable text.
+
+    Drops a trailing task ID, emphasis and code marks, and link or image targets; keeps the link text or
+    image caption; reads backslash escapes back as characters. Shared fixture: tests/fixtures/markdown_plain.json.
+    """
+    text = _ID_SUFFIX.sub("", text)
+    text = _BOOKMARK.sub(lambda m: m.group(2).strip() or m.group(1), text)
+    text = _ESCAPE.sub(lambda m: _LITERAL[m.group(1)], text)
+    text = _CODE_SPAN.sub(lambda m: m.group(2).translate(str.maketrans(_LITERAL)), text)
+    text = _IMAGE_OR_LINK.sub(lambda m: m.group(1), text)
+    for pattern in _EMPHASIS:
+        text = pattern.sub(lambda m: next(group for group in m.groups() if group is not None), text)
+    return " ".join(text.translate(str.maketrans(_UNLITERAL)).split())
+
+
 def _plain_run(text: str) -> str:
     text = _ID_SUFFIX.sub("", text)
     text = _BOOKMARK.sub(lambda m: f"[{m.group(2).strip()}]({m.group(1)})" if m.group(2).strip() else m.group(1), text)

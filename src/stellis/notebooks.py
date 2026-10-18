@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 
 from stellis import storage, suggestions
+from stellis.todos import markdown_inline_text
 
 PALETTE = ("#495575", "#56465C", "#594F4F", "#547980", "#45ADA8")
 # Seven added swatches; each holds white text at 4.5:1 or better (ratios in docs/current-architecture.md).
@@ -47,8 +48,9 @@ def _markdown_sections(markdown: str) -> dict[str, list[str]]:
             current = _SECTIONS.get(heading.group(1).strip().casefold())
             continue
         bullet = re.match(r"^\s*[-*]\s+(.*)$", line)
-        if current and bullet and bullet.group(1).strip():
-            sections.setdefault(current, []).append(bullet.group(1).strip())
+        text = markdown_inline_text(bullet.group(1)) if bullet else ""
+        if current and text:
+            sections.setdefault(current, []).append(text)
     return sections
 
 
