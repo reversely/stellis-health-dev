@@ -78,7 +78,7 @@ def summary_points(conversation_ids: list[str]) -> dict[str, dict[str, object]]:
 def list_notebooks() -> list[dict[str, object]]:
     """List notebooks with their conversations newest first and the latest meeting's progress."""
     with storage.connect() as conn:
-        books = [dict(row) for row in conn.execute("SELECT id, name, color, created_at FROM notebooks ORDER BY created_at")]
+        books = [dict(row) for row in conn.execute("SELECT id, name, color, created_at, collection_id FROM notebooks ORDER BY created_at")]
         rows = conn.execute("""SELECT id, title, duration_ms, created_at, recorded_at, notebook_id FROM conversations
             WHERE notebook_id IS NOT NULL AND trashed_at IS NULL
             ORDER BY COALESCE(recorded_at, created_at) DESC, created_at DESC""").fetchall()

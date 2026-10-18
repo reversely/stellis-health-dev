@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, enhanced_notes, generation_review, images, library, notebooks, notes, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, notebooks, notes, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -634,6 +634,62 @@ def assign_notebook(conversation_id: str, request: NotebookAssignment) -> dict[s
         return notebooks.assign(conversation_id, request.notebook_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class CollectionCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    color: str | None = None
+
+
+class CollectionUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    color: str | None = None
+
+
+class CollectionAssignment(BaseModel):
+    collection_id: str | None = None
+
+
+def _collection_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, LookupError):
+        return HTTPException(status_code=404, detail=str(exc))
+    return HTTPException(status_code=409 if isinstance(exc, collections.NameTaken) else 400, detail=str(exc))
+
+
+@api.get("/collections")
+def list_collections() -> dict[str, object]:
+    return {"palette": list(notebooks.PALETTE), "collections": collections.list_collections()}
+
+
+@api.post("/collections", status_code=201)
+def create_collection(request: CollectionCreate) -> dict[str, object]:
+    try:
+        return collections.create(request.name, request.color)
+    except ValueError as exc:
+        raise _collection_error(exc) from exc
+
+
+@api.patch("/collections/{collection_id}")
+def update_collection(collection_id: str, request: CollectionUpdate) -> dict[str, object]:
+    try:
+        return collections.update(collection_id, name=request.name, color=request.color)
+    except (LookupError, ValueError) as exc:
+        raise _collection_error(exc) from exc
+
+
+@api.delete("/collections/{collection_id}")
+def delete_collection(collection_id: str) -> dict[str, bool]:
+    if not collections.delete(collection_id):
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return {"deleted": True}
+
+
+@api.put("/notebooks/{notebook_id}/collection")
+def assign_notebook_collection(notebook_id: str, request: CollectionAssignment) -> dict[str, object]:
+    try:
+        return collections.assign_notebook(notebook_id, request.collection_id)
+    except LookupError as exc:
+        raise _collection_error(exc) from exc
 
 
 def _recorded_at(value: str | None) -> str | None:
