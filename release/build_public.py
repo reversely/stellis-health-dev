@@ -56,6 +56,11 @@ def scan(out: Path) -> list[str]:
                 findings.append(f"{path.relative_to(out)}:{number}: {line.strip()[:120]}")
     for pattern in FORBIDDEN_FILES:
         findings += [f"{path.relative_to(out)}: file type never published" for path in out.rglob(pattern)]
+    docs = out / "docs"
+    if docs.exists():
+        for path in sorted(docs.rglob("*")):
+            if path.is_file() and path.relative_to(docs).parts[0] not in {"architecture.md", "guide", "releases"}:
+                findings.append(f"{path.relative_to(out)}: internal documentation never published")
     return findings
 
 

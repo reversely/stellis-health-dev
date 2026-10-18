@@ -26,6 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
+      - name: Check source and target repositories
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          test "$GITHUB_REPOSITORY" = reversely/stellis-dev || { echo "Run this workflow only from reversely/stellis-dev"; exit 1; }
+          test "$PUBLIC_REPO" != "$GITHUB_REPOSITORY" || { echo "Source and target repositories must differ"; exit 1; }
+          test "$(gh api "repos/$PUBLIC_REPO" --jq .private)" = false || { echo "$PUBLIC_REPO must be public"; exit 1; }
+
       - name: Check the version and its release notes
         run: |
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version must look like 1.2.3"; exit 1; }

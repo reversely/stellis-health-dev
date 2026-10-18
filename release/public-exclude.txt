@@ -17,6 +17,7 @@ docs/contrast-workspace-experiment.md
 docs/granola-hierarchy-and-home-memo.md
 docs/granola-ui-reference.md
 docs/otter-ui-reference.md
+docs/notion-ui-reference.md
 docs/ui-style-guide.md
 docs/progress/
 scripts/prepare_otter_migration.py

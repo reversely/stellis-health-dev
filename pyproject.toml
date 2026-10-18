@@ -1,11 +1,8 @@
 [project]
 name = "stellis"
 version = "0.1.0"
-description = "Record, transcribe, and search conversations on your Mac"
+description = "Record, transcribe, and search conversations on your computer"
 license = "Apache-2.0"
-authors = [
-    { name = "Shereen L.", email = "105625351+reversely@users.noreply.github.com" }
-]
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.143.2",
