@@ -5,7 +5,7 @@ description: Work on the Stellis repository and its browser-first interview prod
 
 # Stellis workflow
 
-Apply this skill only to `/Users/slee/Repos/stellis` or `reversely/stellis`. Read the repository's `AGENTS.md`, `plans/`, `docs/otter-ui-reference.md`, and `docs/current-architecture.md` as relevant. The user may replace the implementation plan when a significant reason is documented.
+Apply this skill to Stellis development worktrees and `reversely/stellis-dev`. Read the repository's `AGENTS.md`, `plans/`, `docs/otter-ui-reference.md`, and `docs/current-architecture.md` as relevant. The user may replace the implementation plan when a significant reason is documented. Before creating, switching, or cleaning a worktree, read [the worktree skill](../../worktrees/SKILL.md).
 
 ## Product requirements
 
