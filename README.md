@@ -1,6 +1,6 @@
 # Stellis
 
-Stellis records and imports conversations, transcribes them on your Mac, and keeps them searchable with speakers, notes, and summaries. Recordings, audio, and transcription stay on your computer. Summaries, chat, and automatic categories use the Nebius API with a key you provide, and only the transcript text those features need is sent.
+Stellis records and imports conversations, transcribes them on your computer, and keeps them searchable with speakers, notes, and summaries. Recordings, audio, and transcription stay on your computer. Summaries, chat, and automatic categories use the Nebius API with a key you provide, and only the transcript text those features need is sent.
 
 Stellis runs as a small local web app: a service on your computer, opened in your browser at `http://127.0.0.1:8765`.
 
@@ -15,7 +15,7 @@ Stellis runs as a small local web app: a service on your computer, opened in you
 
 ## Requirements
 
-- macOS on Apple silicon, and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs Python 3.12 and every other dependency
 - About 1.5 GB of free disk space for the app and its speech models
 - Optional: a [Nebius](https://nebius.com) API key for summaries, chat, and categories
 
