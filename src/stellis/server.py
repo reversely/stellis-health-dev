@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, todos
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, suggestions, todos
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -618,6 +618,7 @@ class NotebookCreate(BaseModel):
 class NotebookUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     color: str | None = None
+    todo_list: Literal["inherit", "on", "off"] | None = None
 
 
 class NotebookAssignment(BaseModel):
@@ -654,7 +655,7 @@ def create_notebook(request: NotebookCreate) -> dict[str, object]:
 @api.patch("/notebooks/{notebook_id}")
 def update_notebook(notebook_id: str, request: NotebookUpdate) -> dict[str, object]:
     try:
-        return notebooks.update(notebook_id, name=request.name, color=request.color)
+        return notebooks.update(notebook_id, name=request.name, color=request.color, todo_list=request.todo_list)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -684,6 +685,7 @@ class CollectionCreate(BaseModel):
 class CollectionUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     color: str | None = None
+    todo_list: Literal["on", "off"] | None = None
 
 
 class CollectionAssignment(BaseModel):
@@ -712,7 +714,7 @@ def create_collection(request: CollectionCreate) -> dict[str, object]:
 @api.patch("/collections/{collection_id}")
 def update_collection(collection_id: str, request: CollectionUpdate) -> dict[str, object]:
     try:
-        return collections.update(collection_id, name=request.name, color=request.color)
+        return collections.update(collection_id, name=request.name, color=request.color, todo_list=request.todo_list)
     except (LookupError, ValueError) as exc:
         raise _collection_error(exc) from exc
 
@@ -1249,6 +1251,57 @@ def update_todo(todo_id: str, request: TodoStatus) -> dict[str, object]:
         return todos.set_status(todo_id, request.status)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class SuggestionIds(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=500)
+
+
+class SuggestionPreview(SuggestionIds):
+    decision: Literal["accept", "reject"]
+
+
+class SuggestionAmend(BaseModel):
+    values: dict
+
+
+def _suggestion_call(call, *args, **kwargs):
+    try:
+        return call(*args, **kwargs)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.get("/suggestions")
+def list_suggestions(target_kind: Literal["conversation", "page"] | None = None, target_id: str | None = None,
+                     notebook_id: str | None = None) -> dict[str, object]:
+    return {"suggestions": _suggestion_call(suggestions.list_pending, target_kind, target_id, notebook_id)}
+
+
+@api.patch("/suggestions/{suggestion_id}")
+def amend_suggestion(suggestion_id: str, request: SuggestionAmend) -> dict[str, object]:
+    return _suggestion_call(suggestions.amend, suggestion_id, request.values)
+
+
+@api.post("/suggestions/accept")
+def accept_suggestions(request: SuggestionIds) -> dict[str, list[str]]:
+    return _suggestion_call(suggestions.accept, request.ids)
+
+
+@api.post("/suggestions/reject")
+def reject_suggestions(request: SuggestionIds) -> dict[str, list[str]]:
+    return _suggestion_call(suggestions.reject, request.ids)
+
+
+@api.post("/suggestions/preview")
+def preview_suggestions(request: SuggestionPreview) -> dict[str, object]:
+    return _suggestion_call(suggestions.preview, request.ids, request.decision)
 
 
 @api.get("/recordings/{recording_id}/notes")
