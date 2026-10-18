@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -611,6 +611,20 @@ class NotebookUpdate(BaseModel):
 
 class NotebookAssignment(BaseModel):
     notebook_id: str | None = None
+
+
+class LinkPreviewRequest(BaseModel):
+    url: str = Field(max_length=2048)
+
+
+@api.post("/link-previews")
+async def link_preview(request: LinkPreviewRequest) -> dict[str, str | None]:
+    try:
+        return await linkpreview.preview(request.url)
+    except linkpreview.AddressRefused as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @api.get("/notebooks")
