@@ -117,10 +117,17 @@ function $restorePoint(point, saved) {
   point.set(leaf.getKey(), 0, 'element');
 }
 
-export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
-  const imageUrlForId = options.imageUrlForId || (() => '');
-  const onOpenImage = options.onOpenImage || (() => {});
-  const markdown = [
+export const NOTES_NODES = [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
+  TableNode, TableRowNode, TableCellNode, MeetingImageNode];
+export const NOTES_THEME = {heading:{h1:'note-heading-one',h2:'note-heading-two',h3:'note-heading-three'},
+  list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
+    listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
+  text:{bold:'note-bold',italic:'note-italic'}, table:'note-table',
+  tableCell:'note-table-cell', tableCellHeader:'note-table-header'};
+
+// The Markdown dialect shared by the editor and the headless round-trip test.
+export function notesTransformers({imageUrlForId = () => '', onOpenImage = () => {}} = {}) {
+  return [
     {dependencies:[MeetingImageNode], export:node => node instanceof MeetingImageNode ?
       `![${node.__caption.replace(/[\]\\]/g, '')}](stellis-image:${node.__imageId})` : null,
       regExp:IMAGE_MARKDOWN, type:'element', replace(parent, children, match) {
@@ -151,15 +158,16 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     HEADING, CHECK_LIST, UNORDERED_LIST, ORDERED_LIST,
     BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, LINK,
   ];
+}
+
+export function createNotesEditor(root, toolbar, onChange, onError, options = {}) {
+  const imageUrlForId = options.imageUrlForId || (() => '');
+  const onOpenImage = options.onOpenImage || (() => {});
+  const markdown = notesTransformers({imageUrlForId, onOpenImage});
   const editor = createEditor({
     namespace:'StellisNotes',
-    nodes:[HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, AutoLinkNode,
-      TableNode, TableRowNode, TableCellNode, MeetingImageNode],
-    theme:{heading:{h1:'note-heading-one',h2:'note-heading-two'},
-      list:{ul:'note-bullets',ol:'note-numbers',listitem:'note-list-item',
-        listitemChecked:'note-check-done',listitemUnchecked:'note-check-open'},
-      text:{bold:'note-bold',italic:'note-italic'}, table:'note-table',
-      tableCell:'note-table-cell', tableCellHeader:'note-table-header'},
+    nodes:NOTES_NODES,
+    theme:NOTES_THEME,
     onError(error){onError(error);},
   });
   const unregister = [registerRichText(editor), registerList(editor), registerCheckList(editor),

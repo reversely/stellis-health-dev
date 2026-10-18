@@ -245,8 +245,19 @@ main { max-width: 1100px; }
 .notes-editor p { margin: 0 0 10px; color: var(--ink); }
 .notes-editor .note-heading-one { font-size: 26px; font-weight: 700; }
 .notes-editor .note-heading-two { font-size: 21px; font-weight: 700; }
+.notes-editor .note-heading-three { font-size: 17px; font-weight: 700; }
 .notes-editor ul, .notes-editor ol { padding-left: 25px; }
 .notes-editor .note-check-done { text-decoration: line-through; color: var(--quiet); }
+/* Checklist items draw a box in place of the bullet marker. */
+.notes-editor .note-check-open, .notes-editor .note-check-done { list-style: none; position: relative; }
+.notes-editor .note-check-open::before, .notes-editor .note-check-done::before {
+  content: ''; position: absolute; left: -22px; top: .32em; width: 15px; height: 15px; box-sizing: border-box;
+  border: 1.5px solid var(--muted); border-radius: 4px; background: transparent; cursor: pointer; text-decoration: none;
+}
+.notes-editor .note-check-done::before {
+  border-color: var(--ink); background: var(--ink)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23808080' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
 .notes-editor a { color: var(--accent-strong); text-decoration: underline; }
 .notes-save-line { display: flex; align-items: center; gap: 12px; min-height: 24px; }
 .notes-save-line p { margin: 0; color: var(--quiet); font-size: 13px; }
