@@ -408,6 +408,23 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS todo_items (
+            id TEXT PRIMARY KEY,
+            source_kind TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            text TEXT NOT NULL,
+            status TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            due_date TEXT,
+            due_time TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            completed_at TEXT,
+            canceled_at TEXT
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS todo_items_source ON todo_items (source_kind, source_id)")
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS meeting_notes (
             id TEXT PRIMARY KEY,
             conversation_id TEXT UNIQUE REFERENCES conversations(id),
