@@ -16,7 +16,7 @@ let silenceScanTimer = null;
 let manualSeekUntil = 0;
 const API = '/api/v1';
 const conversationMore = document.querySelector('#conversation-more');
-for (const menu of [conversationMore, document.querySelector('#library-more'), document.querySelector('#record-more')]) {
+for (const menu of [conversationMore, document.querySelector('#library-more'), document.querySelector('#record-more'), document.querySelector('#notebook-more')]) {
   menu.addEventListener('click', event => { if (event.target.closest('button, a')) menu.open = false; });
   document.addEventListener('pointerdown', event => { if (!menu.contains(event.target)) menu.open = false; });
   menu.addEventListener('keydown', event => {
@@ -910,7 +910,7 @@ async function loadLibrary() {
     fetch(`${API}/conversations`).then(json), fetch(`${API}/notebooks`).then(json),
     fetch(`${API}/collections`).then(json), fetch(`${API}/pages?notebook_id=none`).then(json)]);
   libraryConversations = conversations;
-  libraryNotebooks = books.notebooks; notebookPalette = books.palette;
+  libraryNotebooks = books.notebooks; notebookPalette = books.palette; notebookPresets = books.presets;
   libraryCollections = collections.collections;
   libraryPages = [...books.notebooks.flatMap(book => book.pages.map(page => ({...page, notebook_id: book.id}))),
     ...loose.map(page => ({...page, notebook_id: null}))];
@@ -3549,15 +3549,15 @@ setInterval(() => {
 }, 5000);
 
 // Home notebooks, the notebook page, and account settings.
-const NOTEBOOK_DARK_INK = new Set(['#45ADA8']);
 let libraryNotebooks = [];
 let notebookPalette = [];
+let notebookPresets = [];
 let pendingNotebookId = null;
 // A calendar meeting whose notes the next recording starts from.
 let pendingCalendarEvent = null;
-let editingNotebook = null;
 let addingToNotebook = null;
 let activeNotebookId = null;
+let notebookTodos = null; let notebookItems = []; let notebookFilter = 'all';
 let calendarOutcome = new URLSearchParams(location.search).get('calendar');
 if (calendarOutcome) history.replaceState(history.state, '', location.pathname);
 function calendarOutcomeText() { return calendarOutcome === 'connected' ? 'Calendar connected' : 'Calendar connection failed'; }
@@ -3577,13 +3577,14 @@ function shortDate(value) {
 }
 function paintNotebook(element, notebook) {
   element.style.setProperty('--notebook', notebook.color);
-  element.style.setProperty('--notebook-ink', NOTEBOOK_DARK_INK.has(notebook.color.toUpperCase()) ? '#27222B' : '#F7F5F6');
+  element.style.setProperty('--notebook-ink', window.StellisNotebookItems.inkFor(notebook.color));
 }
 function hideAppPages() {
   document.querySelector('#page-view').hidden = true;
   document.querySelector('#settings-view').hidden = true;
   document.querySelector('#notebook-view').hidden = true;
   document.querySelector('#todos-view').hidden = true;
+  notebookTodos?.destroy?.(); notebookTodos = null;
   document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page');
   activeNotebookId = null;
 }
@@ -3619,7 +3620,7 @@ function notebookCard(notebook) {
   const name = document.createElement('h3'); const link = document.createElement('a');
   link.href = `/notebook/${encodeURIComponent(notebook.id)}`; link.textContent = notebook.name; name.append(link);
   const add = document.createElement('button'); add.type = 'button'; add.className = 'notebook-plus';
-  add.setAttribute('aria-label', `Add to ${notebook.name}`); add.title = 'Add a conversation'; add.append(icon('plus'));
+  add.setAttribute('aria-label', `Add to ${notebook.name}`); add.title = 'Add a note or conversation'; add.append(icon('plus'));
   add.addEventListener('click', () => openNotebookAdd(notebook));
   head.append(icon('notebook'), name, add);
   card.append(head);
@@ -3925,36 +3926,58 @@ function renderNotebooks() {
 }
 
 const notebookDialog = document.querySelector('#notebook-dialog');
-function openNotebookDialog(notebook = null) {
-  editingNotebook = notebook;
-  document.querySelector('#notebook-dialog-title').textContent = notebook ? 'Edit notebook' : 'New notebook';
-  document.querySelector('#notebook-save').textContent = notebook ? 'Save' : 'Create';
-  document.querySelector('#notebook-name-input').value = notebook?.name || '';
-  document.querySelector('#notebook-form-status').textContent = '';
-  const selected = notebook?.color || notebookPalette[libraryNotebooks.length % notebookPalette.length];
-  document.querySelector('#notebook-swatches').replaceChildren(...notebookPalette.map((color, index) => {
+// One colour control for both notebook dialogs: preset swatches plus a custom #RRGGBB field with a native picker.
+// The text field holds the value; the swatches and the picker write to it.
+let colourPickers = 0;
+function colourPicker(host, selected) {
+  const id = ++colourPickers;
+  const swatches = document.createElement('div'); swatches.className = 'swatch-row';
+  const text = document.createElement('input'); text.type = 'text'; text.id = `colour-text-${id}`; text.className = 'colour-text';
+  text.maxLength = 7; text.placeholder = '#RRGGBB'; text.spellcheck = false; text.autocomplete = 'off'; text.setAttribute('inputmode', 'text');
+  const wheel = document.createElement('input'); wheel.type = 'color'; wheel.className = 'colour-wheel'; wheel.setAttribute('aria-label', 'Pick a custom colour');
+  const radios = notebookPresets.map((color, index) => {
     const option = document.createElement('label'); option.className = 'swatch'; option.style.setProperty('--swatch', color);
-    const radio = document.createElement('input'); radio.type = 'radio'; radio.name = 'notebook-color'; radio.value = color;
-    radio.checked = color === selected;
-    const text = document.createElement('span'); text.className = 'visually-hidden'; text.textContent = `Colour ${index + 1}`;
-    option.append(radio, text);
-    return option;
-  }));
+    const radio = document.createElement('input'); radio.type = 'radio'; radio.name = `notebook-colour-${id}`; radio.value = color;
+    const label = document.createElement('span'); label.className = 'visually-hidden'; label.textContent = `Colour ${index + 1}, ${color}`;
+    radio.addEventListener('change', () => set(color));
+    option.append(radio, label); swatches.append(option);
+    return radio;
+  });
+  const set = value => {
+    text.value = value;
+    if (window.StellisNotebookItems.isHexColour(value)) wheel.value = value.toLowerCase();
+    for (const radio of radios) radio.checked = radio.value.toUpperCase() === value.toUpperCase();
+    text.setAttribute('aria-invalid', String(!window.StellisNotebookItems.isHexColour(value)));
+  };
+  text.addEventListener('input', () => set(text.value.trim().startsWith('#') ? text.value.trim() : `#${text.value.trim()}`));
+  wheel.addEventListener('input', () => set(wheel.value.toUpperCase()));
+  const custom = document.createElement('div'); custom.className = 'colour-custom';
+  const label = document.createElement('label'); label.htmlFor = text.id; label.textContent = 'Custom colour';
+  custom.append(label, wheel, text);
+  host.replaceChildren(swatches, custom);
+  set(selected);
+  return {value: () => text.value.trim().toUpperCase(), valid: () => window.StellisNotebookItems.isHexColour(text.value.trim())};
+}
+let createColour = null;
+function openNotebookDialog() {
+  document.querySelector('#notebook-name-input').value = '';
+  document.querySelector('#notebook-form-status').textContent = '';
+  createColour = colourPicker(document.querySelector('#notebook-swatches'), notebookPalette[libraryNotebooks.length % notebookPalette.length]);
   notebookDialog.showModal();
 }
 document.querySelector('#new-notebook').addEventListener('click', () => openNotebookDialog());
 document.querySelector('#notebook-cancel').addEventListener('click', () => notebookDialog.close());
 document.querySelector('#notebook-form').addEventListener('submit', async event => {
   event.preventDefault();
+  const status = document.querySelector('#notebook-form-status');
+  if (!createColour.valid()) { status.textContent = 'Enter the colour as #RRGGBB'; return; }
   const save = document.querySelector('#notebook-save'); save.disabled = true;
-  const body = {name:document.querySelector('#notebook-name-input').value,
-                color:document.querySelector('input[name="notebook-color"]:checked')?.value};
   try {
-    await json(await fetch(editingNotebook ? `${API}/notebooks/${encodeURIComponent(editingNotebook.id)}` : `${API}/notebooks`,
-      {method:editingNotebook ? 'PATCH' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}));
+    await json(await fetch(`${API}/notebooks`, {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:document.querySelector('#notebook-name-input').value, color:createColour.value()})}));
     notebookDialog.close();
-    if (activeNotebookId) await showNotebook(activeNotebookId); else await showList();
-  } catch (error) { document.querySelector('#notebook-form-status').textContent = error.message; }
+    await showList();
+  } catch (error) { status.textContent = error.message; }
   finally { save.disabled = false; }
 });
 
@@ -3991,6 +4014,10 @@ async function openNotebookAdd(notebook) {
   notebookAddDialog.showModal();
 }
 document.querySelector('#notebook-add-close').addEventListener('click', () => notebookAddDialog.close());
+document.querySelector('#notebook-add-note').addEventListener('click', () => {
+  notebookAddDialog.close();
+  newNoteIn(addingToNotebook, document.querySelector('#notebook-add-note'));
+});
 document.querySelector('#notebook-add-record').addEventListener('click', () => {
   notebookAddDialog.close();
   if (!capture) pendingNotebookId = addingToNotebook.id;
@@ -4016,49 +4043,204 @@ document.querySelector('#home-import').addEventListener('click', () => {
   pendingNotebookId = null; document.querySelector('#import-button').click();
 });
 
+// A note created inside a notebook opens at once in the note view.
+async function newNoteIn(notebook, button) {
+  button.disabled = true;
+  try {
+    const page = await json(await fetch(`${API}/pages`, {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({notebook_id: notebook.id})}));
+    await openNote(page.id);
+  } catch (error) { setStatus(error.message); }
+  finally { button.disabled = false; }
+}
+// The notebook page: a tinted header band, Overview and List tabs, and the items table with its filters.
+const activeNotebook = () => libraryNotebooks.find(item => item.id === activeNotebookId);
+async function notebookTodoCounts(id) {
+  const [open, done] = await Promise.all(['open', 'done'].map(async status =>
+    json(await fetch(`${API}/todos?${new URLSearchParams({notebook_id: id, status})}`))));
+  return window.StellisNotebookItems.countTodos(open.groups, done.groups);
+}
+function paintNotebookItems() {
+  const {FILTERS, filterItems} = window.StellisNotebookItems;
+  const filters = document.querySelector('#notebook-filters');
+  filters.replaceChildren(...FILTERS.map(filter => {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'todo-filter';
+    button.setAttribute('aria-pressed', String(filter.id === notebookFilter));
+    button.append(icon(filter.icon), Object.assign(document.createElement('span'), {textContent: filter.label}));
+    button.addEventListener('click', () => { notebookFilter = filter.id; paintNotebookItems(); });
+    return button;
+  }));
+  const rows = filterItems(notebookItems, notebookFilter);
+  const host = document.querySelector('#notebook-items-table');
+  if (!rows.length) {
+    host.replaceChildren(Object.assign(document.createElement('p'), {className: 'notebook-page-empty', textContent: FILTERS.find(item => item.id === notebookFilter).empty}));
+    return;
+  }
+  const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; };
+  const table = el('table', 'items-table');
+  const head = el('thead'); const headRow = el('tr');
+  for (const [label, className] of [['Type', 'items-icon'], ['Title', 'items-title'], ['Date', 'items-date'], ['Tags', 'items-tags'], ['To-dos', 'items-todos']]) {
+    const cell = el('th', className); cell.scope = 'col';
+    cell.append(el('span', className === 'items-icon' ? 'visually-hidden' : '', label)); headRow.append(cell);
+  }
+  head.append(headRow);
+  const body = el('tbody');
+  const tagNames = new Map(libraryCategories.map(tag => [tag.id, tag.name]));
+  for (const item of rows) {
+    const meeting = item.kind === 'conversation';
+    const row = el('tr');
+    const lead = el('td', 'items-icon'); lead.append(icon(meeting ? 'microphone' : 'file-text'));
+    lead.title = meeting ? 'Meeting' : 'Note';
+    const title = el('td', 'items-title'); const link = el('a', '', item.title || 'Untitled');
+    link.href = meeting ? `/conversation/${encodeURIComponent(item.id)}` : `/page/${encodeURIComponent(item.id)}`; title.append(link);
+    const date = el('td', 'items-date'); const stamp = el('time', '', window.StellisListDate.formatListDate(item.date));
+    stamp.dateTime = String(item.date); stamp.title = window.StellisListDate.formatListDate(item.date, {format: 'iso'}); date.append(stamp);
+    const tags = el('td', 'items-tags');
+    for (const id of item.categoryIds) if (tagNames.has(id)) tags.append(el('span', 'tag-chip', tagNames.get(id)));
+    const todos = el('td', 'items-todos');
+    if (item.todos.open || item.todos.done) {
+      todos.append(el('span', 'visually-hidden', `${item.todos.open} open, ${item.todos.done} completed`));
+      for (const [name, count, label] of [['circle', item.todos.open, 'open'], ['circle-check', item.todos.done, 'completed']]) {
+        const part = el('span', 'items-count'); part.title = `${count} ${label}`; part.setAttribute('aria-hidden', 'true');
+        part.append(icon(name), document.createTextNode(String(count))); todos.append(part);
+      }
+    }
+    row.append(lead, title, date, tags, todos); body.append(row);
+  }
+  table.append(head, body);
+  host.replaceChildren(table);
+}
+async function loadNotebookItems(notebook) {
+  const counts = await notebookTodoCounts(notebook.id);
+  const tags = new Map(libraryConversations.map(item => [item.id, item.category_ids || []]));
+  notebookItems = window.StellisNotebookItems.buildItems({conversations: notebook.conversations, pages: notebook.pages || [],
+    tagsByConversation: tags, counts});
+  paintNotebookItems();
+}
+function showNotebookTab(tab) {
+  for (const name of ['overview', 'list']) document.querySelector(`#notebook-tab-${name}`).setAttribute('aria-selected', String(name === tab));
+  document.querySelector('#notebook-panel').setAttribute('aria-labelledby', `notebook-tab-${tab}`);
+  document.querySelector('#notebook-overview').hidden = tab !== 'overview';
+}
 async function showNotebook(id) {
   await leaveForAppPage('notebook-page', 'Notebook');
-  const [books, conversations] = await Promise.all([fetch(`${API}/notebooks`).then(json), fetch(`${API}/conversations`).then(json)]);
-  libraryNotebooks = books.notebooks; notebookPalette = books.palette; libraryConversations = conversations;
+  const [books, conversations, collections, categories] = await Promise.all([fetch(`${API}/notebooks`).then(json),
+    fetch(`${API}/conversations`).then(json), fetch(`${API}/collections`).then(json), fetch(`${API}/categories`).then(json)]);
+  libraryNotebooks = books.notebooks; notebookPalette = books.palette; notebookPresets = books.presets;
+  libraryConversations = conversations; libraryCollections = collections.collections; libraryCategories = categories;
   const notebook = libraryNotebooks.find(item => item.id === id);
   if (!notebook) {
     history.replaceState({}, '', '/'); await showList(); setStatus('That notebook no longer exists'); return;
   }
-  activeNotebookId = id;
+  activeNotebookId = id; notebookFilter = 'all';
   document.querySelector('#page-title').textContent = notebook.name;
   paintNotebook(document.querySelector('#notebook-hero'), notebook);
   document.querySelector('#notebook-name').textContent = notebook.name;
+  const collection = libraryCollections.find(item => item.notebook_ids.includes(id));
+  document.querySelector('#notebook-collection').hidden = !collection;
+  document.querySelector('#notebook-collection-name').textContent = collection?.name || '';
+  // Latest summary: the newest meeting's Summary overview, shown as written.
   const lines = new Map(conversations.map(item => [item.id, item.summary_line]));
-  const container = document.querySelector('#notebook-conversations');
-  container.replaceChildren(...notebook.conversations.map(item => {
-    const row = meetingLink(item, 'notebook-row');
-    const line = lines.get(item.id);
-    if (line) { const summary = document.createElement('small'); summary.textContent = line; row.append(summary); }
-    return row;
-  }));
-  if (!notebook.conversations.length) {
-    const empty = document.createElement('p'); empty.className = 'notebook-page-empty';
-    empty.textContent = 'Record or move a conversation into this notebook';
-    container.append(empty);
+  const latest = window.StellisNotebookItems.latestSummary(notebook.conversations, lines);
+  const summary = document.querySelector('#notebook-summary'); summary.hidden = !latest;
+  document.querySelector('#notebook-overview').classList.toggle('no-summary', !latest);
+  if (latest) {
+    const link = document.querySelector('#notebook-summary-link');
+    link.href = `/conversation/${encodeURIComponent(latest.id)}`; link.textContent = latest.title;
+    const when = document.querySelector('#notebook-summary-date');
+    when.dateTime = String(latest.date); when.textContent = window.StellisListDate.formatListDate(latest.date);
+    document.querySelector('#notebook-summary-text').textContent = latest.text;
   }
+  showNotebookTab('overview');
   document.querySelector('#notebook-view').hidden = false;
+  notebookTodos?.destroy?.();
+  notebookTodos = mountTodos(document.querySelector('#notebook-todos'), {scope: id, onChange: refreshNotebookItems});
+  await loadNotebookItems(notebook);
   captureControls();
 }
-document.querySelector('#notebook-add').addEventListener('click', () => {
-  const notebook = libraryNotebooks.find(item => item.id === activeNotebookId);
-  if (notebook) openNotebookAdd(notebook);
-});
-document.querySelector('#notebook-edit').addEventListener('click', () => {
-  const notebook = libraryNotebooks.find(item => item.id === activeNotebookId);
-  if (notebook) openNotebookDialog(notebook);
+// Adding or completing a to-do changes the counts, and adding one can create the notebook's To-dos note.
+async function refreshNotebookItems() {
+  if (!activeNotebookId) return;
+  const books = await json(await fetch(`${API}/notebooks`)); libraryNotebooks = books.notebooks;
+  const notebook = activeNotebook(); if (notebook) await loadNotebookItems(notebook);
+}
+for (const tab of ['overview', 'list']) document.querySelector(`#notebook-tab-${tab}`).addEventListener('click', () => showNotebookTab(tab));
+document.querySelector('#notebook-add').addEventListener('click', () => { const notebook = activeNotebook(); if (notebook) openNotebookAdd(notebook); });
+document.querySelector('#notebook-new-note').addEventListener('click', event => { const notebook = activeNotebook(); if (notebook) newNoteIn(notebook, event.currentTarget); });
+document.querySelector('#notebook-record').addEventListener('click', () => {
+  const notebook = activeNotebook();
+  if (notebook && !capture) pendingNotebookId = notebook.id;
+  document.querySelector('#record-button').click();
 });
 document.querySelector('#notebook-delete').addEventListener('click', async () => {
-  const notebook = libraryNotebooks.find(item => item.id === activeNotebookId);
+  const notebook = activeNotebook();
   if (!notebook || !window.confirm(`Delete the notebook “${notebook.name}”? Its conversations stay in your library.`)) return;
   try {
     await json(await fetch(`${API}/notebooks/${encodeURIComponent(notebook.id)}`, {method:'DELETE'}));
     history.pushState({}, '', '/'); await showList();
   } catch (error) { setStatus(error.message); }
+});
+// Export downloads a ZIP of the notebook: plain Markdown files, or the same files with Stellis IDs kept for re-import.
+const EXPORT_LABELS = {markdown: 'Markdown', stellis: 'Stellis'};
+async function exportNotebook(notebook, format) {
+  setStatus(`Preparing the ${EXPORT_LABELS[format]} export of ${notebook.name}…`);
+  try {
+    const response = await fetch(`${API}/export?${new URLSearchParams({scope: 'notebook', id: notebook.id, format})}`);
+    if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || 'The export failed.');
+    const blob = await response.blob();
+    const name = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(response.headers.get('content-disposition') || '')?.[1];
+    const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+    link.download = name ? decodeURIComponent(name) : `${notebook.name}.zip`;
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+    setStatus(`Exported ${notebook.name} as ${link.download}`, true);
+  } catch (error) { setStatus(error.message); }
+}
+document.querySelector('#notebook-export-markdown').addEventListener('click', () => { const notebook = activeNotebook(); if (notebook) exportNotebook(notebook, 'markdown'); });
+document.querySelector('#notebook-export-stellis').addEventListener('click', () => { const notebook = activeNotebook(); if (notebook) exportNotebook(notebook, 'stellis'); });
+// Settings: name, colour, collection, and whether meetings suggest to-dos.
+const notebookSettingsDialog = document.querySelector('#notebook-settings-dialog');
+let settingsColour = null;
+function fillTodoOptions(notebook, collection, value) {
+  // "Like <collection>" follows the collection's own setting; with no collection it resolves to Off.
+  const select = document.querySelector('#notebook-settings-todo');
+  const options = collection ? [['inherit', `Like ${collection.name}`], ['on', 'On'], ['off', 'Off']] : [['inherit', 'Off'], ['on', 'On']];
+  select.replaceChildren(...options.map(([key, label]) => new Option(label, key)));
+  select.value = options.some(([key]) => key === value) ? value : 'inherit';
+}
+function openNotebookSettings(notebook) {
+  document.querySelector('#notebook-settings-name').value = notebook.name;
+  document.querySelector('#notebook-settings-status').textContent = '';
+  settingsColour = colourPicker(document.querySelector('#notebook-settings-colour'), notebook.color);
+  const current = libraryCollections.find(item => item.notebook_ids.includes(notebook.id));
+  const select = document.querySelector('#notebook-settings-collection');
+  select.replaceChildren(new Option('No collection', ''), ...libraryCollections.map(item => new Option(item.name, item.id)));
+  select.value = current?.id || '';
+  fillTodoOptions(notebook, current, notebook.todo_list);
+  notebookSettingsDialog.showModal();
+}
+document.querySelector('#notebook-settings-collection').addEventListener('change', event => {
+  const todo = document.querySelector('#notebook-settings-todo');
+  fillTodoOptions(activeNotebook(), libraryCollections.find(item => item.id === event.target.value), todo.value);
+});
+document.querySelector('#notebook-edit').addEventListener('click', () => { const notebook = activeNotebook(); if (notebook) openNotebookSettings(notebook); });
+document.querySelector('#notebook-settings-cancel').addEventListener('click', () => notebookSettingsDialog.close());
+document.querySelector('#notebook-settings-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const notebook = activeNotebook(); const status = document.querySelector('#notebook-settings-status');
+  if (!settingsColour.valid()) { status.textContent = 'Enter the colour as #RRGGBB'; return; }
+  const save = document.querySelector('#notebook-settings-save'); save.disabled = true;
+  const post = (path, method, body) => fetch(`${API}${path}`, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(json);
+  try {
+    await post(`/notebooks/${encodeURIComponent(notebook.id)}`, 'PATCH', {name: document.querySelector('#notebook-settings-name').value,
+      color: settingsColour.value(), todo_list: document.querySelector('#notebook-settings-todo').value});
+    const wanted = document.querySelector('#notebook-settings-collection').value || null;
+    const current = libraryCollections.find(item => item.notebook_ids.includes(notebook.id))?.id || null;
+    if (wanted !== current) await post(`/notebooks/${encodeURIComponent(notebook.id)}/collection`, 'PUT', {collection_id: wanted});
+    notebookSettingsDialog.close();
+    await showNotebook(notebook.id);
+  } catch (error) { status.textContent = error.message; }
+  finally { save.disabled = false; }
 });
 
 const moveNotebookDialog = document.querySelector('#move-notebook-dialog');
@@ -4124,15 +4306,15 @@ newCollectionForm.addEventListener('submit', async event => {
   } catch (error) { setStatus(error.message); }
 });
 // The To-dos widget is one component: Home mounts it beside the other widgets, the To-dos page gives it the full width,
-// and a notebook page will pass a notebook ID as its scope.
+// and a notebook page passes its notebook ID as the scope.
 let homeTodos = null; let pageTodos = null;
-function mountTodos(host, {scope = 'all', linkTitle = false} = {}) {
+function mountTodos(host, {scope = 'all', linkTitle = false, onChange = null} = {}) {
   if (!window.StellisTodos) return null;
   return window.StellisTodos.mount(host, {scope: {notebookId: scope}, icon, setStatus, linkTitle,
     formatListDate: window.StellisListDate.formatListDate,
     notebooks: async () => libraryNotebooks.length ? libraryNotebooks : (await json(await fetch(`${API}/notebooks`))).notebooks,
     // Adding a to-do can create the To-dos note, so the sidebar and cards reload; the widget has already refreshed itself.
-    onChange: () => { if (!listView.hidden) loadLibrary().then(() => { renderNotebooks(); renderRailTags(); renderConversationList(); }).catch(() => {}); }});
+    onChange: onChange || (() => { if (!listView.hidden) loadLibrary().then(() => { renderNotebooks(); renderRailTags(); renderConversationList(); }).catch(() => {}); })});
 }
 // A note (a page, ADR 0058) opens at /page/<id>: title, notebook, tags, and the shared notes editor.
 const noteTitle = document.querySelector('#note-title');

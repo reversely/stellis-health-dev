@@ -105,6 +105,7 @@
           say(next === 'done' ? `Completed: ${item.text}` : `Reopened: ${item.text}`);
           row.classList.add('leaving');
           setTimeout(() => { removeRow(row); }, 160);
+          onChange();
         } catch (error) {
           box.checked = item.status === 'done'; box.indeterminate = item.status === 'canceled'; box.disabled = false;
           say(error.message); setStatus(error.message);
