@@ -31,16 +31,13 @@ The device service serves the browser files and `/api/v1`, owns local authentica
 
 ## Install and run
 
-Requires macOS, Python 3.12, [uv](https://docs.astral.sh/uv/), `ffmpeg`, and `whisper-cli`. With Homebrew, install the native tools using `brew install ffmpeg whisper.cpp`. The services bind to loopback.
+Requires macOS on Apple silicon and [uv](https://docs.astral.sh/uv/). uv installs Python 3.12, FFmpeg (from the `imageio-ffmpeg` package), and whisper.cpp (through the `pywhispercpp` binding); no Homebrew tools are needed. The services bind to loopback.
 
 ```sh
-uv sync --locked
-scripts/setup_models.sh
-uv run --locked stellis doctor
-uv run --locked stellis serve
+uv run stellis
 ```
 
-Open <http://127.0.0.1:8765/>. `scripts/setup_models.sh` downloads and verifies the English Whisper and two sherpa-onnx model files in private local storage. `stellis doctor` reports model and tool readiness. You can set `STELLIS_WHISPER_MODEL`, `STELLIS_SEGMENTATION_MODEL`, or `STELLIS_EMBEDDING_MODEL` to use other local model paths. Use `--port` to change the loopback port.
+Open <http://127.0.0.1:8765/>. `stellis` with no command starts the device service, the same as `stellis serve`. On first start it downloads the English Whisper model and two sherpa-onnx model files to the `models` folder of the local data directory, checks each file's SHA-256 digest, and shows the progress on the home page; conversations imported meanwhile are transcribed once the models are ready. `uv run stellis setup` downloads the models in advance, and `scripts/setup_models.sh` runs that same command. `uv run stellis doctor` reports the FFmpeg path and each model's readiness. You can set `STELLIS_WHISPER_MODEL`, `STELLIS_SEGMENTATION_MODEL`, or `STELLIS_EMBEDDING_MODEL` to use other local model paths, and `STELLIS_FFMPEG` to use another FFmpeg executable. Use `--port` to change the loopback port.
 
 On first launch, **Sign up** creates the one account for that local data directory. Later, **Sign in**; sessions last seven days. Normal account passwords require at least 12 characters. There is no local password reset. For an explicitly open development workspace, set `STELLIS_AUTH_MODE=open`. For a development account without normal signup, set `STELLIS_DEV_ACCOUNT=1` and `STELLIS_DEV_PASSWORD`, then sign in as `dev`. Keep the same `STELLIS_DATA_DIR` across restarts to retain data and credentials; its default is `~/Library/Application Support/Stellis`.
 
