@@ -174,6 +174,13 @@ def reindex(conn, source_kind: str, source_id: str, markdown: str, todo_dates: d
     return markdown
 
 
+def due_dates(conn, source_kind: str, source_id: str) -> dict[str, dict[str, str | None]]:
+    """Due dates by task ID, so the editor can show them again after a reload."""
+    return {str(row["id"]): {"due_date": row["due_date"], "due_time": row["due_time"]} for row in conn.execute(
+        "SELECT id, due_date, due_time FROM todo_items WHERE source_kind = ? AND source_id = ? AND due_date IS NOT NULL",
+        (source_kind, source_id))}
+
+
 def delete_source(conn, source_kind: str, source_id: str) -> None:
     conn.execute("DELETE FROM todo_items WHERE source_kind = ? AND source_id = ?", (source_kind, source_id))
 

@@ -22,9 +22,10 @@ import {
 } from '@lexical/table';
 import {
   $convertFromMarkdownString, $convertToMarkdownString,
-  BOLD_ITALIC_STAR, BOLD_STAR, CHECK_LIST, CODE, HEADING, INLINE_CODE, ITALIC_STAR, LINK,
+  BOLD_ITALIC_STAR, BOLD_STAR, CODE, HEADING, INLINE_CODE, ITALIC_STAR, LINK,
   ORDERED_LIST, QUOTE, STRIKETHROUGH, UNORDERED_LIST, registerMarkdownShortcuts,
 } from '@lexical/markdown';
+import {$captureDates, $collectDates, $restoreDates, registerTasks, taskListTransformer} from './notes-tasks.js';
 
 // A line of `---`, `***` or `___` is a divider; it is written back as `---`.
 const HR = {
@@ -171,8 +172,8 @@ export function notesTransformers({imageUrlForId = () => '', onOpenImage = () =>
         rootNode.append(table);
         return [true, line - 1];
       }},
-    // CHECK_LIST must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
-    HEADING, QUOTE, CODE, HR, CHECK_LIST, UNORDERED_LIST, ORDERED_LIST,
+    // The task list must precede UNORDERED_LIST, or a saved `- [ ]` reloads as a bullet with literal brackets.
+    HEADING, QUOTE, CODE, HR, taskListTransformer(), UNORDERED_LIST, ORDERED_LIST,
     INLINE_CODE, BOLD_ITALIC_STAR, BOLD_STAR, ITALIC_STAR, STRIKETHROUGH, LINK,
   ];
 }
@@ -193,9 +194,11 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
     registerHistory(editor, createEmptyHistoryState(), 300), registerMarkdownShortcuts(editor, markdown)];
   root.contentEditable = 'true'; root.setAttribute('role','textbox'); root.setAttribute('aria-multiline','true');
   editor.setRootElement(root);
+  // Dates are tracked only where the server indexes to-dos (saved conversations).
+  unregister.push(registerTasks(editor, root, {dates:!!options.todoDates}));
   unregister.push(editor.registerUpdateListener(({editorState, dirtyElements, dirtyLeaves, tags}) => {
     if (tags.has('notes-load') || (!dirtyElements.size && !dirtyLeaves.size)) return;
-    editorState.read(() => onChange($convertToMarkdownString(markdown)));
+    editorState.read(() => onChange($convertToMarkdownString(markdown), $collectDates()));
   }));
   const captureSelection = () => {
     let snapshot = null;
@@ -251,19 +254,23 @@ export function createNotesEditor(root, toolbar, onChange, onError, options = {}
   });
   return {
     // keepSelection puts the caret back where it was after the reload, for a server-side text change.
-    setMarkdown(value, {keepSelection = false} = {}) {
+    // dates is the server's {id: {due_date, due_time}}; unsaved dates on the same text are carried across a keepSelection reload.
+    setMarkdown(value, {keepSelection = false, dates = {}, onLoaded} = {}) {
       editor.update(() => {
+        const carried = keepSelection && options.todoDates ? $captureDates() : [];
         const before = keepSelection ? $getSelection() : null;
         const anchor = $isRangeSelection(before) ? $capturePoint(before.anchor) : null;
         const focus = anchor && $isRangeSelection(before) ? $capturePoint(before.focus) : null;
         $convertFromMarkdownString(value || '', markdown);
+        if (options.todoDates) $restoreDates(dates, carried);
         if (!anchor || !focus) return;
         const selection = $createRangeSelection();
         $restorePoint(selection.anchor, anchor); $restorePoint(selection.focus, focus);
         $setSelection(selection);
-      }, {tag:keepSelection ? ['notes-load', 'history-merge'] : 'notes-load'});
+      }, {tag:keepSelection ? ['notes-load', 'history-merge'] : 'notes-load', onUpdate:onLoaded});
     },
     getMarkdown() {let value=''; editor.getEditorState().read(() => {value=$convertToMarkdownString(markdown);}); return value;},
+    getTodoDates() {let value={}; editor.getEditorState().read(() => {value=$collectDates();}); return value;},
     captureSelection,
     insertImage(imageId, caption = '', snapshot = null) {
       editor.update(() => {

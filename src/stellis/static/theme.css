@@ -1896,3 +1896,43 @@ a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 .notes-editor .note-strike { text-decoration: line-through; }
 .notes-editor .note-divider { height: 0; margin: 16px 0; border: 0; border-top: 1px solid var(--line); }
 .notes-editor .note-divider.selected, .notes-editor hr.selected { border-top-color: var(--focus); }
+
+/* To-do lines in the notes editor (#276): canceled style, typed date at the right, and the line menu. */
+.note-task-host { position: relative; }
+.notes-editor .note-check-open, .notes-editor .note-check-done, .notes-editor .note-check-canceled { padding-right: 34px; }
+.notes-editor .note-check-canceled { list-style: none; position: relative; text-decoration: line-through; color: var(--quiet); }
+.notes-editor .note-check-canceled::before {
+  content: ''; position: absolute; left: -22px; top: .32em; width: 15px; height: 15px; box-sizing: border-box;
+  border: 1.5px solid var(--quiet); border-radius: 4px; cursor: pointer; text-decoration: none;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23808080' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
+/* The date is a plain right-aligned label drawn from data-due; it is not part of the text or the Markdown. */
+.notes-editor li[data-due] { padding-right: 168px; }
+.notes-editor li[data-due]::after {
+  content: attr(data-due); position: absolute; right: 34px; top: 2px; max-width: 130px; color: var(--muted); font-size: 13px;
+  text-align: right; text-decoration: none; white-space: nowrap; pointer-events: none;
+}
+.note-task-more {
+  position: absolute; right: 0; z-index: 2; display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.note-task-more[hidden], .note-task-menu[hidden] { display: none; }
+.note-task-more:hover, .note-task-more:focus-visible { background: var(--raised); color: var(--ink); }
+.note-task-more:focus-visible, .note-task-menu button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.note-task-more svg, .note-task-menu svg { width: 18px; height: 18px; flex: none; }
+.note-task-menu {
+  position: absolute; right: 0; z-index: 3; display: grid; min-width: 210px; padding: 4px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--surface); box-shadow: 0 8px 24px rgb(0 0 0 / .22);
+}
+.note-task-menu button {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.note-task-menu button[hidden] { display: none; }
+.note-task-menu button:hover { background: var(--raised); }
+.note-task-menu span { flex: 1; }
+.note-task-menu kbd { color: var(--muted); font: 12px Inter, sans-serif; }
+@media (max-width: 520px) {
+  .notes-editor li[data-due] { padding-right: 34px; padding-bottom: 18px; }
+  .notes-editor li[data-due]::after { top: auto; bottom: 0; right: 34px; }
+}
