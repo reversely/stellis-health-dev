@@ -839,6 +839,24 @@ def sample_status() -> dict[str, object]:
     return samples.status()
 
 
+@api.get("/samples/rfi91")
+def rfi91_sample_status() -> dict[str, object]:
+    from stellis import samples
+    return samples.status()["rfi91"]
+
+
+@api.post("/samples/rfi91")
+def add_rfi91_sample() -> dict[str, object]:
+    from stellis import samples
+    return samples.add_rfi91()
+
+
+@api.put("/samples/rfi91/reset")
+def reset_rfi91_sample() -> dict[str, object]:
+    from stellis import samples
+    return samples.reset_rfi91()
+
+
 @api.post("/samples")
 def add_samples() -> dict[str, object]:
     from stellis import samples

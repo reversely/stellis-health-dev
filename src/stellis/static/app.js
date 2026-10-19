@@ -3875,6 +3875,9 @@ async function watchSamples() {
     button.textContent = state.state === 'failed' ? 'Try again' : 'Add sample workspace';
     const remove = panel.querySelector('.samples-remove');
     if (remove) remove.hidden = busy || !state.installed;
+    panel.querySelector('.samples-rfi-add').hidden = busy || state.rfi91.installed;
+    const resetCase = panel.querySelector('.samples-rfi-reset');
+    if (resetCase) resetCase.hidden = busy || !state.rfi91.installed;
     panel.querySelector('.samples-status').textContent = busy
       ? `Downloading ${state.meeting || 'the samples'}: ${Math.round((state.progress || 0) * 100)}%`
       : state.state === 'failed' ? `The sample workspace could not be added (${state.error}). Check your connection and try again.`
@@ -3899,6 +3902,19 @@ document.querySelector('.samples-remove')?.addEventListener('click', async event
   const button = event.currentTarget; button.disabled = true;
   try { await json(await fetch(`${API}/samples`, {method: 'DELETE'})); await loadLibrary(); }
   catch (error) { button.closest('.samples-panel').querySelector('.samples-status').textContent = error.message; }
+  finally { button.disabled = false; }
+  watchSamples();
+});
+for (const button of document.querySelectorAll('.samples-rfi-add, .samples-rfi-reset')) button.addEventListener('click', async () => {
+  button.disabled = true;
+  const status = button.closest('.samples-panel').querySelector('.samples-rfi-status');
+  status.textContent = 'Loading case';
+  try {
+    await json(await fetch(`${API}/samples/rfi91${button.classList.contains('samples-rfi-reset') ? '/reset' : ''}`,
+      {method:button.classList.contains('samples-rfi-reset') ? 'PUT' : 'POST'}));
+    status.textContent = 'RFI 91 case is ready';
+    await loadLibrary();
+  } catch (error) { status.textContent = error.message; }
   finally { button.disabled = false; }
   watchSamples();
 });
