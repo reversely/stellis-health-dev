@@ -89,6 +89,8 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
 def _trusted_citations(answer: str, sources: list[dict[str, object]]) -> str:
     """Build local citation links from Stellis targets, never model-generated URLs."""
     if not sources:
+        if "[[source" in answer or re.search(r"https?://|\]\(/", answer, re.IGNORECASE):
+            raise AgentRunError("Agent source links could not be verified. Try again.")
         return answer
     if re.search(r"https?://|\]\(/", answer, re.IGNORECASE):
         raise AgentRunError("Agent source links could not be verified. Try again.")
@@ -187,14 +189,19 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
             cited_indices = {int(index) - 1 for index in re.findall(r"\[\[source:(\d+)\]\]", answer)}
             unmarked = re.sub(r"\[\[source:\d+\]\]", "", answer)
             raw_reference = re.search(r"\b(?:sources?\s*:\s*\d+|source\s*\d+)\b", unmarked, re.IGNORECASE)
-            if (not sources or cited_indices) and not raw_reference and len(answer.split()) <= 170:
+            valid_indices = all(0 <= index < len(sources) for index in cited_indices)
+            if (not sources or cited_indices) and valid_indices and not raw_reference and len(answer.split()) <= 170:
                 break
             if attempt == 0:
-                prompt += ("\n\nYour previous answer did not follow the answer format. "
-                           "Answer again in 1-4 sentences and at most 130 words. Do not list the "
-                           "sources or write source numbers in prose. Put [[source:N]] citations "
-                           "immediately after the facts they support.")
-        if (sources and not cited_indices) or raw_reference or len(answer.split()) > 170:
+                if sources:
+                    prompt += ("\n\nYour previous answer did not follow the answer format. "
+                               "Answer again in 1-4 sentences and at most 130 words. Do not list the "
+                               "sources or write source numbers in prose. Put valid [[source:N]] citations "
+                               "immediately after the facts they support.")
+                else:
+                    prompt += ("\n\nNo retrieved sources are available for this turn. Answer again "
+                               "without source markers, links, or source numbers.")
+        if (sources and not cited_indices) or not valid_indices or raw_reference or len(answer.split()) > 170:
             raise AgentRunError("Agent could not cite its sources clearly. Try again.")
         answer = _trusted_citations(answer, sources)
         if len(answer) > 12000:

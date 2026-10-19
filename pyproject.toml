@@ -14,9 +14,12 @@ dependencies = [
     "pywhispercpp==1.5.1",
     "sherpa-onnx==1.13.8",
     "sherpa-onnx-core==1.13.8",
-    "soundfile>=0.14.0",
+    "soundfile>=0.13.1,<0.14",
     "uvicorn>=0.54.0",
 ]
+
+[project.optional-dependencies]
+voice = ["pipecat-ai[webrtc,whisper,kokoro,silero]==1.12.0"]
 
 [project.scripts]
 stellis = "stellis:main"

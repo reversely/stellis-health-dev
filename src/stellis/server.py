@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
+from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -453,13 +453,14 @@ def start_speech_worker() -> None:
 
 
 @app.on_event("shutdown")
-def stop_retention_worker() -> None:
+async def stop_retention_worker() -> None:
     _retention_stop.set()
     # Wait for an in-flight sweep so it cannot touch the data directory after shutdown returns.
     if _retention_thread is not None:
         _retention_thread.join(timeout=30)
     processing.stop_worker()
     gmail_mcp.stop()
+    await voice_call.close()
 
 
 def _public(record: dict[str, object]) -> dict[str, object]:
@@ -613,6 +614,65 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except agent_runtime.AgentRunError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class VoiceOffer(BaseModel):
+    sdp: str = Field(min_length=1, max_length=100_000)
+    type: Literal["offer"]
+
+
+class VoiceRecordingLink(BaseModel):
+    conversation_id: str
+
+
+@api.get("/agents/voice/availability")
+def voice_availability() -> dict[str, object]:
+    return voice_call.availability()
+
+
+@api.post("/agents/{agent_id}/call")
+async def start_agent_call(agent_id: str, request: VoiceOffer) -> dict[str, str]:
+    try:
+        return await voice_call.offer(agent_id, request.sdp, request.type)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.post("/agents/{agent_id}/call/{pc_id}/stop-reply")
+async def stop_agent_call_reply(agent_id: str, pc_id: str) -> dict[str, bool]:
+    try:
+        await voice_call.stop_reply(agent_id, pc_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"stopped": True}
+
+
+@api.delete("/agents/{agent_id}/call/{pc_id}")
+async def end_agent_call(agent_id: str, pc_id: str) -> dict[str, bool]:
+    try:
+        await voice_call.end(agent_id, pc_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"ended": True}
+
+
+@api.post("/agents/{agent_id}/call-recordings")
+def link_agent_call_recording(agent_id: str, request: VoiceRecordingLink) -> dict[str, str]:
+    try:
+        agents.get(agent_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if storage.get_conversation(request.conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    content = f"Call recording saved: [Open conversation](/conversation/{request.conversation_id})."
+    if not any(item["role"] == "system" and item["content"] == content
+               for item in agents.messages(agent_id)):
+        agents.append_message(agent_id, "system", content)
+    return {"conversation_id": request.conversation_id}
 
 
 class DelegatedTask(BaseModel):

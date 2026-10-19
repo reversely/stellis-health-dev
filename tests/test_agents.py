@@ -236,6 +236,54 @@ class AgentTest(unittest.TestCase):
         with self.assertRaises(agent_runtime.AgentRunError):
             agent_runtime._trusted_citations("Facts [[source:0]]", sources)
 
+    def test_unavailable_source_marker_does_not_save_agent_reply(self):
+        mira = agents.create("Mira", "Coordinator")
+        process = type("Process", (), {"returncode": 0,
+                                       "communicate": AsyncMock(return_value=(
+                                           b'{"status":"ok","result":{"payloads":[{"text":"Claim [[source:1]]"}],"meta":{}}}',
+                                           b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
+             patch.object(agent_runtime.agent_mail, "sources", new_callable=AsyncMock,
+                          return_value=[]), \
+             patch.object(agent_runtime, "_sources", return_value=[]), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          return_value=process):
+            response = self.client.post(f"/api/v1/agents/{mira['id']}/ask",
+                                        json={"question": "What happened?"})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(agents.jobs(mira["id"])[0]["state"], "failed")
+        self.assertEqual([message["role"] for message in agents.messages(mira["id"])], ["user"])
+
+    def test_unavailable_source_marker_retries_without_citation(self):
+        mira = agents.create("Mira", "Coordinator")
+        def process(answer):
+            return type("Process", (), {"returncode": 0,
+                                        "communicate": AsyncMock(return_value=(
+                                            ('{"status":"ok","result":{"payloads":[{"text":'
+                                             + __import__("json").dumps(answer)
+                                             + '}],"meta":{}}}').encode(), b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
+             patch.object(agent_runtime.agent_mail, "sources", new_callable=AsyncMock,
+                          return_value=[]), \
+             patch.object(agent_runtime, "_sources", return_value=[]), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          side_effect=[process("Hello [[source:1]]"), process("Hello")]) as launch:
+            response = self.client.post(f"/api/v1/agents/{mira['id']}/ask",
+                                        json={"question": "Say hello"})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["agent_message"]["content"], "Hello")
+        self.assertEqual(launch.await_count, 2)
+
+    def test_voice_recording_link_is_saved_once_in_agent_thread(self):
+        mira = agents.create("Mira", "Coordinator")
+        path = f"/api/v1/agents/{mira['id']}/call-recordings"
+        with patch.object(storage, "get_conversation", return_value={"id": "conversation-one"}):
+            first = self.client.post(path, json={"conversation_id": "conversation-one"})
+            second = self.client.post(path, json={"conversation_id": "conversation-one"})
+        self.assertEqual((first.status_code, second.status_code), (200, 200))
+        self.assertEqual([message["content"] for message in agents.messages(mira["id"])],
+                         ["Call recording saved: [Open conversation](/conversation/conversation-one)."])
+
     def test_cancellation_terminates_managed_wrapper_and_marks_job_interrupted(self):
         mira = agents.create("Mira", "Coordinator")
 
