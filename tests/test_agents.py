@@ -1,13 +1,14 @@
 """Agent identity, notebook stewardship, memory, and durable thread checks."""
 
 import os
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import agents, notebooks
+from stellis import agents, notebooks, storage
 from stellis.server import app
 
 
@@ -29,16 +30,30 @@ class AgentTest(unittest.TestCase):
             "prompt": "Make Mira my project coordinator; she should keep the Water Treatment notebook current"})
         self.assertEqual(response.status_code, 200, response.text)
         mira = response.json()
-        self.assertEqual((mira["name"], mira["role"], mira["openclaw_id"]),
+        self.assertEqual((mira["name"], mira["role"], mira["slug"]),
                          ("Mira", "project coordinator", "mira"))
         self.assertEqual(mira["notebooks"][0]["notebook_id"], book["id"])
         self.assertTrue(mira["notebooks"][0]["is_steward"])
         self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], mira["id"])
-        self.assertEqual(agents.resolved_agent()["reason"], "openclaw_default")
+        fallback = agents.resolved_agent()
+        self.assertEqual((fallback["agent"]["name"], fallback["reason"]), ("General", "general_default"))
+        self.assertEqual(agents.resolved_agent(explicit_id=mira["id"])["agent"]["id"], mira["id"])
+        self.assertEqual(agents.resolved_agent(book["id"], mira["id"])["reason"], "explicit")
         self.client.close()
         self.client = TestClient(app)
         self.assertEqual(self.client.get(f"/api/v1/agents/{mira['id']}").json()["name"], "Mira")
         self.assertEqual(len(self.client.get("/api/v1/agents").json()), 2)  # General and Mira
+
+    def test_legacy_agent_column_migrates_and_general_is_fallback(self):
+        mira = agents.create("Mira", "Coordinator")
+        book = notebooks.create("Unassigned")
+        with sqlite3.connect(storage.data_dir() / "stellis.sqlite3") as conn:
+            conn.execute("ALTER TABLE agents RENAME COLUMN slug TO openclaw_id")
+            conn.execute("UPDATE agents SET openclaw_id = 'main' WHERE is_default = 1")
+        restored = {item["name"]: item for item in agents.list_agents()}
+        self.assertEqual(restored["General"]["slug"], "main")  # Preserve existing identifiers.
+        self.assertEqual(restored["Mira"]["slug"], mira["slug"])
+        self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], restored["General"]["id"])
 
     def test_steward_reassignment_keeps_other_assignment(self):
         first = notebooks.create("First")

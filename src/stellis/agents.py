@@ -26,8 +26,8 @@ def _default(conn: sqlite3.Connection) -> None:
         return
     now = _now()
     conn.execute("""INSERT INTO agents
-        (id, name, name_key, role, instructions, openclaw_id, is_default, created_at, updated_at)
-        VALUES (?, 'General', 'general', 'General assistant', '', 'main', 1, ?, ?)""",
+        (id, name, name_key, role, instructions, slug, is_default, created_at, updated_at)
+        VALUES (?, 'General', 'general', 'General assistant', '', 'general', 1, ?, ?)""",
         (str(uuid.uuid4()), now, now))
 
 
@@ -64,8 +64,6 @@ def create(name: str, role: str, instructions: str = "", notebook_id: str | None
         raise ValueError("Instructions must be at most 4000 characters")
     key = name.casefold()
     slug = re.sub(r"[^a-z0-9]+", "-", key).strip("-")[:24] or "agent"
-    if slug == "main":
-        slug = "agent-main"
     agent_id = str(uuid.uuid4())
     now = _now()
     with storage.connect() as conn:
@@ -74,11 +72,11 @@ def create(name: str, role: str, instructions: str = "", notebook_id: str | None
             raise ValueError("An agent with this name already exists")
         base = slug
         suffix = 2
-        while conn.execute("SELECT 1 FROM agents WHERE openclaw_id = ?", (slug,)).fetchone():
+        while conn.execute("SELECT 1 FROM agents WHERE slug = ?", (slug,)).fetchone():
             slug = f"{base[:21]}-{suffix}"
             suffix += 1
         conn.execute("""INSERT INTO agents
-            (id, name, name_key, role, instructions, openclaw_id, is_default, created_at, updated_at)
+            (id, name, name_key, role, instructions, slug, is_default, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)""",
             (agent_id, name, key, role, instructions, slug, now, now))
         if notebook_id:
@@ -144,7 +142,7 @@ def unassign(agent_id: str, notebook_id: str) -> dict[str, object]:
 
 
 def resolved_agent(notebook_id: str | None = None, explicit_id: str | None = None) -> dict[str, object]:
-    """Return a target only when Stellis has an explicit user or notebook choice."""
+    """Select the visible agent from the Chat thread, notebook steward, or General."""
     with storage.connect() as conn:
         _default(conn)
         if explicit_id:
@@ -155,7 +153,8 @@ def resolved_agent(notebook_id: str | None = None, explicit_id: str | None = Non
                 WHERE an.notebook_id = ? AND an.is_steward = 1""", (notebook_id,)).fetchone()
             if row:
                 return {"agent": _record(conn, str(row["id"])), "reason": "notebook_steward"}
-        return {"agent": None, "reason": "openclaw_default"}
+        row = conn.execute("SELECT id FROM agents WHERE is_default = 1").fetchone()
+        return {"agent": _record(conn, str(row["id"])), "reason": "general_default"}
 
 
 def memories(agent_id: str) -> list[dict[str, object]]:
