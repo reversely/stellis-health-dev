@@ -40,6 +40,7 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
             if provider == "google":
                 self.assertEqual(set(query["scope"][0].split()), {
                     "https://www.googleapis.com/auth/calendar.events.readonly",
+                    "https://www.googleapis.com/auth/calendar.app.created",
                     "https://www.googleapis.com/auth/gmail.readonly",
                     "https://www.googleapis.com/auth/gmail.compose"})
             else:
@@ -148,6 +149,26 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len([call for call in calls if call.url.path.endswith("/token")]), 2)
         calendar.disconnect("google")
         self.assertFalse(next(row for row in calendar.connections() if row["provider"] == "google")["connected"])
+
+    async def test_app_created_demo_events_appear_with_primary_events(self):
+        calendar._save("google", {"access_token": "access", "refresh_token": "refresh",
+                                  "expires_in": 3600, "scope": calendar._SCOPE["google"]})
+        calendar.save_demo_calendar_id("demo@example.com")
+        requested = []
+        def handler(request):
+            requested.append(request.url.path)
+            title = "Sample — Water Treatment RFI 91 triage" if "demo@example.com" in request.url.path else "Primary meeting"
+            return httpx.Response(200, json={"items": [{"id": title, "summary": title,
+                "start": {"dateTime": "2026-10-20T10:00:00Z"},
+                "end": {"dateTime": "2026-10-20T10:30:00Z"}}]})
+        original = httpx.AsyncClient
+        with patch.object(calendar.httpx, "AsyncClient",
+                          side_effect=lambda **kw: original(transport=httpx.MockTransport(handler), **kw)):
+            found = await calendar.events("google", datetime(2026, 10, 19, tzinfo=timezone.utc))
+        self.assertEqual(len(found), 2)
+        self.assertTrue(any("demo@example.com" in path for path in requested))
+        calendar.disconnect("google")
+        self.assertIsNone(calendar.demo_calendar_id())
 
     async def test_microsoft_pagination_and_untrusted_next_link(self):
         calendar._save("microsoft", {"access_token":"access","refresh_token":"refresh","expires_in":3600})

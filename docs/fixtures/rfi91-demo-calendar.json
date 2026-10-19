@@ -1,0 +1,100 @@
+{
+  "calendar": {
+    "summary": "Stellis demo — Water Treatment RFI 91",
+    "description": "Fictional RFI 91 EPCM workflow for Stellis product testing. No real project commitments.",
+    "timeZone": "America/Toronto"
+  },
+  "events": [
+    {
+      "id": "stellisrfi91open20260928",
+      "summary": "Sample — RFI 91 opened",
+      "start": {
+        "dateTime": "2026-09-28T09:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-09-28T09:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Water Treatment sample: request isolation valve material and revised valve schedule."
+    },
+    {
+      "id": "stellisrfi91coord20261010",
+      "summary": "Sample — RFI 91 coordination",
+      "start": {
+        "dateTime": "2026-10-10T10:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-10-10T10:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Response target moved from October 11 to October 22. Engineering sign-off remains pending."
+    },
+    {
+      "id": "stellisrfi91triage20261019",
+      "summary": "Sample — Water Treatment RFI 91 triage",
+      "start": {
+        "dateTime": "2026-10-19T14:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-10-19T14:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Check revised isolation valve schedule and C316 traceability. Confirm owner and missing evidence."
+    },
+    {
+      "id": "stellisrfi91cert20261020",
+      "summary": "Sample — Review C316 material certificate",
+      "start": {
+        "dateTime": "2026-10-20T10:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-10-20T10:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Engineering review: trace C316 to proposed valve and check WT-04 revision B, section 4.2. No compliance decision assumed."
+    },
+    {
+      "id": "stellisrfi91schedule20261021",
+      "summary": "Sample — Revise isolation valve schedule",
+      "start": {
+        "dateTime": "2026-10-21T11:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-10-21T11:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Review vendor's revised schedule against the proposed valve before the response target."
+    },
+    {
+      "id": "stellisrfi91target20261022",
+      "summary": "Sample — RFI 91 response target",
+      "start": {
+        "dateTime": "2026-10-22T15:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-10-22T15:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Target for an engineering-reviewed response; this event does not imply approval or closure."
+    },
+    {
+      "id": "stellisrfi91check20261023",
+      "summary": "Sample — RFI 91 owner follow-up",
+      "start": {
+        "dateTime": "2026-10-23T09:30:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "end": {
+        "dateTime": "2026-10-23T10:00:00-04:00",
+        "timeZone": "America/Toronto"
+      },
+      "description": "Review actual response and open items with construction manager; close only after engineer sign-off."
+    }
+  ]
+}

@@ -1667,11 +1667,6 @@ async function loadSpeech(id) {
     if (existing.kind === 'word_alignment' || existing.kind === 'voice_index') await showTranscript(id);
     watchJob(existing); return;
   }
-  if (!capabilities.features.transcribe || !capabilities.features.diarize) {
-    setTranscriptLoading(false);
-    processingStatus.textContent = 'The speech models are still downloading. This recording transcribes as soon as they are ready.';
-    return;
-  }
   if (existing?.state === 'failed') {
     setTranscriptLoading(false);
     if (existing.kind === 'rematch') { await showTranscript(id); rematchButton.hidden = false; rematchButton.textContent = 'Retry speaker rematch'; }
@@ -1679,6 +1674,19 @@ async function loadSpeech(id) {
     else if (existing.kind === 'voice_index') await showTranscript(id);
     else { processButton.hidden = false; processButton.textContent = 'Retry processing'; }
     processingStatus.textContent = `${existing.kind === 'rematch' ? 'Speaker rematch' : existing.kind === 'word_alignment' ? 'Word timing' : existing.kind === 'voice_index' ? 'Voice matching' : 'Processing'} stopped: ${existing.error || 'Unknown error'}`;
+    return;
+  }
+  const savedTranscript = await fetch(`${API}/conversations/${encodeURIComponent(id)}/transcript`);
+  if (savedTranscript.ok) {
+    await showTranscript(id);
+    processButton.hidden = !capabilities.features.transcribe || !capabilities.features.diarize;
+    if (!processButton.hidden) processButton.textContent = 'Reprocess transcript';
+    return;
+  }
+  if (savedTranscript.status !== 404) await json(savedTranscript);
+  if (!capabilities.features.transcribe || !capabilities.features.diarize) {
+    setTranscriptLoading(false);
+    processingStatus.textContent = 'The speech models are still downloading. This recording transcribes as soon as they are ready.';
     return;
   }
   await beginProcessing(id);

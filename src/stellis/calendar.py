@@ -11,6 +11,7 @@ import secrets
 import sqlite3
 import threading
 import time
+from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
@@ -22,6 +23,7 @@ from stellis import storage
 PROVIDERS = ("google", "microsoft")
 _SCOPE = {
     "google": " ".join(("https://www.googleapis.com/auth/calendar.events.readonly",
+                        "https://www.googleapis.com/auth/calendar.app.created",
                         "https://www.googleapis.com/auth/gmail.readonly",
                         "https://www.googleapis.com/auth/gmail.compose")),
     "microsoft": "offline_access Calendars.ReadBasic",
@@ -89,7 +91,26 @@ def _connect() -> sqlite3.Connection:
         title_key TEXT NOT NULL, attendees_json TEXT NOT NULL,
         notebook_id TEXT, PRIMARY KEY(provider, key_kind, event_key)
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS demo_calendars (
+        provider TEXT PRIMARY KEY, calendar_id TEXT NOT NULL
+    )""")
     return conn
+
+
+def demo_calendar_id() -> str | None:
+    """Return the app-created calendar used for this account's demo events."""
+    with _connect() as conn:
+        row = conn.execute("SELECT calendar_id FROM demo_calendars WHERE provider = 'google'").fetchone()
+    return str(row["calendar_id"]) if row else None
+
+
+def save_demo_calendar_id(calendar_id: str) -> None:
+    """Register an app-created calendar after Google confirms its creation."""
+    if not calendar_id or len(calendar_id) > 1024 or any(ord(char) < 32 for char in calendar_id):
+        raise CalendarError("Invalid demo calendar ID")
+    with _connect() as conn:
+        conn.execute("""INSERT INTO demo_calendars(provider, calendar_id) VALUES ('google', ?)
+            ON CONFLICT(provider) DO UPDATE SET calendar_id=excluded.calendar_id""", (calendar_id,))
 
 
 def connections() -> list[dict[str, object]]:
@@ -180,6 +201,8 @@ def disconnect(provider: str) -> None:
         raise CalendarError("Unknown calendar provider")
     with _connect() as conn:
         conn.execute("DELETE FROM connections WHERE provider = ?", (provider,))
+        if provider == "google":
+            conn.execute("DELETE FROM demo_calendars WHERE provider = ?", (provider,))
 
 
 async def disconnect_grant(provider: str) -> None:
@@ -209,6 +232,7 @@ def clear_assignments() -> None:
     """Erase local calendar matching data when the account is deleted."""
     with _connect() as conn:
         conn.execute("DELETE FROM notebook_assignments")
+        conn.execute("DELETE FROM demo_calendars")
 
 
 async def _access_token(provider: str, min_validity: int = 60) -> str | None:
@@ -282,45 +306,51 @@ async def events(provider: str, now: datetime | None = None) -> list[dict]:
     now = now or datetime.now(timezone.utc)
     until = now + timedelta(days=14)
     if provider == "google":
-        url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
-        params = {"timeMin": now.isoformat(), "timeMax": until.isoformat(),
-                  "singleEvents": "true", "orderBy": "startTime", "maxResults": "100"}
+        calendars = ["primary"]
+        if demo_id := demo_calendar_id():
+            calendars.append(demo_id)
     else:
-        url = "https://graph.microsoft.com/v1.0/me/calendar/calendarView"
-        params = {"startDateTime": now.isoformat(), "endDateTime": until.isoformat(), "$top": "100"}
+        calendars = ["primary"]
     found: list[dict] = []
     async with httpx.AsyncClient(timeout=15) as client:
-        for _ in range(5):
-            try:
-                response = await client.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
-            except httpx.HTTPError as exc:
-                raise CalendarError("Could not load meetings. Try Refresh.") from exc
-            if response.status_code == 401:
-                raise CalendarError(f"Reconnect {provider.title()} Calendar")
-            if response.status_code != 200:
-                raise CalendarError("Could not load meetings. Try Refresh.")
-            data = response.json()
-            items = data.get("items", []) if provider == "google" else data.get("value", [])
-            for item in items:
-                normalized = _google_event(item) if provider == "google" else _microsoft_event(item)
-                if normalized:
-                    found.append(normalized)
+        for calendar_id in calendars:
             if provider == "google":
-                page = data.get("nextPageToken")
-                if not page:
-                    break
-                params["pageToken"] = page
+                url = f"https://www.googleapis.com/calendar/v3/calendars/{quote(calendar_id, safe='')}/events"
+                params = {"timeMin": now.isoformat(), "timeMax": until.isoformat(),
+                          "singleEvents": "true", "orderBy": "startTime", "maxResults": "100"}
             else:
-                next_url = data.get("@odata.nextLink")
-                if not next_url:
-                    break
-                parsed = urlparse(next_url)
-                if parsed.scheme != "https" or parsed.netloc != "graph.microsoft.com" or not parsed.path.startswith("/v1.0/me/calendar/"):
-                    raise CalendarError("Calendar response contained an invalid page link")
-                url, params = next_url, None
+                url = "https://graph.microsoft.com/v1.0/me/calendar/calendarView"
+                params = {"startDateTime": now.isoformat(), "endDateTime": until.isoformat(), "$top": "100"}
+            for _ in range(5):
+                try:
+                    response = await client.get(url, params=params, headers={"Authorization": f"Bearer {token}"})
+                except httpx.HTTPError as exc:
+                    raise CalendarError("Could not load meetings. Try Refresh.") from exc
+                if response.status_code == 401:
+                    raise CalendarError(f"Reconnect {provider.title()} Calendar")
+                if response.status_code != 200:
+                    raise CalendarError("Could not load meetings. Try Refresh.")
+                data = response.json()
+                items = data.get("items", []) if provider == "google" else data.get("value", [])
+                for item in items:
+                    normalized = _google_event(item) if provider == "google" else _microsoft_event(item)
+                    if normalized:
+                        found.append(normalized)
+                if provider == "google":
+                    page = data.get("nextPageToken")
+                    if not page:
+                        break
+                    params["pageToken"] = page
+                else:
+                    next_url = data.get("@odata.nextLink")
+                    if not next_url:
+                        break
+                    parsed = urlparse(next_url)
+                    if parsed.scheme != "https" or parsed.netloc != "graph.microsoft.com" or not parsed.path.startswith("/v1.0/me/calendar/"):
+                        raise CalendarError("Calendar response contained an invalid page link")
+                    url, params = next_url, None
     found.sort(key=lambda event: event["start"])
     return found[:100]
-
 
 def _title_key(value: str) -> str:
     return " ".join(re.findall(r"\w+", value.casefold()))
