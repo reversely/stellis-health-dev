@@ -107,9 +107,18 @@ def connect() -> Iterator[sqlite3.Connection]:
         conn.execute("ALTER TABLE notebooks ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'inherit'")
     conn.execute("""CREATE TABLE IF NOT EXISTS agents (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
-        role TEXT NOT NULL, instructions TEXT NOT NULL, openclaw_id TEXT NOT NULL UNIQUE,
+        role TEXT NOT NULL, instructions TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
         is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     )""")
+    agent_columns = {row["name"] for row in conn.execute("PRAGMA table_info(agents)")}
+    if "slug" not in agent_columns and "openclaw_id" in agent_columns:
+        try:
+            conn.execute("ALTER TABLE agents RENAME COLUMN openclaw_id TO slug")
+        except sqlite3.OperationalError as error:
+            # Another first connection may have completed this rename after our schema read.
+            if "no such column" not in str(error) or "slug" not in {
+                    row["name"] for row in conn.execute("PRAGMA table_info(agents)")}:
+                raise
     conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agents_one_default ON agents(is_default) WHERE is_default = 1""")
     conn.execute("""CREATE TABLE IF NOT EXISTS agent_notebooks (
         agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
