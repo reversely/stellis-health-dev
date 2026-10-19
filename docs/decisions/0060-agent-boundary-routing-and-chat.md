@@ -1,0 +1,21 @@
+# ADR 0060: Agent execution, routing, and Chat threads
+
+Status: proposed for owner acceptance, revised 2026-10-19.
+
+## Context
+
+Stellis already stores conversations, notebooks, pages, notes, and source-linked AI runs. The live-recording answer path in [ADR 0033](0033-live-recording-agent.md) calls Nebius directly. The owner decided on 2026-10-18 that agent work, including live answers, must run inside the NemoClaw/OpenShell boundary. This changes the implementation direction for that path; it does not change the provisional evidence snapshot and citation requirements in ADR 0033.
+
+## Decision
+
+- **Execution boundary:** Every agent turn, including an answer during recording, runs through OpenClaw inside a NemoClaw-managed OpenShell sandbox. NemoClaw selects and builds its managed OpenClaw image; Stellis neither installs nor launches an independent OpenClaw runtime. Nemotron on Nebius Token Factory supplies inference. Stellis owns the request, job, evidence links, and result records; OpenShell mediates inference, tools, network access, and credentials. Direct Nebius calls that generate saved summaries and other existing non-agent artifacts remain governed by their existing ADRs until separately migrated.
+- **Model routing:** NemoClaw configures the OpenShell inference route and owns the choice of provider and model for agent work. Its optional [host Model Router](https://docs.nvidia.com/nemoclaw/user-guide/deepagents/inference/hosted-inference/set-up-model-router) can choose among a configured model pool per request. The first custom Nebius profile is fixed to one named Nemotron model until a Nebius-compatible multi-model route is proved; no automatic model choice is claimed for that profile.
+- **Named-agent selection:** Stellis resolves which user-visible agent owns a request: the agent in the selected Chat thread, otherwise the notebook's steward when there is one, otherwise General. Stellis sends that agent ID, the request, notebook context, and authorized source references to OpenClaw through NemoClaw's host command. OpenClaw executes the selected agent and may delegate subtasks; delegation does not change which Chat thread owns the user request. Notebook assignment does not itself grant access to another notebook's sources. NemoClaw's Model Router chooses models for inference calls, not the user-visible agent.
+- **Identity and Chat:** Each named agent has a persistent identity, role, instructions, and one durable Chat thread for its messages, calls, jobs, and results. An agent can have no notebook assignment, assignments to several notebooks, or stewardship of one notebook. The Chat tab is the place to find and speak with agents. A message or result can be tagged with its notebook without creating a second thread.
+- **Memory and sources:** Agent memory stores user-correctable learned facts, including each project's email convention. Memory is distinct from transcripts, notes, pages, and retrieved mail; a remembered fact is not a citation. Agents search sources and approved connectors when the user asks. Source-backed answers cite the actual retrieved passage, note, page, or mail item.
+- **Connectors:** Gmail through Google's Gmail MCP server and Tavily through its MCP server are approved agent tools. Their grants and secrets belong in the OpenShell managed-tool boundary, with the user's authorized scope. Reading mail and creating a draft do not authorize sending it. A missing connector cannot prevent local recording or source search.
+- **Existing workspace rules:** Notebooks keep the ownership and capture-time rules in [ADR 0052](0052-notebooks-capture-time-and-account-deletion.md). Agent suggestions to notes and to-dos keep the review and conflict rules in [ADR 0059](0059-todos-as-task-lines-and-suggestions.md).
+
+## Consequences
+
+The existing direct live-answer adapter needs migration before it can be described as an agent response. Agent jobs need Stellis's selected agent ID and the OpenClaw session ID, plus a one-thread-per-agent model. Memory must be inspectable and correctable, and search must retain source IDs and audio times. Ticket #334 validates NemoClaw-managed OpenClaw, credential wiring, cancellation, session persistence, and latency on GN100. OpenClaw remains inside the NemoClaw/OpenShell boundary.
