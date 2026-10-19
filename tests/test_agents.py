@@ -121,7 +121,7 @@ class AgentTest(unittest.TestCase):
                                            b'{"status":"ok","result":{"payloads":[{"text":"Done [[source:1]]"}],"meta":{"agentMeta":{"sessionId":"one"}}}}',
                                            b""))})()
         with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-agent"}), \
-             patch.object(agent_runtime, "_command", return_value="nemoclaw"), \
+             patch.object(agent_runtime, "_command", return_value="/opt/nemoclaw/bin/nemoclaw"), \
              patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
                           return_value=process) as launch:
             response = self.client.post(f"/api/v1/agents/{mira['id']}/ask",
@@ -130,8 +130,10 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["agent_message"]["content"], f"Done [Pump plan](/page/{source['id']})")
         args = launch.await_args.args
-        self.assertEqual(args[:7], ("nemoclaw", "stellis-agent", "agent", "--agent", "main",
+        self.assertEqual(args[:7], ("/opt/nemoclaw/bin/nemoclaw", "stellis-agent", "agent", "--agent", "main",
                                     "--session-id", mira["id"]))
+        self.assertEqual(launch.await_args.kwargs["env"]["PATH"].split(os.pathsep)[0],
+                         "/opt/nemoclaw/bin")
         self.assertEqual(args[7], "-m")
         prompt = args[8]
         self.assertIn("Keep the project current", prompt)

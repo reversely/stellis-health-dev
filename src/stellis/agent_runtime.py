@@ -177,10 +177,16 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
     process = None
     try:
         for attempt in range(2):
+            command = _command()
+            env = os.environ.copy()
+            if os.path.isabs(command):
+                # NemoClaw shells out to its sibling openshell binary.
+                env["PATH"] = str(Path(command).parent) + os.pathsep + env.get("PATH", "")
             process = await asyncio.create_subprocess_exec(
-                _command(), sandbox, "agent", "--agent", "main", "--session-id", agent_id,
+                command, sandbox, "agent", "--agent", "main", "--session-id", agent_id,
                 "-m", prompt, "--json", "--timeout", "90",
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+                env=env)
             stdout, _ = await asyncio.wait_for(process.communicate(), timeout=150)
             if process.returncode or len(stdout) > 1_048_576:
                 raise AgentRunError("Agent reply failed. Try again.")

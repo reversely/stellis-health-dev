@@ -32,10 +32,14 @@ def _command() -> str:
 
 
 def _run(*args: str, token: str | None = None) -> subprocess.CompletedProcess[str]:
+    command = _command()
     env = os.environ.copy()
+    if os.path.isabs(command):
+        # NemoClaw invokes its sibling openshell binary during bridge setup.
+        env["PATH"] = str(Path(command).parent) + os.pathsep + env.get("PATH", "")
     if token is not None:
         env[TOKEN_ENV] = token
-    return subprocess.run([_command(), *args], env=env, capture_output=True,
+    return subprocess.run([command, *args], env=env, capture_output=True,
                           text=True, timeout=120, check=False)
 
 

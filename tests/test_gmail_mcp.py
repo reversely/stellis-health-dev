@@ -56,6 +56,14 @@ class GmailMcpTest(unittest.IsolatedAsyncioTestCase):
             await gmail_mcp.sync_once()
         self.assertEqual(calls, [("test-agent", "mcp", "remove", "gmail")])
 
+    def test_absolute_cli_adds_sibling_helper_to_path(self):
+        with patch.object(gmail_mcp, "_command", return_value="/opt/nemoclaw/bin/nemoclaw"), \
+             patch.object(gmail_mcp.subprocess, "run",
+                          return_value=subprocess.CompletedProcess([], 0)) as run:
+            gmail_mcp._run("test-agent", "mcp", "list")
+        self.assertEqual(run.call_args.kwargs["env"]["PATH"].split(os.pathsep)[0],
+                         "/opt/nemoclaw/bin")
+
     def test_cli_receives_token_only_in_environment(self):
         with patch.object(gmail_mcp, "_command", return_value="nemoclaw"), \
              patch.object(gmail_mcp.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
