@@ -196,6 +196,65 @@
     section.append(form);
     return section;
   }
+  async function draftSection(agent) {
+    const section = el('section', 'agent-detail-section agent-drafts');
+    section.append(el('h3', '', 'Email drafts'));
+    const style = await request('/mail-style');
+    if (!runtimeConfigured) {
+      section.append(el('p', 'agent-empty', 'Email drafting is unavailable on this device.'));
+      return section;
+    }
+    if (!style.groups.some(group => !group.excluded && group.example_count)) {
+      const note = el('p', 'agent-empty', 'Import sent examples in Settings to create drafts in your style.');
+      section.append(note); return section;
+    }
+    const form = el('form', 'agent-ask-form');
+    const recipients = el('input'); recipients.type = 'email'; recipients.required = true;
+    const to = el('label', '', 'To'); to.append(recipients);
+    const subjectInput = el('input'); subjectInput.required = true; subjectInput.maxLength = 200;
+    const subject = el('label', '', 'Subject'); subject.append(subjectInput);
+    const briefInput = el('textarea'); briefInput.required = true; briefInput.maxLength = 2000;
+    const brief = el('label', '', 'What should the draft say?'); brief.append(briefInput);
+    const create = el('button', '', 'Create Gmail draft'); create.type = 'submit';
+    const result = el('div', 'mail-style-draft-result');
+    form.append(to, subject, brief, create);
+    form.addEventListener('submit', async event => {
+      event.preventDefault(); create.disabled = true; status('Creating draft…');
+      try {
+        const draft = await request(`/agents/${encodeURIComponent(agent.id)}/style-draft`,
+          {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+            recipients:[recipients.value], subject:subjectInput.value, brief:briefInput.value})});
+        const link = el('a', '', 'Open Gmail draft');
+        link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(draft.gmail_draft_id)}`;
+        link.target = '_blank'; link.rel = 'noopener noreferrer';
+        result.replaceChildren(el('p', '', draft.body), link, el('strong', '', 'Examples used'));
+        for (const example of draft.examples) {
+          const source = el('a', '', `${example.subject || 'Untitled email'} · ${example.group_name}`);
+          source.href = example.url; source.target = '_blank'; source.rel = 'noopener noreferrer';
+          result.append(source);
+        }
+        status('Draft created. Review it in Gmail before sending.');
+      } catch (error) { status(error.message); }
+      finally { create.disabled = false; }
+    });
+    section.append(form, result);
+    const previous = style.drafts.filter(draft => draft.agent_id === agent.id);
+    if (previous.length) section.append(el('h4', '', 'Recent drafts'));
+    for (const draft of previous) {
+      const item = el('div', 'mail-style-previous-draft');
+      const link = el('a', '', draft.subject);
+      link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(draft.gmail_draft_id)}`;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      item.append(link, el('small', '', draft.recipients.join(', ')), el('span', '', 'Examples used'));
+      for (const example of draft.examples) {
+        const source = el('a', '', example.subject || 'Untitled email');
+        source.href = example.url; source.target = '_blank'; source.rel = 'noopener noreferrer';
+        item.append(source);
+      }
+      section.append(item);
+    }
+    return section;
+  }
   async function renderDetail(agent) {
     const target = document.querySelector('#agent-detail');
     const head = el('div', 'agent-detail-head');
@@ -213,9 +272,9 @@
         status('Agent saved'); await reloadAgent();
       } catch (error) { status(error.message); save.disabled = false; }
     });
-    const [memory, thread] = await Promise.all([memorySection(agent), threadSection(agent)]);
+    const [memory, thread, drafts] = await Promise.all([memorySection(agent), threadSection(agent), draftSection(agent)]);
     if (selectedId !== agent.id) return;
-    target.replaceChildren(head, identity, notebookSection(agent), memory, thread);
+    target.replaceChildren(head, identity, notebookSection(agent), memory, thread, drafts);
   }
   async function select(id, navigate) {
     selectedId = id;

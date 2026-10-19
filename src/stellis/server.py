@@ -21,7 +21,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
+from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
+from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -610,6 +611,71 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except agent_runtime.AgentRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class MailStyleAccountUpdate(BaseModel):
+    excluded: bool
+
+
+class MailStyleGroupUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=80)
+    excluded: bool | None = None
+
+
+class MailStyleMove(BaseModel):
+    group_id: str
+
+
+class MailStyleDraft(BaseModel):
+    recipients: list[str] = Field(min_length=1, max_length=20)
+    subject: str = Field(min_length=1, max_length=200)
+    brief: str = Field(min_length=1, max_length=2000)
+
+
+@api.get("/mail-style")
+def mail_style_status() -> dict[str, object]:
+    return mail_style.status()
+
+
+@api.post("/mail-style/sync")
+async def sync_mail_style() -> dict[str, object]:
+    try:
+        return await mail_style.sync()
+    except GmailError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.put("/mail-style/accounts/{email}")
+def update_mail_style_account(email: str, request: MailStyleAccountUpdate) -> dict[str, object]:
+    return _agent_result(lambda: mail_style.update_account(email, request.excluded))
+
+
+@api.put("/mail-style/groups/{group_id}")
+def update_mail_style_group(group_id: str, request: MailStyleGroupUpdate) -> dict[str, object]:
+    return _agent_result(lambda: mail_style.update_group(group_id, name=request.name,
+                                                          excluded=request.excluded))
+
+
+@api.get("/mail-style/groups/{group_id}/examples")
+def mail_style_group_examples(group_id: str) -> list[dict[str, object]]:
+    return _agent_result(lambda: mail_style.group_examples(group_id))
+
+
+@api.put("/mail-style/examples/{example_id}/group")
+def move_mail_style_example(example_id: str, request: MailStyleMove) -> dict[str, object]:
+    return _agent_result(lambda: mail_style.move_example(example_id, request.group_id))
+
+
+@api.post("/agents/{agent_id}/style-draft")
+async def create_style_draft(agent_id: str, request: MailStyleDraft) -> dict[str, object]:
+    try:
+        return await mail_style.create_draft(agent_id, request.recipients, request.subject, request.brief)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (GmailError, agent_runtime.AgentRunError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 

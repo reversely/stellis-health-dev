@@ -148,6 +148,30 @@ def connect() -> Iterator[sqlite3.Connection]:
         created_at TEXT NOT NULL, finished_at TEXT
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS agent_jobs_thread ON agent_jobs(agent_id, created_at)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_accounts (
+        email TEXT PRIMARY KEY, excluded INTEGER NOT NULL DEFAULT 0,
+        synced_at TEXT
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_groups (
+        id TEXT PRIMARY KEY, account_email TEXT NOT NULL REFERENCES mail_style_accounts(email) ON DELETE CASCADE,
+        recipient_domain TEXT NOT NULL, name TEXT NOT NULL, excluded INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(account_email, recipient_domain)
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_examples (
+        id TEXT PRIMARY KEY, account_email TEXT NOT NULL REFERENCES mail_style_accounts(email) ON DELETE CASCADE,
+        group_id TEXT NOT NULL REFERENCES mail_style_groups(id) ON DELETE CASCADE,
+        message_id TEXT NOT NULL UNIQUE, thread_id TEXT NOT NULL,
+        recipients_json TEXT NOT NULL, subject TEXT NOT NULL, cleaned_body TEXT NOT NULL,
+        sent_at TEXT NOT NULL
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS mail_style_group_examples ON mail_style_examples(group_id, sent_at DESC)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_drafts (
+        id TEXT PRIMARY KEY, account_email TEXT NOT NULL REFERENCES mail_style_accounts(email),
+        agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        group_id TEXT REFERENCES mail_style_groups(id) ON DELETE SET NULL,
+        gmail_draft_id TEXT NOT NULL, recipients_json TEXT NOT NULL, subject TEXT NOT NULL,
+        body TEXT NOT NULL, example_ids_json TEXT NOT NULL, created_at TEXT NOT NULL
+    )""")
     # When the audio was captured; imports without a known capture time fall back to created_at.
     if "recorded_at" not in conversation_columns:
         conn.execute("ALTER TABLE conversations ADD COLUMN recorded_at TEXT")

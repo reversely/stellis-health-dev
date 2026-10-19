@@ -102,6 +102,15 @@ async def search_threads(query: str = "", pageSize: int = 20, pageToken: str = "
     return result
 
 
+async def profile() -> dict[str, str]:
+    """Identify the granted Gmail account without exposing its token."""
+    result = await _request("GET", "/profile")
+    email = str(result.get("emailAddress") or "").casefold()
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise GmailError("Gmail returned an invalid account")
+    return {"email": email}
+
+
 async def get_thread(threadId: str, messageFormat: str = "FULL_CONTENT") -> dict:
     """Read one thread with the same public shape as the fixture mailbox."""
     if messageFormat not in {"FULL_CONTENT", "MINIMAL", "METADATA_ONLY", "MESSAGE_FORMAT_UNSPECIFIED"}:

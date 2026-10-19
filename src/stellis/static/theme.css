@@ -1595,6 +1595,18 @@ a.rail-name:hover { text-decoration: underline; }
 .integration-row strong { display: block; color: var(--ink); font-size: 15px; }
 .integration-row small { color: var(--muted); font-size: 13px; }
 #settings-calendar-status:empty { display: none; }
+.mail-style-list { display: grid; gap: 10px; margin-top: 14px; }
+.mail-style-list h4 { margin: 0; font-size: 14px; }
+.mail-style-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line-soft); border-radius: 8px; }
+.mail-style-row strong, .mail-style-row details { flex-basis: 100%; }
+.mail-style-row input:not([type='checkbox']), .mail-style-row select { min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--ink); font: inherit; }
+.mail-style-row button { min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); color: var(--ink); font: inherit; cursor: pointer; }
+.mail-style-row small { color: var(--muted); }
+.mail-style-option { display: inline-flex; align-items: center; gap: 6px; }
+.mail-style-example { padding: 10px 0; border-top: 1px solid var(--line-soft); }
+.mail-style-example p { margin: 4px 0 8px; white-space: pre-wrap; color: var(--muted); }
+.mail-style-draft-result { display: grid; gap: 8px; margin-top: 14px; }
+.mail-style-draft-result p { white-space: pre-wrap; }
 
 /* Notebook page. */
 .notebook-page-empty { padding: 28px 4px; color: var(--muted); }
