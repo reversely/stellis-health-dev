@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from email.utils import parseaddr
 
-from stellis import agent_mail, agent_runtime, agents, fixture_mailbox, gmail_api, sample_rfi91, storage
+from stellis import agent_mail, agent_runtime, agents, fixture_mailbox, gmail_api, sample_rfi91, storage, tavily
 
 _tasks: dict[str, asyncio.Task] = {}
 
@@ -59,8 +59,8 @@ def create(steward_id: str, specialist_id: str, notebook_id: str, question: str,
         case = sample_rfi91.status()
         if not case["installed"] or notebook_id != case["projects"][0]["notebook_id"]:
             raise ValueError("The RFI 91 sample is not in this notebook")
-    elif os.environ.get("STELLIS_TAVILY_MCP_READY") != "1":
-        raise ValueError("Connect Tavily research in the managed sandbox first")
+    elif not tavily.available_key():
+        raise ValueError("Add a Tavily API key in Settings")
     job_id = str(uuid.uuid4())
     now = _now()
     try:
@@ -201,6 +201,9 @@ async def _sources(job: dict, steward: dict) -> tuple[list[dict], list[str]]:
                 tools.append("Gmail search")
         except gmail_api.GmailError:
             pass
+    if not job["fixture"]:
+        result.extend(await tavily.search(question))
+        tools.append("Tavily search")
     result.extend(agent_runtime._sources(steward, question, notebook_id))
     unique = list({item["source_id"]: item for item in result}.values())[:12]
     if not unique:
@@ -227,7 +230,7 @@ async def _run(job_id: str) -> None:
                     "Each finding needs a factual sentence and its source citation."
                     + (" Your previous reply listed sources without findings; write the findings themselves."
                        if attempt else ""), sources, f"delegation-{job_id}-research-{attempt}",
-                    use_tavily=not job["fixture"])
+                    use_tavily=False)
             except agent_runtime.AgentRunError:
                 if attempt == 0:
                     continue

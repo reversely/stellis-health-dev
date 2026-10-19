@@ -42,7 +42,7 @@ class LocalAuthTest(unittest.TestCase):
         registered = self.client.post('/api/v1/auth/register', json=self.credentials)
         self.assertEqual(registered.status_code, 200)
         self.assertIn('HttpOnly', registered.headers['set-cookie'])
-        self.assertIn('samesite=strict', registered.headers['set-cookie'].lower())
+        self.assertIn('samesite=lax', registered.headers['set-cookie'].lower())
         self.assertEqual(self.client.post('/api/v1/auth/register', json=self.credentials).status_code, 409)
         imported = self.client.post('/api/v1/conversations/import', files={
             'file': ('talk.mp3', mp3_bytes(), 'audio/mpeg')})
@@ -114,4 +114,4 @@ class LocalAuthTest(unittest.TestCase):
                  patch.object(cli.models, 'ensure_in_background'):
                 cli.main()
                 self.assertEqual(run.call_args.kwargs['port'], 8765)
-                self.assertEqual(run.call_args.args[0], 'stellis.server:app')
+                self.assertEqual(run.call_args.args[0], 'stellis.account_gateway:app')

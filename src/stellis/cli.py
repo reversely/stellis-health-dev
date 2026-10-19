@@ -49,5 +49,7 @@ def main() -> None:
         os.environ.setdefault("STELLIS_AUTH_MODE", "required")
         models.ensure_in_background()
         print(f"Stellis is running at http://127.0.0.1:{args.port}/")
-    uvicorn.run("stellis.sync_server:app" if args.command == "sync-serve" else "stellis.server:app",
-                host="127.0.0.1", port=args.port)
+    target = ("stellis.sync_server:app" if args.command == "sync-serve" else
+              "stellis.account_gateway:app" if os.environ.get("STELLIS_AUTH_MODE") == "required" else
+              "stellis.server:app")
+    uvicorn.run(target, host="127.0.0.1", port=args.port)

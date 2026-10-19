@@ -462,7 +462,8 @@
     const sampleAvailable = sampleCase.installed &&
       books.some(book => book.notebook_id === sampleCase.projects[0].notebook_id);
     if (!researchRuntime.live_ready) {
-      section.append(el('p', 'agent-empty', 'Live research is unavailable on this device.'));
+      section.append(el('p', 'agent-empty', researchRuntime.key_configured ?
+        'The managed agent is unavailable on this device.' : 'Add a Tavily API key in Account settings for live research.'));
     }
     const form = el('form', 'agent-ask-form');
     form.hidden = !runtimeConfigured || !specialists.length ||
@@ -479,6 +480,7 @@
       control.maxLength = maxLength; label.append(control); form.append(label); return control;
     };
     const question = input('Research question', 'textarea', 1000);
+    form.append(el('p', 'settings-note', 'Live research sends your question to Tavily.'));
     const recipient = input('Draft to', 'input', 254); recipient.type = 'email';
     const subject = input('Draft subject', 'input', 200);
     const sampleLabel = el('label', 'agent-inline-check');

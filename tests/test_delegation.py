@@ -106,8 +106,8 @@ class DelegationTest(unittest.TestCase):
                 draft.assert_not_called()
         asyncio.run(check())
 
-    def test_live_job_requires_managed_tavily(self):
-        with self.assertRaisesRegex(ValueError, "Tavily research"):
+    def test_live_job_requires_account_tavily_key(self):
+        with patch.object(delegation.tavily, "available_key", return_value=None), self.assertRaisesRegex(ValueError, "Tavily API key"):
             delegation.create(self.steward["id"], self.specialist["id"], self.book["id"],
                               "Research RFI 91", "manager@buildco.example", "Re: RFI 91")
 

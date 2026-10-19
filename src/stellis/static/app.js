@@ -4703,6 +4703,7 @@ async function showSettings() {
   await loadMailStyle().catch(error => { document.querySelector('#mail-style-status').textContent = error.message; });
   loadDateFormat();
   await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
+  await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });
   watchSamples();
   captureControls();
   if (focusKeyInput()) {
@@ -4727,6 +4728,31 @@ function showNebiusKey(state) {
     state.source === 'environment' ? 'Using the key from this computer\'s environment.' : 'No key saved. AI features are off until you add one.';
 }
 async function loadNebiusKey() { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`))); }
+function showTavilyKey(state) {
+  document.querySelector('#tavily-key-input').value = '';
+  document.querySelector('#tavily-key-remove').hidden = state.source !== 'saved';
+  document.querySelector('#tavily-key-save').textContent = state.source === 'saved' ? 'Replace key' : 'Save key';
+  document.querySelector('#tavily-key-status').textContent = state.source === 'saved' ? 'Key saved.' :
+    state.source === 'environment' ? 'Using the key from this computer.' : 'No key saved.';
+}
+async function loadTavilyKey() { showTavilyKey(await json(await fetch(`${API}/settings/tavily-key`))); }
+document.querySelector('#tavily-key-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = document.querySelector('#tavily-key-input');
+  const status = document.querySelector('#tavily-key-status');
+  if (!input.value.trim()) { status.textContent = 'Paste your Tavily API key first.'; return; }
+  const save = document.querySelector('#tavily-key-save'); save.disabled = true;
+  try {
+    showTavilyKey(await json(await fetch(`${API}/settings/tavily-key`, {method:'PUT',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:input.value})})));
+  } catch (error) { status.textContent = error.message; }
+  finally { save.disabled = false; }
+});
+document.querySelector('#tavily-key-remove').addEventListener('click', async () => {
+  try { showTavilyKey(await json(await fetch(`${API}/settings/tavily-key`, {method:'DELETE'}))); }
+  catch (error) { document.querySelector('#tavily-key-status').textContent = error.message; }
+});
+
 function showDateFormatExample() {
   const {formatListDate, getDateFormat} = window.StellisListDate;
   const tomorrow = new Date(Date.now() + 86400000);

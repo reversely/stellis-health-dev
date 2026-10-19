@@ -10,8 +10,8 @@ function showMode(createAccount) {
   createAccount = registration;
   signIn.setAttribute('aria-current', createAccount ? 'false' : 'page');
   signUp.setAttribute('aria-current', createAccount ? 'page' : 'false');
-  document.querySelector('#auth-title').textContent = createAccount ? 'Sign up' : 'Sign in';
-  document.querySelector('#auth-submit').textContent = createAccount ? 'Sign up' : 'Sign in';
+  document.querySelector('#auth-title').textContent = createAccount ? 'Create account' : 'Sign in';
+  document.querySelector('#auth-submit').textContent = createAccount ? 'Create account' : 'Sign in';
   document.querySelector('#username').minLength = createAccount ? 3 : 1;
   document.querySelector('#password').minLength = createAccount ? 12 : 1;
   document.querySelector('#password').autocomplete = createAccount ? 'new-password' : 'current-password';
@@ -26,10 +26,11 @@ signUp.addEventListener('click', () => showMode(true));
     const response = await fetch('/api/v1/auth/status');
     if (!response.ok) throw new Error();
     const status = await response.json();
-    if (!status.required || status.username) { location.replace('/'); return; }
+    const creating = new URLSearchParams(location.search).get('create') === '1';
+    if (!status.required || (status.username && !creating)) { location.replace('/'); return; }
     registrationOpen = status.registration_open;
-    document.querySelector('.auth-modes').hidden = !registrationOpen;
-    showMode(registrationOpen);
+    document.querySelector('.auth-modes').hidden = false;
+    showMode(creating || !status.has_accounts);
   } catch { error.textContent = 'Could not load account status.'; }
 })();
 

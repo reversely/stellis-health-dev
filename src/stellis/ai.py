@@ -115,6 +115,8 @@ def _key() -> str | None:
     value = os.environ.get("NEBIUS_API_KEY")
     if value:
         return value
+    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1":
+        return None
     path = Path(__file__).resolve().parents[2] / ".env"
     if path.is_file():
         for line in path.read_text().splitlines():

@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent, voice_call
+from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -46,7 +46,11 @@ async def session_gate(request: Request, call_next):
             or (request.method == "GET" and path in {
                 "/api/v1/calendar/google/callback", "/api/v1/calendar/microsoft/callback"})):
         return await call_next(request)
-    if auth.current_account(request.cookies.get(auth.COOKIE_NAME)) is None:
+    token = request.cookies.get(auth.COOKIE_NAME)
+    account_id = auth.current_account_id(token)
+    bound_id = os.environ.get("STELLIS_ACCOUNT_ID")
+    dev_session = not bound_id and auth.dev_enabled() and auth.current_account(token) == "dev"
+    if (account_id is None and not dev_session) or (bound_id and account_id != int(bound_id)):
         if path.startswith("/api/"):
             return JSONResponse({"detail": "Login required"}, status_code=401)
         return RedirectResponse("/auth", status_code=303)
@@ -86,7 +90,7 @@ class LoginCredentials(BaseModel):
 def _session_response(token: str, username: str) -> JSONResponse:
     response = JSONResponse({"username": username})
     response.set_cookie(auth.COOKIE_NAME, token, max_age=auth.SESSION_DAYS * 86400,
-                        httponly=True, samesite="strict", secure=False, path="/")
+                        httponly=True, samesite="lax", secure=False, path="/")
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -98,7 +102,7 @@ def auth_page() -> FileResponse:
 
 @app.get("/api/v1/auth/status")
 def auth_status(request: Request) -> dict[str, object]:
-    return {"required": auth.enabled(), "registration_open": auth.enabled() and not auth.has_account(),
+    return {"required": auth.enabled(), "registration_open": auth.enabled(), "has_accounts": auth.has_account(),
             "username": auth.current_account(request.cookies.get(auth.COOKIE_NAME)) if auth.enabled() else None}
 
 
@@ -112,7 +116,7 @@ def auth_register(credentials: Credentials) -> JSONResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _session_response(auth.create_session(), username)
+    return _session_response(auth.create_session(auth.account_id_for_username(username)), username)
 
 
 @app.post("/api/v1/auth/login")
@@ -145,14 +149,17 @@ class AccountDeletion(BaseModel):
     confirm: str
 
 
-def _account_request(request: Request) -> str | None:
+def _account_request(request: Request) -> tuple[str, int]:
     """Return the session token for account changes, refusing open mode and the shared dev login."""
     if not auth.enabled():
         raise HTTPException(status_code=404, detail="Login is disabled")
     token = request.cookies.get(auth.COOKIE_NAME)
     if auth.dev_enabled() and auth.current_account(token) == "dev":
         raise HTTPException(status_code=403, detail="The dev login has no account settings")
-    return token
+    account_id = auth.current_account_id(token)
+    if token is None or account_id is None:
+        raise HTTPException(status_code=401, detail="Login required")
+    return token, account_id
 
 
 def _account_errors(action):
@@ -170,35 +177,35 @@ def _account_errors(action):
 
 @app.get("/api/v1/account")
 def account_profile(request: Request) -> dict[str, str]:
-    _account_request(request)
-    return _account_errors(auth.profile)
+    _, account_id = _account_request(request)
+    return _account_errors(lambda: auth.profile(account_id))
 
 
 @app.patch("/api/v1/account")
 def account_update(request: Request, update: ProfileUpdate) -> dict[str, str]:
-    _account_request(request)
-    return _account_errors(lambda: auth.update_profile(update.name, update.email))
+    _, account_id = _account_request(request)
+    return _account_errors(lambda: auth.update_profile(update.name, update.email, account_id))
 
 
 @app.post("/api/v1/account/username")
 def account_username(request: Request, change: UsernameChange) -> dict[str, str]:
-    _account_request(request)
-    return _account_errors(lambda: auth.change_username(change.username, change.password))
+    _, account_id = _account_request(request)
+    return _account_errors(lambda: auth.change_username(change.username, change.password, account_id))
 
 
 @app.post("/api/v1/account/password")
 def account_password(request: Request, change: PasswordChange) -> dict[str, bool]:
-    token = _account_request(request)
-    _account_errors(lambda: auth.change_password(change.current_password, change.new_password, token))
+    token, account_id = _account_request(request)
+    _account_errors(lambda: auth.change_password(change.current_password, change.new_password, token, account_id))
     return {"changed": True}
 
 
 @app.delete("/api/v1/account")
 def account_delete(request: Request, deletion: AccountDeletion) -> JSONResponse:
-    _account_request(request)
+    _, account_id = _account_request(request)
     if deletion.confirm != "DELETE":
         raise HTTPException(status_code=400, detail="Type DELETE to confirm")
-    _account_errors(lambda: auth.verify_password(deletion.password))
+    _account_errors(lambda: auth.verify_password(deletion.password, account_id))
     try:
         erased = library.erase_all()
     except RuntimeError as exc:
@@ -206,7 +213,9 @@ def account_delete(request: Request, deletion: AccountDeletion) -> JSONResponse:
     for provider in calendar.PROVIDERS:
         calendar.disconnect(provider)
     calendar.clear_assignments()
-    auth.delete_account()
+    ai.remove_key()
+    tavily.remove_key()
+    auth.delete_account(account_id)
     response = JSONResponse({"deleted": True, **erased})
     response.delete_cookie(auth.COOKIE_NAME, path="/")
     response.headers["Cache-Control"] = "no-store"
@@ -684,7 +693,9 @@ class DelegatedTask(BaseModel):
 
 @api.get("/agents/delegations/runtime")
 def delegated_runtime() -> dict[str, bool]:
-    return {"live_ready": os.environ.get("STELLIS_TAVILY_MCP_READY") == "1"}
+    key = bool(tavily.available_key())
+    managed = agent_runtime.configured()
+    return {"live_ready": key and managed, "key_configured": key, "agent_configured": managed}
 
 
 @api.get("/agents/{agent_id}/delegations")
@@ -1117,6 +1128,28 @@ def save_nebius_key(request: NebiusKey) -> dict[str, object]:
 @api.delete("/settings/nebius-key")
 def remove_nebius_key() -> dict[str, object]:
     return ai.remove_key()
+
+
+class TavilyKey(BaseModel):
+    key: str = Field(min_length=1, max_length=512)
+
+
+@api.get("/settings/tavily-key")
+def tavily_key_status() -> dict[str, object]:
+    return tavily.key_status()
+
+
+@api.put("/settings/tavily-key")
+def save_tavily_key(request: TavilyKey) -> dict[str, object]:
+    try:
+        return tavily.save_key(request.key)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.delete("/settings/tavily-key")
+def remove_tavily_key() -> dict[str, object]:
+    return tavily.remove_key()
 
 
 @api.get("/samples")

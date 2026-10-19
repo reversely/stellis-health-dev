@@ -1,0 +1,106 @@
+"""Real HTTP boundary checks for private account creation and routing."""
+
+from __future__ import annotations
+
+import os
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
+
+import httpx
+
+
+@unittest.skipIf(sys.platform == "win32", "Account child Unix sockets need a Windows transport")
+class AccountGatewayTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+        self.url = f"http://127.0.0.1:{port}"
+        env = os.environ.copy()
+        env.update(STELLIS_DATA_DIR=self.temp.name, STELLIS_AUTH_MODE="required",
+                   STELLIS_ACCOUNT_SOCKET_DIR=str(Path(self.temp.name) / "sockets"),
+                   PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"))
+        for key in ("STELLIS_DEV_ACCOUNT", "STELLIS_DEV_PASSWORD", "STELLIS_NEMOCLAW_SANDBOX",
+                    "STELLIS_TAVILY_MCP_READY", "STELLIS_MCP_TOKEN"):
+            env.pop(key, None)
+        self.env = env
+        self.command = [sys.executable, "-m", "uvicorn", "stellis.account_gateway:app", "--host", "127.0.0.1",
+                        "--port", str(port), "--no-access-log"]
+        self.start_gateway()
+
+    def start_gateway(self) -> None:
+        self.process = subprocess.Popen(self.command, env=self.env,
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            if self.process.poll() is not None:
+                self.fail("Account gateway stopped at startup")
+            try:
+                if httpx.get(self.url + "/api/health", timeout=1).status_code == 200:
+                    break
+            except httpx.HTTPError:
+                pass
+            time.sleep(0.1)
+        else:
+            self.fail("Account gateway did not start")
+
+    def tearDown(self) -> None:
+        self.process.terminate()
+        try:
+            self.process.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.wait()
+        self.temp.cleanup()
+
+    def test_second_signup_is_private_and_sessions_survive_restart(self) -> None:
+        owner = httpx.Client(base_url=self.url, timeout=30)
+        second = httpx.Client(base_url=self.url, timeout=30)
+        try:
+            for client, username in ((owner, "owner"), (second, "second")):
+                response = client.post("/api/v1/auth/register", json={
+                    "username": username, "password": "correct horse battery staple"})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(client.get("/api/v1/account").json()["username"], username)
+            self.assertTrue(second.get("/api/v1/auth/status").json()["registration_open"])
+            self.assertEqual(second.post("/api/v1/auth/register", json={
+                "username": "owner", "password": "another correct horse battery"}).status_code, 409)
+            created = owner.post("/api/v1/pages", json={"title": "Private owner note", "markdown": "Only owner"})
+            self.assertEqual(created.status_code, 201)
+            note_id = created.json()["id"]
+            self.assertEqual(len(owner.get("/api/v1/pages").json()), 1)
+            self.assertEqual(second.get("/api/v1/pages").json(), [])
+            self.assertEqual(second.get(f"/api/v1/pages/{note_id}").status_code, 404)
+            self.assertFalse(second.get("/api/v1/settings/nebius-key").json()["configured"])
+            self.assertEqual(second.get("/api/v1/calendar/connections").json()[0]["connected"], False)
+            private_key = "tvly-private-test-credential"
+            response = second.put("/api/v1/settings/tavily-key", json={"key": private_key})
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn(private_key, response.text)
+            self.assertEqual(second.get("/api/v1/settings/tavily-key").json()["source"], "saved")
+            self.assertTrue(second.get("/api/v1/agents/delegations/runtime").json()["key_configured"])
+            self.assertNotEqual(owner.get("/api/v1/settings/tavily-key").json()["source"], "saved")
+            self.assertEqual(owner.get("/api/v1/pages").json()[0]["id"], note_id)
+            owner_cookie = owner.cookies.get("stellis_session")
+            second_cookie = second.cookies.get("stellis_session")
+            self.assertTrue(owner_cookie and second_cookie and owner_cookie != second_cookie)
+            self.process.terminate()
+            self.process.wait(timeout=20)
+            self.start_gateway()
+            self.assertEqual(owner.get("/api/v1/pages").json()[0]["id"], note_id)
+            self.assertEqual(second.get("/api/v1/pages").json(), [])
+            self.assertEqual(second.get("/api/v1/account").json()["username"], "second")
+            self.assertEqual(second.request("DELETE", "/api/v1/account", json={
+                "password": "correct horse battery staple", "confirm": "DELETE"}).status_code, 200)
+            self.assertEqual(second.get("/api/v1/pages").status_code, 401)
+            self.assertEqual(second.post("/api/v1/auth/login", json={
+                "username": "second", "password": "correct horse battery staple"}).status_code, 401)
+            self.assertEqual(owner.get("/api/v1/pages").json()[0]["id"], note_id)
+        finally:
+            owner.close()
+            second.close()

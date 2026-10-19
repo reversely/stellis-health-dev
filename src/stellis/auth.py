@@ -1,4 +1,4 @@
-"""Single-account session gate for the loopback development service."""
+"""Account registry and sessions for private local workspaces."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Iterator
+from pathlib import Path
 
 from stellis import storage
 
@@ -28,13 +29,35 @@ def dev_enabled() -> bool:
 
 @contextmanager
 def _connect() -> Iterator[sqlite3.Connection]:
-    path = storage.data_dir() / "auth.sqlite3"
+    path = Path(os.environ.get("STELLIS_AUTH_DB_DIR") or storage.data_dir()) / "auth.sqlite3"
     conn = sqlite3.connect(path, timeout=30, factory=storage.TolerantConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("""CREATE TABLE IF NOT EXISTS account (
-        id INTEGER PRIMARY KEY CHECK(id = 1), username TEXT NOT NULL UNIQUE,
+        id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE,
         salt BLOB NOT NULL, verifier BLOB NOT NULL, created_at TEXT NOT NULL
     )""")
+    original_schema = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'account'").fetchone()[0]
+    if "CHECK(id = 1)" in original_schema:
+        conn.commit()
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            conn.execute("""CREATE TABLE account_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE,
+                salt BLOB NOT NULL, verifier BLOB NOT NULL, created_at TEXT NOT NULL,
+                name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '')""")
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(account)")}
+            name = "name" if "name" in columns else "''"
+            email = "email" if "email" in columns else "''"
+            conn.execute(f"INSERT INTO account_new SELECT id, username, salt, verifier, created_at, {name}, {email} FROM account")
+            conn.execute("DROP TABLE account")
+            conn.execute("ALTER TABLE account_new RENAME TO account")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.execute("PRAGMA foreign_keys = ON")
     account_columns = {row["name"] for row in conn.execute("PRAGMA table_info(account)")}
     for column in ("name", "email"):
         if column not in account_columns:
@@ -65,7 +88,7 @@ def _token_hash(token: str) -> bytes:
 
 def has_account() -> bool:
     with _connect() as conn:
-        return conn.execute("SELECT 1 FROM account WHERE id = 1").fetchone() is not None
+        return conn.execute("SELECT 1 FROM account LIMIT 1").fetchone() is not None
 
 
 def register(username: str, password: str) -> str:
@@ -76,10 +99,10 @@ def register(username: str, password: str) -> str:
     stamp = datetime.now(timezone.utc).isoformat()
     with _connect() as conn:
         try:
-            conn.execute("INSERT INTO account (id, username, salt, verifier, created_at) VALUES (1, ?, ?, ?, ?)",
+            conn.execute("INSERT INTO account (username, salt, verifier, created_at) VALUES (?, ?, ?, ?)",
                          (username, salt, _verifier(password, salt), stamp))
         except sqlite3.IntegrityError as exc:
-            raise RuntimeError("Account already exists") from exc
+            raise RuntimeError("That username is taken") from exc
     return username
 
 
@@ -92,23 +115,44 @@ def login(username: str, password: str) -> str | None:
                          (_token_hash(token), expiry))
         return token
     with _connect() as conn:
-        row = conn.execute("SELECT username, salt, verifier FROM account WHERE id = 1").fetchone()
+        row = conn.execute("SELECT id, username, salt, verifier FROM account WHERE username = ?", (username,)).fetchone()
     if row is None:
         return None
     candidate = _verifier(password, row["salt"])
-    if not hmac.compare_digest(row["verifier"], candidate) or row["username"] != username:
+    if not hmac.compare_digest(row["verifier"], candidate):
         return None
-    return create_session()
+    return create_session(int(row["id"]))
 
 
-def create_session() -> str:
+def create_session(account_id: int = 1) -> str:
     token = secrets.token_urlsafe(32)
     expiry = (datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS)).isoformat()
     with _connect() as conn:
         conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (datetime.now(timezone.utc).isoformat(),))
-        conn.execute("INSERT INTO sessions (token_hash, account_id, expires_at) VALUES (?, 1, ?)",
-                     (_token_hash(token), expiry))
+        conn.execute("INSERT INTO sessions (token_hash, account_id, expires_at) VALUES (?, ?, ?)",
+                     (_token_hash(token), account_id, expiry))
     return token
+
+
+def account_id_for_username(username: str) -> int:
+    with _connect() as conn:
+        row = conn.execute("SELECT id FROM account WHERE username = ?", (username,)).fetchone()
+    if row is None:
+        raise LookupError("Account not found")
+    return int(row["id"])
+
+
+def current_account_id(token: str | None) -> int | None:
+    if not token:
+        return None
+    try:
+        digest = _token_hash(token)
+    except UnicodeEncodeError:
+        return None
+    with _connect() as conn:
+        row = conn.execute("SELECT account_id FROM sessions WHERE token_hash = ? AND expires_at > ?",
+                           (digest, datetime.now(timezone.utc).isoformat())).fetchone()
+    return int(row["account_id"]) if row else None
 
 
 def current_account(token: str | None) -> str | None:
@@ -140,64 +184,63 @@ def revoke(token: str | None) -> None:
             conn.execute("DELETE FROM dev_sessions WHERE token_hash = ?", (digest,))
 
 
-def _check_password(conn: sqlite3.Connection, password: str) -> None:
-    row = conn.execute("SELECT salt, verifier FROM account WHERE id = 1").fetchone()
+def _check_password(conn: sqlite3.Connection, password: str, account_id: int = 1) -> None:
+    row = conn.execute("SELECT salt, verifier FROM account WHERE id = ?", (account_id,)).fetchone()
     if row is None:
         raise LookupError("Account not found")
     if not hmac.compare_digest(row["verifier"], _verifier(password, row["salt"])):
         raise PermissionError("Your current password is incorrect")
 
 
-def profile() -> dict[str, str]:
+def profile(account_id: int = 1) -> dict[str, str]:
     with _connect() as conn:
-        row = conn.execute("SELECT username, name, email FROM account WHERE id = 1").fetchone()
+        row = conn.execute("SELECT username, name, email FROM account WHERE id = ?", (account_id,)).fetchone()
     if row is None:
         raise LookupError("Account not found")
     return {"username": row["username"], "name": row["name"], "email": row["email"]}
 
 
-def update_profile(name: str, email: str) -> dict[str, str]:
+def update_profile(name: str, email: str, account_id: int = 1) -> dict[str, str]:
     name, email = " ".join(name.split()), email.strip()
     if len(name) > 100:
         raise ValueError("Your name must be at most 100 characters")
     if email and (len(email) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)):
         raise ValueError("Enter an email address like name@example.com")
     with _connect() as conn:
-        if not conn.execute("UPDATE account SET name = ?, email = ? WHERE id = 1", (name, email)).rowcount:
+        if not conn.execute("UPDATE account SET name = ?, email = ? WHERE id = ?", (name, email, account_id)).rowcount:
             raise LookupError("Account not found")
-    return profile()
+    return profile(account_id)
 
 
-def change_username(username: str, password: str) -> dict[str, str]:
+def change_username(username: str, password: str, account_id: int = 1) -> dict[str, str]:
     username = username.strip()
     if not 3 <= len(username) <= 80:
         raise ValueError("Use a username of 3–80 characters")
     with _connect() as conn:
-        _check_password(conn, password)
-        conn.execute("UPDATE account SET username = ? WHERE id = 1", (username,))
-    return profile()
+        _check_password(conn, password, account_id)
+        conn.execute("UPDATE account SET username = ? WHERE id = ?", (username, account_id))
+    return profile(account_id)
 
 
-def change_password(current: str, new: str, keep_token: str | None) -> None:
+def change_password(current: str, new: str, keep_token: str | None, account_id: int = 1) -> None:
     """Replace the verifier and sign out every other session."""
     if len(new) < 12 or len(new) > 1024:
         raise ValueError("Your new password must be at least 12 characters")
     salt = secrets.token_bytes(32)
     with _connect() as conn:
-        _check_password(conn, current)
-        conn.execute("UPDATE account SET salt = ?, verifier = ? WHERE id = 1", (salt, _verifier(new, salt)))
+        _check_password(conn, current, account_id)
+        conn.execute("UPDATE account SET salt = ?, verifier = ? WHERE id = ?", (salt, _verifier(new, salt), account_id))
         keep = _token_hash(keep_token) if keep_token else b""
-        conn.execute("DELETE FROM sessions WHERE token_hash != ?", (keep,))
+        conn.execute("DELETE FROM sessions WHERE account_id = ? AND token_hash != ?", (account_id, keep))
 
 
-def verify_password(password: str) -> None:
+def verify_password(password: str, account_id: int = 1) -> None:
     with _connect() as conn:
-        _check_password(conn, password)
+        _check_password(conn, password, account_id)
 
 
-def delete_account() -> None:
-    """Remove the sign-in and every session; the next visit offers Sign up."""
+def delete_account(account_id: int = 1) -> None:
+    """Remove one account and its sessions after its private workspace is erased."""
     with _connect() as conn:
-        conn.execute("DELETE FROM sessions")
-        conn.execute("DELETE FROM dev_sessions")
-        conn.execute("DELETE FROM account")
+        conn.execute("DELETE FROM sessions WHERE account_id = ?", (account_id,))
+        conn.execute("DELETE FROM account WHERE id = ?", (account_id,))
