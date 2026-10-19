@@ -43,31 +43,45 @@ def _run(*args: str, token: str | None = None) -> subprocess.CompletedProcess[st
                           text=True, timeout=120, check=False)
 
 
-def _managed_provider(sandbox: str) -> str:
-    result = _run(sandbox, "mcp", "status", SERVER, "--json")
+def _managed_status(sandbox: str) -> dict:
+    result = _run(sandbox, "mcp", "status", SERVER, "--json", "--no-probe")
     if result.returncode:
         raise RuntimeError("Could not inspect managed Gmail credential")
     try:
-        provider = json.loads(result.stdout)["provider"]
-        name = provider["name"]
-        if provider["present"] and isinstance(name, str) and name:
-            return name
+        status = json.loads(result.stdout)
+        provider = status["provider"]
+        if provider["present"] and isinstance(provider["name"], str) and provider["name"]:
+            return status
     except (ValueError, KeyError, TypeError) as exc:
         raise RuntimeError("Could not inspect managed Gmail credential") from exc
     raise RuntimeError("Managed Gmail credential is missing")
 
 
-def _run_openshell_provider_update(provider_name: str, token: str) -> subprocess.CompletedProcess[str]:
+def _run_openshell(*args: str) -> subprocess.CompletedProcess[str]:
     command = _command()
     sibling = Path(command).parent / "openshell" if os.path.isabs(command) else None
     openshell = str(sibling) if sibling and sibling.is_file() else (shutil.which("openshell") or "openshell")
     env = os.environ.copy()
-    env[TOKEN_ENV] = token
     if os.path.isabs(openshell):
         env["PATH"] = str(Path(openshell).parent) + os.pathsep + env.get("PATH", "")
-    return subprocess.run([openshell, "provider", "update", provider_name,
-                           "--credential", TOKEN_ENV], env=env, capture_output=True,
+    return subprocess.run([openshell, *args], env=env, capture_output=True,
                           text=True, timeout=120, check=False)
+
+
+def _remove_managed(sandbox: str) -> None:
+    """Remove the adapter through NemoClaw, then retire its detached provider."""
+    provider_name = str(_managed_status(sandbox)["provider"]["name"])
+    removed = _run(sandbox, "mcp", "remove", SERVER)
+    if removed.returncode:
+        raise RuntimeError("Could not remove Gmail MCP access")
+    attached = _run_openshell("sandbox", "provider", "list", sandbox)
+    if attached.returncode:
+        raise RuntimeError("Could not verify Gmail MCP provider detachment")
+    if provider_name in {line.split()[0] for line in attached.stdout.splitlines()[1:] if line.split()}:
+        raise RuntimeError("Gmail MCP provider is still attached")
+    deleted = _run_openshell("provider", "delete", provider_name)
+    if deleted.returncode:
+        raise RuntimeError("Could not retire detached Gmail MCP credential")
 
 
 def _registered(sandbox: str) -> bool:
@@ -90,9 +104,7 @@ async def sync_once() -> None:
     connected = next(item for item in calendar.connections() if item["provider"] == "google")
     if not connected["mail_connected"]:
         if await asyncio.to_thread(_registered, sandbox):
-            result = await asyncio.to_thread(_run, sandbox, "mcp", "remove", SERVER)
-            if result.returncode:
-                raise RuntimeError("Could not remove Gmail MCP access")
+            await asyncio.to_thread(_remove_managed, sandbox)
         _last_token_hash = None
         return
     token = await calendar._access_token("google", min_validity=600)
@@ -101,20 +113,18 @@ async def sync_once() -> None:
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     registered = await asyncio.to_thread(_registered, sandbox)
     if token_hash == _last_token_hash and registered:
-        return
+        status = await asyncio.to_thread(_managed_status, sandbox)
+        if status["adapter"]["registered"] and status["provider"]["state"] == "configured":
+            return
     if registered:
-        provider_name = await asyncio.to_thread(_managed_provider, sandbox)
-        updated = await asyncio.to_thread(_run_openshell_provider_update, provider_name, token)
-        if updated.returncode:
-            raise RuntimeError("Could not rotate Gmail MCP credential")
-    else:
-        added = await asyncio.to_thread(
-            _run, sandbox, "mcp", "add", SERVER, "--url", ENDPOINT, "--env", TOKEN_ENV,
-            "--deny-tool", "get_message", "--deny-tool", "list_drafts",
-            "--deny-tool", "list_labels", "--deny-tool", "label_*",
-            "--deny-tool", "unlabel_*", token=token)
-        if added.returncode:
-            raise RuntimeError("Could not register Gmail MCP credential")
+        await asyncio.to_thread(_remove_managed, sandbox)
+    added = await asyncio.to_thread(
+        _run, sandbox, "mcp", "add", SERVER, "--url", ENDPOINT, "--env", TOKEN_ENV,
+        "--deny-tool", "get_message", "--deny-tool", "list_drafts",
+        "--deny-tool", "list_labels", "--deny-tool", "label_*",
+        "--deny-tool", "unlabel_*", token=token)
+    if added.returncode:
+        raise RuntimeError("Could not register Gmail MCP credential")
     _last_token_hash = token_hash
 
 
