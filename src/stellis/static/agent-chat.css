@@ -47,4 +47,14 @@
 .mail-style-previous-draft{display:grid;gap:6px;padding:12px 0;border-top:1px solid var(--line-soft)}
 .mail-style-previous-draft small{color:var(--muted)}
 .mail-style-previous-draft span{font-size:13px;font-weight:650}
+.agent-delegation-jobs{display:grid;gap:12px;margin-top:20px}
+.agent-delegation form[hidden]{display:none}
+.agent-delegation-job{display:grid;gap:8px;padding:16px;border:1px solid var(--line-soft);border-radius:8px}
+.agent-delegation-job small{color:var(--muted)}
+.agent-delegation-job h4{margin:8px 0 0;font-size:14px}
+.agent-delegation-job p{margin:0;white-space:pre-wrap}
+.agent-delegation-sources{display:grid;gap:5px}
+.agent-delegation-sources span{font-size:13px;font-weight:650}
+.agent-inline-check{display:flex!important;align-items:center;gap:8px}
+.agent-inline-check input{width:auto;min-height:0}
 @media(max-width:680px){.agent-chat-view{padding:16px 0 48px}.agent-chat-layout{grid-template-columns:minmax(0,1fr);gap:22px}.agent-list{display:flex;overflow-x:auto;padding-bottom:4px}.agent-list-item{min-width:150px}.agent-memory-add{align-items:stretch;flex-direction:column}.agent-memory-add button{align-self:start}}

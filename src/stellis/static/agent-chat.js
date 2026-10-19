@@ -4,6 +4,7 @@
   let notebooks = [];
   let selectedId = null;
   let runtimeConfigured = false;
+  let delegationTimer = null;
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -151,7 +152,7 @@
     if (!messages.length) section.append(el('p', 'agent-empty', 'No messages yet'));
     for (const message of messages) {
       const item = el('article', `agent-message agent-message-${message.role}`);
-      item.append(el('strong', '', message.role === 'user' ? 'You' : agent.name), messageBody(message.content));
+      item.append(el('strong', '', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name), messageBody(message.content));
       if (message.notebook_id) {
         const book = notebooks.find(entry => entry.id === message.notebook_id);
         if (book) item.append(el('small', '', book.name));
@@ -255,6 +256,109 @@
     }
     return section;
   }
+  async function delegationSection(agent) {
+    const books = agent.notebooks.filter(item => item.is_steward);
+    if (!books.length) return el('div');
+    const section = el('section', 'agent-detail-section agent-delegation');
+    section.append(el('h3', '', 'Delegate research'));
+    const specialists = agents.filter(item => item.id !== agent.id && !item.is_default);
+    if (!runtimeConfigured || !specialists.length) {
+      section.append(el('p', 'agent-empty', 'Add another agent and connect the managed agent runtime to delegate.'));
+    }
+    const [sampleCase, researchRuntime] = await Promise.all([
+      request('/samples/rfi91'), request('/agents/delegations/runtime')]);
+    const sampleAvailable = sampleCase.installed &&
+      books.some(book => book.notebook_id === sampleCase.projects[0].notebook_id);
+    if (!researchRuntime.live_ready) {
+      section.append(el('p', 'agent-empty', 'Live research is unavailable on this device.'));
+    }
+    const form = el('form', 'agent-ask-form');
+    form.hidden = !runtimeConfigured || !specialists.length ||
+      (!researchRuntime.live_ready && !sampleAvailable);
+    const choice = (title, values) => {
+      const label = el('label', '', title); const select = el('select');
+      for (const [value, text] of values) { const option = el('option', '', text); option.value = value; select.append(option); }
+      label.append(select); form.append(label); return select;
+    };
+    const specialist = choice('Specialist', specialists.map(item => [item.id, `${item.name} · ${item.role}`]));
+    const notebook = choice('Notebook', books.map(item => [item.notebook_id, item.notebook_name]));
+    const input = (title, type, maxLength) => {
+      const label = el('label', '', title); const control = el(type); control.required = true;
+      control.maxLength = maxLength; label.append(control); form.append(label); return control;
+    };
+    const question = input('Research question', 'textarea', 1000);
+    const recipient = input('Draft to', 'input', 254); recipient.type = 'email';
+    const subject = input('Draft subject', 'input', 200);
+    const sampleLabel = el('label', 'agent-inline-check');
+    const sample = el('input'); sample.type = 'checkbox';
+    if (sampleAvailable) {
+      sample.checked = !researchRuntime.live_ready;
+      sample.disabled = !researchRuntime.live_ready;
+      sampleLabel.append(sample, document.createTextNode('Use RFI 91 sample mailbox')); form.append(sampleLabel);
+    }
+    const submit = el('button', '', 'Start delegated job'); submit.type = 'submit'; form.append(submit);
+    const list = el('div', 'agent-delegation-jobs');
+    const refresh = async () => {
+      const jobs = await request(`/agents/${encodeURIComponent(agent.id)}/delegations`);
+      list.replaceChildren();
+      for (const job of jobs) {
+        const item = el('article', 'agent-delegation-job');
+        const name = agents.find(candidate => candidate.id === job.specialist_id)?.name || 'Specialist';
+        item.append(el('strong', '', `${name}: ${job.subject}`), el('small', '', `${job.state} · ${job.stage}`));
+        if (job.error) item.append(el('p', '', job.error));
+        if (job.tools_used.length) item.append(el('small', '', `Tools: ${job.tools_used.join(', ')}`));
+        if (job.research) item.append(el('h4', '', 'Research notes'), messageBody(job.research));
+        if (job.draft_body) {
+          item.append(el('h4', '', 'Draft'), messageBody(job.draft_body));
+          if (job.gmail_draft_id && !job.fixture) {
+            const link = el('a', '', 'Open Gmail draft');
+            link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(job.gmail_draft_id)}`;
+            link.target = '_blank'; link.rel = 'noopener noreferrer'; item.append(link);
+          }
+        }
+        if (job.sources.length) {
+          const sources = el('div', 'agent-delegation-sources');
+          sources.append(el('span', '', 'Sources'));
+          for (const source of job.sources) {
+            if ((!source.target.startsWith('/') || source.target.startsWith('//')) &&
+                !source.target.startsWith('https://')) continue;
+            const link = el('a', '', source.title); link.href = source.target;
+            if (source.target.startsWith('https://')) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+            sources.append(link);
+          }
+          item.append(sources);
+        }
+        if (['queued', 'running'].includes(job.state)) {
+          const stop = el('button', 'agent-quiet', 'Stop job'); stop.type = 'button';
+          stop.addEventListener('click', async () => {
+            try { await request(`/agents/${encodeURIComponent(agent.id)}/delegations/${encodeURIComponent(job.id)}`, {method:'DELETE'}); await refresh(); }
+            catch (error) { status(error.message); }
+          });
+          item.append(stop);
+        }
+        list.append(item);
+      }
+      clearTimeout(delegationTimer);
+      if (selectedId === agent.id && !document.querySelector('#agent-chat-view').hidden &&
+          jobs.some(job => ['queued', 'running'].includes(job.state))) {
+        delegationTimer = setTimeout(() => refresh().catch(error => status(error.message)), 2000);
+      }
+    };
+    form.addEventListener('submit', async event => {
+      event.preventDefault(); submit.disabled = true;
+      try {
+        await request(`/agents/${encodeURIComponent(agent.id)}/delegations`, {method:'POST',
+          headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+            specialist_id:specialist.value, notebook_id:notebook.value, question:question.value,
+            recipient:recipient.value, subject:subject.value, fixture:sample.checked})});
+        form.reset(); status('Delegated job started'); await refresh();
+      } catch (error) { status(error.message); }
+      finally { submit.disabled = false; }
+    });
+    section.append(form, list);
+    await refresh();
+    return section;
+  }
   async function renderDetail(agent) {
     const target = document.querySelector('#agent-detail');
     const head = el('div', 'agent-detail-head');
@@ -272,9 +376,11 @@
         status('Agent saved'); await reloadAgent();
       } catch (error) { status(error.message); save.disabled = false; }
     });
-    const [memory, thread, drafts] = await Promise.all([memorySection(agent), threadSection(agent), draftSection(agent)]);
+    clearTimeout(delegationTimer);
+    const [memory, thread, drafts, delegation] = await Promise.all([
+      memorySection(agent), threadSection(agent), draftSection(agent), delegationSection(agent)]);
     if (selectedId !== agent.id) return;
-    target.replaceChildren(head, identity, notebookSection(agent), memory, thread, drafts);
+    target.replaceChildren(head, identity, notebookSection(agent), memory, thread, drafts, delegation);
   }
   async function select(id, navigate) {
     selectedId = id;

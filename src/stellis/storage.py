@@ -148,6 +148,19 @@ def connect() -> Iterator[sqlite3.Connection]:
         created_at TEXT NOT NULL, finished_at TEXT
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS agent_jobs_thread ON agent_jobs(agent_id, created_at)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_delegations (
+        id TEXT PRIMARY KEY, steward_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        specialist_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+        question TEXT NOT NULL, recipient TEXT NOT NULL, subject TEXT NOT NULL,
+        fixture INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL, stage TEXT NOT NULL,
+        research TEXT, draft_body TEXT, gmail_draft_id TEXT,
+        sources_json TEXT NOT NULL DEFAULT '[]', tools_json TEXT NOT NULL DEFAULT '[]',
+        error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS agent_delegations_thread ON agent_delegations(steward_id, created_at DESC)")
+    conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agent_delegations_one_active
+        ON agent_delegations(steward_id) WHERE state IN ('queued', 'running')""")
     conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_accounts (
         email TEXT PRIMARY KEY, excluded INTEGER NOT NULL DEFAULT 0,
         synced_at TEXT

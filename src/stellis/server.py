@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
+from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -436,6 +436,7 @@ def start_speech_worker() -> None:
     images.recover_orphans()
     storage.fail_interrupted_ai_runs()
     agents.interrupt_running_jobs()
+    delegation.interrupt_running()
     storage.fail_interrupted_clean_runs()
     categorization.fail_interrupted()
     enhanced_notes.fail_interrupted()
@@ -612,6 +613,38 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except agent_runtime.AgentRunError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class DelegatedTask(BaseModel):
+    specialist_id: str
+    notebook_id: str
+    question: str = Field(min_length=1, max_length=1000)
+    recipient: str = Field(min_length=3, max_length=254)
+    subject: str = Field(min_length=1, max_length=200)
+    fixture: bool = False
+
+
+@api.get("/agents/delegations/runtime")
+def delegated_runtime() -> dict[str, bool]:
+    return {"live_ready": os.environ.get("STELLIS_TAVILY_MCP_READY") == "1"}
+
+
+@api.get("/agents/{agent_id}/delegations")
+def delegated_jobs(agent_id: str) -> list[dict[str, object]]:
+    return _agent_result(lambda: delegation.jobs(agent_id))
+
+
+@api.post("/agents/{agent_id}/delegations")
+async def delegate_task(agent_id: str, request: DelegatedTask) -> dict[str, object]:
+    job = _agent_result(lambda: delegation.create(agent_id, request.specialist_id, request.notebook_id,
+        request.question, request.recipient, request.subject, request.fixture))
+    delegation.start(str(job["id"]))
+    return job
+
+
+@api.delete("/agents/{agent_id}/delegations/{job_id}")
+def cancel_delegated_task(agent_id: str, job_id: str) -> dict[str, object]:
+    return _agent_result(lambda: delegation.cancel(job_id, agent_id))
 
 
 class MailStyleAccountUpdate(BaseModel):
