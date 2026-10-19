@@ -189,6 +189,51 @@ def save_memory(agent_id: str, fact: str, kind: str = "general", notebook_id: st
         return dict(conn.execute("SELECT * FROM agent_memories WHERE id = ?", (memory_id,)).fetchone())
 
 
+def remember_email_convention(agent_id: str, notebook_id: str, message: dict) -> dict[str, object] | None:
+    """Save a project's first observed mail pattern without overwriting user edits."""
+    subject = str(message.get("subject") or "").strip()
+    if not subject:
+        return None
+    subject = re.sub(r"^(?:(?:re|fw|fwd):\s*)+", "", subject, flags=re.IGNORECASE)
+    match = re.match(r"(.+?\b(?:RFI|RFQ|PO|CO))\s+\d+\b", subject, re.IGNORECASE)
+    subject_pattern = match.group(1) if match else " ".join(subject.split()[:3])
+    labels = [str(label) for label in message.get("labelIds", [])
+              if str(label).startswith("Label_")]
+    fields = [message.get("sender", ""), *(message.get("toRecipients") or []),
+              *(message.get("ccRecipients") or [])]
+    addresses = list(dict.fromkeys(address.casefold() for field in fields
+                                   for address in re.findall(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", str(field))))
+    domains = list(dict.fromkeys(address.rsplit("@", 1)[1] for address in addresses))
+    parts = [f"Project email subjects begin {subject_pattern}"]
+    if labels:
+        parts.append("labels: " + ", ".join(labels[:4]))
+    if domains:
+        parts.append("counterpart domains: " + ", ".join(domains[:6]))
+    if addresses:
+        parts.append("participants: " + ", ".join(addresses[:8]))
+    fact = "; ".join(parts) + "."
+    with storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        _record(conn, agent_id)
+        if not conn.execute("SELECT 1 FROM notebooks WHERE id = ?", (notebook_id,)).fetchone():
+            raise LookupError("Notebook not found")
+        if not conn.execute("SELECT 1 FROM agent_notebooks WHERE agent_id = ? AND notebook_id = ?",
+                            (agent_id, notebook_id)).fetchone():
+            raise ValueError("Assign this notebook to the agent first")
+        prior = conn.execute("""SELECT * FROM agent_memories WHERE agent_id = ? AND notebook_id = ?
+            AND kind = 'email_convention' ORDER BY created_at LIMIT 1""", (agent_id, notebook_id)).fetchone()
+        if prior:
+            return dict(prior)
+        memory_id = str(uuid.uuid4())
+        now = _now()
+        conn.execute("""INSERT INTO agent_memories
+            (id, agent_id, notebook_id, kind, fact, source_id, created_at, updated_at)
+            VALUES (?, ?, ?, 'email_convention', ?, ?, ?, ?)""",
+            (memory_id, agent_id, notebook_id, _value(fact, "Memory", 2000),
+             f"mail:{message['id']}" if message.get("id") else None, now, now))
+        return dict(conn.execute("SELECT * FROM agent_memories WHERE id = ?", (memory_id,)).fetchone())
+
+
 def delete_memory(agent_id: str, memory_id: str) -> None:
     with storage.connect() as conn:
         if not conn.execute("DELETE FROM agent_memories WHERE id = ? AND agent_id = ?", (memory_id, agent_id)).rowcount:

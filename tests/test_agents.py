@@ -24,6 +24,23 @@ class AgentTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
+    def test_first_project_email_sets_correctable_convention_once(self):
+        book = notebooks.create("Water Treatment")
+        mira = agents.create("Mira", "Coordinator", notebook_id=book["id"])
+        first = {"id": "one", "subject": "WT-04 RFI 91 isolation valve",
+                 "sender": "manager@buildco.example", "toRecipients": ["consultant@epcm.example"],
+                 "labelIds": ["INBOX", "Label_WaterTreatment"]}
+        memory = agents.remember_email_convention(mira["id"], book["id"], first)
+        self.assertIn("WT-04 RFI", memory["fact"])
+        self.assertIn("Label_WaterTreatment", memory["fact"])
+        self.assertIn("buildco.example", memory["fact"])
+        self.assertEqual(memory["source_id"], "mail:one")
+        corrected = agents.save_memory(mira["id"], "Use WT-04 RFI subjects only",
+                                       "email_convention", book["id"], memory["id"], "mail:one")
+        second = {**first, "id": "two", "subject": "Completely different subject"}
+        self.assertEqual(agents.remember_email_convention(mira["id"], book["id"], second)["id"], memory["id"])
+        self.assertEqual(agents.memories(mira["id"]), [corrected])
+
     def test_prompt_creates_steward_and_persists(self):
         book = notebooks.create("Water Treatment")
         response = self.client.post("/api/v1/agents", json={

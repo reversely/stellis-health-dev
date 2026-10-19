@@ -108,9 +108,7 @@ def seed() -> dict[str, object]:
                               books[key], True)
         _mark(f"agent:{key}", "agent", str(agent["id"]))
         if key == "water-treatment":
-            agents.save_memory(str(agent["id"]),
-                "Project email uses WT-04 RFI subjects and Label_WaterTreatment. Counterpart domains: buildco.example and epcm.example; participants: the construction manager, engineer, and consultant.",
-                "email_convention", books[key], source_id="mail:sample-rfi91-open")
+            agents.remember_email_convention(str(agent["id"]), books[key], MAIL_THREADS[0]["messages"][0])
     for key, title, body in (("spec", "WT-04 technical specification (sample)", SPEC),
                              ("status", "RFI 91 status (sample)", STATUS)):
         page = pages.create(title, books["water-treatment"], body)
