@@ -1470,6 +1470,8 @@ a.rail-name:hover { text-decoration: underline; }
 .calendar-meeting:first-child { border-top: 1px solid var(--line-soft); }
 .calendar-meeting time { color: var(--muted); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .calendar-meeting strong { color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; text-wrap: pretty; }
+.calendar-meeting-details { display: grid; gap: 2px; min-width: 0; }
+.calendar-meeting-details small { color: var(--muted); font-size: 12px; }
 .calendar-meeting.is-now time { color: var(--ink); font-weight: 650; }
 .calendar-card .meeting-actions { display: flex; gap: 2px; }
 #list-view .calendar-card .meeting-action { padding: 0; border: 0; background: transparent; color: var(--muted); }
@@ -1526,7 +1528,7 @@ a.rail-name:hover { text-decoration: underline; }
 @media (max-width: 560px) {
   .calendar-meeting { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; padding: 8px 0; }
   .calendar-meeting time { grid-column: 1; }
-  .calendar-meeting strong { grid-column: 1; }
+  .calendar-meeting-details { grid-column: 1; }
   .calendar-meeting .meeting-actions { grid-column: 2; grid-row: 1 / 3; }
   .calendar-days { --gutter: 44px; }
   .days-hours span { padding-right: 5px; font-size: 10.5px; }
@@ -1598,22 +1600,25 @@ a.rail-name:hover { text-decoration: underline; }
 .notebook-page-empty { padding: 28px 4px; color: var(--muted); }
 
 /* Notebook dialogs. */
-#notebook-dialog, #notebook-settings-dialog, #notebook-add-dialog, #move-notebook-dialog {
+#notebook-dialog, #notebook-settings-dialog, #notebook-add-dialog, #move-notebook-dialog, #calendar-notebook-dialog {
   width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-sizing: border-box; padding: 24px;
   border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow);
 }
-#notebook-dialog h2, #notebook-settings-dialog h2, #notebook-add-dialog h2, #move-notebook-dialog h2 { margin: 0 0 16px; font-size: 20px; }
-#notebook-form, #notebook-settings-form, #move-notebook-form { display: grid; gap: 8px; }
-#notebook-form label, #notebook-settings-form label { font-size: 13px; font-weight: 650; }
-#notebook-name-input, #notebook-settings-name, #notebook-settings-form select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--ink); font: 16px Inter, sans-serif; }
+#notebook-dialog h2, #notebook-settings-dialog h2, #notebook-add-dialog h2, #move-notebook-dialog h2, #calendar-notebook-dialog h2 { margin: 0 0 16px; font-size: 20px; }
+#notebook-form, #notebook-settings-form, #move-notebook-form, #calendar-notebook-form { display: grid; gap: 8px; }
+#notebook-form label, #notebook-settings-form label, #calendar-notebook-form label { font-size: 13px; font-weight: 650; }
+#notebook-name-input, #notebook-settings-name, #notebook-settings-form select, #calendar-notebook-select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--input); color: var(--ink); font: 16px Inter, sans-serif; }
+#calendar-notebook-series-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-weight: 500 !important; }
+#calendar-notebook-series-row[hidden] { display: none; }
+#calendar-notebook-series { width: 18px; height: 18px; accent-color: var(--ink); }
 .swatches { margin: 10px 0 0; padding: 0; border: 0; }
 .swatches legend { margin-bottom: 10px; padding: 0; font-size: 13px; font-weight: 650; }
 .swatch { position: relative; width: 40px; height: 40px; border-radius: 50%; background: var(--swatch); cursor: pointer; }
 .swatch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; appearance: none; cursor: pointer; }
 .swatch input:checked { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--ink); }
 .swatch input:focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; }
-#notebook-form-status, #notebook-settings-status, #move-notebook-status { margin: 4px 0 0; color: var(--failure); font-size: 13px; }
-#notebook-form-status:empty, #notebook-settings-status:empty, #move-notebook-status:empty, #notebook-add-status:empty { display: none; }
+#notebook-form-status, #notebook-settings-status, #move-notebook-status, #calendar-notebook-status { margin: 4px 0 0; color: var(--failure); font-size: 13px; }
+#notebook-form-status:empty, #notebook-settings-status:empty, #move-notebook-status:empty, #calendar-notebook-status:empty, #notebook-add-status:empty { display: none; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .dialog-header h2 { margin: 0 !important; }

@@ -16,12 +16,12 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, storage, suggestions, todos, transcript_agent
+from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -40,7 +40,7 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
-    if (path.startswith("/static/") or path in {"/auth", "/api/health", "/api/v1/health"}
+    if (path.startswith("/static/") or path in {"/auth", "/api/health", "/api/v1/health", "/mcp"}
             or path.startswith("/api/v1/auth/")
             or (request.method == "GET" and path in {
                 "/api/v1/calendar/google/callback", "/api/v1/calendar/microsoft/callback"})):
@@ -50,6 +50,11 @@ async def session_gate(request: Request, call_next):
             return JSONResponse({"detail": "Login required"}, status_code=401)
         return RedirectResponse("/auth", status_code=303)
     return await call_next(request)
+
+
+@app.api_route("/mcp", methods=["GET", "POST", "DELETE"], include_in_schema=False)
+async def mcp_endpoint(request: Request) -> Response:
+    return await mcp_server.handle(request)
 
 
 @app.middleware("http")
@@ -199,6 +204,7 @@ def account_delete(request: Request, deletion: AccountDeletion) -> JSONResponse:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     for provider in calendar.PROVIDERS:
         calendar.disconnect(provider)
+    calendar.clear_assignments()
     auth.delete_account()
     response = JSONResponse({"deleted": True, **erased})
     response.delete_cookie(auth.COOKIE_NAME, path="/")
@@ -538,7 +544,28 @@ async def calendar_meetings() -> dict[str, object]:
     noted = notes.events_with_notes()
     for event in meetings:
         event["has_notes"] = (event["provider"], event["id"]) in noted
+        event.update(calendar.assign_notebook(event))
     return {"meetings": meetings[:100], "errors": errors}
+
+
+class EventNotebookSave(BaseModel):
+    provider: str
+    event_id: str = Field(min_length=1, max_length=1024)
+    series_id: str = Field(default="", max_length=1024)
+    title: str = Field(max_length=180)
+    attendees: list[str] = Field(default_factory=list, max_length=100)
+    notebook_id: str | None = None
+    scope: str = "event"
+
+
+@api.put("/calendar/notebook")
+def save_calendar_notebook(request: EventNotebookSave) -> dict[str, object]:
+    try:
+        return calendar.save_notebook_assignment({"provider": request.provider, "id": request.event_id,
+            "series_id": request.series_id, "title": request.title, "attendees": request.attendees},
+            request.notebook_id, request.scope)
+    except calendar.CalendarError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 class EventNotesSave(BaseModel):
@@ -1056,6 +1083,14 @@ def delete_from_trash(conversation_id: str) -> dict[str, object]:
 def library_search(q: str = Query(min_length=2, max_length=120), category_id: str | None = None) -> dict[str, object]:
     try:
         return search.search_library(q, category_id=category_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.get("/search/sources")
+def source_search_results(q: str = Query(min_length=1, max_length=200), notebook_id: str | None = None) -> dict[str, object]:
+    try:
+        return {"results": source_search.search_sources(q, notebook_id)}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

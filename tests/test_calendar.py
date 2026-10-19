@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 from fastapi.testclient import TestClient
 
-from stellis import calendar
+from stellis import calendar, notebooks
 from stellis.server import app
 
 
@@ -60,6 +60,28 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(calendar.client_id("google"), "desktop-id")
             self.assertIsNone(calendar._google_secret())
 
+    def test_provider_fields_and_notebook_assignment(self):
+        book = notebooks.create("Water Treatment")["id"]
+        google = calendar._google_event({"id":"g1", "recurringEventId":"series-g", "summary":"Water Treatment review",
+            "attendees":[{"email":"a@example.com"},{"email":"b@example.com"}],
+            "start":{"dateTime":"2026-10-18T10:00:00Z"}, "end":{"dateTime":"2026-10-18T11:00:00Z"}})
+        microsoft = calendar._microsoft_event({"id":"m1", "seriesMasterId":"series-m", "subject":"Water Treatment review",
+            "attendees":[{"emailAddress":{"address":"a@example.com"}}, {"emailAddress":{"address":"b@example.com"}}],
+            "start":{"dateTime":"2026-10-18T10:00:00Z"}, "end":{"dateTime":"2026-10-18T11:00:00Z"}})
+        self.assertEqual(google["attendees"], microsoft["attendees"])
+        self.assertEqual(google["series_id"], "series-g")
+        self.assertEqual(microsoft["series_id"], "series-m")
+        self.assertEqual(calendar.assign_notebook(google)["notebook_id"], book)  # title contains notebook name
+        calendar.save_notebook_assignment(google, book, "series")
+        next_google = {**google, "id":"g2", "title":"Weekly project review"}
+        self.assertEqual(calendar.assign_notebook(next_google)["assignment_source"], "series")
+        calendar.save_notebook_assignment(next_google, None, "event")
+        self.assertIsNone(calendar.assign_notebook(next_google)["notebook_id"])
+        self.assertEqual(calendar.assign_notebook(next_google)["assignment_source"], "event")
+        calendar.save_notebook_assignment(microsoft, book, "event")
+        next_microsoft = {**microsoft, "id":"m2", "series_id":"", "title":"Supplier call"}
+        self.assertEqual(calendar.assign_notebook(next_microsoft)["assignment_source"], "attendees")
+
     async def test_exchange_refresh_events_and_disconnect(self):
         calls = []
 
@@ -72,7 +94,7 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
             if "googleapis" in request.url.host:
                 self.assertEqual(request.headers["Authorization"], "Bearer new-access")
                 if "pageToken" not in request.url.params:
-                    return httpx.Response(200, json={"items": [{"id":"a","summary":"Planning","start":{"dateTime":"2026-10-17T10:00:00Z"},"end":{"dateTime":"2026-10-17T11:00:00Z"}}],"nextPageToken":"next"})
+                    return httpx.Response(200, json={"items": [{"id":"a","recurringEventId":"series-a","summary":"Planning","attendees":[{"email":"A@example.com"}],"start":{"dateTime":"2026-10-17T10:00:00Z"},"end":{"dateTime":"2026-10-17T11:00:00Z"}}],"nextPageToken":"next"})
                 return httpx.Response(200, json={"items": [{"id":"b","summary":"Day off","start":{"date":"2026-10-18"},"end":{"date":"2026-10-19"}}]})
             return httpx.Response(404)
 
@@ -83,6 +105,8 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
                 conn.execute("UPDATE connections SET expires_at = 0 WHERE provider = 'google'")
             events = await calendar.events("google", datetime(2026, 10, 16, tzinfo=timezone.utc))
         self.assertEqual([event["title"] for event in events], ["Planning", "Day off"])
+        self.assertEqual(events[0]["series_id"], "series-a")
+        self.assertEqual(events[0]["attendees"], ["a@example.com"])
         self.assertEqual(events[1]["start"], "2026-10-18")
         self.assertTrue(events[1]["all_day"])
         self.assertEqual(len([call for call in calls if call.url.path.endswith("/token")]), 2)
@@ -95,13 +119,15 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
         def handler(request):
             if "skiptoken" in request.url.params:
                 return httpx.Response(200, json={"value":[{"id":"two","subject":"Review","start":{"dateTime":"2026-10-18T12:00:00"},"end":{"dateTime":"2026-10-18T13:00:00"}}]})
-            return httpx.Response(200, json={"value":[{"id":"one","subject":"Meet","start":{"dateTime":"2026-10-17T12:00:00"},"end":{"dateTime":"2026-10-17T13:00:00"}}],
+            return httpx.Response(200, json={"value":[{"id":"one","seriesMasterId":"series-one","subject":"Meet","attendees":[{"emailAddress":{"address":"B@example.com"}}],"start":{"dateTime":"2026-10-17T12:00:00"},"end":{"dateTime":"2026-10-17T13:00:00"}}],
                 "@odata.nextLink":"https://graph.microsoft.com/v1.0/me/calendar/calendarView?skiptoken=next"})
 
         original = httpx.AsyncClient
         with patch.object(calendar.httpx, "AsyncClient", side_effect=lambda **kw: original(transport=httpx.MockTransport(handler), **kw)):
             events = await calendar.events("microsoft", datetime(2026, 10, 16, tzinfo=timezone.utc))
         self.assertEqual([item["title"] for item in events], ["Meet", "Review"])
+        self.assertEqual(events[0]["series_id"], "series-one")
+        self.assertEqual(events[0]["attendees"], ["b@example.com"])
         with patch.object(calendar.httpx, "AsyncClient", side_effect=lambda **kw: original(transport=httpx.MockTransport(
             lambda request: httpx.Response(200, json={"value":[],"@odata.nextLink":"https://evil.example/steal"})), **kw)):
             with self.assertRaises(calendar.CalendarError):
@@ -143,6 +169,26 @@ class CalendarRouteTest(unittest.TestCase):
             self.assertEqual(self.client.get("/api/v1/calendar/meetings").status_code, 401)
             self.assertEqual(self.client.post("/api/v1/calendar/google/disconnect").status_code, 401)
             self.assertEqual(self.client.get("/api/v1/calendar/google/callback").status_code, 303)
+
+    def test_assigned_event_flows_into_recording(self):
+        book = notebooks.create("Water Treatment")["id"]
+        event = {"id":"fixture-event", "provider":"google", "series_id":"fixture-series",
+                 "title":"Project review", "attendees":["a@example.com", "b@example.com"],
+                 "start":"2026-10-19T10:00:00+00:00", "end":"2026-10-19T11:00:00+00:00", "all_day":False}
+        saved = self.client.put("/api/v1/calendar/notebook", json={"provider":"google", "event_id":event["id"],
+            "series_id":event["series_id"], "title":event["title"], "attendees":event["attendees"],
+            "notebook_id":book, "scope":"series"})
+        self.assertEqual(saved.status_code, 200)
+        async def events(provider):
+            return [event]
+        with patch.object(calendar, "connections", return_value=[{"provider":"google", "connected":True}]), \
+             patch.object(calendar, "events", side_effect=events):
+            meeting = self.client.get("/api/v1/calendar/meetings").json()["meetings"][0]
+        self.assertEqual(meeting["notebook_id"], book)
+        session = self.client.post("/api/v1/recordings", json={"title":meeting["title"],
+            "media_type":"audio/webm", "notebook_id":meeting["notebook_id"],
+            "calendar_provider":meeting["provider"], "calendar_event_id":meeting["id"]}).json()
+        self.assertEqual(session["notebook_id"], book)
 
 
 class EventNotesTest(unittest.TestCase):

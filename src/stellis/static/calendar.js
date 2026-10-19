@@ -58,11 +58,17 @@ window.StellisCalendar = (() => {
   function recordMeeting(item) {
     if (document.querySelector('#record-button .button-label').textContent === 'Record') {
       document.querySelector('#recording-title').value = item.title;
+      pendingNotebookId = item.notebook_id || null;
       pendingCalendarEvent = {provider:item.provider, id:item.id};
     }
     document.querySelector('#record-button').click();
   }
   function actions(item) {
+    const notebook = document.createElement('button'); notebook.type = 'button'; notebook.className = 'meeting-action';
+    notebook.setAttribute('aria-label', `Notebook for ${item.title}`);
+    notebook.title = item.notebook_id ? `Notebook: ${item.notebook_name || 'assigned'}` : 'Choose notebook';
+    notebook.append(icon('notebook'));
+    notebook.addEventListener('click', () => openNotebook(item));
     const notes = document.createElement('button'); notes.type = 'button'; notes.className = 'meeting-action';
     notes.setAttribute('aria-label', `Notes for ${item.title}`);
     notes.title = item.has_notes ? 'Open notes' : 'Add notes';
@@ -75,9 +81,41 @@ window.StellisCalendar = (() => {
     record.append(dot);
     record.addEventListener('click', () => recordMeeting(item));
     const group = document.createElement('div'); group.className = 'meeting-actions';
-    group.append(notes, record);
+    group.append(notebook, notes, record);
     return group;
   }
+
+  const notebookDialog = document.querySelector('#calendar-notebook-dialog');
+  const notebookSelect = document.querySelector('#calendar-notebook-select');
+  const notebookSeries = document.querySelector('#calendar-notebook-series');
+  const notebookStatus = document.querySelector('#calendar-notebook-status');
+  let notebookEvent = null;
+  async function openNotebook(item) {
+    notebookEvent = item; notebookStatus.textContent = '';
+    document.querySelector('#calendar-notebook-title').textContent = item.title;
+    document.querySelector('#calendar-notebook-series-row').hidden = !item.series_id;
+    notebookSeries.checked = false;
+    notebookSelect.replaceChildren(new Option('No notebook', ''));
+    try {
+      const books = await fetch('/api/v1/notebooks').then(response => response.json());
+      notebookSelect.append(...books.notebooks.map(book => new Option(book.name, book.id)));
+      notebookSelect.value = item.notebook_id || '';
+      notebookDialog.showModal(); notebookSelect.focus();
+    } catch { notebookStatus.textContent = 'Could not load notebooks'; notebookDialog.showModal(); }
+  }
+  document.querySelector('#calendar-notebook-cancel').addEventListener('click', () => notebookDialog.close());
+  document.querySelector('#calendar-notebook-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!notebookEvent) return;
+    notebookStatus.textContent = 'Saving';
+    try {
+      await request('/notebook', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+        provider:notebookEvent.provider, event_id:notebookEvent.id, series_id:notebookEvent.series_id,
+        title:notebookEvent.title, attendees:notebookEvent.attendees,
+        notebook_id:notebookSelect.value || null, scope:notebookSeries.checked ? 'series' : 'event'})});
+      notebookDialog.close(); await refresh();
+    } catch (error) { notebookStatus.textContent = error.message; }
+  });
 
   function meetingRow(item) {
     const row = document.createElement('div'); row.className = 'calendar-meeting';
@@ -85,7 +123,9 @@ window.StellisCalendar = (() => {
     const when = document.createElement('time'); when.dateTime = item.start;
     when.textContent = `${dayName(startOf(item))} ${item.all_day ? 'all day' : clock(startOf(item))}`;
     const title = document.createElement('strong'); title.textContent = item.title;
-    row.append(when, title, actions(item));
+    const details = document.createElement('div'); details.className = 'calendar-meeting-details'; details.append(title);
+    if (item.notebook_name) { const book = document.createElement('small'); book.textContent = item.notebook_name; details.append(book); }
+    row.append(when, details, actions(item));
     return row;
   }
 
