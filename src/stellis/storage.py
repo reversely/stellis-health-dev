@@ -105,6 +105,33 @@ def connect() -> Iterator[sqlite3.Connection]:
         conn.execute("ALTER TABLE collections ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'off'")
     if "todo_list" not in {row["name"] for row in conn.execute("PRAGMA table_info(notebooks)")}:
         conn.execute("ALTER TABLE notebooks ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'inherit'")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agents (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
+        role TEXT NOT NULL, instructions TEXT NOT NULL, openclaw_id TEXT NOT NULL UNIQUE,
+        is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agents_one_default ON agents(is_default) WHERE is_default = 1""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_notebooks (
+        agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+        is_steward INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY(agent_id, notebook_id)
+    )""")
+    conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agent_notebook_one_steward
+        ON agent_notebooks(notebook_id) WHERE is_steward = 1""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_memories (
+        id TEXT PRIMARY KEY, agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+        kind TEXT NOT NULL, fact TEXT NOT NULL, source_id TEXT,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_messages (
+        id TEXT PRIMARY KEY, agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+        role TEXT NOT NULL, content TEXT NOT NULL, job_id TEXT,
+        created_at TEXT NOT NULL
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS agent_messages_thread ON agent_messages(agent_id, created_at)")
     # When the audio was captured; imports without a known capture time fall back to created_at.
     if "recorded_at" not in conversation_columns:
         conn.execute("ALTER TABLE conversations ADD COLUMN recorded_at TEXT")
