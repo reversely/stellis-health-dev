@@ -1,6 +1,6 @@
 # ADR 0060: Agent execution, routing, and Chat threads
 
-Status: proposed for owner acceptance, revised 2026-10-19.
+Status: accepted by owner, 2026-10-19. Implementation is staged across tickets #334 and #337–#339.
 
 ## Context
 

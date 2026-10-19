@@ -30,6 +30,11 @@ class RFI91SampleTest(unittest.TestCase):
         self.assertEqual(result.status_code, 200, result.text)
         case = result.json()
         self.assertTrue(case["installed"])
+        mail_sources = fixture_mailbox.rfi91_sources(case["projects"][0]["notebook_id"], "Why is RFI 91 open?")
+        self.assertEqual({source["source_id"] for source in mail_sources},
+                         {"mail:sample-rfi91-open", "mail:sample-rfi91-block", "mail:sample-rfi91-deadline"})
+        self.assertEqual(fixture_mailbox.rfi91_sources(case["projects"][1]["notebook_id"], "RFI 91"), [])
+        self.assertEqual(self.client.get(mail_sources[0]["target"]).json()["id"], "sample-rfi91-open")
         self.assertEqual(len(case["projects"]), 4)
         self.assertEqual(len({project["agent_name"] for project in case["projects"]}), 4)
         for project in case["projects"]:

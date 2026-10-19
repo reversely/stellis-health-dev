@@ -1,5 +1,6 @@
 """Agent identity, notebook stewardship, memory, and durable thread checks."""
 
+import asyncio
 import os
 import sqlite3
 import tempfile
@@ -117,7 +118,7 @@ class AgentTest(unittest.TestCase):
         pages.create("Private plan", other["id"], "Pump calibration target is secret.")
         process = type("Process", (), {"returncode": 0,
                                        "communicate": AsyncMock(return_value=(
-                                           b'{"status":"ok","result":{"payloads":[{"text":"Done [[source:0]]"}],"meta":{"agentMeta":{"sessionId":"one"}}}}',
+                                           b'{"status":"ok","result":{"payloads":[{"text":"Done [[source:1]]"}],"meta":{"agentMeta":{"sessionId":"one"}}}}',
                                            b""))})()
         with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-agent"}), \
              patch.object(agent_runtime, "_command", return_value="nemoclaw"), \
@@ -145,6 +146,7 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(response.json()["user_message"]["job_id"],
                          response.json()["agent_message"]["job_id"])
         self.assertEqual(response.json()["session_id"], "one")
+        self.assertEqual(response.json()["cited_sources"][0]["source_id"], source["id"])
         self.assertEqual(self.client.get(f"/api/v1/agents/{mira['id']}/jobs").json()[0]["state"],
                          "succeeded")
 
@@ -166,6 +168,108 @@ class AgentTest(unittest.TestCase):
         agents.interrupt_running_jobs()  # Startup recovery after the web process stops.
         self.assertEqual([job["state"] for job in agents.jobs(mira["id"])],
                          ["failed", "interrupted"])
+
+    def test_general_agent_cites_provisional_source_in_notebook(self):
+        book = notebooks.create("Unassigned meeting")
+        general = agents.list_agents()[0]
+        process = type("Process", (), {"returncode": 0,
+                                       "communicate": AsyncMock(return_value=(
+                                           b'{"status":"ok","result":{"payloads":[{"text":"Draft sent [[source:1]]"}],"meta":{}}}',
+                                           b""))})()
+        source = {"source_id": "live-0-500", "title": "Live transcript 0s",
+                  "excerpt": "Avery will send the draft.", "target": "/recording?t=500", "start_ms": 500}
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          return_value=process):
+            result = __import__("asyncio").run(agent_runtime.ask(general["id"], "What will Avery send?",
+                                                        book["id"], [source]))
+        self.assertEqual(result["cited_sources"], [{"source_id": "live-0-500", "target": "/recording?t=500"}])
+        self.assertIn("[Live transcript 0s](/recording?t=500)", result["agent_message"]["content"])
+
+    def test_uncited_source_answer_fails_closed(self):
+        book = notebooks.create("Water Treatment")
+        mira = agents.create("Mira", "Coordinator", notebook_id=book["id"])
+        pages.create("Pump target", book["id"], "The pump calibration target is 17 psi.")
+        process = type("Process", (), {"returncode": 0,
+                                       "communicate": AsyncMock(return_value=(
+                                           b'{"status":"ok","result":{"payloads":[{"text":"The target is 17 psi."}],"meta":{}}}',
+                                           b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          return_value=process):
+            response = self.client.post(f"/api/v1/agents/{mira['id']}/ask",
+                                        json={"question": "What is the pump target?", "notebook_id": book["id"]})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(agents.jobs(mira["id"])[0]["state"], "failed")
+
+    def test_uncited_first_reply_is_retried_with_source_marker(self):
+        book = notebooks.create("Water Treatment")
+        mira = agents.create("Mira", "Coordinator", notebook_id=book["id"])
+        page = pages.create("Pump target", book["id"], "The pump calibration target is 17 psi.")
+        def process(answer):
+            return type("Process", (), {"returncode": 0,
+                                        "communicate": AsyncMock(return_value=(
+                                            ('{"status":"ok","result":{"payloads":[{"text":'
+                                             + __import__("json").dumps(answer)
+                                             + '}],"meta":{}}}').encode(), b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          side_effect=[process("17 psi"), process("17 psi [[source:1]]")]) as launch:
+            response = self.client.post(f"/api/v1/agents/{mira['id']}/ask",
+                                        json={"question": "What is the pump target?", "notebook_id": book["id"]})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["agent_message"]["content"], f"17 psi [Pump target](/page/{page['id']})")
+        self.assertEqual(launch.await_count, 2)
+        self.assertEqual(agents.jobs(mira["id"])[0]["state"], "succeeded")
+
+    def test_adjacent_source_markers_are_normalized_and_checked(self):
+        sources = [{"title": "First", "target": "/page/one"},
+                   {"title": "Second", "target": "/page/two"}]
+        answer = agent_runtime._normalize_citations("Facts [[source:1][source:2]]")
+        self.assertEqual(agent_runtime._trusted_citations(answer, sources),
+                         "Facts [First](/page/one) [Second](/page/two)")
+        with self.assertRaises(agent_runtime.AgentRunError):
+            agent_runtime._trusted_citations("Facts [[source:unknown]]", sources)
+        with self.assertRaises(agent_runtime.AgentRunError):
+            agent_runtime._trusted_citations("Facts [[source:0]]", sources)
+
+    def test_cancellation_terminates_managed_wrapper_and_marks_job_interrupted(self):
+        mira = agents.create("Mira", "Coordinator")
+
+        async def check():
+            entered = asyncio.Event()
+
+            class HangingProcess:
+                returncode = None
+                terminated = False
+
+                async def communicate(self):
+                    entered.set()
+                    await asyncio.Future()
+
+                def terminate(self):
+                    self.terminated = True
+                    self.returncode = 143
+
+                async def wait(self):
+                    return self.returncode
+
+                def kill(self):
+                    raise AssertionError("graceful termination should be enough")
+
+            process = HangingProcess()
+            with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
+                 patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                              return_value=process):
+                task = asyncio.create_task(agent_runtime.ask(mira["id"], "Status?"))
+                await entered.wait()
+                task.cancel()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+            self.assertTrue(process.terminated)
+
+        asyncio.run(check())
+        self.assertEqual(agents.jobs(mira["id"])[0]["state"], "interrupted")
 
 
 if __name__ == "__main__":

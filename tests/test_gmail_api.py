@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 
 from stellis import gmail_api
+from stellis.calendar import CalendarError
 
 
 class GmailAPITest(unittest.TestCase):
@@ -67,6 +68,14 @@ class GmailAPITest(unittest.TestCase):
             with self.assertRaisesRegex(gmail_api.GmailError, "Connect Gmail"):
                 asyncio.run(gmail_api.search_threads("subject:RFI"))
             token.assert_not_called()
+
+    def test_expired_or_changed_grant_requests_reconnection(self):
+        with patch.object(gmail_api.calendar, "connections", return_value=[
+                {"provider": "google", "mail_connected": True}]), \
+             patch.object(gmail_api.calendar, "_access_token", new_callable=AsyncMock,
+                          side_effect=CalendarError("Private OAuth detail")):
+            with self.assertRaisesRegex(gmail_api.GmailError, "Reconnect Gmail"):
+                asyncio.run(gmail_api.search_threads("subject:RFI"))
 
 
 if __name__ == "__main__":

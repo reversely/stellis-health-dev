@@ -1,12 +1,14 @@
-"""Nebius answers grounded in a saved on-device provisional transcript snapshot."""
+"""Named-agent answers grounded in a saved provisional transcript snapshot."""
 
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 import threading
 import uuid
 
-from stellis import ai, recording_preview, storage
+from stellis import agent_runtime, agents, ai, fixture_mailbox, recording_preview, storage
 
 MAX_PREVIEW_SEGMENTS = 500
 
@@ -24,9 +26,17 @@ def _update(run_id: str, **fields: object) -> None:
 
 
 def public(row) -> dict[str, object]:
-    return {key: row[key] for key in ("id", "recording_id", "question", "model_id", "state", "stage",
+    result = json.loads(str(row["result_json"])) if row["result_json"] else None
+    if result:
+        with storage.connect() as conn:
+            session = conn.execute("SELECT conversation_id FROM recording_sessions WHERE id = ?",
+                                   (row["recording_id"],)).fetchone()
+        if session and session["conversation_id"]:
+            result["answer"] = result["answer"].replace(
+                "(/recording?t=", f"(/conversation/{session['conversation_id']}?t=")
+    return {key: row[key] for key in ("id", "recording_id", "agent_id", "question", "model_id", "state", "stage",
                                       "attempts", "error_code", "error_message", "created_at", "updated_at")} | {
-        "result": json.loads(str(row["result_json"])) if row["result_json"] else None,
+        "result": result,
         "source_starts": json.loads(str(row["source_starts_json"])),
         "usage": json.loads(str(row["usage_json"])),
         "provider_request_ids": json.loads(str(row["provider_request_ids_json"])),
@@ -66,29 +76,31 @@ def request(recording_id: str, question: str) -> dict[str, object]:
     if not question or len(question) > 500:
         raise ValueError("Enter a shorter question")
     with storage.connect() as conn:
-        owner = conn.execute("SELECT state FROM recording_sessions WHERE id = ?", (recording_id,)).fetchone()
+        owner = conn.execute("SELECT state, notebook_id FROM recording_sessions WHERE id = ?", (recording_id,)).fetchone()
     if owner is None:
         raise LookupError("Recording session not found")
     if owner["state"] != "recording":
         raise RuntimeError("Recording is already finalized")
-    if not ai._key():
-        raise ai.AIError("not_configured", "Add a Nebius API key to use AI Chat")
     preview = recording_preview.latest(recording_id)
     segments = preview["segments"][-MAX_PREVIEW_SEGMENTS:]
     if not segments:
         raise RuntimeError("Live transcript is not ready")
+    if not agent_runtime.configured():
+        raise ai.AIError("not_configured", "Agent replies are unavailable on this device")
     snapshot = [{"id":f"live-{index}-{int(item['start_ms'])}", "start_ms":int(item["start_ms"]),
                  "end_ms":int(item["end_ms"]), "text":str(item["text"]),
                  "speaker_display_name":"Unknown speaker"}
                 for index, item in enumerate(segments)]
     stamp = ai._now()
     run_id = str(uuid.uuid4())
+    agent_id = str(agents.resolved_agent(owner["notebook_id"])["agent"]["id"])
     with storage.connect() as conn:
         conn.execute("""INSERT INTO recording_ai_runs
-            (id, recording_id, question, input_segments_json, source_starts_json, model_id,
-             state, stage, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'queued', 'queued', ?, ?)""",
-            (run_id, recording_id, question, json.dumps(snapshot),
-             json.dumps({item["id"]:item["start_ms"] for item in snapshot}), ai.MODEL_ID, stamp, stamp))
+            (id, recording_id, agent_id, question, input_segments_json, source_starts_json, model_id,
+             state, stage, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', 'queued', ?, ?)""",
+            (run_id, recording_id, agent_id, question, json.dumps(snapshot),
+             json.dumps({item["id"]:item["start_ms"] for item in snapshot}),
+             "nemoclaw/openclaw", stamp, stamp))
     threading.Thread(target=_run, args=(run_id,), daemon=True).start()
     return get_run(run_id)
 
@@ -97,26 +109,39 @@ def _run(run_id: str) -> None:
     row = _row(run_id)
     if row is None:
         return
-    metadata: dict[str, object] = {"usage": json.loads(str(row["usage_json"])),
-                                   "request_ids": json.loads(str(row["provider_request_ids_json"])),
-                                   "attempts": int(row["attempts"])}
     try:
         _update(run_id, state="running", stage="answering")
         segments = json.loads(str(row["input_segments_json"]))
         question = str(row["question"])
-        result = ai._answer(segments, question, metadata, provisional=True)
+        with storage.connect() as conn:
+            owner = conn.execute("SELECT notebook_id FROM recording_sessions WHERE id = ?",
+                                 (row["recording_id"],)).fetchone()
+        if owner is None:
+            raise LookupError("Recording session not found")
+        terms = {term for term in re.findall(r"[a-z0-9]+", question.casefold()) if len(term) > 2}
+        ranked = sorted(enumerate(segments), key=lambda pair: (
+            -sum(str(pair[1]["text"]).casefold().count(term) for term in terms), pair[0]))
+        selected = sorted(index for index, _ in ranked[:12])
+        live_sources = [{"source_id": segments[index]["id"],
+                         "title": f"Live transcript {int(segments[index]['start_ms']) // 1000}s",
+                         "excerpt": segments[index]["text"],
+                         "target": f"/recording?t={int(segments[index]['start_ms'])}",
+                         "start_ms": segments[index]["start_ms"]} for index in selected]
+        mail_sources = fixture_mailbox.rfi91_sources(owner["notebook_id"], question)
+        reply = asyncio.run(agent_runtime.ask(str(row["agent_id"]), question,
+                                              owner["notebook_id"], [*live_sources, *mail_sources]))
+        source_ids = [source["source_id"] for source in reply["cited_sources"]
+                      if source["source_id"] in {item["id"] for item in segments}]
+        result = {"answer": reply["agent_message"]["content"],
+                  "source_segment_ids": source_ids[:4],
+                  "insufficient_evidence": not bool(source_ids)}
         _update(run_id, state="succeeded", stage="complete", result_json=json.dumps(result),
-                usage_json=json.dumps(metadata["usage"]),
-                provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"],
                 error_code=None, error_message=None)
-    except ai.AIError as exc:
-        _update(run_id, state="failed", stage="failed", error_code=exc.code, error_message=str(exc),
-                usage_json=json.dumps(metadata["usage"]),
-                provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"])
+    except agent_runtime.AgentRunError as exc:
+        _update(run_id, state="failed", stage="failed", error_code="agent_reply", error_message=str(exc))
     except Exception:
         _update(run_id, state="failed", stage="failed", error_code="unexpected",
-                error_message="AI Chat stopped unexpectedly", usage_json=json.dumps(metadata["usage"]),
-                provider_request_ids_json=json.dumps(metadata["request_ids"]), attempts=metadata["attempts"])
+                error_message="AI Chat stopped unexpectedly")
 
 
 def fail_interrupted() -> None:

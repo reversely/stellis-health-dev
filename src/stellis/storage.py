@@ -628,6 +628,7 @@ def connect() -> Iterator[sqlite3.Connection]:
         """CREATE TABLE IF NOT EXISTS recording_ai_runs (
             id TEXT PRIMARY KEY,
             recording_id TEXT NOT NULL REFERENCES recording_sessions(id),
+            agent_id TEXT,
             question TEXT NOT NULL,
             input_segments_json TEXT NOT NULL,
             source_starts_json TEXT NOT NULL,
@@ -644,6 +645,8 @@ def connect() -> Iterator[sqlite3.Connection]:
             updated_at TEXT NOT NULL
         )"""
     )
+    if "agent_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(recording_ai_runs)")}:
+        conn.execute("ALTER TABLE recording_ai_runs ADD COLUMN agent_id TEXT")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS ai_runs (
             id TEXT PRIMARY KEY,

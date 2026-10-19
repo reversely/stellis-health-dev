@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import binascii
 import re
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -26,7 +27,10 @@ async def _request(method: str, path: str, *, params: dict | None = None,
     connection = next(item for item in calendar.connections() if item["provider"] == "google")
     if not connection["mail_connected"]:
         raise GmailError("Connect Gmail in Settings first")
-    token = await calendar._access_token("google")
+    try:
+        token = await calendar._access_token("google")
+    except calendar.CalendarError as exc:
+        raise GmailError("Reconnect Gmail in Settings") from exc
     if not token:
         raise GmailError("Reconnect Gmail in Settings")
     try:
@@ -52,7 +56,7 @@ def _plain(payload: dict) -> str:
         encoded = str(payload["body"]["data"])
         try:
             return base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)).decode("utf-8", "replace")
-        except ValueError:
+        except (ValueError, binascii.Error):
             return ""
     return next((text for part in payload.get("parts", []) if (text := _plain(part))), "")
 

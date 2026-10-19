@@ -990,6 +990,18 @@ def reset_rfi91_sample() -> dict[str, object]:
     return samples.reset_rfi91()
 
 
+@api.get("/samples/rfi91/mail/{message_id}")
+def rfi91_sample_mail(message_id: str) -> dict[str, object]:
+    from stellis import fixture_mailbox, sample_rfi91
+    if not sample_rfi91.status()["installed"]:
+        raise HTTPException(status_code=404, detail="Sample mail not found")
+    for thread in fixture_mailbox.FixtureMailbox().threads:
+        for message in thread["messages"]:
+            if message["id"] == message_id:
+                return {"sample": True, "thread_id": thread["id"], **message}
+    raise HTTPException(status_code=404, detail="Sample mail not found")
+
+
 @api.post("/samples")
 def add_samples() -> dict[str, object]:
     from stellis import samples

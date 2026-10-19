@@ -106,3 +106,29 @@ class FixtureMailbox:
                             "subject": subject, "body": body, "replyToMessageId": replyToMessageId,
                             "created": date.today().isoformat(), "sample": True})
         return {"id": draft_id}
+
+
+def rfi91_sources(notebook_id: str | None, question: str) -> list[dict[str, object]]:
+    """Expose the sample project's mailbox as cited evidence for its agent."""
+    if not any(term in question.casefold() for term in ("rfi", "valve", "certificate", "schedule")):
+        return []
+    case = sample_rfi91.status()
+    project = next((item for item in case["projects"] if item["key"] == "water-treatment"), None)
+    if not case["installed"] or not project or notebook_id != project["notebook_id"]:
+        return []
+    mailbox = FixtureMailbox()
+    # Start with the stored project convention, then broaden once if it finds nothing.
+    queries = ("label:Label_WaterTreatment subject:RFI", "subject:RFI")
+    found = next((result for query in queries
+                  if (result := mailbox.search_threads(query))["threads"]), None)
+    if not found:
+        return []
+    sources = []
+    for thread in found["threads"]:
+        for message in mailbox.get_thread(thread["id"])["messages"]:
+            sources.append({"source_id": f"mail:{message['id']}",
+                            "title": f"Email: {message['subject']} ({message['date']})",
+                            "excerpt": message["plaintextBody"],
+                            "target": f"/api/v1/samples/rfi91/mail/{message['id']}",
+                            "start_ms": None})
+    return sources[:12]

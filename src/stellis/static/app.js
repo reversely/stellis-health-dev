@@ -1361,9 +1361,10 @@ async function showDetail(id) {
       transcriptView.querySelector(`[data-segment-id="${CSS.escape(target.id)}"]`)?.scrollIntoView({block: 'center'});
     }
   }
-  if (targetSegmentId && !transcriptSegments.some(segment => segment.id === targetSegmentId) && query.has('t')) {
+  if ((!targetSegmentId || !transcriptSegments.some(segment => segment.id === targetSegmentId)) && query.has('t')) {
     const timestamp = Number(query.get('t'));
     if (Number.isFinite(timestamp) && timestamp >= 0 && timestamp <= item.duration_ms) {
+      showConversationTab('transcript');
       const seek = () => { player.pause(); player.currentTime = timestamp / 1000; };
       if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
     }
@@ -2770,16 +2771,43 @@ function renderRecordingChat(runs, container, saved = false) {
     const card = document.createElement('article');
     const heading = document.createElement(saved ? 'h4' : 'h3'); heading.textContent = run.question;
     const answer = document.createElement('p');
-    answer.textContent = run.state === 'succeeded' ? run.result.answer :
+    const answerText = run.state === 'succeeded' ? run.result.answer :
       run.state === 'failed' ? run.error_message : `Answering: ${run.stage}`;
+    const links = /\[([^\]\n]{1,120})\]\((\/(?!\/)[^\s)]+)\)/g;
+    let offset = 0;
+    for (const match of answerText.matchAll(links)) {
+      answer.append(document.createTextNode(answerText.slice(offset, match.index)));
+      const link = document.createElement('a'); link.href = match[2]; link.textContent = match[1];
+      if (!saved && match[2].startsWith('/recording?t=')) link.addEventListener('click', event => {
+        event.preventDefault(); showRecordingView('transcript');
+        const startMs = Number(new URL(link.href).searchParams.get('t'));
+        document.querySelectorAll('#recording-transcript-preview [data-start-ms]').forEach(row => {
+          if (Number(row.dataset.startMs) === startMs) row.scrollIntoView({block:'center'});
+        });
+      });
+      answer.append(link); offset = match.index + match[0].length;
+    }
+    answer.append(document.createTextNode(answerText.slice(offset)));
     card.append(heading, answer);
     if (run.state === 'succeeded' && run.result.source_segment_ids.length) {
       if (saved) card.append(sourceButtons(run.result.source_segment_ids, run.source_starts));
       else {const times = document.createElement('small');
-        times.textContent = run.result.source_segment_ids.map(id => time((run.source_starts[id] || 0) / 1000)).join(', ');
+        for (const id of run.result.source_segment_ids) {
+          const startMs = run.source_starts[id];
+          if (!Number.isFinite(startMs)) continue;
+          const button = document.createElement('button'); button.type = 'button';
+          button.textContent = time(startMs / 1000);
+          button.addEventListener('click', () => {
+            showRecordingView('transcript');
+            document.querySelectorAll('#recording-transcript-preview [data-start-ms]').forEach(row => {
+              if (Number(row.dataset.startMs) === startMs) row.scrollIntoView({block:'center'});
+            });
+          });
+          times.append(button);
+        }
         card.append(times);}
     }
-    if (!saved && run.state === 'succeeded') {
+    if (!saved && run.state === 'succeeded' && run.result.source_segment_ids.length) {
       const note = document.createElement('small'); note.textContent = 'Based on live transcript'; card.append(note);
     }
     container.append(card);
@@ -2902,7 +2930,7 @@ function renderRecordingPreview(result) {
   const segments = result.segments || [];
   document.querySelector('#recording-transcript-state').textContent = segments.length ? 'Provisional transcript' : 'No speech yet';
   for (const segment of segments) {
-    const row = document.createElement('p');
+    const row = document.createElement('p'); row.dataset.startMs = String(segment.start_ms);
     const stamp = document.createElement('time'); stamp.textContent = time(segment.start_ms / 1000);
     const words = document.createElement('span'); words.textContent = segment.text;
     row.append(stamp, words); container.append(row);
