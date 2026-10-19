@@ -336,4 +336,8 @@ def save_notebook_assignment(event: dict, notebook_id: str | None, scope: str) -
             VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(provider, key_kind, event_key) DO UPDATE SET
             title_key=excluded.title_key, attendees_json=excluded.attendees_json, notebook_id=excluded.notebook_id""",
             (event["provider"], scope, key, _title_key(str(event.get("title") or "")), json.dumps(attendees), notebook_id))
+        if scope == "series":
+            # The series choice includes the occurrence from which it was made.
+            conn.execute("DELETE FROM notebook_assignments WHERE provider = ? AND key_kind = 'event' AND event_key = ?",
+                         (event["provider"], event["id"]))
     return assign_notebook(event)
