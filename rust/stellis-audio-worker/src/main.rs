@@ -1,5 +1,8 @@
 //! Incremental local ASR for verified recording audio supplied by Stellis.
 
+#[cfg(feature = "native-capture")]
+mod capture;
+
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use sherpa_onnx::{OfflineRecognizer, OfflineRecognizerConfig, OnlineRecognizer, OnlineRecognizerConfig};
@@ -151,6 +154,15 @@ fn run(online_dir: &Path, parakeet_dir: &Path) -> Result<(), String> {
 }
 
 fn main() {
+    let mut args = std::env::args_os().skip(1);
+    #[cfg(feature = "native-capture")]
+    if args.next().as_deref() == Some(std::ffi::OsStr::new("capture")) {
+        if let Err(error) = capture::run() {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     let mut args = std::env::args_os().skip(1);
     let online = args.next();
     let parakeet = args.next();
