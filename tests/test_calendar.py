@@ -78,6 +78,9 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
         calendar.save_notebook_assignment(next_google, None, "event")
         self.assertIsNone(calendar.assign_notebook(next_google)["notebook_id"])
         self.assertEqual(calendar.assign_notebook(next_google)["assignment_source"], "event")
+        calendar.save_notebook_assignment(next_google, book, "series")
+        self.assertEqual(calendar.assign_notebook(next_google)["notebook_id"], book)
+        self.assertEqual(calendar.assign_notebook(next_google)["assignment_source"], "series")
         calendar.save_notebook_assignment(microsoft, book, "event")
         next_microsoft = {**microsoft, "id":"m2", "series_id":"", "title":"Supplier call"}
         self.assertEqual(calendar.assign_notebook(next_microsoft)["assignment_source"], "attendees")
