@@ -1,6 +1,6 @@
 # Stellis live ASR worker
 
-This is the local provisional recognizer for browser recordings. It uses sherpa-onnx 1.13.8: online Zipformer for partial words and offline Nemo Parakeet for completed utterances. Final transcripts still use the existing Whisper path.
+This is the local provisional recognizer for browser recordings. It uses sherpa-onnx 1.13.8: online Zipformer for partial words and offline Nemo Parakeet for completed utterances. Final transcripts still use the existing Whisper path. The online loader also accepts the `encoder.int8.onnx`, `decoder.int8.onnx`, and `joiner.int8.onnx` names used by sherpa-onnx Nemotron Speech Streaming; selecting that model requires a separate verified model installation and service configuration.
 
 Build on the recording device:
 
