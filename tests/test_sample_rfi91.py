@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import fixture_mailbox, notebooks, pages, sample_rfi91, source_search, storage
+from stellis import agents, fixture_mailbox, notebooks, pages, sample_rfi91, source_search, storage
 from stellis.server import app
 
 
@@ -32,6 +32,9 @@ class RFI91SampleTest(unittest.TestCase):
         self.assertTrue(case["installed"])
         self.assertEqual(len(case["projects"]), 4)
         self.assertEqual(len({project["agent_name"] for project in case["projects"]}), 4)
+        for project in case["projects"]:
+            self.assertEqual(agents.resolved_agent(project["notebook_id"])["agent"]["id"], project["agent_id"])
+        self.assertEqual(agents.memories(case["projects"][0]["agent_id"])[0]["kind"], "email_convention")
         self.assertEqual(self.client.post("/api/v1/samples/rfi91").json()["conversation_id"], case["conversation_id"])
         conversation_id = case["conversation_id"]
         self.assertEqual(storage.get_conversation(conversation_id)["notebook_id"], case["projects"][0]["notebook_id"])
@@ -43,8 +46,10 @@ class RFI91SampleTest(unittest.TestCase):
         reset = self.client.put("/api/v1/samples/rfi91/reset")
         self.assertEqual(reset.status_code, 200, reset.text)
         self.assertNotEqual(reset.json()["conversation_id"], conversation_id)
+        self.assertNotEqual(reset.json()["projects"][0]["agent_id"], case["projects"][0]["agent_id"])
         self.assertIsNone(storage.get_conversation(conversation_id, include_trashed=True))
         self.assertEqual(len(storage.list_conversations()), 1)
+        self.assertEqual(len(agents.list_agents()), 5)  # General and four sample agents
         self.assertIn(str(own_book["id"]), {str(book["id"]) for book in notebooks.list_notebooks()})
         self.assertEqual(pages.get(str(own_page["id"]))["title"], "My document")
 

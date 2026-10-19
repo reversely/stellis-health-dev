@@ -9,13 +9,13 @@ from pathlib import Path
 
 from starlette.datastructures import UploadFile
 
-from stellis import collections, library, notebooks, notes, pages, storage
+from stellis import agents, collections, library, notebooks, notes, pages, storage
 
 PROJECTS = (
-    ("water-treatment", "Water Treatment (sample)", "Mira", "Project coordinator"),
-    ("transit-depot", "Transit Depot (sample)", "Ivo", "Design coordinator"),
-    ("harbor-retrofit", "Harbor Retrofit (sample)", "Sol", "Construction specialist"),
-    ("solar-yard", "Solar Yard (sample)", "Nia", "Procurement specialist"),
+    ("water-treatment", "Water Treatment (sample)", "Mira (sample)", "Project coordinator"),
+    ("transit-depot", "Transit Depot (sample)", "Ivo (sample)", "Design coordinator"),
+    ("harbor-retrofit", "Harbor Retrofit (sample)", "Sol (sample)", "Construction specialist"),
+    ("solar-yard", "Solar Yard (sample)", "Nia (sample)", "Procurement specialist"),
 )
 
 SPEC = """# Sample technical specification WT-04, revision B
@@ -83,6 +83,7 @@ def status() -> dict[str, object]:
     return {"sample": True, "installed": "rfi91:conversation" in items,
             "conversation_id": items.get("rfi91:conversation", (None, None))[1],
             "projects": [{"key": key, "name": name, "agent_name": agent, "agent_role": role,
+                          "agent_id": items.get(f"rfi91:agent:{key}", (None, None))[1],
                           "notebook_id": items.get(f"rfi91:notebook:{key}", (None, None))[1]}
                          for key, name, agent, role in PROJECTS],
             "answer_key": [{**entry, "sources": list(entry["sources"])} for entry in ANSWER_KEY]}
@@ -102,6 +103,14 @@ def seed() -> dict[str, object]:
         collections.assign_notebook(str(book["id"]), str(collection["id"]))
         _mark(f"notebook:{key}", "notebook", str(book["id"]))
         books[key] = str(book["id"])
+    for key, _, agent_name, role in PROJECTS:
+        agent = agents.create(agent_name, role, f"Keep the {key.replace('-', ' ')} project notebook current.",
+                              books[key], True)
+        _mark(f"agent:{key}", "agent", str(agent["id"]))
+        if key == "water-treatment":
+            agents.save_memory(str(agent["id"]),
+                "Project email uses WT-04 RFI subjects and Label_WaterTreatment. Counterpart domains: buildco.example and epcm.example; participants: the construction manager, engineer, and consultant.",
+                "email_convention", books[key], source_id="mail:sample-rfi91-open")
     for key, title, body in (("spec", "WT-04 technical specification (sample)", SPEC),
                              ("status", "RFI 91 status (sample)", STATUS)):
         page = pages.create(title, books["water-treatment"], body)
@@ -143,10 +152,10 @@ def reset() -> dict[str, object]:
                 pages.delete_permanently(item_id)
             except LookupError:
                 pass
-    for kind in ("notebook", "collection"):
+    for kind in ("agent", "notebook", "collection"):
         for _, (item_kind, item_id) in items.items():
             if item_kind == kind:
-                (notebooks.delete if kind == "notebook" else collections.delete)(item_id)
+                (agents.delete if kind == "agent" else notebooks.delete if kind == "notebook" else collections.delete)(item_id)
     with storage.connect() as conn:
         conn.execute("DELETE FROM sample_items WHERE key LIKE 'rfi91:%'")
     return seed()

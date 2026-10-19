@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
+from stellis import agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -484,6 +484,103 @@ def sync_config() -> dict[str, str | None]:
             or parsed.username is not None or parsed.password is not None):
         raise HTTPException(status_code=500, detail="Invalid sync origin configuration")
     return {"origin": value}
+
+
+class AgentCreate(BaseModel):
+    name: str | None = Field(default=None, max_length=80)
+    role: str | None = Field(default=None, max_length=160)
+    instructions: str = Field(default="", max_length=4000)
+    prompt: str | None = Field(default=None, max_length=4000)
+    notebook_id: str | None = None
+    steward: bool = False
+
+
+class AgentUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=80)
+    role: str | None = Field(default=None, max_length=160)
+    instructions: str | None = Field(default=None, max_length=4000)
+
+
+class AgentAssignment(BaseModel):
+    steward: bool = False
+
+
+class AgentMemory(BaseModel):
+    fact: str = Field(min_length=1, max_length=2000)
+    kind: Literal["general", "email_convention"] = "general"
+    notebook_id: str | None = None
+    source_id: str | None = Field(default=None, max_length=500)
+
+
+def _agent_result(action):
+    try:
+        return action()
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.get("/agents")
+def list_agents() -> list[dict[str, object]]:
+    return agents.list_agents()
+
+
+@api.post("/agents")
+def create_agent(request: AgentCreate) -> dict[str, object]:
+    if request.prompt:
+        return _agent_result(lambda: agents.create_from_prompt(request.prompt or "", request.notebook_id))
+    return _agent_result(lambda: agents.create(request.name or "", request.role or "",
+                                               request.instructions, request.notebook_id, request.steward))
+
+
+@api.get("/agents/{agent_id}")
+def get_agent(agent_id: str) -> dict[str, object]:
+    return _agent_result(lambda: agents.get(agent_id))
+
+
+@api.patch("/agents/{agent_id}")
+def update_agent(agent_id: str, request: AgentUpdate) -> dict[str, object]:
+    return _agent_result(lambda: agents.update(agent_id, name=request.name, role=request.role,
+                                                instructions=request.instructions))
+
+
+@api.put("/agents/{agent_id}/notebooks/{notebook_id}")
+def assign_agent_notebook(agent_id: str, notebook_id: str, request: AgentAssignment) -> dict[str, object]:
+    return _agent_result(lambda: agents.assign(agent_id, notebook_id, request.steward))
+
+
+@api.delete("/agents/{agent_id}/notebooks/{notebook_id}")
+def unassign_agent_notebook(agent_id: str, notebook_id: str) -> dict[str, object]:
+    return _agent_result(lambda: agents.unassign(agent_id, notebook_id))
+
+
+@api.get("/agents/{agent_id}/memories")
+def agent_memories(agent_id: str) -> list[dict[str, object]]:
+    return _agent_result(lambda: agents.memories(agent_id))
+
+
+@api.post("/agents/{agent_id}/memories")
+def add_agent_memory(agent_id: str, request: AgentMemory) -> dict[str, object]:
+    return _agent_result(lambda: agents.save_memory(agent_id, request.fact, request.kind,
+                                                     request.notebook_id, source_id=request.source_id))
+
+
+@api.put("/agents/{agent_id}/memories/{memory_id}")
+def update_agent_memory(agent_id: str, memory_id: str, request: AgentMemory) -> dict[str, object]:
+    return _agent_result(lambda: agents.save_memory(agent_id, request.fact, request.kind,
+                                                     request.notebook_id, memory_id, request.source_id))
+
+
+@api.delete("/agents/{agent_id}/memories/{memory_id}")
+def remove_agent_memory(agent_id: str, memory_id: str) -> dict[str, bool]:
+    _agent_result(lambda: agents.delete_memory(agent_id, memory_id))
+    return {"deleted": True}
+
+
+@api.get("/agents/{agent_id}/messages")
+def agent_messages(agent_id: str) -> list[dict[str, object]]:
+    return _agent_result(lambda: agents.messages(agent_id))
 
 
 @api.get("/calendar/connections")
