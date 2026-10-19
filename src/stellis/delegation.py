@@ -137,7 +137,7 @@ async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
     if not sandbox:
         raise agent_runtime.AgentRunError("Agent replies are unavailable on this device")
-    tool_rule = ("Use at most one tavily-search and one tavily-extract call for current external facts. "
+    tool_rule = ("Use at most one tavily_search and one tavily_extract call for current external facts. "
                  if use_tavily else "Use only the supplied sources; do not call external tools. ")
     citation_rule = ("For research notes, write factual sentences followed by a matching [[source:N]] "
                      "marker. Example: Engineering review is still open. [[source:1]] "

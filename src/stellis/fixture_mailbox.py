@@ -1,4 +1,4 @@
-"""Deterministic Gmail MCP-shaped fixture mailbox; never sends mail."""
+"""Deterministic Gmail-shaped fixture mailbox; never sends mail."""
 
 from __future__ import annotations
 
