@@ -6,6 +6,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -21,6 +23,7 @@ PROMPT_VERSION = "cited-conversation-v14"
 MAX_CHUNK_CHARS = 9000
 MAX_CHUNKS = 24
 _LOCK = threading.Lock()
+_KEY_LOCK = threading.Lock()
 _ITEM_SCHEMA = {"type": "object", "properties": {
     "text": {"type": "string", "maxLength": 1000},
     "source_segment_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 4}},
@@ -88,41 +91,101 @@ def key_status() -> dict[str, object]:
     return {"configured": bool(_key()), "source": "environment" if _key() else None}
 
 
-def save_key(value: str) -> dict[str, object]:
-    key = value.strip()
-    if not 16 <= len(key) <= 512 or any(character.isspace() for character in key):
-        raise ValueError("Enter the API key exactly as Nebius shows it")
-    path = _key_file()
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
-    # Owner-only from creation, so the key is never briefly readable by others.
-    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(descriptor, "w") as handle:
-        handle.write(key)
-    os.replace(temporary, path)
-    return key_status()
-
-
-def remove_key() -> dict[str, object]:
-    _key_file().unlink(missing_ok=True)
-    return key_status()
-
-
-def _key() -> str | None:
-    saved = _saved_key()
-    if saved:
-        return saved
+def _host_key() -> str | None:
+    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1":
+        return None
     value = os.environ.get("NEBIUS_API_KEY")
     if value:
         return value
-    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1":
-        return None
     path = Path(__file__).resolve().parents[2] / ".env"
     if path.is_file():
         for line in path.read_text().splitlines():
             if line.startswith("NEBIUS_API_KEY="):
                 return line.split("=", 1)[1].strip().strip('"').strip("'") or None
     return None
+
+
+def _managed_sandbox() -> str | None:
+    if os.environ.get("STELLIS_ACCOUNT_ID") != "1":
+        return None
+    return os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip() or None
+
+
+def _sync_managed_key(key: str) -> None:
+    """Update OpenShell's existing inference provider without exposing the key to the sandbox."""
+    if not _managed_sandbox():
+        return
+    command = shutil.which("openshell") or str(Path.home() / ".local/bin/openshell")
+    env = os.environ.copy()
+    env["COMPATIBLE_API_KEY"] = key
+    try:
+        result = subprocess.run([command, "provider", "update", "compatible-endpoint",
+                                 "--credential", "COMPATIBLE_API_KEY"],
+                                env=env, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError("Could not update managed Nebius access") from exc
+    if result.returncode:
+        raise RuntimeError("Could not update managed Nebius access")
+
+
+def save_key(value: str) -> dict[str, object]:
+    key = value.strip()
+    if not 16 <= len(key) <= 512 or any(character.isspace() for character in key):
+        raise ValueError("Enter the API key exactly as Nebius shows it")
+    with _KEY_LOCK:
+        previous = _key()
+        changed = bool(_managed_sandbox() and key != previous)
+        if changed:
+            try:
+                _sync_managed_key(key)
+            except RuntimeError:
+                if previous:
+                    try:
+                        _sync_managed_key(previous)
+                    except RuntimeError:
+                        pass
+                raise
+        path = _key_file()
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        temporary = path.with_name(path.name + ".tmp")
+        try:
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(descriptor, "w") as handle:
+                handle.write(key)
+            os.replace(temporary, path)
+        except OSError:
+            if changed and previous:
+                try:
+                    _sync_managed_key(previous)
+                except RuntimeError:
+                    pass
+            raise
+        finally:
+            temporary.unlink(missing_ok=True)
+        return key_status()
+
+
+def remove_key() -> dict[str, object]:
+    with _KEY_LOCK:
+        saved = _saved_key()
+        fallback = _host_key()
+        if saved and _managed_sandbox() and saved != fallback:
+            if not fallback:
+                raise RuntimeError("Managed Nebius access must be reset before removing its only key")
+            try:
+                _sync_managed_key(fallback)
+            except RuntimeError:
+                try:
+                    _sync_managed_key(saved)
+                except RuntimeError:
+                    pass
+                raise
+        _key_file().unlink(missing_ok=True)
+        return key_status()
+
+
+def _key() -> str | None:
+    return _saved_key() or _host_key()
 
 
 def capabilities() -> dict[str, object]:

@@ -1124,11 +1124,16 @@ def save_nebius_key(request: NebiusKey) -> dict[str, object]:
         return ai.save_key(request.key)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.delete("/settings/nebius-key")
 def remove_nebius_key() -> dict[str, object]:
-    return ai.remove_key()
+    try:
+        return ai.remove_key()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 class TavilyKey(BaseModel):

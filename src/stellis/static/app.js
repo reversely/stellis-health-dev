@@ -4777,6 +4777,7 @@ document.querySelector('#nebius-key-form').addEventListener('submit', async even
   const input = document.querySelector('#nebius-key-input');
   if (!input.value.trim()) { document.querySelector('#nebius-key-status').textContent = 'Paste your Nebius API key first.'; return; }
   const save = document.querySelector('#nebius-key-save'); save.disabled = true;
+  document.querySelector('#nebius-key-status').textContent = 'Saving key…';
   try {
     showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'PUT',
       headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: input.value})})));
