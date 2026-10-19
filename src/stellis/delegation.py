@@ -156,6 +156,7 @@ async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
                                                     "excerpt": source["excerpt"]}
                                                    for index, source in enumerate(sources, 1)]},
                                       ensure_ascii=False))
+    await agent_runtime.ensure_managed_mcp()
     command = agent_runtime._command()
     process = await asyncio.create_subprocess_exec(
         command, sandbox, "agent", "--agent", "main", "--session-id", session_id,

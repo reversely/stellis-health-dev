@@ -7,6 +7,8 @@ import json
 import os
 import re
 import shutil
+import subprocess
+import threading
 from pathlib import Path
 
 from stellis import agent_mail, agents, gmail_api, source_search
@@ -14,6 +16,66 @@ from stellis import agent_mail, agents, gmail_api, source_search
 
 class AgentRunError(Exception):
     """A safe error for a failed agent reply."""
+
+
+_MCP_RECOVERY_LOCK = threading.Lock()
+
+
+def _reconcile_managed_mcp() -> None:
+    """Repair MCP adapters whose revisions drift after a managed gateway restart."""
+    if (os.environ.get("STELLIS_ACCOUNT_ID") != "1"
+            or os.environ.get("STELLIS_TAVILY_MCP_READY") != "1"):
+        return
+    command = _command()
+    sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
+    if not sandbox:
+        return
+    base = [command, sandbox, "mcp"]
+    env = _cli_env(command)
+
+    def run(args: list[str], timeout: int) -> subprocess.CompletedProcess[str]:
+        try:
+            result = subprocess.run([*base, *args], env=env, capture_output=True,
+                                    text=True, timeout=timeout)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise AgentRunError("Managed agent tools are unavailable. Try again.") from exc
+        if result.returncode:
+            raise AgentRunError("Managed agent tools are unavailable. Try again.")
+        return result
+
+    def bridges() -> dict[str, dict]:
+        try:
+            payload = json.loads(run(["list", "--json"], 30).stdout)
+            items = payload["bridges"]
+            if not isinstance(items, list):
+                raise ValueError("Invalid managed MCP list")
+            return {item["server"]: item for item in items if isinstance(item, dict)
+                    and isinstance(item.get("server"), str)}
+        except (ValueError, KeyError, TypeError) as exc:
+            raise AgentRunError("Managed agent tools are unavailable. Try again.") from exc
+
+    from stellis import tavily
+    expected = ["stellis"]
+    if tavily.available_key():
+        expected.append("tavily")
+    with _MCP_RECOVERY_LOCK:
+        current = bridges()
+        for name in expected:
+            item = current.get(name)
+            if (item is None or not item.get("provider", {}).get("credentialReady")
+                    or item.get("policy", {}).get("state") != "configured"):
+                raise AgentRunError("Managed agent tools are unavailable. Try again.")
+            if not item.get("adapter", {}).get("registered"):
+                run(["restart", name], 120)
+        current = bridges()
+        if any(not current.get(name, {}).get("adapter", {}).get("registered")
+               for name in expected):
+            raise AgentRunError("Managed agent tools are unavailable. Try again.")
+
+
+async def ensure_managed_mcp() -> None:
+    """Keep a gateway restart from leaving a user turn without managed tools."""
+    await asyncio.to_thread(_reconcile_managed_mcp)
 
 
 def configured() -> bool:
@@ -175,6 +237,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
     if (notebook_id and not agent["is_default"]
             and notebook_id not in {item["notebook_id"] for item in agent["notebooks"]}):
         raise ValueError("Assign this notebook to the agent first")
+    await ensure_managed_mcp()
     history = agents.messages(agent_id)
     memories = [item for item in agents.memories(agent_id)
                 if notebook_id is None or item["notebook_id"] in (None, notebook_id)]
