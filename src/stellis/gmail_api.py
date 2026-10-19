@@ -1,4 +1,4 @@
-"""Use the ordinary Gmail API for mail tools while MCP preview access is pending."""
+"""Use the ordinary Gmail API for mail search, reading, and drafts."""
 
 from __future__ import annotations
 

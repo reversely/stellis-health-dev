@@ -82,7 +82,7 @@ def main() -> None:
     try:
         env = os.environ.copy()
         env.update(STELLIS_DATA_DIR=temp, STELLIS_AUTH_MODE="off", PYTHONPATH=str(ROOT / "src"),
-                   STELLIS_NEMOCLAW_SANDBOX="stellis-claw", STELLIS_GMAIL_MCP_SYNC="off", DISPLAY=":98",
+                   STELLIS_NEMOCLAW_SANDBOX="stellis-claw", DISPLAY=":98",
                    XDG_RUNTIME_DIR="/run/user/1000",
                    STELLIS_VOICE_WHISPER_MODEL="/home/springbuilt/stellis-models/voice/whisper-base-en",
                    STELLIS_VOICE_KOKORO_MODEL="/home/springbuilt/stellis-models/voice/kokoro/kokoro-v1.0.onnx",

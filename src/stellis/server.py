@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, gmail_mcp, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent, voice_call
+from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -444,7 +444,6 @@ def start_speech_worker() -> None:
     recording_ai.fail_interrupted()
     generation_review.resolve_pending()
     processing.start_worker()
-    gmail_mcp.start()
     processing.index_missing_voices()
     if _retention_thread is None or not _retention_thread.is_alive():
         _retention_stop.clear()
@@ -459,7 +458,6 @@ async def stop_retention_worker() -> None:
     if _retention_thread is not None:
         _retention_thread.join(timeout=30)
     processing.stop_worker()
-    gmail_mcp.stop()
     await voice_call.close()
 
 
@@ -796,8 +794,6 @@ async def calendar_callback(provider: str, state: str = "", code: str = "", erro
         if error or not code:
             raise calendar.CalendarError("Calendar connection was cancelled")
         await calendar.exchange(provider, code, verifier, uri)
-        if provider == "google":
-            gmail_mcp.wake()
         result = "connected"
     except calendar.CalendarError:
         result = "failed"
@@ -811,8 +807,6 @@ async def calendar_callback(provider: str, state: str = "", code: str = "", erro
 async def calendar_disconnect(provider: str) -> dict[str, bool]:
     try:
         await calendar.disconnect_grant(provider)
-        if provider == "google":
-            gmail_mcp.wake()
     except calendar.CalendarError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"disconnected": True}
