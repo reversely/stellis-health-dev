@@ -33,9 +33,9 @@ struct Reply {
 fn online_model(dir: &Path) -> Result<OnlineRecognizer, String> {
     let mut config = OnlineRecognizerConfig::default();
     let model = &mut config.model_config;
-    model.transducer.encoder = Some(model_file(dir, &["encoder.onnx", "encoder-epoch-99-avg-1.int8.onnx"])?);
-    model.transducer.decoder = Some(model_file(dir, &["decoder.onnx", "decoder-epoch-99-avg-1.onnx"])?);
-    model.transducer.joiner = Some(model_file(dir, &["joiner.onnx", "joiner-epoch-99-avg-1.int8.onnx"])?);
+    model.transducer.encoder = Some(model_file(dir, &["encoder.int8.onnx", "encoder.onnx", "encoder-epoch-99-avg-1.int8.onnx"])?);
+    model.transducer.decoder = Some(model_file(dir, &["decoder.int8.onnx", "decoder.onnx", "decoder-epoch-99-avg-1.onnx"])?);
+    model.transducer.joiner = Some(model_file(dir, &["joiner.int8.onnx", "joiner.onnx", "joiner-epoch-99-avg-1.int8.onnx"])?);
     model.tokens = Some(dir.join("tokens.txt").to_string_lossy().into_owned());
     model.num_threads = 2;
     config.enable_endpoint = true;
