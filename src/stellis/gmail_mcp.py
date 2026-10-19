@@ -131,7 +131,8 @@ def _loop() -> None:
 
 def start() -> None:
     global _thread
-    if not os.environ.get("STELLIS_NEMOCLAW_SANDBOX"):
+    if (not os.environ.get("STELLIS_NEMOCLAW_SANDBOX")
+            or os.environ.get("STELLIS_GMAIL_MCP_SYNC") == "off"):
         return
     if _thread is None or not _thread.is_alive():
         _stop.clear()

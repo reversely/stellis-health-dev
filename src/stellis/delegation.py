@@ -108,9 +108,18 @@ def _usable_draft(body: str, fixture: bool) -> bool:
     if len(body.split()) < 25 or re.search(r"\b(?:please wait|being processed|construct the reply|as an AI)\b",
                                            body, re.I):
         return False
-    if fixture and (not re.search(r"\bRFI\s*91\b", body, re.I)
-                    or not re.search(r"\bengineering\b", body, re.I)):
-        return False
+    if fixture:
+        if (not re.search(r"\bRFI\s*91\b", body, re.I)
+                or not re.search(r"\bengineering\b", body, re.I)
+                or not re.search(r"\bschedule\b", body, re.I)
+                or not re.search(r"\bcertificate\b", body, re.I)):
+            return False
+        if re.search(r"\b(?:provide|submit|deliver)\b.{0,80}\b(?:by|before)\s+October\s+22\b",
+                     body, re.I | re.S):
+            return False
+        if re.search(r"\b(?:C316|certificate)\b.{0,35}\b(?:is|has been)\s+(?:compliant|approved|verified)\b",
+                     body, re.I):
+            return False
     return True
 
 
@@ -145,16 +154,18 @@ async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
                                                     "excerpt": source["excerpt"]}
                                                    for index, source in enumerate(sources, 1)]},
                                       ensure_ascii=False))
+    command = agent_runtime._command()
     process = await asyncio.create_subprocess_exec(
-        agent_runtime._command(), sandbox, "agent", "--agent", "main", "--session-id", session_id,
+        command, sandbox, "agent", "--agent", "main", "--session-id", session_id,
         "-m", prompt, "--json", "--timeout", "90", stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL)
+        stderr=asyncio.subprocess.DEVNULL, env=agent_runtime._cli_env(command))
     try:
         stdout, _ = await asyncio.wait_for(process.communicate(), timeout=120)
         if process.returncode or len(stdout) > 1_048_576:
             raise agent_runtime.AgentRunError("Specialist reply failed. Try again.")
         answer, _ = agent_runtime._openclaw_reply(json.loads(stdout))
         answer = agent_runtime._normalize_citations(answer)
+        answer = agent_runtime._normalize_known_source_links(answer, sources)
         if require_citations and sources and not re.search(r"\[\[source:\d+\]\]", answer):
             raise agent_runtime.AgentRunError("Specialist could not cite the research")
         if len(answer) > 6000:
@@ -237,7 +248,9 @@ async def _run(job_id: str) -> None:
                 raw = await _managed_turn(specialist,
                     f"Write the actual reply email body now to {job['recipient']} about {job['subject']}. "
                     f"Use these findings: {research}. Say what is still under review; do not promise "
-                    "closure. Write 3-5 complete sentences. Do not describe your process."
+                    "closure. October 22 is our target response date, not a due date for vendor "
+                    "documents or a closure promise. Write 3-5 complete sentences. "
+                    "Do not describe your process."
                     + (" The previous output was not an email; compose the email itself now."
                        if attempt else ""), sources, f"delegation-{job_id}-draft-{attempt}",
                     require_citations=False)

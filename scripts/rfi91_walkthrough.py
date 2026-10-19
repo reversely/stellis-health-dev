@@ -1,7 +1,8 @@
 """Run the fictional RFI 91 API/browser smoke pass and capture review evidence.
 
-Uses temporary Stellis data and browser profile on GN100. No external accounts
-are touched. Requires the existing Firefox, geckodriver, Xvfb, ffmpeg, and venv.
+Uses temporary Stellis data and browser profile on GN100. Agent turns use the
+configured managed sandbox; no Gmail or Calendar write endpoint is called.
+Requires the existing Firefox, geckodriver, Xvfb, ffmpeg, and venv.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ def request(url: str, method: str = "GET", payload: dict | None = None):
     body = json.dumps(payload).encode() if payload is not None else None
     req = Request(url, data=body, method=method, headers={"Content-Type": "application/json"})
     try:
-        with urlopen(req, timeout=40) as response:
+        with urlopen(req, timeout=180) as response:
             raw = response.read()
             return json.loads(raw) if raw else {}
     except HTTPError as exc:
@@ -81,8 +82,11 @@ def main() -> None:
     try:
         env = os.environ.copy()
         env.update(STELLIS_DATA_DIR=temp, STELLIS_AUTH_MODE="off", PYTHONPATH=str(ROOT / "src"),
-                   STELLIS_NEMOCLAW_SANDBOX="stellis-claw", DISPLAY=":98",
-                   XDG_RUNTIME_DIR="/run/user/1000")
+                   STELLIS_NEMOCLAW_SANDBOX="stellis-claw", STELLIS_GMAIL_MCP_SYNC="off", DISPLAY=":98",
+                   XDG_RUNTIME_DIR="/run/user/1000",
+                   STELLIS_VOICE_WHISPER_MODEL="/home/springbuilt/stellis-models/voice/whisper-base-en",
+                   STELLIS_VOICE_KOKORO_MODEL="/home/springbuilt/stellis-models/voice/kokoro/kokoro-v1.0.onnx",
+                   STELLIS_VOICE_KOKORO_VOICES="/home/springbuilt/stellis-models/voice/kokoro/voices-v1.0.bin")
         xvfb = subprocess.Popen(["Xvfb", ":98", "-screen", "0", "1280x800x24", "-nolisten", "tcp"],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         processes.append(xvfb)
@@ -133,7 +137,46 @@ def main() -> None:
         assert any(item["id"] == throwaway["id"] for item in request(API + "/trash"))
         request(API + "/trash/" + throwaway["id"] + "/restore", "POST", {})
         assert request(API + "/pages/" + throwaway["id"])["title"] == "Walkthrough throwaway"
-        print("PASS: seed, notebooks, pages, transcript, notes, search, audio, annotations, trash and restore", flush=True)
+        person_link = request(API + "/conversations/" + conversation_id + "/person-links", "PUT", {
+            "segment_id": selected["id"], "scope": "segment",
+            "name": "Alex Example (sample)", "expected_revision": transcript["revision"]})
+        person_id = person_link["person_id"]
+        profile = request(API + "/persons/" + person_id)
+        assert profile["total_link_count"] >= 1 and profile["conversations"][0]["conversation_id"] == conversation_id
+        request(API + "/persons/" + person_id, "PATCH", {"name": "Alex Contractor (sample)"})
+        renamed = request(API + "/conversations/" + conversation_id + "/transcript")
+        assert renamed["segments"][0]["speaker_display_name"] == "Alex Contractor (sample)"
+        assert any(item["id"] == person_id and item["name"] == "Alex Contractor (sample)"
+                   for item in request(API + "/persons"))
+        print("PASS: seed, notebooks, pages, transcript, notes, search, audio, annotations, speaker, trash and restore", flush=True)
+        answer = request(API + "/agents/" + water["agent_id"] + "/ask", "POST",
+                         {"question": "What keeps RFI 91 open?", "notebook_id": water["notebook_id"]})
+        content = answer["agent_message"]["content"].lower()
+        assert "schedule" in content and "certificate" in content and ("open" in content or "pending" in content), content
+        assert "22" not in content or "target" in content or "response" in content, content
+        assert answer["cited_sources"], "Managed answer did not cite project evidence"
+        print("PASS: managed agent answered from project sources", flush=True)
+        specialist = next(project for project in result["projects"] if project["key"] != "water-treatment")
+        job = request(API + "/agents/" + water["agent_id"] + "/delegations", "POST", {
+            "specialist_id": specialist["agent_id"], "notebook_id": water["notebook_id"],
+            "question": "What evidence remains for RFI 91 and how should we respond?",
+            "recipient": "manager@example.com", "subject": "Re: RFI 91 isolation valve",
+            "fixture": True})
+        for _ in range(150):
+            jobs = request(API + "/agents/" + water["agent_id"] + "/delegations")
+            current = next(item for item in jobs if item["id"] == job["id"])
+            if current["state"] in ("succeeded", "failed", "interrupted"):
+                break
+            time.sleep(1)
+        else:
+            raise AssertionError("Delegated sample job did not finish")
+        assert current["state"] == "succeeded", current
+        draft = current["draft_body"].lower()
+        assert "engineering" in draft and ("review" in draft or "sign-off" in draft), draft
+        assert "schedule" in draft and "certificate" in draft, draft
+        assert current["gmail_draft_id"].startswith("sample-draft-"), current
+        assert current["sources"] and current["research"], current
+        print("PASS: delegated specialist research and sample draft", flush=True)
 
         caps = {"capabilities": {"alwaysMatch": {
             "browserName": "firefox", "moz:firefoxOptions": {"args": [],
@@ -164,6 +207,51 @@ def main() -> None:
         webdriver(session, "/execute/sync", "POST", {"script": "document.querySelector('.agent-thread')?.scrollIntoView();", "args": []})
         time.sleep(1)
         capture(session, "agent-thread", evidence)
+        webdriver(session, "/execute/sync", "POST", {
+            "script": "document.querySelector('.agent-delegation')?.scrollIntoView();", "args": []})
+        time.sleep(0.8)
+        delegation_view = webdriver(session, "/execute/sync", "POST", {
+            "script": "return document.querySelector('.agent-delegation')?.innerText || ''", "args": []})
+        assert "Research notes" in delegation_view and "Draft" in delegation_view, delegation_view
+        capture(session, "delegation", evidence)
+        availability = request(API + "/agents/voice/availability")
+        assert availability["ready"], availability
+        call = webdriver(session, "/element", "POST", {
+            "using": "xpath", "value": "//button[normalize-space(.)='Call']"})
+        webdriver(session, "/element/" + call[KEY] + "/click", "POST", {})
+        for _ in range(100):
+            state = webdriver(session, "/execute/sync", "POST", {
+                "script": "return document.body.innerText", "args": []})
+            if "Call connected" in state and "End call" in state:
+                break
+            time.sleep(0.25)
+        else:
+            raise AssertionError("Voice call did not connect: " + state[-600:])
+        capture(session, "call-connected", evidence)
+        time.sleep(2)
+        end = webdriver(session, "/element", "POST", {
+            "using": "xpath", "value": "//button[normalize-space(.)='End call']"})
+        webdriver(session, "/element/" + end[KEY] + "/click", "POST", {})
+        for _ in range(120):
+            state = webdriver(session, "/execute/sync", "POST", {
+                "script": "return document.body.innerText", "args": []})
+            if "Call saved in Conversations." in state:
+                break
+            time.sleep(0.25)
+        else:
+            raise AssertionError("Voice call did not save: " + state[-600:])
+        capture(session, "call-saved", evidence)
+        messages = request(API + "/agents/" + water["agent_id"] + "/messages")
+        assert any(item["role"] == "system" and "Call recording saved:" in item["content"]
+                   for item in messages), "Saved call was not linked to the agent thread"
+        print("PASS: browser WebRTC call, recording, and agent thread link", flush=True)
+        webdriver(session, "/window/rect", "POST", {"width": 390, "height": 760, "x": 0, "y": 0})
+        browse(session, "http://127.0.0.1:8767/conversation/" + conversation_id,
+               "RFI 91", "mobile-conversation", evidence)
+        dimensions = webdriver(session, "/execute/sync", "POST", {
+            "script": "return {width:document.documentElement.scrollWidth, viewport:window.innerWidth}", "args": []})
+        assert dimensions["viewport"] <= 600 and dimensions["width"] <= dimensions["viewport"] + 3, dimensions
+        webdriver(session, "/window/rect", "POST", {"width": 1280, "height": 800, "x": 0, "y": 0})
         browse(session, "http://127.0.0.1:8767/", "RFI 91", "home-final", evidence)
         movie.terminate()
         movie.wait(timeout=15)

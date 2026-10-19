@@ -325,5 +325,12 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(agents.jobs(mira["id"])[0]["state"], "interrupted")
 
 
+class CitationNormalizationTest(unittest.TestCase):
+    def test_model_multi_source_marker(self):
+        self.assertEqual(
+            agent_runtime._normalize_citations("Unverified. [[source:2], [source:7]]"),
+            "Unverified. [[source:2]] [[source:7]]")
+
+
 if __name__ == "__main__":
     unittest.main()

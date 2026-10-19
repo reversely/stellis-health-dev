@@ -40,4 +40,4 @@ Use the exact source passage and expected revision for transcript edits, highlig
 
 ## Evidence status
 
-The first pass passed on GN100 on 2026-10-19; see [the evidence record](../evidence/rfi91/README.md). The connected account pass waits for the new Google calendar scope and for the user to send the synthetic messages. Record each observed result, failure, and screenshot path in the issue comment; do not mark an unrun step passed.
+The isolated pass, including managed agent, sample delegation, voice call, speaker rename, and narrow Firefox viewport, passed on GN100 on 2026-10-19; see [the evidence record](../evidence/rfi91/README.md). The connected account pass waits for the new Google calendar scope and for the user to send the synthetic messages. Record each observed result, failure, and screenshot path in the issue comment; do not mark an unrun step passed.

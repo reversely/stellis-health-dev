@@ -18,6 +18,12 @@ class GmailMcpTest(unittest.IsolatedAsyncioTestCase):
         self.environment.stop()
         gmail_mcp._last_token_hash = None
 
+    def test_isolated_walkthrough_does_not_start_live_sync(self):
+        with patch.dict(os.environ, {"STELLIS_GMAIL_MCP_SYNC": "off"}), \
+             patch.object(gmail_mcp.threading, "Thread") as thread:
+            gmail_mcp.start()
+        thread.assert_not_called()
+
     async def test_register_and_rotate_refreshed_token(self):
         calls = []
         updates = []

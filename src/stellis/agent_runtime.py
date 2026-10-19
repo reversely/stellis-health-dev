@@ -27,6 +27,14 @@ def _command() -> str:
     return shutil.which("nemoclaw") or str(Path.home() / ".local/bin/nemoclaw")
 
 
+def _cli_env(command: str) -> dict[str, str]:
+    """Expose NemoClaw's sibling OpenShell executable to its child process."""
+    env = os.environ.copy()
+    if os.path.isabs(command):
+        env["PATH"] = str(Path(command).parent) + os.pathsep + env.get("PATH", "")
+    return env
+
+
 _SEARCH_STOPWORDS = {"about", "after", "before", "could", "does", "from", "have", "into",
                      "project", "should", "that", "their", "there", "these", "those", "what",
                      "when", "where", "which", "with", "would"}
@@ -34,16 +42,17 @@ _SEARCH_STOPWORDS = {"about", "after", "before", "could", "does", "from", "have"
 
 def _sources(agent: dict, question: str, notebook_id: str | None) -> list[dict[str, object]]:
     """Retrieve linked workspace evidence only from notebooks assigned to this agent."""
+    case_ids = re.findall(r"\b(?:RFI|RFP|CO|NCR)\s*[-#]?\s*\d+\b", question, re.I)
     terms = [term for term in re.findall(r"\w+", question, re.UNICODE)
              if len(term) >= 4 and term.casefold() not in _SEARCH_STOPWORDS]
-    if not terms:
+    if not terms and not case_ids:
         return []
     books = [item for item in agent["notebooks"]
              if notebook_id is None or item["notebook_id"] == notebook_id]
     found: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for book in books:
-        for term in dict.fromkeys(terms[:3]):
+        for term in dict.fromkeys([*case_ids[:1], *terms[:3]]):
             for hit in source_search.search_sources(term, book["notebook_id"], limit=3):
                 key = (str(hit["source_type"]), str(hit["source_id"]))
                 if key in seen:
@@ -110,7 +119,21 @@ def _normalize_citations(answer: str) -> str:
     """Repair a common adjacent-marker form without accepting arbitrary source text."""
     answer = re.sub(r"\[\[source:(\d+)\]\[source:(\d+)\]\]",
                     r"[[source:\1]] [[source:\2]]", answer)
+    answer = re.sub(
+        r"\[\[(source:\d+(?:\]?\s*,\s*\[?source:\d+)+)\]\]",
+        lambda match: " ".join(f"[[source:{number}]]"
+                               for number in re.findall(r"source:(\d+)", match.group(1))),
+        answer)
     return re.sub(r"\]\]\s*(?=\[\[source:\d+\]\])", "]] ", answer)
+
+
+def _normalize_known_source_links(answer: str, sources: list[dict[str, object]]) -> str:
+    """Convert only exact retrieved source links to trusted citation markers."""
+    targets = {str(source["target"]): index for index, source in enumerate(sources, 1)}
+    def replace(match: re.Match[str]) -> str:
+        index = targets.get(match.group(1))
+        return f"[[source:{index}]]" if index is not None else match.group(0)
+    return re.sub(r"\[[^\]\n]{1,200}\]\((/[^)\n]+)\)", replace, answer)
 
 
 def _openclaw_reply(result: object) -> tuple[str, str | None]:
@@ -178,10 +201,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
     try:
         for attempt in range(2):
             command = _command()
-            env = os.environ.copy()
-            if os.path.isabs(command):
-                # NemoClaw shells out to its sibling openshell binary.
-                env["PATH"] = str(Path(command).parent) + os.pathsep + env.get("PATH", "")
+            env = _cli_env(command)
             process = await asyncio.create_subprocess_exec(
                 command, sandbox, "agent", "--agent", "main", "--session-id", agent_id,
                 "-m", prompt, "--json", "--timeout", "90",

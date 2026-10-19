@@ -59,6 +59,35 @@ class DelegationTest(unittest.TestCase):
                                                 "Managed specialist", "Sample draft"])
         self.assertEqual(agents.messages(self.steward["id"])[0]["role"], "system")
 
+    def test_specialist_uses_managed_cli_helper_path(self):
+        process = type("Process", (), {"returncode": 0,
+            "communicate": AsyncMock(return_value=(
+                b'{"status":"ok","result":{"payloads":[{"text":"Review is open."}],"meta":{}}}', b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "test-agent"}), \
+             patch.object(delegation.agent_runtime, "_command",
+                          return_value="/opt/nemoclaw/bin/nemoclaw"), \
+             patch.object(delegation.asyncio, "create_subprocess_exec",
+                          new_callable=AsyncMock, return_value=process) as launch:
+            answer = asyncio.run(delegation._managed_turn(
+                self.specialist, "Summarize", [], "test-session", require_citations=False))
+        self.assertEqual(answer, "Review is open.")
+        self.assertEqual(launch.await_args.kwargs["env"]["PATH"].split(os.pathsep)[0],
+                         "/opt/nemoclaw/bin")
+
+    def test_specialist_canonicalizes_only_retrieved_links(self):
+        expected = ("Finding [RFI 91 email]"
+                    "(/api/v1/samples/rfi91/mail/sample-rfi91-block)")
+        process = type("Process", (), {"returncode": 0,
+            "communicate": AsyncMock(return_value=(
+                ('{"status":"ok","result":{"payloads":[{"text":' +
+                 __import__("json").dumps(expected) + '}],"meta":{}}}').encode(), b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "test-agent"}), \
+             patch.object(delegation.asyncio, "create_subprocess_exec",
+                          new_callable=AsyncMock, return_value=process):
+            answer = asyncio.run(delegation._managed_turn(
+                self.specialist, "Summarize", [self.source], "test-session"))
+        self.assertEqual(answer, expected)
+
     def test_cancel_stops_before_draft_tool(self):
         job = self._job()
         async def check():
@@ -97,6 +126,9 @@ class DelegationTest(unittest.TestCase):
                                                     "Re: RFI 91"), "Hello,\n\nReview is open.")
         self.assertFalse(delegation._usable_draft("Your email is being processed. Please wait.", True))
         self.assertTrue(delegation._usable_draft(delegation._RFI91_SAMPLE_DRAFT, True))
+        unsafe = ("RFI 91 engineering sign-off is open. The certificate and valve schedule "
+                  "are needed; please provide both by October 22 before closure.")
+        self.assertFalse(delegation._usable_draft(unsafe, True))
 
 
 if __name__ == "__main__":

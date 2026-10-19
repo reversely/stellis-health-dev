@@ -62,7 +62,7 @@ def search_sources(query: str, notebook_id: str | None = None, limit: int = 30) 
         scope = " AND notebook_id = ?" if notebook_id is not None else ""
         parameters: tuple[object, ...] = (expression, notebook_id, limit) if notebook_id is not None else (expression, limit)
         rows = conn.execute(f"""SELECT source_type, source_id, title,
-            snippet(source_fts, 4, '[', ']', '…', 18) AS excerpt,
+            snippet(source_fts, 4, '[', ']', '…', 48) AS excerpt,
             target, start_ms, bm25(source_fts, 0, 0, 0, 3, 1) AS rank
             FROM source_fts WHERE source_fts MATCH ?{scope}
             ORDER BY rank LIMIT ?""", parameters).fetchall()
