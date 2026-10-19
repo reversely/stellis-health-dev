@@ -265,8 +265,9 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
         for attempt in range(2):
             command = _command()
             env = _cli_env(command)
+            # A canceled OpenClaw turn may still finish; keep its sandbox session out of later jobs.
             process = await asyncio.create_subprocess_exec(
-                command, sandbox, "agent", "--agent", "main", "--session-id", agent_id,
+                command, sandbox, "agent", "--agent", "main", "--session-id", job_id,
                 "-m", prompt, "--json", "--timeout", "90",
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
                 env=env)

@@ -131,7 +131,7 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(response.json()["agent_message"]["content"], f"Done [Pump plan](/page/{source['id']})")
         args = launch.await_args.args
         self.assertEqual(args[:7], ("/opt/nemoclaw/bin/nemoclaw", "stellis-agent", "agent", "--agent", "main",
-                                    "--session-id", mira["id"]))
+                                    "--session-id", response.json()["user_message"]["job_id"]))
         self.assertEqual(launch.await_args.kwargs["env"]["PATH"].split(os.pathsep)[0],
                          "/opt/nemoclaw/bin")
         self.assertEqual(args[7], "-m")
