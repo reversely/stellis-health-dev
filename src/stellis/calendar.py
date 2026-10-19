@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import os
+import re
 import secrets
 import sqlite3
 import threading
@@ -73,6 +75,11 @@ def _connect() -> sqlite3.Connection:
     conn.execute("""CREATE TABLE IF NOT EXISTS connections (
         provider TEXT PRIMARY KEY, client_id TEXT NOT NULL, access_token TEXT NOT NULL,
         refresh_token TEXT NOT NULL, expires_at REAL NOT NULL
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS notebook_assignments (
+        provider TEXT NOT NULL, key_kind TEXT NOT NULL, event_key TEXT NOT NULL,
+        title_key TEXT NOT NULL, attendees_json TEXT NOT NULL,
+        notebook_id TEXT, PRIMARY KEY(provider, key_kind, event_key)
     )""")
     return conn
 
@@ -159,6 +166,12 @@ def disconnect(provider: str) -> None:
         conn.execute("DELETE FROM connections WHERE provider = ?", (provider,))
 
 
+def clear_assignments() -> None:
+    """Erase local calendar matching data when the account is deleted."""
+    with _connect() as conn:
+        conn.execute("DELETE FROM notebook_assignments")
+
+
 async def _access_token(provider: str) -> str | None:
     with _connect() as conn:
         row = conn.execute("SELECT * FROM connections WHERE provider = ?", (provider,)).fetchone()
@@ -201,6 +214,9 @@ def _google_event(item: dict) -> dict | None:
         return None
     all_day = "date" in start and "dateTime" not in start
     return {"id": str(item.get("id", "")), "provider": "google",
+            "series_id": str(item.get("recurringEventId") or ""),
+            "attendees": sorted({str(person.get("email", "")).casefold() for person in item.get("attendees", [])
+                                 if person.get("email")}),
             "title": str(item.get("summary") or "Untitled meeting")[:180],
             "start": raw_start if all_day else _instant(raw_start),
             "end": raw_end if all_day else _instant(raw_end), "all_day": all_day}
@@ -212,6 +228,9 @@ def _microsoft_event(item: dict) -> dict | None:
     if item.get("isCancelled") or not start.get("dateTime") or not end.get("dateTime"):
         return None
     return {"id": str(item.get("id", "")), "provider": "microsoft",
+            "series_id": str(item.get("seriesMasterId") or ""),
+            "attendees": sorted({str(person.get("emailAddress", {}).get("address", "")).casefold()
+                                 for person in item.get("attendees", []) if person.get("emailAddress", {}).get("address")}),
             "title": str(item.get("subject") or "Untitled meeting")[:180],
             "start": _instant(start["dateTime"]), "end": _instant(end["dateTime"]),
             "all_day": bool(item.get("isAllDay"))}
@@ -262,3 +281,59 @@ async def events(provider: str, now: datetime | None = None) -> list[dict]:
                 url, params = next_url, None
     found.sort(key=lambda event: event["start"])
     return found[:100]
+
+
+def _title_key(value: str) -> str:
+    return " ".join(re.findall(r"\w+", value.casefold()))
+
+
+def assign_notebook(event: dict) -> dict:
+    """Project an explicit event/series choice, then unambiguous title or attendees."""
+    from stellis import notebooks
+    with _connect() as conn:
+        rows = [dict(row) for row in conn.execute("SELECT * FROM notebook_assignments WHERE provider = ?",
+                                                  (event["provider"],))]
+    valid = {str(book["id"]): str(book["name"]) for book in notebooks.list_notebooks()}
+    def result(notebook_id: str | None, source: str) -> dict:
+        return {**event, "notebook_id": notebook_id if notebook_id in valid else None,
+                "notebook_name": valid.get(notebook_id),
+                "assignment_source": source if notebook_id is None or notebook_id in valid else "none"}
+    for kind, key in (("event", event["id"]), ("series", event.get("series_id"))):
+        if key:
+            match = next((row for row in rows if row["key_kind"] == kind and row["event_key"] == key), None)
+            if match:
+                return result(match["notebook_id"], kind)
+    name = _title_key(str(event["title"]))
+    title_matches = {row["notebook_id"] for row in rows if row["notebook_id"] in valid and row["title_key"] == name}
+    if len(title_matches) == 1:
+        return result(title_matches.pop(), "title")
+    attendees = set(event.get("attendees", []))
+    attendee_matches = {row["notebook_id"] for row in rows if row["notebook_id"] in valid
+                        and len(attendees & set(json.loads(row["attendees_json"]))) >= 2}
+    if len(attendee_matches) == 1:
+        return result(attendee_matches.pop(), "attendees")
+    name_matches = {str(book["id"]) for book in notebooks.list_notebooks()
+                    if _title_key(str(book["name"])) and f" {_title_key(str(book['name']))} " in f" {name} "}
+    if len(name_matches) == 1:
+        return result(name_matches.pop(), "notebook name")
+    return result(None, "none")
+
+
+def save_notebook_assignment(event: dict, notebook_id: str | None, scope: str) -> dict:
+    """Persist one user's choice; a null notebook is an explicit No notebook choice."""
+    from stellis import notebooks
+    if event.get("provider") not in PROVIDERS or not event.get("id") or scope not in ("event", "series"):
+        raise CalendarError("Choose a calendar event")
+    if scope == "series" and not event.get("series_id"):
+        raise CalendarError("This meeting is not part of a series")
+    if notebook_id is not None and not notebooks.exists(notebook_id):
+        raise CalendarError("Notebook not found")
+    key = str(event["id"] if scope == "event" else event["series_id"])
+    attendees = sorted({str(value).casefold() for value in event.get("attendees", []) if value})
+    with _connect() as conn:
+        conn.execute("""INSERT INTO notebook_assignments
+            (provider, key_kind, event_key, title_key, attendees_json, notebook_id)
+            VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(provider, key_kind, event_key) DO UPDATE SET
+            title_key=excluded.title_key, attendees_json=excluded.attendees_json, notebook_id=excluded.notebook_id""",
+            (event["provider"], scope, key, _title_key(str(event.get("title") or "")), json.dumps(attendees), notebook_id))
+    return assign_notebook(event)

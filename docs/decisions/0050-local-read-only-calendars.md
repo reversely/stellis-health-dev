@@ -10,6 +10,10 @@ Tokens are in a separate private local SQLite file with `0600` permissions. They
 
 The Google adapter reads the existing `GOOGLE_OAUTH_CLIENT_ID` and optional `GOOGLE_OAUTH_CLIENT_SECRET` from the ignored repository `.env` or environment. A dedicated `STELLIS_GOOGLE_CALENDAR_CLIENT_ID` overrides it when the existing client cannot use the loopback redirect. OAuth clients identify the app/platform; they are not specific to the Calendar API.
 
+## Amendment for ticket #335, 2026-10-18
+
+Notebook assignment requires the provider's recurring series ID, event title, and attendee email addresses. Normalization now exposes only those fields alongside the existing event summary; it still discards body, location, and meeting links. An explicit event or series assignment stores its normalized title and attendee emails in the private local calendar SQLite file to support automatic matching of later events. Unassigned events are not persisted. This expands local calendar data custody. Calendar data is still excluded from Nebius requests and encrypted sync. A disconnected calendar retains these local assignment rules, like pre-meeting notes; account deletion clears them.
+
 ## Evidence and boundaries
 
 - Google documents [desktop loopback PKCE](https://developers.google.com/identity/protocols/oauth2/native-app), [read-only event scope](https://developers.google.com/workspace/calendar/api/auth), and [event pagination](https://developers.google.com/workspace/calendar/api/v3/reference/events/list). These establish provider protocol support, not a live Stellis connection test.

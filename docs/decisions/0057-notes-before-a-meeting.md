@@ -9,6 +9,7 @@ The user asked to "add notes to a meeting before starting the recording" from Ho
 ## Decision
 
 - **Event notes are keyed by the provider's event ID.** A new `event_notes` table holds `provider`, `event_id`, Markdown, a revision, and the update time. It stores no title, time, attendee, or other event detail, so the device still keeps no event list.
+- **Ticket #335 adds a separate calendar notebook assignment record.** It stores the provider, event or recurring series ID, normalized title and attendee emails, and selected notebook in the private calendar SQLite file. Event notes keep the smaller record described above; the expanded local custody is recorded in the amendment to [ADR 0050](0050-local-read-only-calendars.md).
 - **Recording a meeting moves its notes.** `POST /api/v1/recordings` accepts `calendar_provider` and `calendar_event_id`. In the same transaction that creates the session, the event's notes become the session's My Notes and the event row is removed.
 - **The same editor and save rules apply.** The browser uses the existing notes editor and revision checks; a stale revision returns 409.
 - **The meetings list says which events have notes** through a `has_notes` flag, computed from the table on each request.
