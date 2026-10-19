@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
+from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -434,6 +434,7 @@ def start_speech_worker() -> None:
     library.recover_staged_media()
     images.recover_orphans()
     storage.fail_interrupted_ai_runs()
+    agents.interrupt_running_jobs()
     storage.fail_interrupted_clean_runs()
     categorization.fail_interrupted()
     enhanced_notes.fail_interrupted()
@@ -512,6 +513,11 @@ class AgentMemory(BaseModel):
     source_id: str | None = Field(default=None, max_length=500)
 
 
+class AgentQuestion(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    notebook_id: str | None = None
+
+
 def _agent_result(action):
     try:
         return action()
@@ -532,6 +538,11 @@ def create_agent(request: AgentCreate) -> dict[str, object]:
         return _agent_result(lambda: agents.create_from_prompt(request.prompt or "", request.notebook_id))
     return _agent_result(lambda: agents.create(request.name or "", request.role or "",
                                                request.instructions, request.notebook_id, request.steward))
+
+
+@api.get("/agents/runtime")
+def agent_runtime_status() -> dict[str, bool]:
+    return {"configured": agent_runtime.configured()}
 
 
 @api.get("/agents/{agent_id}")
@@ -581,6 +592,23 @@ def remove_agent_memory(agent_id: str, memory_id: str) -> dict[str, bool]:
 @api.get("/agents/{agent_id}/messages")
 def agent_messages(agent_id: str) -> list[dict[str, object]]:
     return _agent_result(lambda: agents.messages(agent_id))
+
+
+@api.get("/agents/{agent_id}/jobs")
+def agent_jobs(agent_id: str) -> list[dict[str, object]]:
+    return _agent_result(lambda: agents.jobs(agent_id))
+
+
+@api.post("/agents/{agent_id}/ask")
+async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
+    try:
+        return await agent_runtime.ask(agent_id, request.question, request.notebook_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except agent_runtime.AgentRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.get("/calendar/connections")
@@ -716,8 +744,10 @@ def person_page(person_id: str | None = None, page_id: str | None = None) -> Fil
 
 @app.get("/settings", include_in_schema=False)
 @app.get("/todos", include_in_schema=False)
+@app.get("/chat", include_in_schema=False)
+@app.get("/chat/{agent_id}", include_in_schema=False)
 @app.get("/notebook/{notebook_id}", include_in_schema=False)
-def settings_or_notebook_page(notebook_id: str | None = None) -> FileResponse:
+def settings_or_notebook_page(notebook_id: str | None = None, agent_id: str | None = None) -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 

@@ -217,6 +217,38 @@ def append_message(agent_id: str, role: str, content: str, notebook_id: str | No
         return dict(conn.execute("SELECT * FROM agent_messages WHERE id = ?", (message_id,)).fetchone())
 
 
+def start_job(agent_id: str, notebook_id: str | None = None) -> str:
+    """Record a reply before calling the sandbox so failed attempts stay visible."""
+    job_id = str(uuid.uuid4())
+    with storage.connect() as conn:
+        _record(conn, agent_id)
+        conn.execute("""INSERT INTO agent_jobs(id, agent_id, notebook_id, state, created_at)
+            VALUES (?, ?, ?, 'running', ?)""", (job_id, agent_id, notebook_id, _now()))
+    return job_id
+
+
+def finish_job(job_id: str, state: str, error: str | None = None) -> None:
+    if state not in {"succeeded", "failed", "interrupted"}:
+        raise ValueError("Unknown job state")
+    with storage.connect() as conn:
+        conn.execute("""UPDATE agent_jobs SET state = ?, error = ?, finished_at = ? WHERE id = ?""",
+                     (state, error, _now(), job_id))
+
+
+def jobs(agent_id: str) -> list[dict[str, object]]:
+    with storage.connect() as conn:
+        _record(conn, agent_id)
+        return [dict(row) for row in conn.execute("""SELECT * FROM agent_jobs WHERE agent_id = ?
+            ORDER BY created_at, id""", (agent_id,))]
+
+
+def interrupt_running_jobs() -> None:
+    """Mark replies lost when the web process stopped during a sandbox call."""
+    with storage.connect() as conn:
+        conn.execute("""UPDATE agent_jobs SET state = 'interrupted', error = 'Reply interrupted. Send again.',
+            finished_at = ? WHERE state = 'running'""", (_now(),))
+
+
 def delete(agent_id: str) -> None:
     with storage.connect() as conn:
         row = conn.execute("SELECT is_default FROM agents WHERE id = ?", (agent_id,)).fetchone()

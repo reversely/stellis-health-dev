@@ -2688,6 +2688,7 @@ async function route() {
   else if (location.pathname.match(/^\/person\/([^/]+)$/))
     await showPerson(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname === '/settings') await showSettings();
+  else if (location.pathname === '/chat' || location.pathname.startsWith('/chat/')) await showAgentChat();
   else if (location.pathname === '/todos') await showTodos();
   else if (location.pathname.match(/^\/page\/([^/]+)$/)) await showNote(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
@@ -3373,7 +3374,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href^="/page/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href^="/chat"], a[href^="/page/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3633,8 +3634,9 @@ function hideAppPages() {
   document.querySelector('#settings-view').hidden = true;
   document.querySelector('#notebook-view').hidden = true;
   document.querySelector('#todos-view').hidden = true;
+  document.querySelector('#agent-chat-view').hidden = true;
   notebookTodos?.destroy?.(); notebookTodos = null;
-  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page');
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page', 'agent-chat-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
@@ -4476,6 +4478,13 @@ async function showTodos() {
   document.querySelector('#todos-view').hidden = false;
   pageTodos?.destroy?.();
   pageTodos = mountTodos(document.querySelector('#todos-page-widget'));
+  captureControls();
+}
+
+async function showAgentChat() {
+  await leaveForAppPage('agent-chat-page', 'Chat');
+  document.querySelector('#agent-chat-view').hidden = false;
+  await window.StellisAgentChat.show(location.pathname.split('/')[2] || null);
   captureControls();
 }
 

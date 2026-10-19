@@ -9,6 +9,7 @@
     <script>try { document.documentElement.dataset.theme = localStorage.getItem('stellis-theme') === 'dark' ? 'dark' : 'light'; } catch {}</script>
     <link rel="stylesheet" href="/static/app.css" />
     <link rel="stylesheet" href="/static/theme.css" />
+    <link rel="stylesheet" href="/static/agent-chat.css" />
     <script src="/shared/sync-crypto.js" defer></script>
     <script src="/shared/snapshot-format.js" defer></script>
     <script src="/shared/notes-merge.js" defer></script>
@@ -18,6 +19,7 @@
     <script src="/static/todos-widget.js" defer></script>
     <script src="/static/suggestions.js" defer></script>
     <script src="/static/notebook-items.js" defer></script>
+    <script src="/static/agent-chat.js" defer></script>
     <script src="/static/app.js" defer></script>
     <script src="/static/tour.js" defer></script>
     <script src="/static/calendar.js" defer></script>
@@ -44,6 +46,7 @@
           <nav class="rail-pinned" aria-label="Pinned">
             <a id="rail-meetings" class="rail-pin" href="/" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-microphone"/></svg><span>Meetings</span></a>
             <a id="rail-todos" class="rail-pin" href="/todos"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg><span>To-dos</span></a>
+            <a id="rail-chat" class="rail-pin" href="/chat"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>Chat</span></a>
           </nav>
           <div class="home-rail-head"><h2 id="recent-title">Library</h2><div id="rail-tags" class="rail-tags" role="group" aria-label="Filter by tag"></div></div>
           <div id="conversation-list" class="recent-list" aria-label="Collections, notebooks, and conversations"></div>
@@ -181,6 +184,13 @@
         </section>
       </section>
       <section id="todos-view" class="todos-view" hidden aria-label="To-dos"><div id="todos-page-widget"></div></section>
+      <section id="agent-chat-view" class="agent-chat-view" hidden aria-label="Chat">
+        <a class="back-link" href="/">← Home</a>
+        <div class="agent-chat-heading"><button id="agent-new-toggle" type="button">New agent</button></div>
+        <form id="agent-new-form" class="agent-new-form" hidden><label for="agent-new-prompt">Describe the agent</label><input id="agent-new-prompt" maxlength="500" placeholder="Make Mira my project coordinator" required /><div><button type="submit">Create agent</button><button id="agent-new-cancel" type="button">Cancel</button></div></form>
+        <p id="agent-chat-status" role="status" aria-live="polite"></p>
+        <div class="agent-chat-layout"><nav id="agent-list" class="agent-list" aria-label="Agents"></nav><div id="agent-detail" class="agent-detail"></div></div>
+      </section>
       <section id="page-view" class="note-view" hidden aria-label="Note">
         <a class="back-link" href="/">← All conversations</a>
         <div class="note-head"><svg class="icon" aria-hidden="true"><use href="#i-file-text"/></svg><input id="note-title" maxlength="200" aria-label="Note title" placeholder="Untitled" /><button id="note-delete" class="icon-button" type="button" aria-label="Delete note" title="Delete note"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button></div>

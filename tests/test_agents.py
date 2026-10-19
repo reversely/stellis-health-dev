@@ -4,11 +4,11 @@ import os
 import sqlite3
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from stellis import agents, notebooks, storage
+from stellis import agent_runtime, agents, notebooks, pages, storage
 from stellis.server import app
 
 
@@ -88,6 +88,67 @@ class AgentTest(unittest.TestCase):
         rows = self.client.get(f"/api/v1/agents/{agent['id']}/messages").json()
         self.assertEqual([row["notebook_id"] for row in rows], [first["id"], first["id"], second["id"]])
         self.assertEqual(rows[1]["job_id"], "job-1")
+
+    def test_chat_request_runs_selected_agent_and_saves_reply(self):
+        book = notebooks.create("Water Treatment")
+        other = notebooks.create("Other Project")
+        mira = agents.create("Mira", "Coordinator", "Keep the project current", book["id"], True)
+        agents.assign(mira["id"], other["id"])
+        agents.save_memory(mira["id"], "Use WT-04 subjects")
+        agents.save_memory(mira["id"], "Other project secret", notebook_id=other["id"])
+        source = pages.create("Pump plan", book["id"], "Pump calibration target is 17 psi.")
+        pages.create("Private plan", other["id"], "Pump calibration target is secret.")
+        process = type("Process", (), {"returncode": 0,
+                                       "communicate": AsyncMock(return_value=(
+                                           b'{"status":"ok","result":{"payloads":[{"text":"Done [[source:0]]"}],"meta":{"agentMeta":{"sessionId":"one"}}}}',
+                                           b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-agent"}), \
+             patch.object(agent_runtime, "_command", return_value="nemoclaw"), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          return_value=process) as launch:
+            response = self.client.post(f"/api/v1/agents/{mira['id']}/ask",
+                                        json={"question": "What is the pump calibration target?", "notebook_id": book["id"]})
+            self.assertEqual(self.client.get("/api/v1/agents/runtime").json(), {"configured": True})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["agent_message"]["content"], f"Done [Pump plan](/page/{source['id']})")
+        args = launch.await_args.args
+        self.assertEqual(args[:7], ("nemoclaw", "stellis-agent", "agent", "--agent", "main",
+                                    "--session-id", mira["id"]))
+        self.assertEqual(args[7], "-m")
+        prompt = args[8]
+        self.assertIn("Keep the project current", prompt)
+        self.assertIn("Use WT-04 subjects", prompt)
+        self.assertIn("17 psi", prompt)
+        self.assertIn(f"/page/{source['id']}", prompt)
+        self.assertNotIn("Other project secret", prompt)
+        self.assertNotIn("Private plan", prompt)
+        self.assertEqual([(row["role"], row["content"]) for row in agents.messages(mira["id"])],
+                         [("user", "What is the pump calibration target?"),
+                          ("agent", f"Done [Pump plan](/page/{source['id']})")])
+        self.assertEqual(response.json()["user_message"]["job_id"],
+                         response.json()["agent_message"]["job_id"])
+        self.assertEqual(response.json()["session_id"], "one")
+        self.assertEqual(self.client.get(f"/api/v1/agents/{mira['id']}/jobs").json()[0]["state"],
+                         "succeeded")
+
+    def test_failed_reply_and_restart_keep_job_result_in_thread(self):
+        mira = agents.create("Mira", "Coordinator")
+        process = type("Process", (), {"returncode": 1,
+                                       "communicate": AsyncMock(return_value=(b"", b""))})()
+        with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-agent"}), \
+             patch.object(agent_runtime, "_command", return_value="nemoclaw"), \
+             patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
+                          return_value=process):
+            response = self.client.post(f"/api/v1/agents/{mira['id']}/ask", json={"question": "Any update?"})
+        self.assertEqual(response.status_code, 503)
+        rows = self.client.get(f"/api/v1/agents/{mira['id']}/messages").json()
+        jobs = self.client.get(f"/api/v1/agents/{mira['id']}/jobs").json()
+        self.assertEqual([(row["role"], row["content"]) for row in rows], [("user", "Any update?")])
+        self.assertEqual((jobs[0]["id"], jobs[0]["state"]), (rows[0]["job_id"], "failed"))
+        agents.start_job(mira["id"])
+        agents.interrupt_running_jobs()  # Startup recovery after the web process stops.
+        self.assertEqual([job["state"] for job in agents.jobs(mira["id"])],
+                         ["failed", "interrupted"])
 
 
 if __name__ == "__main__":

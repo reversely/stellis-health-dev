@@ -141,6 +141,13 @@ def connect() -> Iterator[sqlite3.Connection]:
         created_at TEXT NOT NULL
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS agent_messages_thread ON agent_messages(agent_id, created_at)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_jobs (
+        id TEXT PRIMARY KEY, agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+        state TEXT NOT NULL, error TEXT,
+        created_at TEXT NOT NULL, finished_at TEXT
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS agent_jobs_thread ON agent_jobs(agent_id, created_at)")
     # When the audio was captured; imports without a known capture time fall back to created_at.
     if "recorded_at" not in conversation_columns:
         conn.execute("ALTER TABLE conversations ADD COLUMN recorded_at TEXT")
