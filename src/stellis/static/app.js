@@ -4571,13 +4571,15 @@ async function loadSettingsCalendars() {
     const row = document.createElement('div'); row.className = 'integration-row';
     const text = document.createElement('div');
     const name = document.createElement('strong');
-    name.textContent = item.provider === 'google' ? 'Google Calendar and Gmail' : window.StellisCalendar.labels[item.provider];
+    name.textContent = item.provider === 'google' ? 'Google Workspace' : window.StellisCalendar.labels[item.provider];
     const state = document.createElement('small');
     state.textContent = item.provider === 'google' && item.connected && item.mail_connected ?
-      'Connected. Disconnect removes Calendar and Gmail access' :
+      'Calendar and Gmail connected' :
       item.provider === 'google' && item.connected ?
-      'Calendar connected. Connect Gmail to let agents read mail and create drafts' :
-      item.connected ? 'Connected' : item.configured ? 'Not connected' : 'Needs an OAuth client on this device';
+      'Calendar connected. Connect Gmail for agent mail' :
+      item.connected ? 'Connected' : item.configured ?
+      (item.provider === 'google' ? 'Calendar and Gmail not connected' : 'Not connected') :
+      'Needs an OAuth client on this device';
     text.append(name, state);
     row.append(icon('calendar'), text);
     if (item.connected || item.configured) {
