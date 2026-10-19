@@ -154,6 +154,7 @@ fn run(online_dir: &Path, parakeet_dir: &Path) -> Result<(), String> {
 }
 
 fn main() {
+    #[cfg(feature = "native-capture")]
     let mut args = std::env::args_os().skip(1);
     #[cfg(feature = "native-capture")]
     if args.next().as_deref() == Some(std::ffi::OsStr::new("capture")) {
