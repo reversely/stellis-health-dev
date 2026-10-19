@@ -1,4 +1,4 @@
-"""Read-only local Google and Microsoft calendar connections."""
+"""Local calendar connections and the shared Google Calendar/Gmail grant."""
 
 from __future__ import annotations
 
@@ -21,7 +21,9 @@ from stellis import storage
 
 PROVIDERS = ("google", "microsoft")
 _SCOPE = {
-    "google": "https://www.googleapis.com/auth/calendar.events.readonly",
+    "google": " ".join(("https://www.googleapis.com/auth/calendar.events.readonly",
+                        "https://www.googleapis.com/auth/gmail.readonly",
+                        "https://www.googleapis.com/auth/gmail.compose")),
     "microsoft": "offline_access Calendars.ReadBasic",
 }
 _AUTH = {
@@ -74,8 +76,14 @@ def _connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("""CREATE TABLE IF NOT EXISTS connections (
         provider TEXT PRIMARY KEY, client_id TEXT NOT NULL, access_token TEXT NOT NULL,
-        refresh_token TEXT NOT NULL, expires_at REAL NOT NULL
+        refresh_token TEXT NOT NULL, expires_at REAL NOT NULL, scopes TEXT NOT NULL DEFAULT ''
     )""")
+    if "scopes" not in {row["name"] for row in conn.execute("PRAGMA table_info(connections)")}:
+        try:
+            conn.execute("ALTER TABLE connections ADD COLUMN scopes TEXT NOT NULL DEFAULT ''")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column name" not in str(exc):
+                raise
     conn.execute("""CREATE TABLE IF NOT EXISTS notebook_assignments (
         provider TEXT NOT NULL, key_kind TEXT NOT NULL, event_key TEXT NOT NULL,
         title_key TEXT NOT NULL, attendees_json TEXT NOT NULL,
@@ -86,9 +94,13 @@ def _connect() -> sqlite3.Connection:
 
 def connections() -> list[dict[str, object]]:
     with _connect() as conn:
-        rows = {row["provider"] for row in conn.execute("SELECT provider FROM connections")}
+        rows = {row["provider"]: row for row in conn.execute("SELECT provider, scopes FROM connections")}
     return [{"provider": provider, "configured": bool(client_id(provider)),
-             "connected": provider in rows} for provider in PROVIDERS]
+             "connected": provider in rows,
+             "mail_connected": provider == "google" and provider in rows and
+                 {"https://www.googleapis.com/auth/gmail.readonly",
+                  "https://www.googleapis.com/auth/gmail.compose"}.issubset(set(rows[provider]["scopes"].split()))}
+            for provider in PROVIDERS]
 
 
 def redirect_uri(provider: str, port: int) -> str:
@@ -127,7 +139,7 @@ def consume_state(provider: str, state: str) -> tuple[str, str, str]:
     return entry[1], entry[2], entry[3]
 
 
-def _save(provider: str, response: dict, existing_refresh: str = "") -> None:
+def _save(provider: str, response: dict, existing_refresh: str = "", existing_scopes: str = "") -> None:
     access = response.get("access_token")
     refresh = response.get("refresh_token") or existing_refresh
     if not isinstance(access, str) or not access or not isinstance(refresh, str) or not refresh:
@@ -137,11 +149,15 @@ def _save(provider: str, response: dict, existing_refresh: str = "") -> None:
     except (TypeError, ValueError) as exc:
         raise CalendarError("Calendar token response was invalid") from exc
     with _connect() as conn:
-        conn.execute("""INSERT INTO connections(provider, client_id, access_token, refresh_token, expires_at)
-            VALUES (?, ?, ?, ?, ?) ON CONFLICT(provider) DO UPDATE SET
+        # A token response can omit scope during refresh; preserve the last verified grant.
+        # Do not infer Gmail access merely because it was requested during authorization.
+        scopes = response.get("scope") or existing_scopes
+        conn.execute("""INSERT INTO connections(provider, client_id, access_token, refresh_token, expires_at, scopes)
+            VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(provider) DO UPDATE SET
             client_id=excluded.client_id, access_token=excluded.access_token,
-            refresh_token=excluded.refresh_token, expires_at=excluded.expires_at""",
-            (provider, client_id(provider), access, refresh, time.time() + expires))
+            refresh_token=excluded.refresh_token, expires_at=excluded.expires_at,
+            scopes=excluded.scopes""",
+            (provider, client_id(provider), access, refresh, time.time() + expires, scopes))
 
 
 async def exchange(provider: str, code: str, verifier: str, uri: str) -> None:
@@ -166,20 +182,43 @@ def disconnect(provider: str) -> None:
         conn.execute("DELETE FROM connections WHERE provider = ?", (provider,))
 
 
+async def disconnect_grant(provider: str) -> None:
+    """Revoke Google's shared Calendar/Gmail grant before removing local tokens."""
+    if provider not in PROVIDERS:
+        raise CalendarError("Unknown calendar provider")
+    if provider == "google":
+        with _connect() as conn:
+            row = conn.execute("SELECT refresh_token FROM connections WHERE provider = 'google'").fetchone()
+        if row:
+            async with httpx.AsyncClient(timeout=15) as client:
+                try:
+                    response = await client.post("https://oauth2.googleapis.com/revoke",
+                                                 data={"token": row["refresh_token"]})
+                except httpx.HTTPError as exc:
+                    raise CalendarError("Google disconnect failed. Try again.") from exc
+            try:
+                invalid_token = response.status_code == 400 and response.json().get("error") == "invalid_token"
+            except ValueError:
+                invalid_token = False
+            if response.status_code != 200 and not invalid_token:
+                raise CalendarError("Google disconnect failed. Try again.")
+    disconnect(provider)
+
+
 def clear_assignments() -> None:
     """Erase local calendar matching data when the account is deleted."""
     with _connect() as conn:
         conn.execute("DELETE FROM notebook_assignments")
 
 
-async def _access_token(provider: str) -> str | None:
+async def _access_token(provider: str, min_validity: int = 60) -> str | None:
     with _connect() as conn:
         row = conn.execute("SELECT * FROM connections WHERE provider = ?", (provider,)).fetchone()
     if row is None:
         return None
     if row["client_id"] != client_id(provider):
         raise CalendarError(f"Reconnect {provider.title()} Calendar after changing its app ID")
-    if row["expires_at"] > time.time() + 60:
+    if row["expires_at"] > time.time() + min_validity:
         return row["access_token"]
     data = {"client_id": client_id(provider), "grant_type": "refresh_token",
             "refresh_token": row["refresh_token"]}
@@ -194,7 +233,7 @@ async def _access_token(provider: str) -> str | None:
             raise CalendarError("Calendar refresh failed. Try again.") from exc
     if response.status_code != 200:
         raise CalendarError(f"Reconnect {provider.title()} Calendar")
-    _save(provider, response.json(), row["refresh_token"])
+    _save(provider, response.json(), row["refresh_token"], row["scopes"])
     return response.json()["access_token"]
 
 

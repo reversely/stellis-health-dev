@@ -3610,7 +3610,7 @@ let activeNotebookId = null;
 let notebookTodos = null; let notebookItems = []; let notebookFilter = 'all';
 let calendarOutcome = new URLSearchParams(location.search).get('calendar');
 if (calendarOutcome) history.replaceState(history.state, '', location.pathname);
-function calendarOutcomeText() { return calendarOutcome === 'connected' ? 'Calendar connected' : 'Calendar connection failed'; }
+function calendarOutcomeText() { return calendarOutcome === 'connected' ? 'Connected' : 'Connection failed'; }
 function icon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
@@ -4533,18 +4533,27 @@ async function loadSettingsCalendars() {
   container.replaceChildren(...rows.map(item => {
     const row = document.createElement('div'); row.className = 'integration-row';
     const text = document.createElement('div');
-    const name = document.createElement('strong'); name.textContent = window.StellisCalendar.labels[item.provider];
+    const name = document.createElement('strong');
+    name.textContent = item.provider === 'google' ? 'Google Calendar and Gmail' : window.StellisCalendar.labels[item.provider];
     const state = document.createElement('small');
-    state.textContent = item.connected ? 'Connected' : item.configured ? 'Not connected' : 'Needs an OAuth client on this device';
+    state.textContent = item.provider === 'google' && item.connected && item.mail_connected ?
+      'Connected. Disconnect removes Calendar and Gmail access' :
+      item.provider === 'google' && item.connected ?
+      'Calendar connected. Connect Gmail to let agents read mail and create drafts' :
+      item.connected ? 'Connected' : item.configured ? 'Not connected' : 'Needs an OAuth client on this device';
     text.append(name, state);
     row.append(icon('calendar'), text);
     if (item.connected || item.configured) {
       const action = document.createElement('button'); action.type = 'button';
-      action.textContent = item.connected ? 'Disconnect' : 'Connect';
+      action.textContent = item.provider === 'google' && item.connected && !item.mail_connected ?
+        'Connect Gmail' : item.connected ? 'Disconnect' : 'Connect';
       action.addEventListener('click', async () => {
         action.disabled = true; document.querySelector('#settings-calendar-status').textContent = '';
         try {
-          if (item.connected) { await window.StellisCalendar.request(`/${item.provider}/disconnect`, {method:'POST'}); await loadSettingsCalendars(); }
+          if (item.connected && (item.provider !== 'google' || item.mail_connected)) {
+            await window.StellisCalendar.request(`/${item.provider}/disconnect`, {method:'POST'});
+            await loadSettingsCalendars();
+          }
           else location.assign((await window.StellisCalendar.request(`/${item.provider}/authorize?return_to=/settings`)).url);
         } catch (error) { document.querySelector('#settings-calendar-status').textContent = error.message; action.disabled = false; }
       });
