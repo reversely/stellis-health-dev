@@ -4734,7 +4734,8 @@ function showTavilyKey(state) {
   document.querySelector('#tavily-key-input').value = '';
   document.querySelector('#tavily-key-remove').hidden = state.source !== 'saved';
   document.querySelector('#tavily-key-save').textContent = state.source === 'saved' ? 'Replace key' : 'Save key';
-  document.querySelector('#tavily-key-status').textContent = state.source === 'saved' ? 'Key saved.' :
+  document.querySelector('#tavily-key-status').textContent = state.source === 'saved' ?
+    (state.managed_ready ? 'Key saved.' : 'Key saved. Managed agents are unavailable for this account.') :
     state.source === 'environment' ? 'Using the key from this computer.' : 'No key saved.';
 }
 async function loadTavilyKey() { showTavilyKey(await json(await fetch(`${API}/settings/tavily-key`))); }
@@ -4744,6 +4745,7 @@ document.querySelector('#tavily-key-form').addEventListener('submit', async even
   const status = document.querySelector('#tavily-key-status');
   if (!input.value.trim()) { status.textContent = 'Paste your Tavily API key first.'; return; }
   const save = document.querySelector('#tavily-key-save'); save.disabled = true;
+  status.textContent = 'Saving key…';
   try {
     showTavilyKey(await json(await fetch(`${API}/settings/tavily-key`, {method:'PUT',
       headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:input.value})})));

@@ -695,7 +695,8 @@ class DelegatedTask(BaseModel):
 def delegated_runtime() -> dict[str, bool]:
     key = bool(tavily.available_key())
     managed = agent_runtime.configured()
-    return {"live_ready": key and managed, "key_configured": key, "agent_configured": managed}
+    return {"live_ready": key and managed and os.environ.get("STELLIS_TAVILY_MCP_READY") == "1",
+            "key_configured": key, "agent_configured": managed}
 
 
 @api.get("/agents/{agent_id}/delegations")
@@ -1145,11 +1146,20 @@ def save_tavily_key(request: TavilyKey) -> dict[str, object]:
         return tavily.save_key(request.key)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Could not save the Tavily key") from exc
 
 
 @api.delete("/settings/tavily-key")
 def remove_tavily_key() -> dict[str, object]:
-    return tavily.remove_key()
+    try:
+        return tavily.remove_key()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Could not remove the Tavily key") from exc
 
 
 @api.get("/samples")
