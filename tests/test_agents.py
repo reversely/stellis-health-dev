@@ -228,6 +228,9 @@ class AgentTest(unittest.TestCase):
         answer = agent_runtime._normalize_citations("Facts [[source:1][source:2]]")
         self.assertEqual(agent_runtime._trusted_citations(answer, sources),
                          "Facts [First](/page/one) [Second](/page/two)")
+        adjacent = agent_runtime._normalize_citations("Facts [[source:1]][[source:2]]")
+        self.assertEqual(agent_runtime._trusted_citations(adjacent, sources),
+                         "Facts [First](/page/one) [Second](/page/two)")
         with self.assertRaises(agent_runtime.AgentRunError):
             agent_runtime._trusted_citations("Facts [[source:unknown]]", sources)
         with self.assertRaises(agent_runtime.AgentRunError):

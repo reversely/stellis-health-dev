@@ -106,8 +106,9 @@ def _trusted_citations(answer: str, sources: list[dict[str, object]]) -> str:
 
 def _normalize_citations(answer: str) -> str:
     """Repair a common adjacent-marker form without accepting arbitrary source text."""
-    return re.sub(r"\[\[source:(\d+)\]\[source:(\d+)\]\]",
-                  r"[[source:\1]] [[source:\2]]", answer)
+    answer = re.sub(r"\[\[source:(\d+)\]\[source:(\d+)\]\]",
+                    r"[[source:\1]] [[source:\2]]", answer)
+    return re.sub(r"\]\]\s*(?=\[\[source:\d+\]\])", "]] ", answer)
 
 
 def _openclaw_reply(result: object) -> tuple[str, str | None]:
