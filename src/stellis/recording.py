@@ -102,6 +102,8 @@ def rename_session(recording_id: str, title: str) -> dict[str, object]:
 
 def discard_session(recording_id: str) -> bool:
     """Delete an unfinished capture after the user explicitly discards it."""
+    from stellis import recording_preview
+    recording_preview.stop(recording_id)
     with storage.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute("SELECT state FROM recording_sessions WHERE id = ?", (recording_id,)).fetchone()
@@ -240,6 +242,8 @@ async def finalize_session(recording_id: str) -> dict[str, object]:
         with storage.connect() as conn:
             conn.execute("UPDATE recording_sessions SET state = 'finalized', conversation_id = ?, updated_at = ? WHERE id = ?",
                          (conversation["id"], _stamp(), recording_id))
+        from stellis import recording_preview
+        recording_preview.stop(recording_id)
         for row in rows:
             (directory / f"{row['sequence']:08d}.chunk").unlink(missing_ok=True)
         (directory / "preview.json").unlink(missing_ok=True)

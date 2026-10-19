@@ -1,0 +1,24 @@
+name: Live ASR worker
+on:
+  push:
+    paths:
+      - 'rust/stellis-audio-worker/**'
+      - '.github/workflows/live-asr-worker.yml'
+  pull_request:
+    paths:
+      - 'rust/stellis-audio-worker/**'
+      - '.github/workflows/live-asr-worker.yml'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust/stellis-audio-worker
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo check --locked

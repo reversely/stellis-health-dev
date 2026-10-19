@@ -2919,8 +2919,8 @@ function renderRecordingPreview(result) {
   }
 }
 async function updateRecordingPreview(current) {
-  if (current.previewPending || Date.now() < (current.previewRetryAfter || 0) || capture !== current || current.sequence < 5) return;
-  if (current.sequence - current.lastPreviewSequence < 8 && current.lastPreviewSequence >= 0) return;
+  if (current.previewPending || Date.now() < (current.previewRetryAfter || 0) || capture !== current || current.sequence < 3) return;
+  if (current.sequence - current.lastPreviewSequence < 2 && current.lastPreviewSequence >= 0) return;
   current.previewPending = true;
   document.querySelector('#recording-transcript-state').textContent = 'Transcribing on this device…';
   if (!document.querySelector('#live-recording-preview-lines').childElementCount)
@@ -2931,8 +2931,9 @@ async function updateRecordingPreview(current) {
   } catch (error) {
     if (capture === current) {
       current.previewRetryAfter = Date.now() + 8000;
-      const message = error.message === 'Local transcription model unavailable' ?
-        'Install the local speech model to use Live transcript.' : 'Live transcript unavailable. Retrying.';
+      const message = error.message === 'Local live transcription model unavailable' ||
+        error.message === 'Local live transcription worker unavailable' ?
+        'Install the local live speech models to use Live transcript.' : 'Live transcript unavailable. Retrying.';
       document.querySelector('#recording-transcript-state').textContent = message;
       document.querySelector('#recording-live-peek-text').textContent = message;
       if (!document.querySelector('#live-recording-preview-lines').childElementCount)
@@ -2940,7 +2941,7 @@ async function updateRecordingPreview(current) {
     }
   } finally {
     current.previewPending = false;
-    if (capture === current && Date.now() >= (current.previewRetryAfter || 0) && current.sequence - current.lastPreviewSequence >= 8)
+    if (capture === current && Date.now() >= (current.previewRetryAfter || 0) && current.sequence - current.lastPreviewSequence >= 2)
       updateRecordingPreview(current);
   }
 }
