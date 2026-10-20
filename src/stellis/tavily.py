@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import threading
 from pathlib import Path
-from stellis import storage
+from stellis import runtime_profile, storage
 
 _MANAGED_LOCK = threading.Lock()
 
@@ -45,6 +45,8 @@ def available_key() -> str | None:
 
 
 def _managed_sandbox() -> str | None:
+    if runtime_profile.cloud():
+        return None
     if os.environ.get("STELLIS_ACCOUNT_ID") != "1":
         return None
     return os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip() or None
@@ -95,6 +97,10 @@ def _sync_managed(key: str | None) -> None:
 
 def key_status() -> dict[str, object]:
     """Report availability without returning the credential."""
+    if runtime_profile.cloud():
+        from stellis import agent_gateway
+        ready = agent_gateway.configured() and os.environ.get("STELLIS_AGENT_GATEWAY_TAVILY_READY") == "1"
+        return {"configured": ready, "source": "cloud" if ready else None, "managed_ready": ready}
     managed_ready = bool(_managed_sandbox() and os.environ.get("STELLIS_TAVILY_MCP_READY") == "1")
     if saved_key():
         return {"configured": True, "source": "saved", "managed_ready": managed_ready}

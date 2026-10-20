@@ -693,9 +693,10 @@ class DelegatedTask(BaseModel):
 
 @api.get("/agents/delegations/runtime")
 def delegated_runtime() -> dict[str, bool]:
-    key = bool(tavily.available_key())
+    status = tavily.key_status()
+    key = bool(status["configured"])
     managed = agent_runtime.configured()
-    return {"live_ready": key and managed and os.environ.get("STELLIS_TAVILY_MCP_READY") == "1",
+    return {"live_ready": key and managed and bool(status["managed_ready"]),
             "key_configured": key, "agent_configured": managed}
 
 
@@ -1111,6 +1112,17 @@ def categories() -> list[dict[str, object]]:
 
 class NebiusKey(BaseModel):
     key: str = Field(min_length=1, max_length=512)
+
+
+@api.get("/settings/runtime-profile")
+def runtime_profile_status() -> dict[str, object]:
+    from stellis import runtime_profile
+    local = runtime_profile.local_inference()
+    cloud = runtime_profile.cloud()
+    return {"profile": runtime_profile.selected(), "local_inference": local,
+            "label": "Nebius Cloud + Token Factory" if cloud else
+                     "GN100 + local inference" if local else "GN100 + Token Factory (existing configuration)",
+            "model": runtime_profile.model_id(), "agent_configured": agent_runtime.configured()}
 
 
 @api.get("/settings/nebius-key")

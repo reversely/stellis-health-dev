@@ -15,7 +15,7 @@ from pathlib import Path
 
 import httpx
 
-from stellis import storage
+from stellis import runtime_profile, storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
@@ -88,7 +88,7 @@ def key_status() -> dict[str, object]:
     """Whether a key is available and where it comes from; never the key itself."""
     if _saved_key():
         return {"configured": True, "source": "saved"}
-    return {"configured": bool(_key()), "source": "environment" if _key() else None}
+    return {"configured": bool(_host_key()), "source": "environment" if _host_key() else None}
 
 
 def _host_key() -> str | None:
@@ -106,6 +106,8 @@ def _host_key() -> str | None:
 
 
 def _managed_sandbox() -> str | None:
+    if runtime_profile.cloud() or runtime_profile.local_inference():
+        return None
     if os.environ.get("STELLIS_ACCOUNT_ID") != "1":
         return None
     return os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip() or None
@@ -185,11 +187,13 @@ def remove_key() -> dict[str, object]:
 
 
 def _key() -> str | None:
+    if runtime_profile.local_inference():
+        return "ollama"
     return _saved_key() or _host_key()
 
 
 def capabilities() -> dict[str, object]:
-    return {"configured": bool(_key()), "model_id": MODEL_ID, "prompt_version": PROMPT_VERSION}
+    return {"configured": bool(_key()), "model_id": runtime_profile.model_id(), "prompt_version": PROMPT_VERSION}
 
 
 def _identity_hash(display: dict[str, object]) -> str:
@@ -262,7 +266,7 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
     if not display["segments"]:
         raise ValueError("Transcript has no speech to analyze")
     source_identity_hash = _identity_hash(display)
-    identity = json.dumps([display["revision"], source_identity_hash, kind, question, MODEL_ID, PROMPT_VERSION], ensure_ascii=False)
+    identity = json.dumps([display["revision"], source_identity_hash, kind, question, runtime_profile.model_id(), PROMPT_VERSION], ensure_ascii=False)
     digest = hashlib.sha256(identity.encode()).hexdigest()
     with _LOCK:
         if force:
@@ -275,7 +279,7 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
             failed = next((item for item in storage.list_ai_runs(conversation_id)
                            if item["kind"] == "summary" and item["source_revision"] == display["revision"]
                            and item["source_identity_hash"] == source_identity_hash
-                           and item["model_id"] == MODEL_ID and item["prompt_version"] == PROMPT_VERSION
+                           and item["model_id"] == runtime_profile.model_id() and item["prompt_version"] == PROMPT_VERSION
                            and item["state"] == "failed"), None)
             if failed:
                 storage.update_ai_run(str(failed["id"]), state="queued", stage="queued",
@@ -298,7 +302,7 @@ def request_run(conversation_id: str, kind: str, question: str | None = None,
             "source_identity_hash": source_identity_hash,
             "source_segments_json": json.dumps({str(item["id"]): int(item["start_ms"])
                                                 for item in display["segments"]}),
-            "model_id": MODEL_ID, "prompt_version": PROMPT_VERSION, "question": question,
+            "model_id": runtime_profile.model_id(), "prompt_version": PROMPT_VERSION, "question": question,
             "state": "queued", "stage": "queued", "error_code": None, "error_message": None,
             "result_json": None, "checkpoint_json": "[]", "usage_json": "{}", "provider_request_ids_json": "[]",
             "attempts": 0, "created_at": stamp, "updated_at": stamp,
@@ -498,34 +502,35 @@ def _validate_answer(payload: object, allowed_ids: set[str]) -> dict[str, object
 
 def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str, object], kind: str) -> object:
     key = _key()
+    provider = "Local inference" if runtime_profile.local_inference() else "Nebius"
     if not key:
         raise AIError("not_configured", "Nebius API key is unavailable")
     schema = {"answer": ANSWER_SCHEMA, "clean": CLEAN_SCHEMA, "agent": AGENT_SCHEMA}.get(kind, SUMMARY_SCHEMA)
-    body = {"model": MODEL_ID, "messages": messages,
+    body = {"model": runtime_profile.model_id(), "messages": messages,
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": f"stellis_{kind}", "schema": schema, "strict": True}},
             "chat_template_kwargs": {"enable_thinking": False}, "temperature": 0.1,
             "max_tokens": max_tokens}
     metadata["attempts"] = int(metadata["attempts"]) + 1
     try:
-        with httpx.Client(timeout=90) as client:
-            response = client.post(f"{BASE_URL}/chat/completions",
+        with httpx.Client(timeout=90, follow_redirects=False, trust_env=False) as client:
+            response = client.post(f"{runtime_profile.inference_url()}/chat/completions",
                                    headers={"Authorization": f"Bearer {key}"}, json=body)
     except httpx.TimeoutException as exc:
-        raise AIError("timeout", "Nebius timed out. A retry may create another billed request") from exc
+        raise AIError("timeout", f"{provider} timed out. Try again.") from exc
     except httpx.HTTPError as exc:
-        raise AIError("network", "Nebius could not be reached") from exc
+        raise AIError("network", f"{provider} could not be reached") from exc
     provider_id = response.headers.get("x-request-id")
     if provider_id:
         metadata["request_ids"].append(provider_id)
     if response.status_code == 429:
-        raise AIError("rate_limited", "Nebius rate limit reached. Try again later")
+        raise AIError("rate_limited", f"{provider} rate limit reached. Try again later")
     if response.status_code in {401, 403}:
-        raise AIError("authentication", "Nebius rejected the API key")
+        raise AIError("authentication", f"{provider} rejected the API key")
     if response.status_code == 404:
         raise AIError("model_unavailable", "The selected Nemotron model is unavailable")
     if response.status_code >= 400:
-        raise AIError("provider", f"Nebius request failed (HTTP {response.status_code})")
+        raise AIError("provider", f"{provider} request failed (HTTP {response.status_code})")
     try:
         data = response.json()
         usage = data.get("usage") or {}
@@ -535,10 +540,10 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
             metadata["request_ids"].append(str(data["id"]))
         content = data["choices"][0]["message"]["content"]
         if data["choices"][0].get("finish_reason") == "length":
-            raise AIError("output_limit", "Nebius reached the response length limit")
+            raise AIError("output_limit", f"{provider} reached the response length limit")
         return json.loads(content)
     except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise AIError("invalid_json", "Nebius returned invalid JSON") from exc
+        raise AIError("invalid_json", f"{provider} returned invalid JSON") from exc
 
 
 def _complete(messages: list[dict[str, str]], allowed: set[str], max_tokens: int,

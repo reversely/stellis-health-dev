@@ -68,7 +68,7 @@ def request_run(conversation_id: str) -> dict[str, object]:
     display = storage.get_display_transcript(conversation_id)
     if display is None or not display["segments"]:
         raise LookupError("Transcript is not ready")
-    identity = json.dumps([display["revision"], ai.MODEL_ID, PROMPT_VERSION])
+    identity = json.dumps([display["revision"], ai.runtime_profile.model_id(), PROMPT_VERSION])
     digest = hashlib.sha256(identity.encode()).hexdigest()
     with _LOCK:
         existing = storage.find_clean_run(conversation_id, digest)
@@ -82,7 +82,7 @@ def request_run(conversation_id: str) -> dict[str, object]:
         stamp = ai._now()
         record: dict[str, object] = {
             "id": str(uuid.uuid4()), "conversation_id": conversation_id, "input_hash": digest,
-            "source_revision": display["revision"], "model_id": ai.MODEL_ID,
+            "source_revision": display["revision"], "model_id": ai.runtime_profile.model_id(),
             "prompt_version": PROMPT_VERSION, "state": "queued", "stage": "queued",
             "error_code": None, "error_message": None, "result_json": None,
             "checkpoint_json": "[]", "usage_json": "{}", "provider_request_ids_json": "[]",

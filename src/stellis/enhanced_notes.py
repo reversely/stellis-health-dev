@@ -105,7 +105,7 @@ def request(conversation_id: str, *, force: bool = False) -> dict[str, object]:
         raise ai.AIError("not_configured", "Add a Nebius API key to generate a summary")
     display, raw, identity_hash, notes_hash = _source(conversation_id)
     identity = json.dumps([display["revision"], identity_hash, raw["revision"], notes_hash,
-                           ai.MODEL_ID, PROMPT_VERSION])
+                           ai.runtime_profile.model_id(), PROMPT_VERSION])
     digest = hashlib.sha256(identity.encode()).hexdigest()
     with _LOCK:
         rows = _runs(conversation_id)
@@ -128,7 +128,7 @@ def request(conversation_id: str, *, force: bool = False) -> dict[str, object]:
                  notes_revision, notes_hash, model_id, prompt_version, state, stage, source_starts_json,
                  created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', 'queued', ?, ?, ?)""",
                 (run_id, conversation_id, digest, display["revision"], identity_hash, raw["revision"],
-                 notes_hash, ai.MODEL_ID, PROMPT_VERSION,
+                 notes_hash, ai.runtime_profile.model_id(), PROMPT_VERSION,
                  json.dumps({str(item["id"]): int(item["start_ms"]) for item in display["segments"]}), stamp, stamp))
         threading.Thread(target=_run, args=(run_id,), daemon=True).start()
         return get_run(run_id)

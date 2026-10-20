@@ -4769,15 +4769,27 @@ function showNebiusKey(state) {
   document.querySelector('#nebius-key-remove').hidden = state.source !== 'saved';
   document.querySelector('#nebius-key-save').textContent = state.source === 'saved' ? 'Replace key' : 'Save key';
   document.querySelector('#nebius-key-status').textContent = state.source === 'saved' ? 'A key is saved on this device.' :
-    state.source === 'environment' ? 'Using the key from this computer\'s environment.' : 'No key saved. AI features are off until you add one.';
+    state.source === 'environment' ? 'Using the key from this computer\'s environment.' : 'No key saved for transcript AI.';
 }
-async function loadNebiusKey() { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`))); }
+async function loadNebiusKey() {
+  const [key, runtime] = await Promise.all([
+    fetch(`${API}/settings/nebius-key`).then(json),
+    fetch(`${API}/settings/runtime-profile`).then(json)
+  ]);
+  showNebiusKey(key);
+  document.querySelector('#runtime-profile-status').textContent = runtime.label;
+  document.querySelector('#runtime-profile-note').textContent = runtime.local_inference ?
+    'AI inference runs on your GN100. Connected tools may contact their services.' :
+    'AI inference uses Nebius Token Factory. Agent requests include the instructions and sources needed for your task.';
+  document.querySelector('#nebius-key-form').hidden = runtime.local_inference;
+}
 function showTavilyKey(state) {
   document.querySelector('#tavily-key-input').value = '';
   document.querySelector('#tavily-key-remove').hidden = state.source !== 'saved';
   document.querySelector('#tavily-key-save').textContent = state.source === 'saved' ? 'Replace key' : 'Save key';
   document.querySelector('#tavily-key-status').textContent = state.source === 'saved' ?
     (state.managed_ready ? 'Key saved.' : 'Key saved. Managed agents are unavailable for this account.') :
+    state.source === 'cloud' ? 'Managed by the cloud agent service.' :
     state.source === 'environment' ? 'Using the key from this computer.' : 'No key saved.';
 }
 async function loadTavilyKey() { showTavilyKey(await json(await fetch(`${API}/settings/tavily-key`))); }

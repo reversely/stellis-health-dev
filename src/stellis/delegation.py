@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from email.utils import parseaddr
 
-from stellis import agent_mail, agent_runtime, agents, fixture_mailbox, gmail_api, sample_rfi91, storage, tavily
+from stellis import agent_gateway, runtime_profile, agent_mail, agent_runtime, agents, fixture_mailbox, gmail_api, sample_rfi91, storage, tavily
 
 _tasks: dict[str, asyncio.Task] = {}
 
@@ -59,10 +59,10 @@ def create(steward_id: str, specialist_id: str, notebook_id: str, question: str,
         case = sample_rfi91.status()
         if not case["installed"] or notebook_id != case["projects"][0]["notebook_id"]:
             raise ValueError("The RFI 91 sample is not in this notebook")
-    elif not tavily.available_key():
+    elif not tavily.key_status()["configured"]:
         raise ValueError("Add a Tavily API key in Settings")
-    elif os.environ.get("STELLIS_TAVILY_MCP_READY") != "1":
-        raise ValueError("Connect Tavily research in the managed sandbox first")
+    elif not tavily.key_status()["managed_ready"]:
+        raise ValueError("Connect Tavily research in the selected agent service first")
     job_id = str(uuid.uuid4())
     now = _now()
     try:
@@ -137,7 +137,7 @@ async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
                         use_tavily: bool = False) -> str:
     """Call only NemoClaw's managed OpenClaw agent and validate local source markers."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
-    if not sandbox:
+    if not agent_runtime.configured():
         raise agent_runtime.AgentRunError("Agent replies are unavailable on this device")
     tool_rule = ("Use at most one tavily_search and one tavily_extract call for current external facts. "
                  if use_tavily else "Use only the supplied sources; do not call external tools. ")
@@ -157,16 +157,23 @@ async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
                                                    for index, source in enumerate(sources, 1)]},
                                       ensure_ascii=False))
     await agent_runtime.ensure_managed_mcp()
-    command = agent_runtime._command()
-    process = await asyncio.create_subprocess_exec(
-        command, sandbox, "agent", "--agent", "main", "--session-id", session_id,
-        "-m", prompt, "--json", "--timeout", "90", stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL, env=agent_runtime._cli_env(command))
+    process = None
     try:
-        stdout, _ = await asyncio.wait_for(process.communicate(), timeout=120)
-        if process.returncode or len(stdout) > 1_048_576:
-            raise agent_runtime.AgentRunError("Specialist reply failed. Try again.")
-        answer, _ = agent_runtime._openclaw_reply(json.loads(stdout))
+        if runtime_profile.cloud():
+            try:
+                answer, _ = await agent_gateway.turn(prompt, session_id)
+            except agent_gateway.GatewayError as exc:
+                raise agent_runtime.AgentRunError(str(exc)) from exc
+        else:
+            command = agent_runtime._command()
+            process = await asyncio.create_subprocess_exec(
+                command, sandbox, "agent", "--agent", "main", "--session-id", session_id,
+                "-m", prompt, "--json", "--timeout", "90", stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL, env=agent_runtime._cli_env(command))
+            stdout, _ = await asyncio.wait_for(process.communicate(), timeout=120)
+            if process.returncode or len(stdout) > 1_048_576:
+                raise agent_runtime.AgentRunError("Specialist reply failed. Try again.")
+            answer, _ = agent_runtime._openclaw_reply(json.loads(stdout))
         answer = agent_runtime._normalize_citations(answer)
         answer = agent_runtime._normalize_known_source_links(answer, sources)
         if require_citations and sources and not re.search(r"\[\[source:\d+\]\]", answer):
@@ -175,7 +182,7 @@ async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
             raise agent_runtime.AgentRunError("Specialist reply was too long")
         return agent_runtime._trusted_citations(answer, sources)
     finally:
-        if process.returncode is None:
+        if process is not None and process.returncode is None:
             try:
                 process.terminate()
             except ProcessLookupError:

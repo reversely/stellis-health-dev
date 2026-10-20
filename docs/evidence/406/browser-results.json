@@ -1,0 +1,58 @@
+[
+  {
+    "profile": "local",
+    "width": 1440,
+    "theme": "light",
+    "label": "GN100 + local inference",
+    "overflow": false
+  },
+  {
+    "profile": "local",
+    "width": 1440,
+    "theme": "dark",
+    "label": "GN100 + local inference",
+    "overflow": false
+  },
+  {
+    "profile": "local",
+    "width": 390,
+    "theme": "light",
+    "label": "GN100 + local inference",
+    "overflow": false
+  },
+  {
+    "profile": "local",
+    "width": 390,
+    "theme": "dark",
+    "label": "GN100 + local inference",
+    "overflow": false
+  },
+  {
+    "profile": "cloud",
+    "width": 1440,
+    "theme": "light",
+    "label": "Nebius Cloud + Token Factory",
+    "overflow": false
+  },
+  {
+    "profile": "cloud",
+    "width": 1440,
+    "theme": "dark",
+    "label": "Nebius Cloud + Token Factory",
+    "overflow": false
+  },
+  {
+    "profile": "cloud",
+    "width": 390,
+    "theme": "light",
+    "label": "Nebius Cloud + Token Factory",
+    "overflow": false
+  },
+  {
+    "profile": "cloud",
+    "width": 390,
+    "theme": "dark",
+    "label": "Nebius Cloud + Token Factory",
+    "overflow": false
+  }
+]

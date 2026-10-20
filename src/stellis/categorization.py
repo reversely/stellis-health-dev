@@ -9,13 +9,17 @@ from datetime import datetime, timezone
 
 import httpx
 
-from stellis import ai, storage
+from stellis import ai, runtime_profile, storage
 
 MODEL_ID = "zai-org/GLM-5.3-Flash"
 PROMPT_VERSION = "six-choice-v1"
 LABELS = ("Meetings", "Interviews", "Workshops", "Briefings", "Calls", "Unclear")
 _LOCK = threading.Lock()
 _RUNNING: set[str] = set()
+
+
+def _model_id() -> str:
+    return runtime_profile.model_id() if runtime_profile.local_inference() else MODEL_ID
 
 
 def _now() -> str:
@@ -25,7 +29,7 @@ def _now() -> str:
 def settings() -> dict[str, object]:
     with storage.connect() as conn:
         enabled = bool(conn.execute("SELECT enabled FROM category_automation WHERE id = 1").fetchone()[0])
-    return {"enabled": enabled, "configured": bool(ai._key()), "model_id": MODEL_ID}
+    return {"enabled": enabled, "configured": bool(ai._key()), "model_id": _model_id()}
 
 
 def set_enabled(enabled: bool) -> dict[str, object]:
@@ -82,12 +86,23 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
     body = {"model": MODEL_ID, "prompt": f"[gMASK]<sop><|user|>\n{prompt}\n<|assistant|>\n</think>",
             "max_tokens": 1, "temperature": 0, "logprobs": 20}
     try:
-        with httpx.Client(timeout=30) as client:
-            response = client.post(f"{ai.BASE_URL}/completions", json=body,
-                                   headers={"Authorization": f"Bearer {key}"})
-            response.raise_for_status()
-            choice = response.json()["choices"][0]
-            top = choice["logprobs"]["top_logprobs"][0]
+        with httpx.Client(timeout=30, trust_env=False, follow_redirects=False) as client:
+            if runtime_profile.local_inference():
+                # Ollama exposes token probabilities through its native API.
+                base = runtime_profile.inference_url().removesuffix("/v1")
+                response = client.post(f"{base}/api/generate", json={
+                    "model": _model_id(), "prompt": prompt, "stream": False, "think": False,
+                    "logprobs": True, "top_logprobs": 20,
+                    "options": {"num_predict": 1, "temperature": 0}})
+                response.raise_for_status()
+                alternatives = response.json()["logprobs"][0]["top_logprobs"]
+                top = {item["token"]: item["logprob"] for item in alternatives}
+            else:
+                response = client.post(f"{ai.BASE_URL}/completions", json=body,
+                                       headers={"Authorization": f"Bearer {key}"})
+                response.raise_for_status()
+                choice = response.json()["choices"][0]
+                top = choice["logprobs"]["top_logprobs"][0]
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
         raise RuntimeError("Category provider unavailable; retry") from exc
     weights = {name: 0.0 for name in labels}
@@ -145,7 +160,7 @@ def request(conversation_id: str, *, retry: bool = False) -> dict[str, object]:
             ON CONFLICT(conversation_id) DO UPDATE SET state = 'queued', model_id = excluded.model_id,
             prompt_version = excluded.prompt_version, transcript_revision = excluded.transcript_revision,
             confidence = NULL, error = NULL, updated_at = excluded.updated_at""",
-                         (conversation_id, MODEL_ID, PROMPT_VERSION, revision, _now()))
+                         (conversation_id, _model_id(), PROMPT_VERSION, revision, _now()))
     if skip:
         return status(conversation_id)
     key = ai._key()
