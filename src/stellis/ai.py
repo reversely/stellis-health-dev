@@ -509,7 +509,8 @@ def _request_impl(messages: list[dict[str, str]], max_tokens: int, metadata: dic
     body = {"model": runtime_profile.model_id(), "messages": messages,
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": f"stellis_{kind}", "schema": schema, "strict": True}},
-            "chat_template_kwargs": {"enable_thinking": False}, "temperature": 0.1,
+            **({"reasoning_effort": "none"} if runtime_profile.local_inference() else
+               {"chat_template_kwargs": {"enable_thinking": False}}), "temperature": 0.1,
             "max_tokens": max_tokens}
     metadata["attempts"] = int(metadata["attempts"]) + 1
     try:

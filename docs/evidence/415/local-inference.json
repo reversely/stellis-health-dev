@@ -1,0 +1,13 @@
+{
+  "model": "nemotron-3-nano:latest",
+  "bounded_tokens": 256,
+  "attempts": 1,
+  "usage": {
+    "prompt_tokens": 61,
+    "completion_tokens": 40,
+    "total_tokens": 101
+  },
+  "validated_sources": [
+    "s1"
+  ]
+}
