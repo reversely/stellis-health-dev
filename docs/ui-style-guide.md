@@ -21,6 +21,7 @@ The **desktop home left rail** is a WebGL fill (`static/rail-shader.js`) of five
 
 ## Type and shape
 
+- The brand is the v2 mark (`static/logo-mark.png`, an alpha mask drawn in `currentColor`) beside the lowercase wordmark in upright Piazzolla, in one colour: near-white on dark surfaces, ink on light ones. Never set the logo in italics.
 - Use the existing Piazzolla display face for the brand and major page headings; use Inter for controls, labels, and body text. Keep a clear size and weight difference between page title, section title, and supporting text.
 - Do not place an eyebrow or overline above a heading. Avoid decorative taglines and explanations that do not help someone act.
 - The conversation document is square and attaches cleanly to its notebook tabs. Primary tabs (Notes, Transcript, and the recording page tabs) have a 7px top radius and square bottom corners; the large outward curves are retired. An unselected tab is a quiet raised surface with muted text and a hairline border. The selected tab is inverted (text-colour fill, surface-colour label) and sits on the 2px rule that joins it to the document. `.view-tabs` is the same shape for notebook view tabs. Keep My Notes and Enhanced Notes quieter than the primary tabs.

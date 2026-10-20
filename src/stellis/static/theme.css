@@ -98,9 +98,21 @@ header {
   backdrop-filter: blur(18px);
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: var(--ink);
-  font: italic 400 28px/1 Piazzolla, Georgia, serif;
+  font: 400 28px/1 Piazzolla, Georgia, serif;
   letter-spacing: -.045em;
+}
+/* The v2 mark is an alpha mask, so it takes the wordmark colour: one colour, light or dark. */
+.brand-mark {
+  width: 24px;
+  height: 25px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("/static/logo-mark.png") center / contain no-repeat;
+  mask: url("/static/logo-mark.png") center / contain no-repeat;
 }
 .header-side { display: flex; align-items: center; gap: 16px; }
 .calendar-card { margin: 0 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
