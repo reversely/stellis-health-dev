@@ -1,0 +1,144 @@
+{
+  "generated": "2026-10-20T19:01:22.021Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux-arm64/chrome-headless-shell",
+  "dark": true,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/chat/settings",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_360_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 819
+          },
+          "findings": [
+            {
+              "check": "tap-target",
+              "level": "warn",
+              "element": "a.back-link \"← Home\"",
+              "rect": {
+                "left": 20,
+                "top": 211,
+                "right": 83,
+                "bottom": 231,
+                "width": 63,
+                "height": 20
+              },
+              "detail": "63x20px, minimum 24x24"
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_390_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 844
+          },
+          "findings": [
+            {
+              "check": "tap-target",
+              "level": "warn",
+              "element": "a.back-link \"← Home\"",
+              "rect": {
+                "left": 20,
+                "top": 211,
+                "right": 83,
+                "bottom": 231,
+                "width": 63,
+                "height": 20
+              },
+              "detail": "63x20px, minimum 24x24"
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_768_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 1024
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_1024_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 770
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_1280_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 800
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_1440_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 900
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-template-management/docs/evidence/410/audit-dark/127-0-0-1-8824-chat-settings_1920_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1080
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 2
+  }
+}

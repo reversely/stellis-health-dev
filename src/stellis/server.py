@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
+from stellis import agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -502,6 +502,7 @@ def sync_config() -> dict[str, str | None]:
 
 
 class AgentCreate(BaseModel):
+    template_id: str | None = None
     name: str | None = Field(default=None, max_length=80)
     role: str | None = Field(default=None, max_length=160)
     instructions: str = Field(default="", max_length=4000)
@@ -511,6 +512,7 @@ class AgentCreate(BaseModel):
 
 
 class AgentUpdate(BaseModel):
+    enabled: bool | None = None
     name: str | None = Field(default=None, max_length=80)
     role: str | None = Field(default=None, max_length=160)
     instructions: str | None = Field(default=None, max_length=4000)
@@ -550,8 +552,20 @@ def list_agents() -> list[dict[str, object]]:
 def create_agent(request: AgentCreate) -> dict[str, object]:
     if request.prompt:
         return _agent_result(lambda: agents.create_from_prompt(request.prompt or "", request.notebook_id))
-    return _agent_result(lambda: agents.create(request.name or "", request.role or "",
-                                               request.instructions, request.notebook_id, request.steward))
+    def create():
+        if request.template_id:
+            return agents.deploy(request.template_id, request.notebook_id, request.name, request.instructions)
+        template = None
+        return agents.create(request.name or (template["name"] if template else ""),
+                             request.role or (template["does"] if template else ""),
+                             request.instructions, request.notebook_id,
+                             request.steward or request.template_id == "steward", request.template_id)
+    return _agent_result(create)
+
+
+@api.get("/agents/templates")
+def agent_template_catalog() -> list[dict]:
+    return agent_templates.catalog()
 
 
 @api.get("/agents/runtime")
@@ -567,7 +581,13 @@ def get_agent(agent_id: str) -> dict[str, object]:
 @api.patch("/agents/{agent_id}")
 def update_agent(agent_id: str, request: AgentUpdate) -> dict[str, object]:
     return _agent_result(lambda: agents.update(agent_id, name=request.name, role=request.role,
-                                                instructions=request.instructions))
+                                                instructions=request.instructions, enabled=request.enabled))
+
+
+@api.delete("/agents/{agent_id}")
+def delete_agent(agent_id: str) -> dict[str, bool]:
+    _agent_result(lambda: agents.delete(agent_id))
+    return {"deleted": True}
 
 
 @api.put("/agents/{agent_id}/notebooks/{notebook_id}")

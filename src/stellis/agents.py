@@ -7,7 +7,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from stellis import storage
+from stellis import agent_templates, storage
 
 
 def _now() -> str:
@@ -38,8 +38,9 @@ def _record(conn: sqlite3.Connection, agent_id: str) -> dict[str, object]:
     assignments = [dict(item) for item in conn.execute("""SELECT an.notebook_id, n.name AS notebook_name,
         an.is_steward FROM agent_notebooks an JOIN notebooks n ON n.id = an.notebook_id
         WHERE an.agent_id = ? ORDER BY n.name COLLATE NOCASE""", (agent_id,))]
-    return {**dict(row), "is_default": bool(row["is_default"]),
-            "notebooks": [{**item, "is_steward": bool(item["is_steward"])} for item in assignments]}
+    record = {**dict(row), "is_default": bool(row["is_default"]), "enabled": bool(row["enabled"]),
+              "notebooks": [{**item, "is_steward": bool(item["is_steward"])} for item in assignments]}
+    return {**record, "behavior": agent_templates.behavior(record)}
 
 
 def list_agents() -> list[dict[str, object]]:
@@ -56,7 +57,9 @@ def get(agent_id: str) -> dict[str, object]:
 
 
 def create(name: str, role: str, instructions: str = "", notebook_id: str | None = None,
-           steward: bool = False) -> dict[str, object]:
+           steward: bool = False, template_id: str | None = None) -> dict[str, object]:
+    if template_id:
+        agent_templates.get(template_id)
     name = _value(name, "Name", 80)
     role = _value(role, "Role", 160)
     instructions = instructions.strip()
@@ -79,6 +82,7 @@ def create(name: str, role: str, instructions: str = "", notebook_id: str | None
             (id, name, name_key, role, instructions, slug, is_default, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)""",
             (agent_id, name, key, role, instructions, slug, now, now))
+        conn.execute("UPDATE agents SET template_id = ? WHERE id = ?", (template_id, agent_id))
         if notebook_id:
             _assign(conn, agent_id, notebook_id, steward)
         return _record(conn, agent_id)
@@ -88,7 +92,7 @@ def create_from_prompt(prompt: str, notebook_id: str | None = None) -> dict[str,
     """Parse the documented short creation instruction without an untrusted model call."""
     match = re.fullmatch(r"\s*Make\s+(.+?)\s+my\s+(.+?)(?:\s*[;.].*)?\s*", prompt, re.IGNORECASE | re.DOTALL)
     if not match:
-        raise ValueError("Try: Make Mira my project coordinator")
+        raise ValueError("Try: Make Writing my project writing agent")
     notebook_match = re.search(r"\bkeep\s+the\s+(.+?)\s+notebook\b", prompt, re.IGNORECASE)
     if notebook_match and not notebook_id:
         requested = notebook_match.group(1).strip().casefold()
@@ -101,7 +105,7 @@ def create_from_prompt(prompt: str, notebook_id: str | None = None) -> dict[str,
 
 
 def update(agent_id: str, *, name: str | None = None, role: str | None = None,
-           instructions: str | None = None) -> dict[str, object]:
+           instructions: str | None = None, enabled: bool | None = None) -> dict[str, object]:
     with storage.connect() as conn:
         current = _record(conn, agent_id)
         next_name = _value(name, "Name", 80) if name is not None else str(current["name"])
@@ -114,12 +118,30 @@ def update(agent_id: str, *, name: str | None = None, role: str | None = None,
                 WHERE id = ?""", (next_name, next_name.casefold(), next_role, next_instructions, _now(), agent_id))
         except sqlite3.IntegrityError as exc:
             raise ValueError("An agent with this name already exists") from exc
+        if enabled is not None:
+            if current["is_default"] and not enabled:
+                raise ValueError("The default agent must remain on")
+            conn.execute("UPDATE agents SET enabled = ? WHERE id = ?", (int(enabled), agent_id))
         return _record(conn, agent_id)
+
+
+def require_enabled(agent_id: str) -> dict[str, object]:
+    agent = get(agent_id)
+    if not agent["enabled"]:
+        raise ValueError("This agent is off. Turn it on in Agent settings.")
+    return agent
 
 
 def _assign(conn: sqlite3.Connection, agent_id: str, notebook_id: str, steward: bool) -> None:
     if conn.execute("SELECT 1 FROM notebooks WHERE id = ?", (notebook_id,)).fetchone() is None:
         raise LookupError("Notebook not found")
+    agent = _record(conn, agent_id)
+    if steward and agent.get("template_id") not in (None, "steward"):
+        raise ValueError("Add a Steward template to coordinate this notebook")
+    if agent.get("template_id") == "steward":
+        if any(item["notebook_id"] != notebook_id for item in agent["notebooks"]):
+            raise ValueError("A Steward serves one notebook. Add a Steward to the other notebook instead.")
+        steward = True
     if steward:
         conn.execute("UPDATE agent_notebooks SET is_steward = 0 WHERE notebook_id = ?", (notebook_id,))
     conn.execute("""INSERT INTO agent_notebooks(agent_id, notebook_id, is_steward) VALUES (?, ?, ?)
@@ -147,10 +169,12 @@ def resolved_agent(notebook_id: str | None = None, explicit_id: str | None = Non
         _default(conn)
         if explicit_id:
             result = _record(conn, explicit_id)
+            if not result["enabled"]:
+                raise ValueError("This agent is off. Turn it on in Agent settings.")
             return {"agent": result, "reason": "explicit"}
         if notebook_id:
             row = conn.execute("""SELECT a.id FROM agents a JOIN agent_notebooks an ON an.agent_id = a.id
-                WHERE an.notebook_id = ? AND an.is_steward = 1""", (notebook_id,)).fetchone()
+                WHERE an.notebook_id = ? AND an.is_steward = 1 AND a.enabled = 1""", (notebook_id,)).fetchone()
             if row:
                 return {"agent": _record(conn, str(row["id"])), "reason": "notebook_steward"}
         row = conn.execute("SELECT id FROM agents WHERE is_default = 1").fetchone()
@@ -301,4 +325,38 @@ def delete(agent_id: str) -> None:
             raise LookupError("Agent not found")
         if row["is_default"]:
             raise ValueError("The general agent cannot be deleted")
+        if conn.execute("SELECT 1 FROM agent_jobs WHERE agent_id = ? AND state = 'running'", (agent_id,)).fetchone():
+            raise ValueError("Stop this agent's active request before deleting it")
+        if conn.execute("SELECT 1 FROM inference_traces WHERE agent_id = ? AND state = 'running'", (agent_id,)).fetchone():
+            raise ValueError("Stop this agent's active request before deleting it")
+        if conn.execute("SELECT 1 FROM agent_delegations WHERE (steward_id = ? OR specialist_id = ?) AND state IN ('queued', 'running')", (agent_id, agent_id)).fetchone():
+            raise ValueError("Stop this agent's delegated job before deleting it")
         conn.execute("DELETE FROM agents WHERE id = ?", (agent_id,))
+
+
+def deploy(template_id: str, notebook_id: str | None = None, name: str | None = None,
+           instructions: str = "") -> dict[str, object]:
+    """Reuse a template deployment; a supplied name creates an independent identity."""
+    template = agent_templates.get(template_id)
+    if template_id == "steward" and not notebook_id:
+        raise ValueError("Choose a notebook for its Steward")
+    with storage.connect() as conn:
+        notebook = conn.execute("SELECT name FROM notebooks WHERE id = ?", (notebook_id,)).fetchone() if notebook_id else None
+        if notebook_id and not notebook:
+            raise LookupError("Notebook not found")
+        if not name:
+            if template_id == "steward":
+                row = conn.execute("SELECT agent_id FROM agent_notebooks WHERE notebook_id = ? AND is_steward = 1", (notebook_id,)).fetchone()
+            else:
+                row = conn.execute("SELECT id FROM agents WHERE template_id = ? AND name_key = ?", (template_id, template["name"].casefold())).fetchone()
+            if row:
+                existing_id = str(row[0])
+            else:
+                existing_id = None
+        else:
+            existing_id = None
+    if existing_id:
+        return assign(existing_id, notebook_id, template_id == "steward") if notebook_id else get(existing_id)
+    deployment_name = name or (f"{notebook['name'][:65]} Steward" if template_id == "steward" else template["name"])
+    return create(deployment_name, template["does"], instructions, notebook_id,
+                  template_id == "steward", template_id)

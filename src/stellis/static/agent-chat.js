@@ -1,6 +1,7 @@
 (() => {
   const base = '/api/v1';
   let agents = [];
+  let templates = [];
   let notebooks = [];
   let collections = [];
   let view = 'thread';
@@ -100,7 +101,9 @@
           status('Steward saved'); await reloadAgent(agent.id);
         } catch (error) { status(error.message); }
       });
-      row.append(label, steward); section.append(row);
+      row.append(label);
+      if (!agent.template_id || agent.template_id === 'steward') row.append(steward);
+      section.append(row);
     }
     return section;
   }
@@ -178,6 +181,10 @@
         }
       }
       section.append(item);
+    }
+    if (!agent.enabled) {
+      section.append(el('p', 'agent-empty', 'Turn on this agent in Agent settings to start a request.'));
+      return section;
     }
     if (!runtimeConfigured) {
       section.append(el('p', 'agent-empty', 'Agent replies are unavailable on this device.'));
@@ -567,7 +574,7 @@
   function identityForm(agent) {
     const identity = el('form', 'agent-identity-form');
     identity.append(field('Name', agent.name, 'name'), field('Role', agent.role, 'role'),
-      field('Instructions', agent.instructions, 'instructions'));
+      field('Instructions', agent.instructions, 'instructions', true));
     const save = el('button', '', 'Save agent'); save.type = 'submit'; identity.append(save);
     identity.addEventListener('submit', async event => {
       event.preventDefault(); save.disabled = true;
@@ -584,7 +591,8 @@
     const target = document.querySelector('#agent-detail');
     const head = el('div', 'agent-detail-head');
     const settings = el('a', 'agent-quiet agent-link-button', 'Settings'); settings.href = '/chat/settings';
-    head.append(el('h3', '', agent.name), el('p', '', agent.role), settings);
+    head.append(el('h3', '', agent.name), el('p', '', agent.behavior?.does || agent.role), settings);
+    if (!agent.enabled) head.append(el('p', 'agent-empty', 'This agent is off. Turn it on in Agent settings.'));
     clearTimeout(delegationTimer);
     const [thread, drafts, delegation] = await Promise.all([threadSection(agent), draftSection(agent), delegationSection(agent)]);
     if (selectedId !== agent.id || view !== 'thread') return;
@@ -599,18 +607,19 @@
   // Agent settings (#390): every agent grouped like Home, each one opening to its name, notebooks and memory.
   function settingsEntry({agent, books}, groupKey) {
     const key = `${groupKey}:${agent.id}`;
-    const details = el('details', 'agent-settings-item');
+    const details = el('details', 'agent-settings-item'); details.dataset.agentId = agent.id;
     const summary = el('summary');
     const text = el('span', 'agent-list-text');
     text.append(el('strong', '', agent.name), el('small', '', agent.role));
     if (books.length) text.append(el('small', 'agent-settings-where', books.map(book => book.notebook_name).join(', ')));
     summary.append(agentAvatar(agent, 32), text);
+    if (!agent.enabled) summary.append(el('span', 'home-agent-tag', 'Off'));
     if (books.some(book => book.is_steward)) summary.append(el('span', 'home-agent-tag', 'Steward'));
     const body = el('div', 'agent-settings-body');
     const fill = async () => {
       const open = el('a', 'agent-quiet agent-link-button', 'Open chat'); open.href = `/chat/${encodeURIComponent(agent.id)}`;
       const memory = await memorySection(agent);
-      body.replaceChildren(identityForm(agent), notebookSection(agent), memory, open);
+      body.replaceChildren(behaviorCard(agent), agentControls(agent), identityForm(agent), notebookSection(agent), memory, open);
     };
     details.addEventListener('toggle', () => {
       if (!details.open) { openSettings.delete(key); return; }
@@ -649,29 +658,92 @@
   }
   async function show(requestedId) {
     status('');
-    const [items, books, groups, runtime] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime')]);
+    const [items, books, groups, runtime, catalog] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime'), request('/agents/templates')]);
+    templates = catalog;
     agents = items; notebooks = books.notebooks || []; collections = groups.collections || []; runtimeConfigured = runtime.configured;
     if (requestedId === 'settings') { setView('settings'); selectedId = null; renderList(); await renderSettings(); return; }
     const id = agents.some(agent => agent.id === requestedId) ? requestedId : agents[0]?.id;
     if (id) await select(id, false);
   }
-  document.querySelector('#agent-new-toggle').addEventListener('click', () => {
-    document.querySelector('#agent-new-form').hidden = false;
-    document.querySelector('#agent-new-prompt').focus();
-  });
-  document.querySelector('#agent-new-cancel').addEventListener('click', () => {
-    document.querySelector('#agent-new-form').hidden = true;
-  });
+  function behaviorCard(agent) {
+    const card = el('dl', 'agent-behavior');
+    const behavior = agent.behavior || {};
+    for (const [key, label] of [['does', 'Does'], ['runs', 'Runs'], ['returns', 'Returns'], ['asks_first', 'Asks first']]) {
+      card.append(el('dt', '', label), el('dd', '', behavior[key] || 'Not specified'));
+    }
+    return card;
+  }
+  function agentControls(agent) {
+    const controls = el('div', 'agent-controls');
+    const label = el('label', 'agent-enabled');
+    const toggle = el('input'); toggle.type = 'checkbox'; toggle.checked = agent.enabled; toggle.disabled = agent.is_default;
+    label.append(toggle, el('span', '', 'On in assigned notebooks'));
+    toggle.addEventListener('change', async () => {
+      toggle.disabled = true;
+      try {
+        await request(`/agents/${encodeURIComponent(agent.id)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:toggle.checked})});
+        await reloadAgent(agent.id); status(toggle.checked ? 'Agent turned on' : 'Agent turned off');
+      } catch (error) { toggle.checked = !toggle.checked; toggle.disabled = false; status(error.message); }
+    });
+    controls.append(label);
+    const template = templates.find(item => item.id === agent.template_id);
+    if (template) {
+      const baseline = el('details', 'agent-template-instructions');
+      baseline.append(el('summary', '', template.name + ' instructions'), el('p', '', template.instructions));
+      controls.append(baseline);
+    }
+    if (!agent.is_default) {
+      const remove = el('button', 'agent-quiet', 'Delete agent'); remove.type = 'button';
+      remove.addEventListener('click', async () => {
+        if (!window.confirm(`Delete ${agent.name}, its chat and saved memory?`)) return;
+        remove.disabled = true;
+        try { await request(`/agents/${encodeURIComponent(agent.id)}`, {method:'DELETE'}); await show('settings'); status('Agent deleted'); }
+        catch (error) { remove.disabled = false; status(error.message); }
+      });
+      controls.append(remove);
+    }
+    return controls;
+  }
+  function openCreate() {
+    status('');
+    const form = document.querySelector('#agent-new-form'); form.replaceChildren(); form.hidden = false;
+    const templateLabel = el('label', '', 'Agent template');
+    const select = el('select'); select.name = 'template_id'; select.required = true;
+    for (const item of templates) { const option = el('option', '', item.name); option.value = item.id; select.append(option); }
+    templateLabel.append(select);
+    const preview = el('div', 'agent-template-preview');
+    const notebookLabel = el('label', '', 'Notebook');
+    const notebook = el('select'); notebook.name = 'notebook_id'; notebook.required = true;
+    const empty = el('option', '', 'Choose notebook'); empty.value = ''; notebook.append(empty);
+    for (const item of notebooks) { const option = el('option', '', item.name); option.value = item.id; notebook.append(option); }
+    notebookLabel.append(notebook);
+    const copyLabel = el('label', 'agent-enabled'); const copy = el('input'); copy.type = 'checkbox';
+    copyLabel.append(copy, el('span', '', 'Create a copy with separate memory'));
+    const name = field('Copy name', '', 'name'); name.hidden = true; name.querySelector('input').disabled = true;
+    copy.addEventListener('change', () => { name.hidden = !copy.checked; name.querySelector('input').disabled = !copy.checked; if (copy.checked) name.querySelector('input').focus(); });
+    const instructions = field('Instructions for this agent', '', 'instructions', true);
+    const actions = el('div', 'agent-form-actions'); const add = el('button', '', 'Add agent'); add.type = 'submit';
+    const cancel = el('button', 'agent-quiet', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', () => {form.hidden = true;document.querySelector('#agent-new-toggle').focus();});
+    actions.append(add, cancel);
+    function update() {
+      const template = templates.find(item => item.id === select.value);
+      preview.replaceChildren(behaviorCard({behavior:template}));
+      const steward = select.value === 'steward'; copyLabel.hidden = steward;
+      if (steward) {copy.checked = false; name.hidden = true; name.querySelector('input').disabled = true;}
+    }
+    select.addEventListener('change', update);
+    form.append(templateLabel, preview, notebookLabel, copyLabel, name, instructions, actions);
+    if (!notebooks.length) { add.disabled = true; form.append(el('p', 'agent-empty', 'Create a notebook in the Library first.')); }
+    update(); select.focus();
+  }
+  document.querySelector('#agent-new-toggle').addEventListener('click', openCreate);
   document.querySelector('#agent-new-form').addEventListener('submit', async event => {
     event.preventDefault();
-    const form = event.currentTarget; const button = form.querySelector('button[type="submit"]');
-    button.disabled = true;
+    const form = event.currentTarget; const button = form.querySelector('button[type="submit"]'); button.disabled = true;
     try {
-      const created = await request('/agents', {method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({prompt:document.querySelector('#agent-new-prompt').value})});
-      form.reset(); form.hidden = true;
-      await show(created.id); history.replaceState({}, '', `/chat/${encodeURIComponent(created.id)}`);
-      status('Agent created');
+      const created = await request('/agents', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.fromEntries(new FormData(form)))});
+      form.hidden = true; await show('settings'); history.replaceState({}, '', '/chat/settings');
+      status(created.name + ' added');
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }
   });
