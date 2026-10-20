@@ -14,6 +14,7 @@ from stellis import runtime_profile, storage
 
 _GUARD = threading.Lock()
 _SWITCHING = False
+_ACTIVE_REQUESTS = set()
 
 _ACTIVE = contextvars.ContextVar("inference_trace", default=None)
 
@@ -83,6 +84,7 @@ def span(kind: str, agent_id=None, model=None, provider=None):
                 (trace_id, kind, agent_id, runtime_profile.selected(), execution, model, provider, _now()))
             conn.execute("""DELETE FROM inference_traces WHERE state != 'running' AND id NOT IN
                 (SELECT id FROM inference_traces ORDER BY created_at DESC LIMIT 500)""")
+        _ACTIVE_REQUESTS.add(trace_id)
     token = _ACTIVE.set(trace_id)
     state = "succeeded"
     event("request_started")
@@ -103,6 +105,8 @@ def span(kind: str, agent_id=None, model=None, provider=None):
             conn.execute("""UPDATE inference_traces SET state = ?, finished_at = ?, duration_ms = ?
                 WHERE id = ?""", (state, _now(), round((time.monotonic()-start)*1000), trace_id))
         _ACTIVE.reset(token)
+        with _GUARD:
+            _ACTIVE_REQUESTS.discard(trace_id)
 
 
 def recent():
@@ -136,7 +140,7 @@ def model_change():
         with storage.connect() as conn:
             active = conn.execute("SELECT COUNT(*) FROM inference_traces WHERE state = 'running'").fetchone()[0]
             active += conn.execute("SELECT COUNT(*) FROM agent_jobs WHERE state = 'running'").fetchone()[0]
-        if _SWITCHING or active:
+        if _SWITCHING or active or _ACTIVE_REQUESTS:
             raise ValueError("Wait for active requests to finish before changing models")
         _SWITCHING = True
     try:

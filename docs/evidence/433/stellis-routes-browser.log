@@ -1,0 +1,4 @@
+Independent UI persistence and vision rejection passed
+Transcript actual response {'answer': 'The project is Atlas.', 'insufficient_evidence': False, 'source_segment_ids': ['s1']}
+Planning actual response [{'id': 'ccce00ba-ea89-4302-b14d-a7dfaf37fc62', 'name': 'Atlas design review', 'collection': 'Work', 'source_ids': ['source1']}]
+Categories actual response ('Meetings', 0.9980497607963436)

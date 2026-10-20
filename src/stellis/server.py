@@ -1306,6 +1306,21 @@ def select_local_model(request: LocalModelSelection) -> dict[str, object]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+class ModelRouteSelection(BaseModel):
+    routes: dict[str, str]
+
+
+@api.put("/settings/inference/routes")
+def select_model_routes(request: ModelRouteSelection) -> dict[str, object]:
+    from stellis import runtime_settings
+    try:
+        return runtime_settings.save_routes(request.routes)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @api.delete("/settings/inference/traces")
 def clear_inference_traces() -> dict[str, object]:
     from stellis import runtime_settings, runtime_trace

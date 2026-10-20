@@ -108,7 +108,7 @@ async def check(account_id):
     default = next(item for item in agents.list_agents() if item["is_default"])
     reply = await agent_runtime.ask(default["id"], "This is a connection check during first setup. Reply with one short sentence saying you are ready to help.")
     with _LOCK:
-        state = _read(); state["ready"] = {"checked_at":observed["checked_at"], "model":route["inference_model"], "local":route["local_inference"], "job_id":reply["job_id"]}; _save(state)
+        state = _read(); state["ready"] = {"checked_at":observed["checked_at"], "model":route["agent_model"], "local":route["local_inference"], "job_id":reply["job_id"]}; _save(state)
     return status(account_id)
 
 

@@ -1,0 +1,53 @@
+"""Persistent model choices per inference role and deployment profile."""
+from __future__ import annotations
+
+import json
+import os
+import re
+from stellis import storage
+
+ROLES = {
+    "agent": ("Managed agents", "tools"),
+    "transcript": ("Transcript AI", "completion"),
+    "categories": ("Categories", "completion"),
+    "planning": ("Notebook planning", "completion"),
+    "vision": ("Tutor screen reading", "vision"),
+}
+
+
+def path():
+    from stellis import runtime_profile
+    profile = "local" if runtime_profile.local_inference() else "cloud" if runtime_profile.cloud() else "legacy"
+    return storage.data_dir() / f"model-routes-{profile}.json"
+
+
+def choices():
+    file = path()
+    if not file.exists():
+        return {}
+    data = json.loads(file.read_text())
+    if not isinstance(data, dict):
+        raise ValueError("Saved model routes are unreadable")
+    validate(data)
+    return data
+
+
+def validate(routes):
+    if not isinstance(routes, dict) or any(role not in ROLES for role in routes):
+        raise ValueError("Choose a listed inference role")
+    for model in routes.values():
+        if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}", model):
+            raise ValueError("Enter a valid model ID")
+
+
+def save(routes):
+    """Atomically replace already validated role choices; callers own runtime guards."""
+    validate(routes)
+    file = path(); temporary = file.with_suffix(".tmp")
+    try:
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "w") as output:
+            json.dump(routes, output)
+        os.replace(temporary, file)
+    finally:
+        temporary.unlink(missing_ok=True)

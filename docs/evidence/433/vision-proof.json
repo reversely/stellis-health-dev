@@ -1,0 +1,12 @@
+{
+  "observation": {
+    "description": "The screenshot shows a simple interface with the text 'Atlas CAD lesson' at the top and a blue button labeled 'Sketch' in the center. The button is the only interactive element visible.",
+    "point": {
+      "x": 0.5,
+      "y": 0.45,
+      "label": "Sketch button"
+    }
+  },
+  "selected_model": "qwen2.5vl:7b",
+  "reported_model": "qwen2.5vl:7b"
+}

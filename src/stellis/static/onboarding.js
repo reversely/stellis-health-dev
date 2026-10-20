@@ -70,7 +70,7 @@
       catch (e) { result.textContent = e.message; throw e; }
     }));
     const details = node('details', null, 'setup-runtime-details'); details.append(node('summary', 'Models and speech'));
-    details.append(node('p', `Teaching: ${state.runtime.inference_model}`, 'setup-hint'));
+    details.append(node('p', `Teaching: ${state.runtime.agent_model}`, 'setup-hint'));
     if (state.runtime.tutor_vision_model) details.append(node('p', `Screen reading: ${state.runtime.tutor_vision_model}`, 'setup-hint'));
     const speech = state.runtime.speech || {};
     details.append(node('p', `Live speech: ${speech.live_installed ? 'Installed' : 'Not configured'}. Saved speech: ${speech.transcribe && speech.diarize ? 'Installed' : 'Not configured'}.`, 'setup-hint'));

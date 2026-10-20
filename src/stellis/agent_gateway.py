@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from stellis import runtime_trace
+from stellis import runtime_trace, runtime_profile, model_routes
 
 
 class GatewayError(Exception):
@@ -80,6 +80,10 @@ async def turn(prompt: str, session_id: str) -> tuple[str, str]:
         raise GatewayError("Invalid agent session")
     headers = {"Authorization": "Bearer " + token,
                "x-openclaw-session-key": "stellis-" + session_id}
+    if model_routes.choices().get("agent"):
+        # OpenClaw's documented backend-model override preserves managed execution.
+        provider = os.environ.get("STELLIS_CLOUD_MODEL_PROVIDER", "nebius").strip()
+        headers["x-openclaw-model"] = provider + "/" + runtime_profile.model_id("agent")
     try:
         async with asyncio.timeout(150):
             async with httpx.AsyncClient(timeout=150, follow_redirects=False, trust_env=False) as client:

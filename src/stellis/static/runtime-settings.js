@@ -1,6 +1,7 @@
 const $ = selector => document.querySelector(selector);
 let current;
 let busy = false;
+const draftRoutes = new Map();
 const kindLabels = {tutor_vision: 'Tutor screen reading', onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', specialist: 'Specialist', email_draft: 'Email draft',
   answer: 'Transcript question', summary: 'Summary', clean: 'Transcript cleanup', agent: 'To-do extraction', categorization: 'Category scoring'};
 const stateLabels = {running: 'Running', succeeded: 'Completed', failed: 'Failed', interrupted: 'Interrupted'};
@@ -11,7 +12,7 @@ const eventLabels = {request_started: 'Request started', sources_selected: 'Sour
   request_completed: 'Request completed', request_failed: 'Request failed', request_interrupted: 'Request interrupted'};
 const checkLabels = {available: 'Model available', model_missing: 'Selected model not found',
   unavailable: 'Unavailable', not_configured: 'Not configured', reported: 'Route reported by runtime',
-  mismatch: 'Agent and transcript routes differ', remote_unverified: 'Cloud route not yet verified'};
+  mismatch: 'Managed runtime uses a different model', remote_unverified: 'Cloud route not yet verified'};
 function element(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -34,25 +35,52 @@ function route(title, execution, model, state) {
   row.append(details);
   return row;
 }
+function editableRoute(entry, data) {
+  const model = draftRoutes.has(entry.role) ? draftRoutes.get(entry.role) : entry.model;
+  const observed = entry.observed;
+  const state = observed ? (checkLabels[observed.state] || observed.state) +
+    (observed.model ? `: ${observed.model}` : '') : entry.model ? 'Configured, not checked' : 'Not configured';
+  const row = route(entry.label, entry.role === 'agent' ? data.agent_execution + ' → OpenClaw inside NemoClaw' : data.inference_provider, entry.model, state);
+  row.dataset.role = entry.role;
+  const form = element('form', undefined, 'inference-route-editor');
+  const input = element(data.local_inference ? 'select' : 'input'); input.setAttribute('aria-label', entry.label + ' model');
+  if (data.local_inference) {
+    const values = [...new Set([entry.model, ...(data.observed?.models || [])].filter(Boolean))];
+    for (const value of values) { const option = element('option', value); option.value = value; input.append(option); }
+  } else { input.type = 'text'; input.maxLength = 200; input.placeholder = 'Token Factory model ID'; }
+  input.value = model || ''; input.required = true;
+  input.disabled = !entry.editable || data.local_inference && !data.observed?.models.length;
+  const save = element('button', 'Save'); save.type = 'submit';
+  const update = () => {draftRoutes.set(entry.role,input.value);save.disabled=busy || input.disabled || !input.value || input.value === entry.model;};
+  input.addEventListener('input', update); input.addEventListener('change', update);
+  save.disabled = busy || input.disabled || !model || model === entry.model;
+  form.append(input,save);
+  form.addEventListener('submit', async event => {
+    event.preventDefault(); const selected=input.value;
+    await operate(save, $('#inference-check-status'), `Saving ${entry.label}…`, async () => {
+      const result=await request('/routes',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({routes:{[entry.role]:selected}})});
+      if(draftRoutes.get(entry.role)===selected)draftRoutes.delete(entry.role);
+      return result;
+    });
+  });
+  row.lastElementChild.append(form);
+  if (!entry.editable) row.lastElementChild.append(element('p','The deployment owner manages this route.','settings-note'));
+  else if (input.disabled) row.lastElementChild.append(element('p','Check connections to load installed models.','settings-note'));
+  if (entry.role === 'vision' && !data.local_inference) row.lastElementChild.append(element('p','Choose a vision-capable model. Screenshots are sent to Token Factory only when you ask.','settings-note'));
+  return row;
+}
 function render(data) {
   current = data;
   const observed = data.observed;
   const agent = observed?.agent;
   $('#inference-routes').replaceChildren(
-    route('Agents', data.agent_execution + ' → OpenClaw inside NemoClaw', agent?.model,
-      agent ? (checkLabels[agent.state] || agent.state) + (agent.provider ? ', ' + agent.provider : '') :
-        data.agent_configured ? 'Configured, not checked' : 'Not configured'),
-    route('Transcript AI', data.inference_provider, data.inference_model,
-      observed ? checkLabels[observed.inference.state] : data.inference_configured ? 'Configured, not checked' : 'Not configured'),
-    route('Categories', data.inference_provider, data.category_model, 'Configured model'),
-    route('Tutor screen reading', data.local_inference ? 'GN100 Ollama' : 'Cloud', data.tutor_vision_model,
-      data.tutor_vision_model ? 'Configured vision model' : 'Not configured'),
+    ...data.routes.map(entry => editableRoute(entry, data)),
     route('Live transcription', data.agent_execution, 'Local Parakeet speech worker',
       data.speech?.live_installed ? 'Worker and model files installed' : 'Not configured'),
     route('Saved transcription', data.agent_execution, 'Whisper + local speaker models',
       data.speech?.transcribe && data.speech?.diarize ? 'Model files installed' : 'Not configured'));
   $('#inference-checked-at').textContent = observed ? 'Last checked ' + time(observed.checked_at) : 'No connection check yet.';
-  $('#local-model-controls').hidden = !data.can_switch;
+  $('#local-model-controls').hidden = true;
   const select = $('#local-model-select');
   const wanted = select.value || data.inference_model;
   select.replaceChildren(element('option', observed?.models.length ? 'Choose a model' : 'Check connections to load models'));
@@ -115,6 +143,7 @@ export async function load() {
 async function operate(button, status, message, action) {
   if (busy) return;
   busy = true; button.disabled = true; status.textContent = message; updateApply();
+  document.querySelectorAll('.inference-route-editor button').forEach(item => item.disabled = true);
   try { render(await action()); status.textContent = 'Done'; }
   catch (error) { status.textContent = error.message; }
   finally { busy = false; button.disabled = false; if (current) render(current); }

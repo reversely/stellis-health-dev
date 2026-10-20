@@ -350,5 +350,5 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
               extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
     agents.require_enabled(agent_id)
-    with runtime_trace.span("agent_chat", agent_id=agent_id):
+    with runtime_trace.span("agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
         return await _ask(agent_id, question, notebook_id, extra_sources)

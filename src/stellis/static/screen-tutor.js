@@ -17,7 +17,7 @@ export async function create(agent, refreshed, messageBody) {
   if (epoch !== lifecycle) return section;
   const local = el('p', state.inference || 'Screen tutoring unavailable', 'tutor-local-mode'); section.append(local);
   if (!response.ok || !state.configured) { section.append(el('p', state.reason || state.detail || 'Screen tutoring unavailable')); return section; }
-  section.append(el('p', 'Share a window or choose a screenshot. Images are not saved; your tutor’s observations stay in chat.', 'settings-note'));
+  section.append(el('p', state.local_inference ? 'Share a window or choose a screenshot. Images stay on GN100 and are not saved; observations stay in chat.' : 'Screenshots go to Token Factory when you ask. Stellis saves observations in chat, not the images.', 'settings-note'));
   const actions = el('div', null, 'agent-inline-actions');
   const share = el('button', 'Share window'); share.type = 'button';
   const upload = el('button', 'Choose screenshot', 'agent-quiet'); upload.type = 'button';
@@ -76,7 +76,7 @@ export async function create(agent, refreshed, messageBody) {
     if (!['image/png','image/jpeg'].includes(picked.type) || picked.size > 2000000) {status.textContent = 'Choose a PNG or JPEG smaller than 2 MB'; return;}
     objectURL = URL.createObjectURL(picked); image.src = objectURL;
     try { await image.decode(); if (disposed || !objectURL || mine !== generation) return; image.hidden = false; preview.hidden = false; end.hidden = false;
-      status.textContent = 'Screenshot ready. Ask a question to share it with your local tutor.'; controls();
+      status.textContent = 'Screenshot ready. Ask a question to share it with your tutor.'; controls();
     } catch {if (mine === generation) clearFrame('This image could not be read. Choose a PNG or JPEG.');}
   });
   async function capture() {

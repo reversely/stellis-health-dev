@@ -10,13 +10,13 @@ from datetime import datetime, timezone
 
 import httpx
 
-from stellis import agent_runtime, ai, categorization, runtime_profile, runtime_trace, storage, recording_preview, processing
+from stellis import agent_runtime, ai, categorization, runtime_profile, runtime_trace, storage, recording_preview, processing, model_routes
 
 _SWITCH_LOCK = threading.Lock()
 
 
 def _signature():
-    values = [runtime_profile.selected(), runtime_profile.model_id(),
+    values = [runtime_profile.selected(), *[runtime_profile.model_id(role) for role in model_routes.ROLES],
               os.environ.get("STELLIS_NEMOCLAW_SANDBOX", ""),
               os.environ.get("NEMOCLAW_GATEWAY_PORT", ""),
               os.environ.get("STELLIS_AGENT_GATEWAY_URL", ""),
@@ -38,10 +38,13 @@ def status():
             "agent_execution": "Nebius Cloud" if runtime_profile.cloud() else "GN100",
             "agent_configured": agent_runtime.configured(),
             "inference_provider": "Ollama" if runtime_profile.local_inference() else "Token Factory",
-            "inference_model": runtime_profile.model_id(), "inference_configured": bool(ai._key()),
+            "inference_model": runtime_profile.model_id(), "agent_model": runtime_profile.model_id("agent"), "inference_configured": bool(ai._key()),
             "category_model": categorization._model_id(), "can_switch": can_switch(),
-            "tutor_vision_model": (os.environ.get("STELLIS_TUTOR_VISION_MODEL", "qwen3.5:9b")
-                                   if runtime_profile.local_inference() else None),
+            "tutor_vision_model": runtime_profile.model_id("vision") or None,
+            "routes": [{"role":role,"label":label,"model":runtime_profile.model_id(role),
+                        "capability":capability,"editable": role != "agent" or can_switch() or runtime_profile.cloud(),
+                        "observed": (observed or {}).get("routes",{}).get(role)}
+                       for role,(label,capability) in model_routes.ROLES.items()],
             "speech": {"live_installed": recording_preview.installed(), **processing.capabilities()["features"]},
             "observed": observed, "traces": runtime_trace.recent()}
 
@@ -96,66 +99,95 @@ def check():
             try:
                 route = _agent_route()
                 result["agent"] = {"state": "reported", **route}
-                if runtime_profile.local_inference() and (route.get("model") != runtime_profile.model_id()
+                if runtime_profile.local_inference() and (route.get("model") != runtime_profile.model_id("agent")
                                                          or route.get("provider") != "ollama-local"):
                     result["agent"]["state"] = "mismatch"
             except RuntimeError:
                 result["agent"] = {"state": "unavailable"}
+    result["routes"] = {}
+    for role in model_routes.ROLES:
+        model = runtime_profile.model_id(role)
+        state = result["inference"]["state"]
+        if not model:
+            state = "not_configured"
+        elif state not in {"unavailable", "not_configured"}:
+            state = "available" if model in result["models"] else "model_missing"
+        result["routes"][role] = {"state": state}
+    result["routes"]["agent"] = result["agent"]
     with storage.connect() as conn:
         conn.execute("INSERT OR REPLACE INTO runtime_observations VALUES (1, ?, ?, ?)",
                      (_signature(), result["checked_at"], json.dumps(result)))
     return status()
 
 
-def switch_model(model):
-    if not can_switch():
-        raise ValueError("Model switching is available to the local deployment owner")
-    if not isinstance(model, str) or not model or len(model) > 200 or model.startswith("-"):
-        raise ValueError("Choose an installed model")
+def _capabilities(model):
+    base = runtime_profile.inference_url().removesuffix("/v1")
+    try:
+        with httpx.Client(timeout=15, trust_env=False, follow_redirects=False) as client:
+            response = client.post(base + "/api/show", json={"model":model})
+        response.raise_for_status()
+        return response.json().get("capabilities", [])
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        raise RuntimeError("Could not check this model's capabilities") from exc
+
+
+def _apply_agent(model):
+    _cli(["inference", "set", "--provider", "ollama-local", "--model", model,
+          "--sandbox", os.environ["STELLIS_NEMOCLAW_SANDBOX"]], timeout=180)
+    route = _agent_route()
+    if route.get("model") != model or route.get("provider") != "ollama-local":
+        raise RuntimeError("The agent runtime did not confirm the selected model")
+
+
+def save_routes(changes):
+    model_routes.validate(changes)
+    if not changes:
+        raise ValueError("Choose a model route to save")
+    if "agent" in changes and not (can_switch() or runtime_profile.cloud()):
+        raise ValueError("Managed model switching is available to the deployment owner")
     if not _SWITCH_LOCK.acquire(blocking=False):
         raise ValueError("A model change is already running")
     try:
         with runtime_trace.model_change():
             current = check()
             observed = current["observed"]
-            if model not in observed["models"]:
-                raise ValueError("Choose an installed model. Check connections to refresh the list.")
-            route = observed["agent"]
-            if route.get("provider") != "ollama-local" or not route.get("model"):
-                raise ValueError("The agent must already use a local Ollama provider")
-            previous = route["model"]
-            base = runtime_profile.inference_url().removesuffix("/v1")
+            if runtime_profile.local_inference():
+                capabilities = {}
+                for role,model in changes.items():
+                    if model not in observed["models"]:
+                        raise ValueError("Choose an installed model. Check connections to refresh the list.")
+                    if model not in capabilities:
+                        capabilities[model] = _capabilities(model)
+                    required = model_routes.ROLES[role][1]
+                    if required not in capabilities[model]:
+                        raise ValueError(f"{model} does not support {required}, required for {model_routes.ROLES[role][0]}.")
+            elif observed["models"]:
+                if any(model not in observed["models"] for model in changes.values()):
+                    raise ValueError("Choose a model listed by Token Factory")
+            previous = None
+            if runtime_profile.local_inference() and "agent" in changes:
+                route = observed["agent"]
+                if route.get("provider") != "ollama-local" or not route.get("model"):
+                    raise ValueError("The managed agent must use the local Ollama provider")
+                previous = route["model"]
             try:
-                with httpx.Client(timeout=15, trust_env=False, follow_redirects=False) as client:
-                    response = client.post(base + "/api/show", json={"model": model})
-                response.raise_for_status()
-                capabilities = response.json().get("capabilities", [])
-                if "tools" not in capabilities:
-                    raise ValueError("This model does not support agent tools. Choose a tool-capable model.")
-            except (httpx.HTTPError, TypeError) as exc:
-                raise RuntimeError("Could not check this model's tool support") from exc
-            sandbox = os.environ["STELLIS_NEMOCLAW_SANDBOX"]
-            def apply(value):
-                _cli(["inference", "set", "--provider", "ollama-local", "--model", value,
-                      "--sandbox", sandbox], timeout=180)
-                if _agent_route().get("model") != value:
-                    raise RuntimeError("The agent runtime did not confirm the selected model")
-            path = storage.data_dir() / "local-inference-model"
-            temporary = path.with_suffix(".tmp")
-            try:
-                apply(model)
-                descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-                with os.fdopen(descriptor, "w") as output:
-                    output.write(model)
-                os.replace(temporary, path)
-            except (RuntimeError, OSError) as exc:
-                try:
-                    apply(previous)
-                except RuntimeError:
-                    raise RuntimeError("Model change failed and the previous route could not be restored. Check connections.") from exc
-                raise RuntimeError("Model change failed. The previous model was restored.") from exc
-            finally:
-                temporary.unlink(missing_ok=True)
+                if previous and previous != changes["agent"]:
+                    _apply_agent(changes["agent"])
+                model_routes.save({**model_routes.choices(), **changes})
+            except (RuntimeError, OSError, ValueError) as exc:
+                if previous and previous != changes["agent"]:
+                    try:
+                        _apply_agent(previous)
+                    except RuntimeError:
+                        raise RuntimeError("Model change failed and the previous route could not be restored. Check connections.") from exc
+                raise RuntimeError("Model change failed. Previous settings were retained.") from exc
         return check()
     finally:
         _SWITCH_LOCK.release()
+
+
+def switch_model(model):
+    """Compatibility for the previous coupled local-model control."""
+    if not can_switch():
+        raise ValueError("Model switching is available to the local deployment owner")
+    return save_routes({role:model for role in ("agent","transcript","categories","planning")})

@@ -529,7 +529,7 @@ def _request_impl(messages: list[dict[str, str]], max_tokens: int, metadata: dic
     if response.status_code in {401, 403}:
         raise AIError("authentication", f"{provider} rejected the API key")
     if response.status_code == 404:
-        raise AIError("model_unavailable", "The selected Nemotron model is unavailable")
+        raise AIError("model_unavailable", "The selected model is unavailable")
     if response.status_code >= 400:
         raise AIError("provider", f"{provider} request failed (HTTP {response.status_code})")
     try:

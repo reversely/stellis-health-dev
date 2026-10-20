@@ -31,7 +31,7 @@ def inference_url() -> str:
     return url
 
 
-def model_id() -> str:
+def _default_text_model() -> str:
     if local_inference():
         from stellis import storage
         path = storage.data_dir() / "local-inference-model"
@@ -41,3 +41,17 @@ def model_id() -> str:
                 return value
         return os.environ.get("STELLIS_LOCAL_INFERENCE_MODEL", "nemotron-3-nano:latest")
     return "nvidia/Nemotron-3_5-Lightning"
+
+
+def model_id(role: str = "transcript") -> str:
+    from stellis import model_routes
+    if role not in model_routes.ROLES:
+        raise ValueError("Unknown inference role")
+    saved = model_routes.choices().get(role)
+    if saved:
+        return saved
+    if role == "vision":
+        return os.environ.get("STELLIS_TUTOR_VISION_MODEL", "qwen3.5:9b" if local_inference() else "").strip()
+    if role == "categories" and not local_inference():
+        return "zai-org/GLM-5.3-Flash"
+    return _default_text_model()

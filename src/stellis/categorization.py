@@ -19,7 +19,7 @@ _RUNNING: set[str] = set()
 
 
 def _model_id() -> str:
-    return runtime_profile.model_id() if runtime_profile.local_inference() else MODEL_ID
+    return runtime_profile.model_id("categories")
 
 
 def _now() -> str:
@@ -83,7 +83,7 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
               "short or informal one-to-one conversations. If the transcript is only greetings, "
               "setup, noise, or too little evidence, choose Unclear. Reply with one letter.\n"
               f"{options}\n\n{source}\nAnswer:")
-    body = {"model": MODEL_ID, "prompt": f"[gMASK]<sop><|user|>\n{prompt}\n<|assistant|>\n</think>",
+    body = {"model": _model_id(), "prompt": f"[gMASK]<sop><|user|>\n{prompt}\n<|assistant|>\n</think>",
             "max_tokens": 1, "temperature": 0, "logprobs": 20}
     try:
         with httpx.Client(timeout=30, trust_env=False, follow_redirects=False) as client:
@@ -95,14 +95,29 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
                     "logprobs": True, "top_logprobs": 20,
                     "options": {"num_predict": 1, "temperature": 0}})
                 response.raise_for_status()
-                alternatives = response.json()["logprobs"][0]["top_logprobs"]
+                data = response.json()
+                runtime_trace.report(model=data.get("model"))
+                alternatives = data["logprobs"][0]["top_logprobs"]
                 top = {item["token"]: item["logprob"] for item in alternatives}
-            else:
+            elif _model_id() == MODEL_ID:
                 response = client.post(f"{ai.BASE_URL}/completions", json=body,
                                        headers={"Authorization": f"Bearer {key}"})
                 response.raise_for_status()
-                choice = response.json()["choices"][0]
+                data = response.json()
+                runtime_trace.report(model=data.get("model"))
+                choice = data["choices"][0]
                 top = choice["logprobs"]["top_logprobs"][0]
+            else:
+                # Other models use their provider's chat template, never GLM control tokens.
+                response = client.post(f"{runtime_profile.inference_url()}/chat/completions", json={
+                    "model": _model_id(), "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 1, "temperature": 0, "logprobs": True, "top_logprobs": 20},
+                    headers={"Authorization": f"Bearer {key}"})
+                response.raise_for_status()
+                data = response.json()
+                runtime_trace.report(model=data.get("model"))
+                alternatives = data["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
+                top = {item["token"]: item["logprob"] for item in alternatives}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
         raise RuntimeError("Category provider unavailable; retry") from exc
     weights = {name: 0.0 for name in labels}

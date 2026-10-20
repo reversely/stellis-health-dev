@@ -2330,3 +2330,6 @@ body.recording-page #back-from-recording { min-height:44px; }
 @media(max-width:700px) {
   body.recording-page .recording-workspace-grid.recording-chat-open .recording-workspace-main { min-height:0; padding-bottom:16px; }
 }
+
+.inference-route-editor{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}.inference-route-editor :is(input,select){min-height:44px;min-width:0;max-width:100%;flex:1;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);padding:8px 10px;font:inherit}.inference-route-editor button{min-height:44px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:var(--surface);padding:8px 16px;font:inherit;cursor:pointer}.inference-route-editor button:disabled{opacity:.5;cursor:default}
+.settings-page .back-link { display: inline-flex; align-items: center; min-height: 32px; }

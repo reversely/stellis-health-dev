@@ -1,0 +1,76 @@
+{
+  "routes": [
+    {
+      "role": "agent",
+      "label": "Managed agents",
+      "model": "nemotron-3-nano:latest",
+      "capability": "tools",
+      "editable": true,
+      "observed": {
+        "state": "reported",
+        "provider": "ollama-local",
+        "model": "nemotron-3-nano:latest"
+      }
+    },
+    {
+      "role": "transcript",
+      "label": "Transcript AI",
+      "model": "granite4.2:8b",
+      "capability": "completion",
+      "editable": true,
+      "observed": {
+        "state": "available"
+      }
+    },
+    {
+      "role": "categories",
+      "label": "Categories",
+      "model": "granite4.2:8b",
+      "capability": "completion",
+      "editable": true,
+      "observed": {
+        "state": "available"
+      }
+    },
+    {
+      "role": "planning",
+      "label": "Notebook planning",
+      "model": "granite4.2:8b",
+      "capability": "completion",
+      "editable": true,
+      "observed": {
+        "state": "available"
+      }
+    },
+    {
+      "role": "vision",
+      "label": "Tutor screen reading",
+      "model": "qwen2.5vl:7b",
+      "capability": "vision",
+      "editable": true,
+      "observed": {
+        "state": "available"
+      }
+    }
+  ],
+  "trace_models": [
+    {
+      "kind": "categorization",
+      "model": "granite4.2:8b",
+      "state": "succeeded"
+    },
+    {
+      "kind": "onboarding_plan",
+      "model": "granite4.2:8b",
+      "state": "succeeded"
+    },
+    {
+      "kind": "answer",
+      "model": "granite4.2:8b",
+      "state": "succeeded"
+    }
+  ],
+  "ui_persistence": true,
+  "vision_capability_rejected": true,
+  "managed_model_unchanged": true
+}
