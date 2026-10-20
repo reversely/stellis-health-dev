@@ -4004,21 +4004,8 @@ function renderCategoryGroups() {
   }
 }
 function renderHomeAgents() {
-  // Agents group like the notebooks: by collection, then notebooks outside one, then agents with no notebook.
-  // An agent with notebooks in several collections shows under each; coordinators lead each group.
+  // Agents group like the notebooks (shared/agent-groups.js); each chip opens that agent's Chat thread.
   const avatars = window.StellisAgentAvatar;
-  const inCollection = new Map(libraryCollections.flatMap(collection => collection.notebook_ids.map(id => [id, collection.id])));
-  const groups = new Map([...libraryCollections.map(collection => [collection.id, {name: collection.name, color: collection.color, kind: 'folder', agents: new Map()}]),
-    ['loose', {name: 'Notebooks', kind: 'notebook', agents: new Map()}], ['none', {name: 'No notebook', kind: 'inbox', agents: new Map()}]]);
-  const place = (key, agent, book) => {
-    const group = groups.get(key);
-    if (!group.agents.has(agent.id)) group.agents.set(agent.id, {agent, books: []});
-    if (book) group.agents.get(agent.id).books.push(book);
-  };
-  for (const agent of libraryAgents) {
-    if (!agent.notebooks.length) place('none', agent);
-    for (const book of agent.notebooks) place(inCollection.get(book.notebook_id) || 'loose', agent, book);
-  }
   const chip = ({agent, books}) => {
     const link = document.createElement('a'); link.className = 'home-agent'; link.href = `/chat/${encodeURIComponent(agent.id)}`;
     const text = document.createElement('span'); text.className = 'home-agent-text';
@@ -4028,14 +4015,12 @@ function renderHomeAgents() {
     if (books.some(book => book.is_steward)) { const tag = document.createElement('span'); tag.className = 'home-agent-tag'; tag.textContent = 'Steward'; link.append(tag); }
     return link;
   };
-  const leads = item => Number(item.agent.is_default || item.books.some(book => book.is_steward));
-  const sections = [...groups.values()].filter(group => group.agents.size).map(group => {
+  const sections = window.StellisAgentGroups.groupAgents(libraryAgents, libraryCollections).map(group => {
     const node = document.createElement('div'); node.className = 'notebook-group';
     const head = document.createElement('h3'); head.className = 'notebook-group-head';
     const glyph = icon(group.kind); if (group.color) glyph.style.setProperty('--tint', group.color);
     const label = document.createElement('span'); label.textContent = group.name; head.append(glyph, label);
-    const row = document.createElement('div'); row.className = 'home-agent-row';
-    row.append(...[...group.agents.values()].sort((a, b) => leads(b) - leads(a) || a.agent.name.localeCompare(b.agent.name)).map(chip));
+    const row = document.createElement('div'); row.className = 'home-agent-row'; row.append(...group.items.map(chip));
     node.append(head, row); return node;
   });
   document.querySelector('#home-agent-groups').replaceChildren(...sections);

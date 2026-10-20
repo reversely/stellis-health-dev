@@ -2,6 +2,9 @@
   const base = '/api/v1';
   let agents = [];
   let notebooks = [];
+  let collections = [];
+  let view = 'thread';
+  const openSettings = new Set();
   let selectedId = null;
   let runtimeConfigured = false;
   let delegationTimer = null;
@@ -60,11 +63,12 @@
   function renderList() {
     document.querySelector('#agent-list').replaceChildren(...agents.map(agentButton));
   }
-  async function reloadAgent() {
-    const agent = await request(`/agents/${encodeURIComponent(selectedId)}`);
+  // Settings sections pass their agent; thread actions reload the selected one.
+  async function reloadAgent(id = selectedId) {
+    const agent = await request(`/agents/${encodeURIComponent(id)}`);
     agents = agents.map(item => item.id === agent.id ? agent : item);
     renderList();
-    await renderDetail(agent);
+    if (view === 'settings') await renderSettings(); else await renderDetail(agent);
   }
   function notebookSection(agent) {
     const section = el('section', 'agent-detail-section');
@@ -86,14 +90,14 @@
         try {
           const path = `/agents/${encodeURIComponent(agent.id)}/notebooks/${encodeURIComponent(notebook.id)}`;
           await request(path, input.checked ? {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({steward:false})} : {method:'DELETE'});
-          status('Notebook assignment saved'); await reloadAgent();
+          status('Notebook assignment saved'); await reloadAgent(agent.id);
         } catch (error) { input.checked = !input.checked; status(error.message); }
       });
       steward.addEventListener('click', async () => {
         try {
           await request(`/agents/${encodeURIComponent(agent.id)}/notebooks/${encodeURIComponent(notebook.id)}`,
             {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({steward:true})});
-          status('Steward saved'); await reloadAgent();
+          status('Steward saved'); await reloadAgent(agent.id);
         } catch (error) { status(error.message); }
       });
       row.append(label, steward); section.append(row);
@@ -126,7 +130,7 @@
       remove.addEventListener('click', async () => {
         try {
           await request(`/agents/${encodeURIComponent(agent.id)}/memories/${encodeURIComponent(memory.id)}`, {method:'DELETE'});
-          status('Memory deleted'); await reloadAgent();
+          status('Memory deleted'); await reloadAgent(agent.id);
         } catch (error) { status(error.message); }
       });
       buttons.append(save, remove); form.append(label, buttons); list.append(form);
@@ -142,7 +146,7 @@
       try {
         await request(`/agents/${encodeURIComponent(agent.id)}/memories`,
           {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fact:input.value, kind:'general'})});
-        status('Memory added'); await reloadAgent();
+        status('Memory added'); await reloadAgent(agent.id);
       } catch (error) { status(error.message); button.disabled = false; }
     });
     section.append(add);
@@ -560,10 +564,7 @@
     await refresh();
     return section;
   }
-  async function renderDetail(agent) {
-    const target = document.querySelector('#agent-detail');
-    const head = el('div', 'agent-detail-head');
-    head.append(el('h3', '', agent.name), el('p', '', agent.role));
+  function identityForm(agent) {
     const identity = el('form', 'agent-identity-form');
     identity.append(field('Name', agent.name, 'name'), field('Role', agent.role, 'role'),
       field('Instructions', agent.instructions, 'instructions'));
@@ -574,16 +575,72 @@
         const data = Object.fromEntries(new FormData(identity));
         await request(`/agents/${encodeURIComponent(agent.id)}`,
           {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-        status('Agent saved'); await reloadAgent();
+        status('Agent saved'); await reloadAgent(agent.id);
       } catch (error) { status(error.message); save.disabled = false; }
     });
+    return identity;
+  }
+  async function renderDetail(agent) {
+    const target = document.querySelector('#agent-detail');
+    const head = el('div', 'agent-detail-head');
+    const settings = el('a', 'agent-quiet agent-link-button', 'Settings'); settings.href = '/chat/settings';
+    head.append(el('h3', '', agent.name), el('p', '', agent.role), settings);
     clearTimeout(delegationTimer);
-    const [memory, thread, drafts, delegation] = await Promise.all([
-      memorySection(agent), threadSection(agent), draftSection(agent), delegationSection(agent)]);
-    if (selectedId !== agent.id) return;
-    target.replaceChildren(head, identity, notebookSection(agent), memory, thread, drafts, delegation);
+    const [thread, drafts, delegation] = await Promise.all([threadSection(agent), draftSection(agent), delegationSection(agent)]);
+    if (selectedId !== agent.id || view !== 'thread') return;
+    target.replaceChildren(head, thread, drafts, delegation);
+  }
+  function glyph(name) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', `#i-${name}`);
+    svg.append(use); return svg;
+  }
+  // Agent settings (#390): every agent grouped like Home, each one opening to its name, notebooks and memory.
+  function settingsEntry({agent, books}, groupKey) {
+    const key = `${groupKey}:${agent.id}`;
+    const details = el('details', 'agent-settings-item');
+    const summary = el('summary');
+    const text = el('span', 'agent-list-text');
+    text.append(el('strong', '', agent.name), el('small', '', agent.role));
+    if (books.length) text.append(el('small', 'agent-settings-where', books.map(book => book.notebook_name).join(', ')));
+    summary.append(agentAvatar(agent, 32), text);
+    if (books.some(book => book.is_steward)) summary.append(el('span', 'home-agent-tag', 'Steward'));
+    const body = el('div', 'agent-settings-body');
+    const fill = async () => {
+      const open = el('a', 'agent-quiet agent-link-button', 'Open chat'); open.href = `/chat/${encodeURIComponent(agent.id)}`;
+      const memory = await memorySection(agent);
+      body.replaceChildren(identityForm(agent), notebookSection(agent), memory, open);
+    };
+    details.addEventListener('toggle', () => {
+      if (!details.open) { openSettings.delete(key); return; }
+      openSettings.add(key);
+      if (!body.childElementCount) fill().catch(error => status(error.message));
+    });
+    details.append(summary, body);
+    details.open = openSettings.has(key);
+    return details;
+  }
+  async function renderSettings() {
+    const head = el('div', 'agent-detail-head');
+    head.append(el('h3', '', 'Agent settings'));
+    const groups = window.StellisAgentGroups.groupAgents(agents, collections).map(group => {
+      const section = el('section', 'agent-settings-group');
+      const title = el('h4', 'notebook-group-head');
+      const lead = glyph(group.kind); if (group.color) lead.style.setProperty('--tint', group.color);
+      title.append(lead, el('span', '', group.name));
+      section.append(title, ...group.items.map(item => settingsEntry(item, group.key)));
+      return section;
+    });
+    if (view === 'settings') document.querySelector('#agent-detail').replaceChildren(head, ...groups);
+  }
+  function setView(next) {
+    view = next;
+    const link = document.querySelector('#agent-settings-link');
+    if (next === 'settings') link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
   }
   async function select(id, navigate) {
+    setView('thread');
     selectedId = id;
     renderList();
     if (navigate) history.pushState({}, '', `/chat/${encodeURIComponent(id)}`);
@@ -592,8 +649,9 @@
   }
   async function show(requestedId) {
     status('');
-    const [items, books, runtime] = await Promise.all([request('/agents'), request('/notebooks'), request('/agents/runtime')]);
-    agents = items; notebooks = books.notebooks || []; runtimeConfigured = runtime.configured;
+    const [items, books, groups, runtime] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime')]);
+    agents = items; notebooks = books.notebooks || []; collections = groups.collections || []; runtimeConfigured = runtime.configured;
+    if (requestedId === 'settings') { setView('settings'); selectedId = null; renderList(); await renderSettings(); return; }
     const id = agents.some(agent => agent.id === requestedId) ? requestedId : agents[0]?.id;
     if (id) await select(id, false);
   }

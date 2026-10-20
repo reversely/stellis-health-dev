@@ -15,6 +15,18 @@
 .agent-message-author{display:inline-flex;align-items:center;gap:8px}
 .agent-list-item[aria-current=page]{background:var(--raised);border-color:var(--line)}
 .agent-detail{min-width:0}
+.agent-link-button{display:inline-flex;align-items:center;box-sizing:border-box;text-decoration:none;font:inherit;font-size:14px}
+.agent-link-button[aria-current=page]{border-color:var(--ink);font-weight:650}
+.agent-detail-head .agent-link-button{margin-top:12px}
+.agent-settings-group{display:grid;gap:8px;margin-top:22px}
+.agent-settings-item{border:1px solid var(--line-soft);border-radius:6px;background:var(--surface)}
+.agent-settings-item summary{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;cursor:pointer;list-style:none}
+.agent-settings-item summary::-webkit-details-marker{display:none}
+.agent-settings-item summary .agent-list-text{flex:1}
+.agent-settings-item summary small{color:var(--muted)}
+.agent-settings-item summary:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.agent-settings-body{padding:0 16px 16px}
+.agent-settings-body .agent-identity-form{margin:0;padding:0;border:0;background:transparent}
 .agent-detail-head h3{font-family:Piazzolla,serif;font-size:30px;font-weight:400;margin:0 0 4px}
 .agent-detail-head p{margin:0;color:var(--muted)}
 .agent-identity-form,.agent-new-form{display:grid;gap:14px;padding:18px;margin:18px 0;border:1px solid var(--line-soft);border-radius:6px;background:var(--surface)}
