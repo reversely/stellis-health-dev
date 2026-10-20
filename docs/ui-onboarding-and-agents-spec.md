@@ -104,4 +104,4 @@ Ledger: R1, R2.
 
 Ledger: P5, C7, Q8.
 
-- After the owner picks a Piazzolla weight from the canvas type board, apply it to page headings and add the italic rule to the style guide: italic only on long phrases such as subheads, never on headings or single words.
+- Owner approved Piazzolla 300 (light) on 2026-10-20. Page headings and onboarding now use the light font asset; #425 brought phone recording titles into line and recorded the italic rule. Keep italics only on long phrases such as subheads, never on headings or single words. #397 records the final approval.

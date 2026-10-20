@@ -76,7 +76,7 @@ Implementation order: template/deployment controls (#410 and ADR 0063), function
 | C4 | "we have a new logo btw, it's in assets, and not a fan of italics logos" (00:52); "single colour logo please, invert as needed for clarity to white or 80% opacity white" (02:26); "i have a v2 logo in assets/, please drop it in" (chat 03:45) | Comments; chat | Logo is `assets/stellis_logo_v2.png`, one colour, white or 80% white on dark; no italic logo |
 | C5 | "general future qol, need to add some different colour palettes" | Comment, board 1 Today, 00:52 | Later work: more colour palettes |
 | C6 | "what is "tap more to add them"?" | Chat 03:03 | Hint copy must say what it means; the hint was removed |
-| C7 | Owner's own edit: the welcome heading set to Manrope, 40px, weight 400 | Canvas edit to O1 | Observed edit only; whether Manrope replaces Piazzolla is open (Q8) |
+| C7 | Owner's own edit: the welcome heading set to Manrope, 40px, weight 400 | Canvas edit to O1 | Observed edit only; later heading choice is Piazzolla 300 (Q8) |
 
 ### Home and recording
 
@@ -96,7 +96,7 @@ Implementation order: template/deployment controls (#410 and ADR 0063), function
 | P2 | Asked how the first-run tour fits: "redo the tour as well with the new actual features" | Chat, question answers | The first-run tour is rewritten for the new onboarding and features |
 | P3 | Asked where agent settings live: chose "In Chat" | Chat, question answers | Agent settings are a view in Chat, grouped by collection and notebook |
 | P4 | Asked about the per-notebook agent's name: "i kind of like steward but sme gives idk" | Chat, question answers | Superseded by P6 |
-| P5 | Asked about Manrope against Piazzolla: "there's something stodgy about the bold piazzola, maybe the light version would work better and the occasional italic, but only for long phrases like subheads  and not for headers or to italicize one word" | Chat, question answers | Direction: lighter Piazzolla weights; italic only on long phrases such as subheads, never on headings or single words; heading weight still to be tried (Q8) |
+| P5 | Asked about Manrope against Piazzolla: "there's something stodgy about the bold piazzola, maybe the light version would work better and the occasional italic, but only for long phrases like subheads  and not for headers or to italicize one word" | Chat, question answers | Direction: lighter Piazzolla weights; italic only on long phrases such as subheads, never on headings or single words; heading weight resolved to Piazzolla 300 by the owner on 2026-10-20 (Q8) |
 | P6 | After a recommendation of Steward: "Ok, sure. Steward it is." | Chat | The per-notebook agent is Steward in every notebook; users can rename it (A2) |
 
 ## 2. Against shipped decisions
@@ -123,7 +123,7 @@ Implementation order: template/deployment controls (#410 and ADR 0063), function
 | C1, C2 | "Keep explanatory copy brief" | Matches | AGENTS.md |
 | C3 | No rule on emojis | Extends; add to the style guide | Style guide |
 | C4 | "Use the existing Piazzolla display face for the brand" | Extends: a logo mark beside the wordmark is new | Style guide |
-| C7 | Piazzolla for "the brand and major page headings" | Open (Q8) | Style guide |
+| C7 | Piazzolla for "the brand and major page headings" | Approved: upright Piazzolla 300 headings; existing 400 wordmark retained, owner reply 2026-10-20 (Q8) | Style guide |
 | H2 | Calendars are read-only | Matches | ADR 0050 |
 | R1 | #344 records microphone and system audio as two streams | Extends: #344 covers capture, not a device picker | #344 |
 
@@ -152,7 +152,7 @@ Everything below appears on the canvas without an owner decision. A spec does no
 | Q5 | Settled by P3: in Chat | None |
 | Q6 | How far back does onboarding read mail by default, and can the user change it? | Notebook proposal |
 | Q7 | Local inference is deferred (P1). Does Stellis require or check Nebius ZDR before sending? | Privacy, after the interface work |
-| Q8 | Which Piazzolla weight for headings (P5)? Google Fonts serves Piazzolla at 100 to 900 with italics. Does Manrope stay anywhere? | Style guide |
+| Q8 | Resolved 2026-10-20: owner selected **300** after correcting the initial 400 choice to 300 for headings. Keep upright Piazzolla 300 and existing Inter controls/body text; no Manrope substitution is part of this decision. The earlier canvas experiment remains an observation. | Style guide; #397 |
 | Q9 | What replaces the unsorted-items row (O16)? | Notebook proposal |
 | Q10 | When and how does a new agent join the fleet after onboarding (A6)? | Agent growth tickets |
 | Q11 | ADR amending ADR 0060 for templates, per-notebook deployments and named copies (A1 to A4) | Every agent ticket |
