@@ -1,0 +1,116 @@
+{
+  "generated": "2026-10-20T22:31:35.171Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium-1243/chrome-linux-arm64/chrome",
+  "dark": false,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/chat/90643e6f-4f5d-4889-8333-e57a074935a3?guide=chat",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_360.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 2428
+          },
+          "findings": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_390.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 2418
+          },
+          "findings": []
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_768.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 2230
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_1024.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 950
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_1280.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 950
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_1440.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 950
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/tmp/stellis-guide-audit/chat-light/127-0-0-1-8824-chat-90643e6f-4f5d-4889-8333-e57a074935a3-gui_1920.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1080
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 0
+  }
+}

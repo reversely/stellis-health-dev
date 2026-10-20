@@ -1,0 +1,26 @@
+[
+  {
+    "view": "chat",
+    "theme": "light",
+    "fail": 0,
+    "warn": 0
+  },
+  {
+    "view": "chat",
+    "theme": "dark",
+    "fail": 0,
+    "warn": 0
+  },
+  {
+    "view": "recording",
+    "theme": "light",
+    "fail": 0,
+    "warn": 0
+  },
+  {
+    "view": "recording",
+    "theme": "dark",
+    "fail": 0,
+    "warn": 0
+  }
+]

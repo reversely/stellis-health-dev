@@ -1,0 +1,116 @@
+{
+  "generated": "2026-10-20T22:32:06.732Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium-1243/chrome-linux-arm64/chrome",
+  "dark": true,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/recording?guide=recording",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_360_dark.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 1764
+          },
+          "findings": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_390_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 1758
+          },
+          "findings": []
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_768_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 2045
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_1024_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 1212
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_1280_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 1200
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_1440_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 1157
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/tmp/stellis-guide-audit/recording-dark/127-0-0-1-8824-recording-guide-recording_1920_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1157
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 0
+  }
+}

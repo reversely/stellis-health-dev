@@ -157,7 +157,7 @@
     const finish = button('Set up workspace', async () => {
       await saves; await save('review');
       await api('/onboarding/complete', 'POST', {proposal_id:importChoice.proposal_id, group_ids:importChoice.group_ids});
-      location.assign('/');
+      location.assign(state.editing ? '/' : '/?guide=workspace');
     }, true);
     const sourceReview = window.StellisOnboardingSources.create(api, state.scan, value => {
       importChoice = value; finish.disabled = value.busy;
