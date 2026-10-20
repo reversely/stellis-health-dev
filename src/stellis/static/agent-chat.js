@@ -5,6 +5,13 @@
   let notebooks = [];
   let collections = [];
   let view = 'thread';
+  let accountScope = '';
+  let workspaceTab = 'thread';
+  let threadTimer = null;
+  const pendingTurns = new Map();
+  function draftKey(id) { return `stellis-compose:${accountScope}:${id}`; }
+  function readDraft(id) { try { return JSON.parse(sessionStorage.getItem(draftKey(id))) || {}; } catch { return {}; } }
+  function writeDraft(id, value) { try { sessionStorage.setItem(draftKey(id), JSON.stringify(value)); } catch {} }
   const openSettings = new Set();
   let selectedId = null;
   let runtimeConfigured = false;
@@ -65,6 +72,9 @@
   }
   function renderList() {
     document.querySelector('#agent-list').replaceChildren(...agents.map(agentButton));
+    let picker=document.querySelector('#agent-picker');
+    if(!picker){picker=el('select','agent-picker');picker.id='agent-picker';picker.setAttribute('aria-label','Choose agent');picker.addEventListener('change',()=>select(picker.value,true).catch(error=>status(error.message)));document.querySelector('.agent-chat-heading').prepend(picker);}
+    picker.replaceChildren(...agents.map(agent=>{const option=el('option','',agent.name);option.value=agent.id;return option;}));picker.value=selectedId||agents[0]?.id||'';
   }
   // Settings sections pass their agent; thread actions reload the selected one.
   async function reloadAgent(id = selectedId) {
@@ -157,42 +167,57 @@
     section.append(add);
     return section;
   }
-  async function threadSection(agent) {
-    const section = el('section', 'agent-detail-section agent-thread');
-    section.append(el('h3', '', 'Thread'));
+  function contextChip(id) {
+    const book = notebooks.find(item => item.id === id);
+    if (!book) return null;
+    const chip = el('a', 'agent-context-chip', book.name); chip.href = `/notebook/${encodeURIComponent(id)}`;
+    return chip;
+  }
+  async function refreshThread(section, agent) {
     const [messages, jobs] = await Promise.all([
       request(`/agents/${encodeURIComponent(agent.id)}/messages`),
       request(`/agents/${encodeURIComponent(agent.id)}/jobs`),
     ]);
-    const jobsById = new Map(jobs.map(job => [job.id, job]));
-    if (!messages.length) section.append(el('p', 'agent-empty', 'No messages yet'));
+    if (selectedId !== agent.id) return;
+    const feed = section.querySelector('.agent-thread-feed');
+    const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+    const byJob = new Map(jobs.map(job => [job.id, job]));
+    const nodes = [];
     for (const message of messages) {
       const item = el('article', `agent-message agent-message-${message.role}`); item.id = 'message-' + message.id;
       const author = el('strong', 'agent-message-author', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name);
       if (message.role === 'agent') author.prepend(agentAvatar(agent, 24));
       item.append(author, messageBody(message.content));
-      if (message.notebook_id) {
-        const book = notebooks.find(entry => entry.id === message.notebook_id);
-        if (book) item.append(el('small', '', book.name));
-      }
-      if (message.role === 'user' && message.job_id) {
-        const job = jobsById.get(message.job_id);
-        if (job?.state === 'running') item.append(el('small', 'agent-job-state', 'Replying…'));
-        if (job?.state === 'failed' || job?.state === 'interrupted') {
-          item.append(el('small', 'agent-job-state', job.error || 'Reply failed. Send again.'));
-        }
-      }
-      section.append(item);
+      const chip = contextChip(message.notebook_id); if (chip) item.append(chip);
+      const job = byJob.get(message.job_id);
+      if (message.role === 'user' && job && job.state !== 'succeeded')
+        item.append(el('small', 'agent-job-state', job.state === 'running' ? 'Working on your request…' : job.error || 'Reply interrupted. Try again.'));
+      nodes.push(item);
     }
-    if (!agent.enabled) {
-      section.append(el('p', 'agent-empty', 'Turn on this agent in Agent settings to start a request.'));
-      return section;
+    const pending = pendingTurns.get(agent.id);
+    section.running = Boolean(pending) || jobs.some(job => job.state === 'running');
+    const send = section.querySelector('button[type=submit]');
+    if (send) send.disabled = !runtimeConfigured || !agent.enabled || section.running;
+    if (pending && !messages.some(message => message.role === 'user' && message.content === pending.question.replace(/\s+/g, ' ').trim() && Date.parse(message.created_at) >= Date.parse(pending.started) - 1000)) {
+      const item = el('article', 'agent-message agent-message-user');
+      item.append(el('strong', 'agent-message-author', 'You'), messageBody(pending.question), el('small', 'agent-job-state', 'Submitting…'));
+      const chip = contextChip(pending.notebook); if (chip) item.append(chip); nodes.push(item);
     }
-    if (!runtimeConfigured) {
-      section.append(el('p', 'agent-empty', 'Agent replies are unavailable on this device.'));
-      return section;
-    }
-    const callStatus = await request('/agents/voice/availability');
+    if (!nodes.length) nodes.push(el('p', 'agent-empty', `Ask ${agent.name} a question or choose a notebook to work from.`));
+    const signature = JSON.stringify([messages,jobs,pending?.question]);
+    if (feed.dataset.signature !== signature) {feed.replaceChildren(...nodes);feed.dataset.signature = signature;}
+    if (nearBottom || pending) feed.scrollTop = feed.scrollHeight;
+    clearTimeout(threadTimer);
+    if (pending || jobs.some(job => job.state === 'running')) threadTimer = setTimeout(() => {
+      if (selectedId === agent.id && section.isConnected) refreshThread(section, agent).catch(error => status(error.message));
+    }, 1800);
+  }
+  async function threadSection(agent) {
+    const section = el('section', 'agent-detail-section agent-thread');
+    const feed = el('div', 'agent-thread-feed'); feed.setAttribute('role', 'log'); feed.setAttribute('aria-label', `Conversation with ${agent.name}`); feed.setAttribute('aria-live', 'polite');
+    section.append(feed);
+    await refreshThread(section, agent);
+    const callStatus = await request('/agents/voice/availability').catch(() => ({ready:false,reason:'Voice availability could not be checked.'}));
     const callControls = el('div', 'agent-call-controls');
     const callButton = el('button', '', activeCall?.agentId === agent.id ? 'End call' : 'Call');
     callButton.type = 'button';
@@ -228,33 +253,50 @@
       } catch (error) { status(error.message); }
     });
     callControls.prepend(callButton, stopReply);
-    section.append(callControls);
-    const form = el('form', 'agent-ask-form');
-    const label = el('label', '', 'Message');
-    const input = el('textarea'); input.maxLength = 2000; input.required = true;
-    label.append(input); form.append(label);
-    if (agent.notebooks.length) {
-      const bookLabel = el('label', '', 'Notebook');
-      const select = el('select'); select.name = 'notebook_id';
-      const any = el('option', '', 'No notebook'); any.value = ''; select.append(any);
-      for (const book of agent.notebooks) {
-        const option = el('option', '', book.notebook_name);
-        option.value = book.notebook_id; select.append(option);
-      }
-      bookLabel.append(select); form.append(bookLabel);
+    section.callControls = callControls;
+    const form = el('form', 'agent-ask-form agent-composer');
+    const draft = readDraft(agent.id);
+    const context = el('div', 'agent-composer-context');
+    const select = el('select'); select.name = 'notebook_id'; select.setAttribute('aria-label', 'Notebook context');
+    const any = el('option', '', 'No notebook'); any.value = ''; select.append(any);
+    for (const book of agent.notebooks) {
+      const option = el('option', '', book.notebook_name); option.value = book.notebook_id; select.append(option);
     }
-    const send = el('button', '', 'Send'); send.type = 'submit'; form.append(send);
+    select.value = draft.notebook || ''; context.append(glyph('notebook'), select); form.append(context);
+    const input = el('textarea'); input.name = 'question'; input.maxLength = 2000; input.required = true; input.value = draft.question || '';
+    input.placeholder = `Message ${agent.name}`; input.setAttribute('aria-label', `Message ${agent.name}`); form.append(input);
+    const remember = () => writeDraft(agent.id, {question:input.value, notebook:select.value});
+    input.addEventListener('input', remember); select.addEventListener('change', remember);
+    const actions = el('div', 'agent-composer-actions');
+    const state = el('span', 'agent-composer-state'); state.role = 'status';
+    const send = el('button', '', 'Send'); send.type = 'submit';
+    send.disabled = !runtimeConfigured || !agent.enabled || section.running;
+    if (!agent.enabled) state.textContent = 'Turn on this agent in Setup.';
+    else if (!runtimeConfigured) state.textContent = 'Configure inference in Settings to reply.';
+    actions.append(state, send); form.append(actions);
+    input.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !send.disabled) {event.preventDefault(); form.requestSubmit();} });
     form.addEventListener('submit', async event => {
-      event.preventDefault(); send.disabled = true; status('Replying…');
+      event.preventDefault(); if (send.disabled || !input.value.trim()) return;
+      const submitted = {question:input.value.trim(), notebook:select.value, started:new Date().toISOString()};
+      pendingTurns.set(agent.id, submitted); send.disabled = true; input.value = ''; remember(); state.textContent = 'Working…';
+      const optimistic = el('article', 'agent-message agent-message-user'); optimistic.append(el('strong', 'agent-message-author', 'You'), messageBody(submitted.question), el('small', 'agent-job-state', 'Submitting…')); feed.querySelector('.agent-empty')?.remove(); feed.append(optimistic); feed.scrollTop = feed.scrollHeight;
+      clearTimeout(threadTimer); threadTimer = setTimeout(() => refreshThread(section, agent).catch(error => status(error.message)), 700);
       try {
-        await request(`/agents/${encodeURIComponent(agent.id)}/ask`,
-          {method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({question:input.value, notebook_id:form.elements.notebook_id?.value || null})});
-        status(''); await reloadAgent();
-      } catch (error) { status(error.message); send.disabled = false; }
+        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null})});
+        state.textContent = '';
+      } catch (error) {
+        state.textContent = error.message;
+        if (!readDraft(agent.id).question) {
+          writeDraft(agent.id, {question:submitted.question, notebook:submitted.notebook});
+          const current = selectedId === agent.id ? document.querySelector('.agent-composer textarea') : null;
+          if (current && !current.value) current.value = submitted.question;
+        }
+      } finally {
+        pendingTurns.delete(agent.id); send.disabled = !runtimeConfigured || !agent.enabled;
+        if (selectedId === agent.id && section.isConnected) await refreshThread(section, agent).catch(error => status(error.message));
+      }
     });
-    section.append(form);
-    return section;
+    section.append(form); return section;
   }
   async function beginCallCapture(agentId, stream, remoteStream) {
     const mediaType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
@@ -589,29 +631,67 @@
     });
     return identity;
   }
+  async function contextPanel(agent) {
+    const panel = el('aside', 'agent-context-panel'); panel.setAttribute('aria-label', 'Agent context');
+    const group = (title, text) => { const section = el('section'); section.append(el('h4', '', title)); if (text) section.append(el('p', '', text)); panel.append(section); return section; };
+    group('Formats', agent.behavior?.returns || 'Answers and source-backed notes');
+    const scope = group('Works in');
+    if (!agent.notebooks.length) scope.append(el('p', '', 'No notebooks assigned'));
+    for (const book of agent.notebooks) {const chip = contextChip(book.notebook_id); if (chip) scope.append(chip);}
+    const memories = await request(`/agents/${encodeURIComponent(agent.id)}/memories`);
+    const memory = group('Memory');
+    if (!memories.length) memory.append(el('p', '', 'No saved memory yet.'));
+    for (const item of memories.slice(-4)) memory.append(el('p', '', item.fact));
+    if (!agent.template_id || agent.template_id === 'steward') return panel;
+    const copies = group('Named copies');
+    const related = agents.filter(item => item.id !== agent.id && item.template_id && item.template_id === agent.template_id);
+    for (const copy of related) {const link=el('a', 'agent-copy-link', copy.name);link.href=`/chat/${encodeURIComponent(copy.id)}`;copies.append(link);}
+    if (!related.length) copies.append(el('p', '', 'Give a specific use its own instructions and memory.'));
+    const create = el('button', 'agent-quiet', 'Name a copy'); create.type='button';
+    create.addEventListener('click', () => {
+      openCreate();const form=document.querySelector('#agent-new-form'),template=form.elements.template_id;
+      if (agent.template_id) {template.value=agent.template_id;template.dispatchEvent(new Event('change'));}
+      form.querySelector('input[type=checkbox]').click();form.scrollIntoView({block:'nearest'});
+    });copies.append(create);return panel;
+  }
   async function renderDetail(agent) {
     const revision = ++detailRevision;
     const target = document.querySelector('#agent-detail');
-    const head = el('div', 'agent-detail-head');
-    const settings = el('a', 'agent-quiet agent-link-button', 'Settings'); settings.href = '/chat/settings';
-    head.append(el('h3', '', agent.name), el('p', '', agent.behavior?.does || agent.role), settings);
-    if (!agent.enabled) head.append(el('p', 'agent-empty', 'This agent is off. Turn it on in Agent settings.'));
-    clearTimeout(delegationTimer);
-    const [thread, drafts, delegation] = await Promise.all([threadSection(agent), draftSection(agent), delegationSection(agent)]);
+    clearTimeout(delegationTimer); clearTimeout(threadTimer); tutorModule?.stop();
+    const head = el('div', 'agent-detail-head'); const identity=el('div','agent-workspace-identity'),text=el('div');
+    text.append(el('h3', '', agent.name), el('p', '', agent.behavior?.does || agent.role));identity.append(agentAvatar(agent,44),text);head.append(identity);
+    const tabs=el('div','agent-workspace-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Agent workspace');
+    const thread=await threadSection(agent);
     if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
-    tutorModule?.stop();
-    let tutor = null;
+    head.append(thread.callControls);
+    const shell=el('div','agent-workspace'),center=el('div','agent-workspace-center');
+    const threadPanel=el('div','agent-workspace-panel'),setupPanel=el('div','agent-workspace-panel'),workPanel=el('div','agent-workspace-panel');
+    const panels={thread:threadPanel,setup:setupPanel,work:workPanel}; let setupLoaded=false,workLoaded=false;
+    threadPanel.append(thread);
     if (agent.template_id === 'tutor') {
-      tutorModule = await import('/static/screen-tutor.js');
-      if (revision !== detailRevision || selectedId !== agent.id || view !== 'thread') return;
-      tutor = await tutorModule.create(agent, async () => {
-        if (selectedId !== agent.id || view !== 'thread') return;
-        const updated = await threadSection(agent); target.querySelector('.agent-thread')?.replaceWith(updated);
-      }, messageBody);
+      tutorModule=await import('/static/screen-tutor.js');
+      const tutor=await tutorModule.create(agent, () => refreshThread(thread,agent), messageBody);
+      if (selectedId !== agent.id || revision !== detailRevision) {tutor.stopSharing?.();return;}
+      const screen=el('details','agent-screen-tools');screen.append(el('summary','','Share a screen with your Tutor'),tutor);threadPanel.prepend(screen);
     }
-    if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) {tutor?.stopSharing?.();return;}
-    target.replaceChildren(head, ...(tutor ? [tutor] : []), thread, drafts, delegation);
+    async function activate(name) {
+      workspaceTab=name;
+      for (const [key,panel] of Object.entries(panels)) {panel.hidden=key!==name;tabs.querySelector(`[data-tab="${key}"]`).setAttribute('aria-selected',String(key===name));}
+      try {
+        if(name==='setup'&&!setupLoaded){setupLoaded=true;setupPanel.append(behaviorCard(agent),agentControls(agent),identityForm(agent),notebookSection(agent),await memorySection(agent));}
+        if(name==='work'&&!workLoaded){workLoaded=true;workPanel.append(el('p','agent-empty','Loading work…'));const [drafts,delegation]=await Promise.all([draftSection(agent),delegationSection(agent)]);workPanel.replaceChildren(drafts,delegation);}
+      } catch(error) {if(name==='setup')setupLoaded=false;else workLoaded=false;status(error.message);}
+    }
+    for(const [name,label] of [['thread','Thread'],['setup','Setup'],['work','Work']]) {
+      const button=el('button','',label);button.type='button';button.dataset.tab=name;button.id=`agent-tab-${name}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`agent-panel-${name}`);
+      const panel=panels[name];panel.id=`agent-panel-${name}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);
+      button.addEventListener('click',()=>activate(name));button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const buttons=[...tabs.children],index=buttons.indexOf(button),next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;buttons[next].focus();buttons[next].click();});tabs.append(button);
+    }
+    center.append(tabs,threadPanel,setupPanel,workPanel);shell.append(center,await contextPanel(agent));
+    if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
+    target.replaceChildren(head,shell);await activate(workspaceTab);
     if (location.hash.startsWith('#message-')) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    else thread.querySelector('.agent-thread-feed').scrollTop=thread.querySelector('.agent-thread-feed').scrollHeight;
   }
   function glyph(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -664,8 +744,10 @@
     if (next === 'settings') link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
   }
   async function select(id, navigate) {
+    clearTimeout(threadTimer);
     tutorModule?.stop();
     setView('thread');
+    if (selectedId !== id) workspaceTab = 'thread';
     selectedId = id;
     renderList();
     if (navigate) history.pushState({}, '', `/chat/${encodeURIComponent(id)}`);
@@ -676,6 +758,7 @@
     tutorModule?.stop();
     status('');
     const [items, books, groups, runtime, catalog] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime'), request('/agents/templates')]);
+    accountScope = (await request('/auth/status')).username || 'local';
     templates = catalog;
     agents = items; notebooks = books.notebooks || []; collections = groups.collections || []; runtimeConfigured = runtime.configured;
     if (requestedId === 'settings') { setView('settings'); selectedId = null; renderList(); await renderSettings(); return; }

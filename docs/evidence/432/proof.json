@@ -1,0 +1,13 @@
+{
+  "real_local_reply": true,
+  "cited_notebook_page": true,
+  "draft_survives_switch_reload_tabs": true,
+  "next_draft_preserved": true,
+  "keyboard_send": true,
+  "page_errors": [],
+  "setup_edit_persists": true,
+  "named_copy_independent_memory": true,
+  "home_navigation_restores_library": true,
+  "switch_during_inference": true,
+  "real_api_error_preserves_request": true
+}

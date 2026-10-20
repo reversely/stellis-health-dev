@@ -1,0 +1,21 @@
+--- layout-audit.mjs
++++ layout-audit.mjs
+@@ -151,7 +151,17 @@
+     const ownText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
+     return interactive || ownText;
+   });
+-  const boxes = leafLike.map((el) => ({ el, r: el.getBoundingClientRect(), cs: getComputedStyle(el) }));
++  const visibleBox = (el) => {
++    const box = el.getBoundingClientRect();
++    let {left,top,right,bottom} = box;
++    for(let parent=el.parentElement;parent;parent=parent.parentElement){
++      const style=getComputedStyle(parent),r=parent.getBoundingClientRect();
++      if(/(hidden|auto|scroll|clip)/.test(style.overflowX)){left=Math.max(left,r.left+parent.clientLeft);right=Math.min(right,r.left+parent.clientLeft+parent.clientWidth);}
++      if(/(hidden|auto|scroll|clip)/.test(style.overflowY)){top=Math.max(top,r.top+parent.clientTop);bottom=Math.min(bottom,r.top+parent.clientTop+parent.clientHeight);}
++    }
++    return {left,top,right,bottom,width:Math.max(0,right-left),height:Math.max(0,bottom-top)};
++  };
++  const boxes = leafLike.map((el) => ({ el, r: visibleBox(el), cs: getComputedStyle(el) }));
+   const seen = new Set();
+   for (let i = 0; i < boxes.length; i++) {
+     for (let j = i + 1; j < boxes.length; j++) {

@@ -1,0 +1,12 @@
+[
+  {
+    "theme": "light",
+    "fail": 0,
+    "warn": 0
+  },
+  {
+    "theme": "dark",
+    "fail": 0,
+    "warn": 0
+  }
+]
