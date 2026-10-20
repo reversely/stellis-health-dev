@@ -29,8 +29,9 @@ WORD_ALIGNMENT_VERSION = "word-align-v1"
 # Whisper writes bracketed sound tags such as "(scissors snipping)" or
 # "[BLANK_AUDIO]" for non-speech audio; a passage of only tags is not speech.
 _SOUND_TAG = re.compile(r"[\(\[\*][^\)\]\*]*[\)\]\*]")
-_QUEUE: queue.Queue[str] = queue.Queue()
+_QUEUE: queue.Queue[str | None] = queue.Queue()
 _WORKER_LOCK = threading.Lock()
+_CHILD_LOCK = threading.Lock()
 _REQUEST_LOCK = threading.Lock()
 _WORKER: threading.Thread | None = None
 _CHILD: subprocess.Popen | None = None
@@ -100,11 +101,20 @@ def start_worker() -> None:
     with _WORKER_LOCK:
         if _WORKER and _WORKER.is_alive():
             return
-        _WORKER = threading.Thread(target=_worker_loop, name="stellis-speech", daemon=True)
-        _WORKER.start()
-        for job in storage.list_pending_jobs():
-            storage.update_job(str(job["id"]), state="queued", stage="resuming", updated_at=now())
-            _QUEUE.put(str(job["id"]))
+        with _REQUEST_LOCK:
+            # The database owns pending work. Discard stale wakeups from the previous lifecycle.
+            while True:
+                try:
+                    _QUEUE.get_nowait()
+                    _QUEUE.task_done()
+                except queue.Empty:
+                    break
+            for job in storage.list_pending_jobs():
+                storage.update_job(str(job["id"]), state="queued", stage="resuming", updated_at=now())
+                _QUEUE.put(str(job["id"]))
+            _STOPPING.clear()
+            _WORKER = threading.Thread(target=_worker_loop, name="stellis-speech", daemon=True)
+            _WORKER.start()
 
 
 def request_processing(conversation_id: str) -> dict[str, object]:
@@ -310,9 +320,12 @@ def _worker_loop() -> None:
         job_id = _QUEUE.get()
         global _CHILD
         try:
-            # Its own process group, so shutdown can stop the worker and its native tools together.
-            _CHILD = subprocess.Popen([sys.executable, "-m", "stellis.worker", job_id],
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            with _CHILD_LOCK:
+                if job_id is None or _STOPPING.is_set():
+                    return
+                # Serialize launch with shutdown so it cannot miss a newly started child.
+                _CHILD = subprocess.Popen([sys.executable, "-m", "stellis.worker", job_id],
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             try:
                 returncode = _CHILD.wait(timeout=14400)
             except subprocess.TimeoutExpired:
@@ -320,8 +333,8 @@ def _worker_loop() -> None:
                 returncode = -1
             finally:
                 _CHILD = None
-            if returncode in (-signal.SIGTERM, -signal.SIGKILL) and _STOPPING.is_set():
-                continue  # Server shutdown: the job stays running and resumes on the next start.
+            if _STOPPING.is_set():
+                return  # Leave interrupted work durable for the next start, including graceful exit 143.
             if returncode:
                 storage.update_job(job_id, state="failed", stage="failed",
                                    error="Speech worker exited unexpectedly", updated_at=now())
@@ -365,11 +378,18 @@ def _stop_child(child: subprocess.Popen, grace: float = 5.0) -> None:
 
 
 def stop_worker() -> None:
-    """Stop the running speech job's process group; it resumes on the next start."""
-    _STOPPING.set()
-    child = _CHILD
-    if child is not None and child.poll() is None:
-        _stop_child(child)
+    """Stop native tools and join the dispatcher before storage can be released."""
+    global _WORKER
+    with _WORKER_LOCK:
+        with _CHILD_LOCK:
+            _STOPPING.set()
+            child = _CHILD
+        if child is not None and child.poll() is None:
+            _stop_child(child)
+        if _WORKER is not None:
+            _QUEUE.put(None)  # Wake an idle dispatcher as well as an active one.
+            _WORKER.join()
+            _WORKER = None
 
 
 def _stage(job_id: str, name: str, progress: float) -> None:

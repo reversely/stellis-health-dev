@@ -1,0 +1,17 @@
+{
+  "method": "Temporary pytest audit hook: os.mkdir under /tmp, tagged with active test and thread; no provider interception",
+  "before": {
+    "tests/test_editing.py::EditingWorkflowTest::test_word_edit_history_conflict_and_restore": 1,
+    "tests/test_library.py::LibraryWorkflowTest::test_automatic_category_requires_opt_in_and_respects_manual_change": 2,
+    "tests/test_library.py::LibraryWorkflowTest::test_categories_trash_restore_and_permanent_delete": 1,
+    "tests/test_processing.py::ProcessingWorkflowTest::test_failed_job_can_be_requeued_without_losing_audio": 1,
+    "tests/test_processing.py::ProcessingWorkflowTest::test_native_asr_times_cannot_outlive_source_audio": 1,
+    "tests/test_processing.py::ProcessingWorkflowTest::test_persisted_job_and_transcript": 1,
+    "tests/test_processing.py::ProcessingWorkflowTest::test_public_real_speech_fixture_with_installed_whisper": 1,
+    "tests/test_processing.py::ProcessingWorkflowTest::test_word_alignment_reuses_timing_without_rewriting_edited_source": 1,
+    "tests/test_suggestions.py::SuggestionsTest::test_add_todo_in_a_conversation_without_notes": 1,
+    "tests/test_suggestions.py::SuggestionsTest::test_amend_then_accept_keeps_the_original": 1,
+    "tests/test_voice_suggestions.py::VoiceSuggestionTest::test_an_unfamiliar_voice_gets_no_suggestion": 1
+  },
+  "after": {}
+}

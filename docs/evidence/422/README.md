@@ -1,0 +1,7 @@
+# Speech dispatcher lifetime (#422)
+
+The original rare Directory-not-empty teardown exception did not recur in the diagnostic run. An audit of actual filesystem calls nevertheless identified a surviving stellis-speech thread touching temporary storage during 11 unrelated tests (12 mkdir calls), including SuggestionsTest. Its stack ran from processing._worker_loop through storage.get_job/connect/data_dir. stop_worker previously killed only the native child, leaving the dispatcher blocked on its global queue.
+
+Shutdown now serializes with child launch, signals and joins the dispatcher, and leaves interrupted jobs durable. Restart clears its stop state and reconstructs pending work from the current database rather than old in-memory wakeups. Graceful worker exit 143 during shutdown does not mark interrupted work failed.
+
+New checks use actual worker processes and filesystem locks: idle shutdown/restart, stale wakeups, active shutdown, and durable restart into an expected missing-input error. No model or media adapter was replaced for these checks. Existing subprocess-group termination and orphan-exit checks remain. Targeted suite: 15 passed, 1 skipped. Full instrumented suite: 319 passed, 25 subtests passed, 1 skipped; no dispatcher mkdir calls outside the dedicated lifecycle tests were observed after the fix. This closes the identified writer path, not a claim that all possible background writers were proven absent. No cleanup retries or ignore_errors were added.

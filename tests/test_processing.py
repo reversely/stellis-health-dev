@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 import uuid
 from pathlib import Path
@@ -52,7 +53,8 @@ class ProcessingWorkflowTest(unittest.TestCase):
             def task_done(self) -> None:
                 pass
 
-        with patch.object(processing, "_QUEUE", OneJobQueue()), \
+        with patch.object(processing, "_STOPPING", threading.Event()), \
+             patch.object(processing, "_QUEUE", OneJobQueue()), \
              patch.object(processing.subprocess, "Popen",
                           return_value=SimpleNamespace(pid=0, wait=lambda timeout=None: 0, poll=lambda: 0)), \
              patch("stellis.categorization.request"), \

@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import os
+import fcntl
+import tempfile
+import uuid
+from pathlib import Path
+from unittest.mock import patch
 import subprocess
 import sys
 import time
 import unittest
 
-from stellis import processing
+from stellis import processing, storage
 
 
 class WorkerShutdownTest(unittest.TestCase):
@@ -30,6 +35,56 @@ class WorkerShutdownTest(unittest.TestCase):
                 os.killpg(child.pid, 9)
             except ProcessLookupError:
                 pass
+
+    def test_idle_shutdown_joins_and_restart_ignores_old_wakeups(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
+            try:
+                processing.start_worker()
+                first = processing._WORKER
+                processing.stop_worker()
+                self.assertFalse(first.is_alive())
+                processing._QUEUE.put(str(uuid.uuid4()))
+                processing.start_worker()
+                self.assertIsNot(processing._WORKER, first)
+                self.assertFalse(processing._STOPPING.is_set())
+                processing.stop_worker()
+                self.assertFalse((Path(directory) / "job-locks").exists())
+            finally:
+                processing.stop_worker()
+
+    def test_active_real_worker_stops_and_durable_job_resumes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
+            conversation_id = str(uuid.uuid4())
+            storage.add_conversation({"id": conversation_id, "title": "Shutdown check",
+                "source_sha256": conversation_id, "audio_filename": "missing.wav",
+                "audio_media_type": "audio/wav", "duration_ms": 1, "created_at": processing.now()})
+            job = processing.request_processing(conversation_id)
+            lock_dir = Path(directory) / "job-locks"
+            lock_dir.mkdir()
+            try:
+                # Hold the real worker's durable lock so shutdown interrupts a live process
+                # without requiring a model download or substituting an inference adapter.
+                with (lock_dir / f"{job['id']}.lock").open("a+b") as lock:
+                    fcntl.flock(lock, fcntl.LOCK_EX)
+                    processing.start_worker()
+                    deadline = time.monotonic() + 10
+                    while processing._CHILD is None and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    child = processing._CHILD
+                    self.assertIsNotNone(child)
+                    dispatcher = processing._WORKER
+                    processing.stop_worker()
+                    self.assertFalse(dispatcher.is_alive())
+                    self.assertIsNotNone(child.poll())
+                    self.assertEqual(storage.get_job(job["id"])["state"], "queued")
+                processing.start_worker()
+                deadline = time.monotonic() + 15
+                while storage.get_job(job["id"])["state"] != "failed" and time.monotonic() < deadline:
+                    time.sleep(.05)
+                # The real worker resumed the job and reported its missing local inputs.
+                self.assertEqual(storage.get_job(job["id"])["state"], "failed")
+            finally:
+                processing.stop_worker()
 
     def test_worker_exits_when_its_parent_disappears(self) -> None:
         # The parent shell exits immediately, orphaning the worker it launched.
