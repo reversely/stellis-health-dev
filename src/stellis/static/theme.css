@@ -218,7 +218,7 @@ main { max-width: 1100px; }
 .recording-workspace-head { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
 .recording-workspace-head button { border: 0; background: transparent; color: var(--accent); cursor: pointer; }
 .recording-workspace-head label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-.recording-workspace-head input { width: min(560px, 100%); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); font-size: 28px; font-weight: 700; }
+.recording-workspace-head input { width: min(560px, 100%); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); font: 400 28px/1.16 Piazzolla, Georgia, serif; }
 .recording-workspace-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 31%); gap: 24px; min-height: calc(100vh - 260px); }
 .recording-workspace-grid > * { padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .recording-workspace-grid h2 { margin: 0 0 22px; font-size: 24px; }
@@ -1907,7 +1907,7 @@ button.card-item { width: 100%; padding: 0; border: 0; background: transparent; 
 a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 .todo-row[data-status="done"] .todo-text, .todo-row[data-status="canceled"] .todo-text { color: var(--muted); text-decoration: line-through; }
 .todo-row.has-suggestion { background: color-mix(in srgb, var(--accent) 7%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
-.todo-suggestion { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; font-style: italic; }
+.todo-suggestion { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; font-style: normal; }
 .todo-suggestion .icon { width: 14px; height: 14px; }
 .todo-empty { margin: 18px 0; color: var(--muted); }
 .widgets-note { margin: 12px 0; color: var(--muted); font-size: 14px; }
