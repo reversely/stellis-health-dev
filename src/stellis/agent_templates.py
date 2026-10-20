@@ -55,14 +55,23 @@ TEMPLATES = {
         "Guide the learner; do not click, type, or change their work.",
     },
 }
-VERSION = 1
+RUNS = {
+    "steward": "When you ask about this notebook or delegate work",
+    "writing": "When you request a draft; new-mail monitoring is not enabled",
+    "research": "When you ask or a notebook steward delegates research",
+    "regulations": "When you ask to check a supplied specification",
+    "schedule": "When you request a schedule; no automatic calendar changes",
+    "slides": "When you request a slide deck",
+    "tutor": "When you ask a lesson question or share a screen",
+}
+VERSION = 2
 
 
 def get(template_id: str) -> dict:
     if template_id not in TEMPLATES:
         raise ValueError("Unknown agent template")
     return {"id": template_id, "version": VERSION, **TEMPLATES[template_id],
-            "runs": "When you ask"}
+            "runs": RUNS[template_id]}
 
 
 def catalog() -> list[dict]:
@@ -74,7 +83,7 @@ def behavior(agent: dict) -> dict:
     return {
         "does": template["does"] if template else agent["role"],
         "returns": template["returns"] if template else "Reply",
-        "runs": "When you ask",
+        "runs": template["runs"] if template else "When you ask",
         "asks_first": template["asks_first"] if template else "Changes outside this chat",
     }
 

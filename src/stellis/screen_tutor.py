@@ -126,7 +126,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None, content: by
     state = status(agent_id)
     if not state["configured"]:
         raise ValueError(state["reason"])
-    agent = agents.require_enabled(agent_id)
+    agent = agents.require_enabled(agent_id, notebook_id)
     if notebook_id and notebook_id not in {item["notebook_id"] for item in agent["notebooks"]}:
         raise ValueError("Assign this notebook to the Tutor first")
     question = question.strip()
@@ -135,7 +135,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None, content: by
     pixels, width, height = image_payload(content)
     result = await perceive(agent_id, question, pixels)
     # Recheck after perception in case the user turned the Tutor off while it was reading.
-    agents.require_enabled(agent_id)
+    agents.require_enabled(agent_id, notebook_id)
     stamp = datetime.now(timezone.utc).isoformat()
     note = agents.append_message(agent_id, "system", "Shared screen observation (" + stamp + "): " + result["description"], notebook_id)
     source = {"source_id": note["id"], "title": "Shared screen observation", "excerpt": result["description"],

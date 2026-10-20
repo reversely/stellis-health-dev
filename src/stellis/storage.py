@@ -132,6 +132,12 @@ def connect() -> Iterator[sqlite3.Connection]:
         is_steward INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY(agent_id, notebook_id)
     )""")
+    if "enabled" not in {row["name"] for row in conn.execute("PRAGMA table_info(agent_notebooks)")}:
+        try:
+            conn.execute("ALTER TABLE agent_notebooks ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+        except sqlite3.OperationalError as error:
+            if "duplicate column" not in str(error):
+                raise
     conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agent_notebook_one_steward
         ON agent_notebooks(notebook_id) WHERE is_steward = 1""")
     conn.execute("""CREATE TABLE IF NOT EXISTS agent_memories (

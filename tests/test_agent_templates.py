@@ -54,7 +54,7 @@ class TemplateTest(unittest.TestCase):
         prompt = agent_runtime._prompt(agent, [], [], "Teach me", [])
         self.assertIn("Teach one achievable step", prompt)
         self.assertIn("Start with one sketch", prompt)
-        self.assertEqual(agent["behavior"]["runs"], "When you ask")
+        self.assertEqual(agent["behavior"]["runs"], "When you ask a lesson question or share a screen")
     def test_default_and_active_agent_deletion_guards(self):
         default = agents.list_agents()[0]
         with self.assertRaisesRegex(ValueError, "remain on"):
@@ -67,3 +67,32 @@ class TemplateTest(unittest.TestCase):
         agents.finish_job(job, "succeeded")
         agents.delete(agent["id"])
         with self.assertRaises(LookupError): agents.get(agent["id"])
+
+    def test_notebook_off_does_not_disable_other_assignments_or_erase_memory(self):
+        agent = agents.deploy("writing", self.one["id"])
+        agents.assign(agent["id"], self.two["id"])
+        agents.save_memory(agent["id"], "Preserve this convention", notebook_id=self.one["id"])
+        agents.set_notebook_enabled(agent["id"], self.one["id"], False)
+        with self.assertRaisesRegex(ValueError, "off in this notebook"):
+            agents.require_enabled(agent["id"], self.one["id"])
+        self.assertTrue(agents.require_enabled(agent["id"], self.two["id"])["enabled"])
+        self.assertEqual(len(agents.memories(agent["id"])), 1)
+        agents.unassign(agent["id"], self.one["id"])
+        self.assertEqual(len(agents.memories(agent["id"])), 1)
+        agents.assign(agent["id"], self.one["id"])
+        self.assertTrue(agents.require_enabled(agent["id"], self.one["id"])["enabled"])
+
+    def test_off_notebook_steward_is_not_automatically_selected(self):
+        agent = agents.deploy("steward", self.one["id"])
+        agents.set_notebook_enabled(agent["id"], self.one["id"], False)
+        self.assertTrue(agents.resolved_agent(self.one["id"])["agent"]["is_default"])
+        with self.assertRaisesRegex(ValueError, "off in this notebook"):
+            agents.resolved_agent(self.one["id"], agent["id"])
+
+    def test_removed_steward_can_be_added_again_without_name_collision(self):
+        agent = agents.deploy("steward", self.one["id"])
+        agents.save_memory(agent["id"], "Keep notebook context")
+        agents.unassign(agent["id"], self.one["id"])
+        restored = agents.deploy("steward", self.one["id"])
+        self.assertEqual(restored["id"], agent["id"])
+        self.assertEqual(len(agents.memories(restored["id"])), 1)

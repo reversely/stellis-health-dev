@@ -599,6 +599,15 @@ def assign_agent_notebook(agent_id: str, notebook_id: str, request: AgentAssignm
     return _agent_result(lambda: agents.assign(agent_id, notebook_id, request.steward))
 
 
+class AgentNotebookState(BaseModel):
+    enabled: bool
+
+
+@api.patch("/agents/{agent_id}/notebooks/{notebook_id}")
+def toggle_agent_notebook(agent_id: str, notebook_id: str, request: AgentNotebookState) -> dict[str, object]:
+    return _agent_result(lambda: agents.set_notebook_enabled(agent_id, notebook_id, request.enabled))
+
+
 @api.delete("/agents/{agent_id}/notebooks/{notebook_id}")
 def unassign_agent_notebook(agent_id: str, notebook_id: str) -> dict[str, object]:
     return _agent_result(lambda: agents.unassign(agent_id, notebook_id))

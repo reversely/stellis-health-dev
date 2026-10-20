@@ -113,7 +113,7 @@ def _sources(agent: dict, question: str, notebook_id: str | None) -> list[dict[s
     if not terms and not case_ids:
         return []
     books = [item for item in agent["notebooks"]
-             if notebook_id is None or item["notebook_id"] == notebook_id]
+             if item.get("enabled", True) and (notebook_id is None or item["notebook_id"] == notebook_id)]
     found: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for book in books:
@@ -239,14 +239,17 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     question = " ".join(question.split())
     if not question or len(question) > 2000:
         raise ValueError("Question must be 1–2000 characters")
-    agent = agents.require_enabled(agent_id)
+    agent = agents.require_enabled(agent_id, notebook_id)
+    agent = {**agent, "notebooks": [item for item in agent["notebooks"] if item.get("enabled", True)]}
     if (notebook_id and not agent["is_default"]
             and notebook_id not in {item["notebook_id"] for item in agent["notebooks"]}):
         raise ValueError("Assign this notebook to the agent first")
     await ensure_managed_mcp()
     history = agents.messages(agent_id)
+    active_books = {item["notebook_id"] for item in agent["notebooks"]}
     memories = [item for item in agents.memories(agent_id)
-                if notebook_id is None or item["notebook_id"] in (None, notebook_id)]
+                if item["notebook_id"] is None or (item["notebook_id"] in active_books
+                    and (notebook_id is None or item["notebook_id"] == notebook_id))]
     try:
         mail_sources = await agent_mail.sources(agent, question, notebook_id, memories)
     except gmail_api.GmailError:
@@ -349,6 +352,6 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
               extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
-    agents.require_enabled(agent_id)
+    agents.require_enabled(agent_id, notebook_id)
     with runtime_trace.span("agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
         return await _ask(agent_id, question, notebook_id, extra_sources)

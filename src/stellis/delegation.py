@@ -42,8 +42,8 @@ def jobs(steward_id: str) -> list[dict[str, object]]:
 
 def create(steward_id: str, specialist_id: str, notebook_id: str, question: str,
            recipient: str, subject: str, fixture: bool = False) -> dict[str, object]:
-    steward = agents.require_enabled(steward_id)
-    agents.require_enabled(specialist_id)
+    steward = agents.require_enabled(steward_id, notebook_id)
+    agents.require_enabled(specialist_id, notebook_id)
     if steward_id == specialist_id:
         raise ValueError("Choose another agent as the specialist")
     if notebook_id not in {item["notebook_id"] for item in steward["notebooks"]
@@ -221,8 +221,8 @@ async def _sources(job: dict, steward: dict) -> tuple[list[dict], list[str]]:
 async def _run(job_id: str) -> None:
     try:
         job = _record(job_id)
-        steward = agents.require_enabled(str(job["steward_id"]))
-        specialist = agents.require_enabled(str(job["specialist_id"]))
+        steward = agents.require_enabled(str(job["steward_id"]), job["notebook_id"])
+        specialist = agents.require_enabled(str(job["specialist_id"]), job["notebook_id"])
         _update(job_id, state="running", stage="researching")
         sources, tools = await _sources(job, steward)
         _update(job_id, sources_json=json.dumps([{"source_id": item["source_id"],

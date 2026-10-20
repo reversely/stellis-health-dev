@@ -36,10 +36,10 @@ def _record(conn: sqlite3.Connection, agent_id: str) -> dict[str, object]:
     if row is None:
         raise LookupError("Agent not found")
     assignments = [dict(item) for item in conn.execute("""SELECT an.notebook_id, n.name AS notebook_name,
-        an.is_steward FROM agent_notebooks an JOIN notebooks n ON n.id = an.notebook_id
+        an.is_steward, an.enabled FROM agent_notebooks an JOIN notebooks n ON n.id = an.notebook_id
         WHERE an.agent_id = ? ORDER BY n.name COLLATE NOCASE""", (agent_id,))]
     record = {**dict(row), "is_default": bool(row["is_default"]), "enabled": bool(row["enabled"]),
-              "notebooks": [{**item, "is_steward": bool(item["is_steward"])} for item in assignments]}
+              "notebooks": [{**item, "is_steward": bool(item["is_steward"]), "enabled": bool(item["enabled"])} for item in assignments]}
     return {**record, "behavior": agent_templates.behavior(record)}
 
 
@@ -125,11 +125,24 @@ def update(agent_id: str, *, name: str | None = None, role: str | None = None,
         return _record(conn, agent_id)
 
 
-def require_enabled(agent_id: str) -> dict[str, object]:
+def require_enabled(agent_id: str, notebook_id: str | None = None) -> dict[str, object]:
     agent = get(agent_id)
     if not agent["enabled"]:
         raise ValueError("This agent is off. Turn it on in Agent settings.")
+    if notebook_id:
+        assignment = next((item for item in agent["notebooks"] if item["notebook_id"] == notebook_id), None)
+        if assignment and not assignment["enabled"]:
+            raise ValueError("This agent is off in this notebook. Turn it on in Agent settings.")
     return agent
+
+
+def set_notebook_enabled(agent_id: str, notebook_id: str, enabled: bool) -> dict:
+    with storage.connect() as conn:
+        _record(conn, agent_id)
+        if not conn.execute("UPDATE agent_notebooks SET enabled = ? WHERE agent_id = ? AND notebook_id = ?",
+                            (int(enabled), agent_id, notebook_id)).rowcount:
+            raise LookupError("Notebook assignment not found")
+        return _record(conn, agent_id)
 
 
 def _assign(conn: sqlite3.Connection, agent_id: str, notebook_id: str, steward: bool) -> None:
@@ -171,10 +184,12 @@ def resolved_agent(notebook_id: str | None = None, explicit_id: str | None = Non
             result = _record(conn, explicit_id)
             if not result["enabled"]:
                 raise ValueError("This agent is off. Turn it on in Agent settings.")
+            if notebook_id and any(item["notebook_id"] == notebook_id and not item["enabled"] for item in result["notebooks"]):
+                raise ValueError("This agent is off in this notebook")
             return {"agent": result, "reason": "explicit"}
         if notebook_id:
             row = conn.execute("""SELECT a.id FROM agents a JOIN agent_notebooks an ON an.agent_id = a.id
-                WHERE an.notebook_id = ? AND an.is_steward = 1 AND a.enabled = 1""", (notebook_id,)).fetchone()
+                WHERE an.notebook_id = ? AND an.is_steward = 1 AND a.enabled = 1 AND an.enabled = 1""", (notebook_id,)).fetchone()
             if row:
                 return {"agent": _record(conn, str(row["id"])), "reason": "notebook_steward"}
         row = conn.execute("SELECT id FROM agents WHERE is_default = 1").fetchone()
@@ -347,6 +362,10 @@ def deploy(template_id: str, notebook_id: str | None = None, name: str | None = 
         if not name:
             if template_id == "steward":
                 row = conn.execute("SELECT agent_id FROM agent_notebooks WHERE notebook_id = ? AND is_steward = 1", (notebook_id,)).fetchone()
+                if row is None:
+                    row = conn.execute("""SELECT a.id AS agent_id FROM agents a WHERE a.template_id = 'steward'
+                        AND a.name_key = ? AND NOT EXISTS (SELECT 1 FROM agent_notebooks n WHERE n.agent_id = a.id)""",
+                        ((f"{notebook['name'][:65]} Steward").casefold(),)).fetchone()
             else:
                 row = conn.execute("SELECT id FROM agents WHERE template_id = ? AND name_key = ?", (template_id, template["name"].casefold())).fetchone()
             if row:

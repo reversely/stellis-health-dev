@@ -159,3 +159,31 @@
  .agent-chat-page .agent-detail-head,.agent-chat-page .agent-workspace-tabs{flex:none}
 }
 @media(max-width:1000px){body.agent-chat-page:has(#agent-chat-view) main{padding:12px 16px 32px;box-sizing:border-box;width:100%}.agent-chat-page .rail-name{min-height:24px;display:inline-flex;align-items:center}}
+/* Notebook deployment management keeps the library rail and real agent identities. */
+.agent-chat-page #agent-chat-view.agent-management-view{height:auto;min-height:calc(100dvh - 72px)}
+.agent-management-view #agent-detail{height:auto}
+.deployment-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:start}
+.deployment-list,.deployment-group{min-width:0}
+.deployment-group{padding:6px 0 22px}
+.deployment-group h4{margin:0 0 8px;font-size:14px;font-weight:600;color:var(--muted)}
+.deployment-row{display:grid;grid-template-columns:minmax(120px,.65fr) minmax(0,1fr);align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--line-soft)}
+.deployment-book{font-family:Piazzolla,serif;font-weight:300;font-size:21px;line-height:1.3;color:var(--ink);text-decoration:none;overflow-wrap:anywhere;min-height:32px;display:flex;align-items:center}
+.deployment-chips{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.deployment-chip,.deployment-add{display:inline-flex;align-items:center;gap:7px;min-height:38px;max-width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.deployment-chip span{overflow-wrap:anywhere;min-width:0}.deployment-chip canvas{flex:none}.deployment-chip[aria-pressed=true]{background:var(--raised);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.deployment-off{color:var(--muted);font-size:12px}.deployment-add{border-color:transparent;color:var(--muted)}
+.deployment-detail{min-width:0;padding:22px;border:1px solid var(--line-soft);border-radius:14px;background:var(--raised);position:sticky;top:22px;overflow-wrap:anywhere}
+.deployment-identity{display:flex;align-items:center;gap:12px}.deployment-identity h4{font-family:Piazzolla,serif;font-size:25px;font-weight:300;margin:0}.deployment-identity p{margin:4px 0;color:var(--muted);font-size:13px}
+.deployment-toggle{display:flex;align-items:center;gap:9px;min-height:44px;margin:14px 0;font-size:13px}.deployment-toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.deployment-facts{margin:0;display:grid;gap:5px}.deployment-facts dt{font-size:12px;color:var(--muted);margin-top:13px}.deployment-facts dd{margin:0;font-size:14px;line-height:1.55;white-space:pre-line}
+.deployment-actions{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.deployment-actions a,.deployment-actions button,.deployment-suggestions button{min-height:36px;padding:7px 11px;font-size:13px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;cursor:pointer}
+.deployment-suggestions{border-top:1px solid var(--line-soft);padding-top:16px;margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}.deployment-suggestions h4{width:100%;margin:0 0 4px;font-size:14px}
+.deployment-customize summary{min-height:36px;cursor:pointer;font-size:13px;padding-block:8px}.deployment-template-text,.agent-template-text{font-size:13px;line-height:1.5}
+.deployment-editor[hidden]{display:none}.deployment-editor .agent-identity-form,.deployment-customize .agent-identity-form{padding:12px 0;margin:0;border:0}.deployment-detail .agent-memory-add{flex-direction:column}.deployment-detail .agent-memory-list{padding:0;list-style:none}.deployment-detail .agent-detail-section h3{font-size:16px}
+.deployment-chip:focus-visible,.deployment-add:focus-visible,.deployment-detail:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+@media(max-width:1250px){.deployment-layout{grid-template-columns:minmax(0,1fr) 270px;gap:18px}.deployment-row{grid-template-columns:1fr;gap:10px}.deployment-detail{padding:18px}}
+@media(max-width:700px){.deployment-layout{grid-template-columns:1fr}.deployment-detail{position:static}.deployment-group{padding-bottom:16px}.deployment-row{padding:14px 0}.deployment-chip,.deployment-add{min-height:44px}.deployment-detail .deployment-actions a,.deployment-detail .deployment-actions button,.deployment-suggestions button{min-height:44px}}
+@media(prefers-reduced-motion:no-preference){.deployment-chip{transition:background-color 120ms,border-color 120ms}.deployment-detail{animation:deployment-appear 150ms ease-out}@keyframes deployment-appear{from{opacity:.65;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}}
+
+.agent-chat-page .home-rail .agent-list-item{height:auto;flex-shrink:0}.agent-chat-page .home-rail .agent-list-text{min-height:0}
+.agent-chat-page .home-rail .agent-list{grid-auto-rows:max-content;align-content:start}.deployment-toggle input{width:24px;height:24px;flex:none}

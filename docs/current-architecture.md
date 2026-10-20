@@ -359,3 +359,7 @@ At #120 after rebasing onto main, 102 tests pass with one skip. In an isolated c
 ### Independent inference roles (#433)
 
 Settings persists managed-agent, transcript-AI, category, notebook-planning and Tutor-vision model choices separately in profile-specific account files (`model_routes.py`; ADR 0069). Local saves check installation and capabilities; managed saves additionally apply/read back NemoClaw and roll back failures. Active requests across account contexts block runtime changes. Each inference path consumes its own role. Cloud choices have separate storage, explicit Token Factory adapters and a documented OpenClaw backend-model override; missing credentials remain unverified. Tutor displays whether screenshots stay on GN100 or are sent to Token Factory on request. Availability checks and actual execution traces remain distinct evidence.
+
+### Notebook agent management (#438)
+
+Agent settings presents collection/notebook deployment rows and a selected-agent detail panel. `agent_notebooks.enabled` adds notebook-specific On/Off alongside identity-wide enablement; scoped runtime entry points and steward resolution enforce both. Removing a deployment preserves identity, chat and memory. The shared library rail and template/copy creation flow remain. Runs describes actual manual/delegated entry points; automatic new-mail monitoring remains open. See ADR 0070.

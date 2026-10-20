@@ -12,7 +12,7 @@
   function draftKey(id) { return `stellis-compose:${accountScope}:${id}`; }
   function readDraft(id) { try { return JSON.parse(sessionStorage.getItem(draftKey(id))) || {}; } catch { return {}; } }
   function writeDraft(id, value) { try { sessionStorage.setItem(draftKey(id), JSON.stringify(value)); } catch {} }
-  const openSettings = new Set();
+  let managementSelection = null;
   let selectedId = null;
   let runtimeConfigured = false;
   let delegationTimer = null;
@@ -260,7 +260,7 @@
     const select = el('select'); select.name = 'notebook_id'; select.setAttribute('aria-label', 'Notebook context');
     const any = el('option', '', 'No notebook'); any.value = ''; select.append(any);
     for (const book of agent.notebooks) {
-      const option = el('option', '', book.notebook_name); option.value = book.notebook_id; select.append(option);
+      const option = el('option', '', book.notebook_name + (book.enabled===false?' (Off)':'')); option.value = book.notebook_id; option.disabled=book.enabled===false;select.append(option);
     }
     select.value = draft.notebook || ''; context.append(glyph('notebook'), select); form.append(context);
     const input = el('textarea'); input.name = 'question'; input.maxLength = 2000; input.required = true; input.value = draft.question || '';
@@ -699,47 +699,74 @@
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', `#i-${name}`);
     svg.append(use); return svg;
   }
-  // Agent settings (#390): every agent grouped like Home, each one opening to its name, notebooks and memory.
-  function settingsEntry({agent, books}, groupKey) {
-    const key = `${groupKey}:${agent.id}`;
-    const details = el('details', 'agent-settings-item'); details.dataset.agentId = agent.id;
-    const summary = el('summary');
-    const text = el('span', 'agent-list-text');
-    text.append(el('strong', '', agent.name), el('small', '', agent.role));
-    if (books.length) text.append(el('small', 'agent-settings-where', books.map(book => book.notebook_name).join(', ')));
-    summary.append(agentAvatar(agent, 32), text);
-    if (!agent.enabled) summary.append(el('span', 'home-agent-tag', 'Off'));
-    if (books.some(book => book.is_steward)) summary.append(el('span', 'home-agent-tag', 'Steward'));
-    const body = el('div', 'agent-settings-body');
-    const fill = async () => {
-      const open = el('a', 'agent-quiet agent-link-button', 'Open chat'); open.href = `/chat/${encodeURIComponent(agent.id)}`;
-      const memory = await memorySection(agent);
-      body.replaceChildren(behaviorCard(agent), agentControls(agent), identityForm(agent), notebookSection(agent), memory, open);
-    };
-    details.addEventListener('toggle', () => {
-      if (!details.open) { openSettings.delete(key); return; }
-      openSettings.add(key);
-      if (!body.childElementCount) fill().catch(error => status(error.message));
-    });
-    details.append(summary, body);
-    details.open = openSettings.has(key);
-    return details;
+  function managementChip(agent, bookId) {
+    const button=el('button','deployment-chip');button.type='button';button.dataset.agentId=agent.id;
+    const assignment=agent.notebooks.find(item=>item.notebook_id===bookId);
+    button.append(agentAvatar(agent,24),el('span','',assignment?.is_steward?'Steward':agent.name));
+    if(!agent.enabled || assignment?.enabled===false)button.append(el('small','deployment-off','Off'));
+    button.setAttribute('aria-pressed',String(managementSelection?.agentId===agent.id && managementSelection?.bookId===bookId));
+    button.addEventListener('click',()=>{managementSelection={agentId:agent.id,bookId};renderSettings(true).catch(error=>status(error.message));});
+    return button;
   }
-  async function renderSettings() {
-    const head = el('div', 'agent-detail-head');
-    head.append(el('h3', '', 'Agent settings'));
-    const groups = window.StellisAgentGroups.groupAgents(agents, collections).map(group => {
-      const section = el('section', 'agent-settings-group');
-      const title = el('h4', 'notebook-group-head');
-      const lead = glyph(group.kind); if (group.color) lead.style.setProperty('--tint', group.color);
-      title.append(lead, el('span', '', group.name));
-      section.append(title, ...group.items.map(item => settingsEntry(item, group.key)));
-      return section;
-    });
-    if (view === 'settings') document.querySelector('#agent-detail').replaceChildren(head, ...groups);
+  function managementAdd(bookId, templateId) {
+    managementSelection={bookId};openCreate();
+    const form=document.querySelector('#agent-new-form');form.elements.notebook_id.value=bookId;
+    if(templateId){form.elements.template_id.value=templateId;form.elements.template_id.dispatchEvent(new Event('change'));}
+    form.scrollIntoView({block:'nearest'});
+  }
+  async function managementPanel(selection) {
+    const panel=el('aside','deployment-detail');panel.setAttribute('aria-label','Selected agent');panel.tabIndex=-1;
+    const agent=agents.find(item=>item.id===selection?.agentId),book=notebooks.find(item=>item.id===selection?.bookId);
+    if(!agent){panel.append(el('h4','','Choose an agent'),el('p','agent-empty','Select an agent to manage its work and memory.'));return panel;}
+    const identity=el('div','deployment-identity'),text=el('div');text.append(el('h4','',agent.name),el('p','',book?.name || (agent.is_default?'All notebooks':'No notebook assigned')));identity.append(agentAvatar(agent,38),text);panel.append(identity);
+    const assignment=agent.notebooks.find(item=>item.notebook_id===book?.id);
+    const toggleLabel=el('label','deployment-toggle'),toggle=el('input');toggle.type='checkbox';toggle.setAttribute('role','switch');toggle.checked=agent.enabled && assignment?.enabled!==false;toggle.disabled=agent.is_default;
+    toggleLabel.append(toggle,el('span','',book?'On in this notebook':'On'));panel.append(toggleLabel);
+    if(assignment && !agent.enabled)panel.append(el('p','agent-empty','This agent is off everywhere. Turning it on also enables this notebook.'));
+    toggle.addEventListener('change',async()=>{toggle.disabled=true;try{
+      if(assignment){
+        if(toggle.checked&&!agent.enabled)await request(`/agents/${agent.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true})});
+        await request(`/agents/${agent.id}/notebooks/${book.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:toggle.checked})});
+      }else await request(`/agents/${agent.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:toggle.checked})});
+      await reloadAgent(agent.id);status(toggle.checked?'Agent turned on':'Agent turned off in this notebook');
+    }catch(error){toggle.checked=!toggle.checked;toggle.disabled=false;status(error.message);}});
+    const facts=el('dl','deployment-facts');for(const [key,label] of [['does','Does'],['runs','Runs'],['asks_first','Asks first']])facts.append(el('dt','',label),el('dd','',agent.behavior?.[key]||'Not specified'));
+    const memories=await request(`/agents/${agent.id}/memories`);facts.append(el('dt','','Remembers'));
+    const remembered=memories.filter(item=>!book || !item.notebook_id || item.notebook_id===book.id);
+    facts.append(el('dd','',remembered.length?remembered.map(item=>item.fact).join('\n'):'No saved memory yet.'));panel.append(facts);
+    const actions=el('div','deployment-actions'),chat=el('a','agent-link-button','Chat');chat.href=`/chat/${agent.id}`;actions.append(chat);
+    if(book){chat.addEventListener('click',()=>writeDraft(agent.id,{...readDraft(agent.id),notebook:book.id}));}
+    const edit=el('button','agent-quiet','Rename');edit.type='button';actions.append(edit);
+    const editor=el('div','deployment-editor');editor.hidden=true;editor.append(identityForm(agent));
+    edit.addEventListener('click',()=>{editor.hidden=!editor.hidden;if(!editor.hidden)editor.querySelector('input').focus();});
+    if(assignment){const remove=el('button','agent-quiet','Remove');remove.type='button';actions.append(remove);remove.addEventListener('click',async()=>{
+      remove.disabled=true;try{await request(`/agents/${agent.id}/notebooks/${book.id}`,{method:'DELETE'});managementSelection={bookId:book.id};await reloadAgent(agent.id);status('Removed from '+book.name+'. Chat and memory kept.');}catch(error){remove.disabled=false;status(error.message);}
+    });}
+    panel.append(actions,editor);
+    const customize=el('details','deployment-customize');customize.append(el('summary','','Instructions and memory'),el('p','agent-template-text',templates.find(item=>item.id===agent.template_id)?.instructions||agent.role),await memorySection(agent));
+    const instructions=identityForm(agent);instructions.querySelector('input[name=name]').closest('label').hidden=true;instructions.querySelector('input[name=role]').closest('label').hidden=true;customize.append(instructions);panel.append(customize);
+    if(book){const suggestions=el('section','deployment-suggestions');suggestions.append(el('h4','','Add to '+book.name));
+      for(const template of templates.filter(item=>!agents.some(a=>a.template_id===item.id&&a.notebooks.some(n=>n.notebook_id===book.id)))){const add=el('button','agent-quiet',template.name);add.type='button';add.addEventListener('click',()=>managementAdd(book.id,template.id));suggestions.append(add);}panel.append(suggestions);}
+    return panel;
+  }
+  async function renderSettings(focus=false) {
+    const revision=++detailRevision;clearTimeout(threadTimer);clearTimeout(delegationTimer);tutorModule?.stop();
+    const head=el('div','agent-detail-head');head.append(el('h3','','Agents'));
+    const layout=el('div','deployment-layout'),list=el('div','deployment-list');
+    function group(name,books){if(!books.length)return;const section=el('section','deployment-group');section.append(el('h4','notebook-group-head',name));
+      for(const book of books){const row=el('div','deployment-row');row.dataset.notebookId=book.id;const title=el('a','deployment-book',book.name);title.href=`/notebook/${book.id}`;row.append(title);const chips=el('div','deployment-chips');for(const agent of agents.filter(item=>item.notebooks.some(n=>n.notebook_id===book.id)))chips.append(managementChip(agent,book.id));
+        const add=el('button','deployment-add','+ Add');add.type='button';add.setAttribute('aria-label','Add agent to '+book.name);add.addEventListener('click',()=>managementAdd(book.id));chips.append(add);row.append(chips);section.append(row);}list.append(section);}
+    const everywhere=el('section','deployment-group');everywhere.append(el('h4','notebook-group-head','Everywhere'));const globalRow=el('div','deployment-row');globalRow.append(el('span','deployment-book','All notebooks'));const defaults=el('div','deployment-chips');for(const agent of agents.filter(item=>item.is_default))defaults.append(managementChip(agent,null));globalRow.append(defaults);everywhere.append(globalRow);list.append(everywhere);
+    for(const collection of collections)group(collection.name,notebooks.filter(book=>collection.notebook_ids.includes(book.id)));
+    group('Notebooks',notebooks.filter(book=>!collections.some(group=>group.notebook_ids.includes(book.id))));
+    const unassigned=agents.filter(agent=>!agent.is_default&&!agent.notebooks.length);if(unassigned.length){const section=el('section','deployment-group');section.append(el('h4','notebook-group-head','Not assigned'));const chips=el('div','deployment-chips');for(const agent of unassigned)chips.append(managementChip(agent,null));section.append(chips);list.append(section);}
+    if(!managementSelection) {const agent=agents.find(item=>!item.is_default&&item.notebooks.length)||agents[0];if(agent)managementSelection={agentId:agent.id,bookId:agent.notebooks[0]?.notebook_id||null};}
+    const panel=await managementPanel(managementSelection);layout.append(list,panel);
+    if(view==='settings'&&revision===detailRevision){document.querySelector('#agent-detail').replaceChildren(head,layout);if(focus){panel.focus({preventScroll:true});if(innerWidth<1100)panel.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}}
   }
   function setView(next) {
     view = next;
+    document.querySelector('#agent-chat-view').classList.toggle('agent-management-view',next==='settings');
     const link = document.querySelector('#agent-settings-link');
     if (next === 'settings') link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
   }
@@ -842,7 +869,7 @@
     const form = event.currentTarget; const button = form.querySelector('button[type="submit"]'); button.disabled = true;
     try {
       const created = await request('/agents', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.fromEntries(new FormData(form)))});
-      form.hidden = true; await show('settings'); history.replaceState({}, '', '/chat/settings');
+      form.hidden = true; managementSelection={agentId:created.id,bookId:form.elements.notebook_id.value};await show('settings'); history.replaceState({}, '', '/chat/settings');
       status(created.name + ' added');
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }

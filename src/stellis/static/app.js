@@ -4096,6 +4096,7 @@ function renderHomeAgents() {
     const name = document.createElement('strong'); name.textContent = agent.name; text.append(name);
     if (books.length) { const where = document.createElement('small'); where.textContent = books.map(book => book.notebook_name).join(', '); text.append(where); }
     link.append(avatars.avatarElement(document, {seed: agent.id, coordinator: avatars.isCoordinator(agent), size: 36}), text);
+    if (!agent.enabled || books.length && books.every(book => book.enabled === false)) { const off=document.createElement('span');off.className='home-agent-tag';off.textContent='Off';link.append(off); }
     if (books.some(book => book.is_steward)) { const tag = document.createElement('span'); tag.className = 'home-agent-tag'; tag.textContent = 'Steward'; link.append(tag); }
     return link;
   };
