@@ -1,0 +1,11 @@
+{
+  "real_pipewire_inputs": 2,
+  "measured_audio_peak": 0.032247066497802734,
+  "continuous_track": true,
+  "paused_switch": true,
+  "missing_device_retained_capture": true,
+  "finalized": true,
+  "remembered_after_reload": true,
+  "page_errors": [],
+  "finalized_audio_decoded_non_silent": true
+}

@@ -2292,3 +2292,11 @@ details.more-menu:not([open]) > .more-menu-items { display: none; }
 .agent-new-form textarea, .agent-identity-form textarea { min-height: 100px; resize: vertical; }
 .agent-form-actions { display: flex; gap: .75rem; }
 @media (max-width: 600px) { .agent-behavior { grid-template-columns: 5rem minmax(0, 1fr); gap: .65rem; } }
+
+.recording-inputs { display:flex; flex-wrap:wrap; align-items:end; gap:12px 20px; margin:4px 0; min-width:0; --ink:#F7F5F6; --quiet:#CDBFCE; --line:#605465; color:var(--ink); }
+.recording-inputs label { display:grid; gap:6px; font-size:14px; min-width:0; flex:0 1 260px; }
+.recording-inputs select { width:100%; min-height:44px; border:1px solid var(--line); border-radius:8px; padding:8px 12px; background:#302A35; color:var(--ink); font:inherit; }
+.recording-inputs p { font-size:13px; color:var(--quiet); margin:0 0 10px; }
+#recording-input-status:empty { display:none; }
+@media(max-width:700px) { .recording-inputs label { flex:1 1 140px; } .recording-inputs p { flex-basis:100%; margin:0; } }
+body.recording-page #back-from-recording { min-height:44px; }

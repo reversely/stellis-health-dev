@@ -2879,6 +2879,7 @@ async function loadSavedRecordingChat(conversationId) {
     setTimeout(() => loadSavedRecordingChat(conversationId).catch(() => {}), 2000);
 }
 function captureControls() {
+  document.querySelector('#recording-microphone').disabled = captureRequesting || captureFinalizing || microphoneSwitching;
   const active = Boolean(capture?.recorder && capture.recorder.state !== 'inactive');
   if (active && (captureHeartbeatId !== capture.session.id || Date.now() - captureHeartbeatAt >= 1000)) {
     try { localStorage.setItem(recordingHeartbeatKey(capture.session.id), JSON.stringify({at:Date.now(), state:capture.recorder.state})); } catch {}
@@ -3065,8 +3066,36 @@ async function loadRecoveries() {
     container.append(row);
   }
 }
+const microphonePicker=document.querySelector('#recording-microphone');
+const microphoneStatus=document.querySelector('#recording-input-status');
+let microphoneSwitching=false;
+async function refreshMicrophones(){
+  if(!navigator.mediaDevices?.enumerateDevices)return;
+  try{
+    const devices=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput'&&d.deviceId&&d.deviceId!=='default');
+    const selected=capture?.input?.deviceId??window.StellisRecordingInput.preference();
+    microphonePicker.replaceChildren(new Option('System default',''));
+    devices.forEach((d,i)=>microphonePicker.add(new Option(d.label||`Microphone ${i+1}`,d.deviceId)));
+    if(selected&&!devices.some(d=>d.deviceId===selected))microphonePicker.add(new Option('Saved microphone unavailable',selected));
+    microphonePicker.value=selected;
+  }catch{microphoneStatus.textContent='Could not list microphones. You can try the system default.';}
+}
+microphonePicker.addEventListener('change',async()=>{
+  const current=capture,id=microphonePicker.value;
+  if(!current){window.StellisRecordingInput.remember(id);microphoneStatus.textContent='Microphone selected for the next recording.';return;}
+  if(microphoneSwitching||current.stopping)return;
+  microphoneSwitching=true;microphonePicker.disabled=true;microphoneStatus.textContent='Switching microphone…';
+  try{
+    await current.input.switchTo(id);
+    if(capture===current&&!current.stopping){microphonePicker.value=current.input.deviceId;document.querySelector('#recording-source-label').textContent=`${current.input.label} (English)`;microphoneStatus.textContent='Microphone changed.';}
+  }catch(error){microphonePicker.value=current.input.deviceId;microphoneStatus.textContent=captureErrorMessage(error);}
+  finally{microphoneSwitching=false;captureControls();}
+});
+navigator.mediaDevices?.addEventListener('devicechange',refreshMicrophones);
+refreshMicrophones();
 function captureErrorMessage(error) {
   if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') return 'Microphone access was denied. Allow this site to use the microphone, then try again.';
+  if (error?.name === 'OverconstrainedError') return 'The selected microphone is unavailable. Choose another microphone.';
   if (error?.name === 'NotFoundError') return 'No microphone was found. Connect one and try again.';
   if (error?.name === 'NotReadableError') return 'The microphone is busy or disconnected. Check the device and try again.';
   return error?.message || 'Recording could not start.';
@@ -3090,19 +3119,21 @@ async function startCapture() {
   if (!mediaType) { recordingDetail.textContent = 'This browser has no supported recording format.'; return; }
   recordingState.textContent = 'Requesting microphone access…';
   captureRequesting = true; captureControls();
-  let stream;
+  let stream, input;
   let waveformContext = null;
   try {waveformContext = new AudioContext(); waveformContext.resume().catch(() => {});} catch {}
   try {
-    stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-    document.querySelector('#recording-source-label').textContent = `${stream.getAudioTracks()[0]?.label || 'Microphone'} (English)`;
+    input = await window.StellisRecordingInput.open(microphonePicker.value);
+    stream = input.stream;
+    refreshMicrophones();
+    document.querySelector('#recording-source-label').textContent = `${input.label} (English)`;
     const recorder = new MediaRecorder(stream, {mimeType:mediaType});
     const session = await json(await fetch(`${API}/recordings`, {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({title:document.querySelector('#recording-title').value.trim() || 'New recording',media_type:mediaType.split(';')[0],
         notebook_id:pendingNotebookId, calendar_provider:pendingCalendarEvent?.provider,
         calendar_event_id:pendingCalendarEvent?.id})}));
     pendingNotebookId = null; pendingCalendarEvent = null;
-    capture = {recorder, stream, session, sequence:0, pending:Promise.resolve(), uploadError:null,
+    capture = {recorder, stream, input, session, sequence:0, pending:Promise.resolve(), uploadError:null,
       startedAt:Date.now(), pausedAt:null, totalPausedMs:0, timer:null, stopping:false,
       previewPending:false, previewRetryAfter:0, lastPreviewSequence:-1};
     document.querySelector('#recording-transcript-preview').replaceChildren();
@@ -3131,7 +3162,7 @@ async function startCapture() {
       });
     });
     recorder.addEventListener('stop', () => finishCapture());
-    stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => {
+    input.onended = () => {
       if (capture?.recorder === recorder && recorder.state !== 'inactive') {
         recordingState.textContent = 'Microphone disconnected';
         recordingDetail.textContent = 'Saving audio captured before the device stopped.';
@@ -3139,7 +3170,7 @@ async function startCapture() {
           body:JSON.stringify({kind:'device_ended',media_position_ms:Math.round(captureElapsedMs())})}).catch(()=>{});
         recorder.stop();
       }
-    }));
+    };
     recorder.start(1000);
     try {capture.stopWaveform = drawRecordingWaveform(capture, waveformContext);} catch {
       waveformContext?.close().catch(() => {}); capture.stopWaveform = () => {};}
@@ -3150,6 +3181,7 @@ async function startCapture() {
     loadRecordingChat(session.id).catch(error => {document.querySelector('#recording-chat-status').textContent = error.message;});
     captureControls(); await loadRecoveries();
   } catch (error) {
+    input?.close();
     stream?.getTracks().forEach(track => track.stop());
     waveformContext?.close().catch(() => {});
     if (capture?.recorder?.state === 'inactive') capture = null;
@@ -3168,6 +3200,7 @@ async function finishCapture() {
   captureFinalizing = true; captureControls();
   clearInterval(current.timer);
   current.stopWaveform?.();
+  current.input?.close();
   current.stream.getTracks().forEach(track => track.stop());
   recordingState.textContent = 'Saving recording…';
   await current.pending;
