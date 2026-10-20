@@ -11,7 +11,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-from stellis import runtime_trace, agent_gateway, runtime_profile, agent_mail, agents, gmail_api, source_search
+from stellis import agent_templates, runtime_trace, agent_gateway, runtime_profile, agent_mail, agents, gmail_api, source_search
 
 
 class AgentRunError(Exception):
@@ -136,7 +136,7 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
             sources: list[dict[str, object]]) -> str:
     context = {
         "id": agent["id"], "name": agent["name"], "role": agent["role"],
-        "instructions": agent["instructions"],
+        "instructions": agent_templates.instructions(agent),
         "assigned_notebooks": [item["notebook_name"] for item in agent["notebooks"]],
         "memory": [item["fact"] for item in memories[-20:]],
         "recent_messages": [{"role": item["role"], "content": item["content"]}
@@ -239,7 +239,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     question = " ".join(question.split())
     if not question or len(question) > 2000:
         raise ValueError("Question must be 1–2000 characters")
-    agent = agents.get(agent_id)
+    agent = agents.require_enabled(agent_id)
     if (notebook_id and not agent["is_default"]
             and notebook_id not in {item["notebook_id"] for item in agent["notebooks"]}):
         raise ValueError("Assign this notebook to the agent first")
@@ -349,6 +349,6 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
               extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
-    agents.get(agent_id)
+    agents.require_enabled(agent_id)
     with runtime_trace.span("agent_chat", agent_id=agent_id):
         return await _ask(agent_id, question, notebook_id, extra_sources)

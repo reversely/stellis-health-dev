@@ -40,7 +40,7 @@ def _speech_text(text: str) -> str:
 async def offer(agent_id: str, sdp: str, kind: str) -> dict[str, str]:
     """Answer a browser offer with Pipecat's SmallWebRTC peer transport."""
     global _handler
-    agents.get(agent_id)
+    agents.require_enabled(agent_id)
     status = availability()
     if not status["ready"]:
         raise RuntimeError(str(status["reason"]))

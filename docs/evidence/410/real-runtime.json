@@ -1,0 +1,12 @@
+{
+  "profile": "local",
+  "agent_template": "tutor",
+  "reply": "Calibration: The pump calibration target is 17 psi. [Calibration lesson](/page/c8817c7f-6a97-4449-b94e-b4b9b717b6ee) What value would you use for the pump?",
+  "cited_sources": [
+    {
+      "source_id": "c8817c7f-6a97-4449-b94e-b4b9b717b6ee",
+      "target": "/page/c8817c7f-6a97-4449-b94e-b4b9b717b6ee"
+    }
+  ],
+  "disabled_status": 400
+}

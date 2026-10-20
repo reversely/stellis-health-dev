@@ -1,0 +1,10 @@
+{
+  "page_errors": [],
+  "checks": [
+    "create template copy",
+    "save memory and reload",
+    "disable and reject actual ask",
+    "enable and real inference",
+    "desktop/mobile light/dark"
+  ]
+}

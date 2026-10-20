@@ -111,6 +111,12 @@ def connect() -> Iterator[sqlite3.Connection]:
         is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     )""")
     agent_columns = {row["name"] for row in conn.execute("PRAGMA table_info(agents)")}
+    for column, definition in (
+        ("template_id", "TEXT"),
+        ("enabled", "INTEGER NOT NULL DEFAULT 1"),
+    ):
+        if column not in agent_columns:
+            conn.execute(f"ALTER TABLE agents ADD COLUMN {column} {definition}")
     if "slug" not in agent_columns and "openclaw_id" in agent_columns:
         try:
             conn.execute("ALTER TABLE agents RENAME COLUMN openclaw_id TO slug")

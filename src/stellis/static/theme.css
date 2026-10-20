@@ -2276,3 +2276,19 @@ details.more-menu:not([open]) > .more-menu-items { display: none; }
   .inference-trace summary { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   .inference-trace summary .trace-duration { grid-column: 2; }
 }
+
+/* Agent behavior and deployment controls share the existing Chat surfaces. */
+.agent-behavior { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: .65rem 1rem; margin: 1rem 0; }
+.agent-behavior dt { color: var(--muted); }
+.agent-behavior dd { margin: 0; overflow-wrap: anywhere; }
+.agent-controls { display: flex; flex-direction: column; align-items: start; gap: 1rem; margin-block: 1rem 1.5rem; }
+.agent-enabled { display: flex !important; align-items: center; gap: .6rem; min-height: 44px; }
+.agent-enabled input { width: 1.2rem !important; height: 1.2rem; margin: 0; }
+.agent-template-instructions summary { min-height: 44px; cursor: pointer; }
+.agent-template-instructions p { max-width: 65ch; }
+.agent-new-form label { display: grid; gap: .5rem; }
+.agent-new-form [hidden] { display: none !important; }
+.agent-new-form select, .agent-new-form input, .agent-new-form textarea { width: 100%; min-height: 44px; }
+.agent-new-form textarea, .agent-identity-form textarea { min-height: 100px; resize: vertical; }
+.agent-form-actions { display: flex; gap: .75rem; }
+@media (max-width: 600px) { .agent-behavior { grid-template-columns: 5rem minmax(0, 1fr); gap: .65rem; } }

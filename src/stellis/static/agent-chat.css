@@ -75,3 +75,8 @@
 .agent-inline-check{display:flex!important;align-items:center;gap:8px}
 .agent-inline-check input{width:auto;min-height:0}
 @media(max-width:680px){.agent-chat-view{padding:16px 0 48px}.agent-chat-layout{grid-template-columns:minmax(0,1fr);gap:22px}.agent-list{display:flex;overflow-x:auto;padding-bottom:4px}.agent-list-item{min-width:150px}.agent-memory-add{align-items:stretch;flex-direction:column}.agent-memory-add button{align-self:start}}
+
+.agent-new-form select,.agent-new-form textarea{border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);padding:10px;font:inherit}
+.agent-new-form select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.agent-new-form .agent-template-preview{display:block}
+.agent-enabled input[type=checkbox]{min-height:20px;padding:0}

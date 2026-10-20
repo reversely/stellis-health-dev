@@ -6,6 +6,14 @@ The wireframes are low fidelity. Only the rows in section 1 record a decision, a
 
 The owner put it this way: "this is low fidelity so i don't want some of the existing decisions to be overwritten by filler" (chat, 03:26).
 
+## Current implementation direction (2026-10-20 continuation)
+
+The owner's later instructions supersede P1 and Q7's deferral: two deployment versions are required, and the current UI/onboarding adopts fully local inference on GN100. Cloud remains a separate Nebius Cloud + Token Factory option. The owner explicitly requested Settings traces/routing/local model switching (merged #409), functional tutor and template management, then PDF-aligned onboarding and live setup from a fresh state on GN100. Existing sidebar backgrounds, icons and richer controls must be preserved, not replaced with low-fidelity mockup styling. Emil's design-foundations and animations skills in `Repos/skills-sandbox` inform hierarchy and purposeful motion with reduced-motion support. This grants implementation judgment for routine open design details; external account connections still use their real authorization flows.
+
+Observed directly in the PDF: pages 7–8 welcome and uses/connections; page 9 reviewed collection/notebook proposals with agent choices; page 10 grouped agent row and Home; page 11 agent management with function, run mode, approval and memory information. These are static references, not proof of live interactions. Counts, schedules and project examples remain illustrative, never fabricated live data.
+
+Implementation order: template/deployment controls (#410 and ADR 0063), functional local screen tutor (#395 follow-up), welcome/uses/local setup (#391), reviewed notebook setup (#393), updated contextual tour (#392), then cross-flow browser verification and newly discovered gaps. Existing unrelated platform/stretch tickets are not prerequisites.
+
 ## 1. Decision ledger
 
 "Board" names the canvas board the comment was left on. Chat rows come from the session transcript. The "Settles" column states only what the quote says; where the quote leaves a choice open, the row says so.
