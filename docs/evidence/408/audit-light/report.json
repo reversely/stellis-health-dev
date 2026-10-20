@@ -1,0 +1,165 @@
+{
+  "generated": "2026-10-20T18:34:17.391Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux-arm64/chrome-headless-shell",
+  "dark": false,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/settings",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_360.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 4805
+          },
+          "findings": [
+            {
+              "check": "tap-target",
+              "level": "warn",
+              "element": "a.back-link \"← All conversations\"",
+              "rect": {
+                "left": 20,
+                "top": 146,
+                "right": 177,
+                "bottom": 166,
+                "width": 157,
+                "height": 20
+              },
+              "detail": "157x20px, minimum 24x24"
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_390.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 4718
+          },
+          "findings": [
+            {
+              "check": "tap-target",
+              "level": "warn",
+              "element": "a.back-link \"← All conversations\"",
+              "rect": {
+                "left": 20,
+                "top": 146,
+                "right": 177,
+                "bottom": 166,
+                "width": 157,
+                "height": 20
+              },
+              "detail": "157x20px, minimum 24x24"
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_768.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 4441
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_1024.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 4426
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_1280.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 4426
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_1440.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 4426
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/agent-trace-settings/docs/evidence/408/audit-light/127-0-0-1-8824-settings_1920.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 4426
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 2
+  }
+}

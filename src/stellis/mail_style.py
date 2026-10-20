@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from email.utils import getaddresses
 
-from stellis import agent_gateway, runtime_profile, agent_runtime, agents, gmail_api, storage
+from stellis import runtime_trace, agent_gateway, runtime_profile, agent_runtime, agents, gmail_api, storage
 
 
 def _now() -> str:
@@ -152,7 +152,7 @@ def examples_for(recipients: list[str], account: str | None = None) -> list[dict
             and (account is None or row["account_email"] == account)][:3]
 
 
-async def _draft_body(agent_id: str, brief: str, subject: str, examples: list[dict]) -> str:
+async def _draft_body_impl(agent_id: str, brief: str, subject: str, examples: list[dict]) -> str:
     if not agent_runtime.configured():
         raise RuntimeError("Agent replies are unavailable on this device")
     agent = agents.get(agent_id)
@@ -222,3 +222,10 @@ def group_examples(group_id: str) -> list[dict[str, object]]:
             WHERE group_id = ? ORDER BY sent_at DESC LIMIT 30""", (group_id,))]
     return [{**row, "recipients": json.loads(row["recipients_json"]),
              "url": f"https://mail.google.com/mail/u/0/#sent/{row['thread_id']}"} for row in rows]
+
+
+async def _draft_body(agent_id: str, brief: str, subject: str, examples: list[dict]) -> str:
+    with runtime_trace.span("email_draft", agent_id=agent_id):
+        runtime_trace.event("sources_selected", source_count=len(examples))
+        runtime_trace.event("model_requested")
+        return await _draft_body_impl(agent_id, brief, subject, examples)

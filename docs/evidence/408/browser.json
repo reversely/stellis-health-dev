@@ -1,0 +1,32 @@
+{
+  "checks": [
+    {
+      "width": 1440,
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "overflow": false
+    }
+  ],
+  "page_errors": [],
+  "states": [
+    "populated",
+    "expanded",
+    "refreshed",
+    "empty"
+  ],
+  "model_picker": "installed models; same model disabled; alternative enabled; invalid rejected"
+}

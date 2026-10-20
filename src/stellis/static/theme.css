@@ -2251,3 +2251,28 @@ details.more-menu:not([open]) > .more-menu-items { display: none; }
 
 /* The local inference profile has no Nebius credential form. */
 #nebius-key-form[hidden] { display: none; }
+
+#local-model-controls[hidden] { display: none; }
+.inference-routes { margin: 12px 0 20px; }
+.inference-route { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line-soft); }
+.inference-route code, .trace-model { overflow-wrap: anywhere; }
+.inference-route .settings-note { margin: 5px 0 0; }
+#local-model-controls { margin-top: 20px; }
+#local-model-select { width: 100%; max-width: 100%; min-height: 44px; }
+.inference-traces { margin-top: 18px; }
+.inference-trace { padding: 14px 0; border-bottom: 1px solid var(--line-soft); }
+.inference-trace summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; min-height: 44px; align-items: center; cursor: pointer; }
+.inference-trace summary strong { overflow-wrap: anywhere; }
+.inference-trace summary strong::before { content: '▸ '; }
+.inference-trace[open] summary strong::before { content: '▾ '; }
+.inference-trace summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.trace-state, .trace-duration { font-size: 13px; }
+.trace-events { padding-left: 22px; }
+.trace-events li { padding: 5px 0; }
+.trace-events li > span:first-child { margin-right: 14px; }
+.inference-trace small { display: block; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .inference-route { grid-template-columns: 1fr; gap: 7px; }
+  .inference-trace summary { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .inference-trace summary .trace-duration { grid-column: 2; }
+}

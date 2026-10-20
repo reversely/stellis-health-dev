@@ -11,7 +11,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-from stellis import agent_gateway, runtime_profile, agent_mail, agents, gmail_api, source_search
+from stellis import runtime_trace, agent_gateway, runtime_profile, agent_mail, agents, gmail_api, source_search
 
 
 class AgentRunError(Exception):
@@ -222,12 +222,15 @@ def _openclaw_reply(result: object) -> tuple[str, str | None]:
     if not answer:
         raise AgentRunError("Agent reply failed. Try again.")
     agent_meta = meta.get("agentMeta")
+    if isinstance(agent_meta, dict):
+        runtime_trace.report(model=agent_meta.get("model"), provider=agent_meta.get("provider"),
+                             usage=agent_meta.get("usage"))
     if isinstance(agent_meta, dict) and isinstance(agent_meta.get("sessionId"), str):
         return answer, agent_meta["sessionId"]
     return answer, meta.get("sessionId") if isinstance(meta.get("sessionId"), str) else None
 
 
-async def ask(agent_id: str, question: str, notebook_id: str | None = None,
+async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
               extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
     """Save a Chat request and its managed headless reply."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
@@ -262,10 +265,13 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
         source["index"] = index
     prompt = _prompt(agent, memories, history, question, sources)
     job_id = agents.start_job(agent_id, notebook_id)
+    runtime_trace.job(job_id)
+    runtime_trace.event("sources_selected", source_count=len(sources))
     user_message = agents.append_message(agent_id, "user", question, notebook_id, job_id)
     process = None
     try:
         for attempt in range(2):
+            runtime_trace.event("model_requested", attempt=attempt + 1)
             if runtime_profile.cloud():
                 try:
                     answer, session_id = await agent_gateway.turn(prompt, job_id)
@@ -284,6 +290,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
                 if process.returncode or len(stdout) > 1_048_576:
                     raise AgentRunError("Agent reply failed. Try again.")
                 answer, session_id = _openclaw_reply(json.loads(stdout))
+            runtime_trace.event("model_replied", attempt=attempt + 1)
             answer = _normalize_citations(answer)
             cited_indices = {int(index) - 1 for index in re.findall(r"\[\[source:(\d+)\]\]", answer)}
             unmarked = re.sub(r"\[\[source:\d+\]\]", "", answer)
@@ -292,6 +299,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
             if (not sources or cited_indices) and valid_indices and not raw_reference and len(answer.split()) <= 170:
                 break
             if attempt == 0:
+                runtime_trace.event("answer_retry", attempt=attempt + 1)
                 if sources:
                     prompt += ("\n\nYour previous answer did not follow the answer format. "
                                "Answer again in 1-4 sentences and at most 130 words. Do not list the "
@@ -305,6 +313,7 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
         answer = _trusted_citations(answer, sources)
         if len(answer) > 12000:
             raise AgentRunError("Agent reply was too long. Try again.")
+        runtime_trace.event("sources_validated", citation_count=len(cited_indices))
         agent_message = agents.append_message(agent_id, "agent", answer, notebook_id, job_id)
         agents.finish_job(job_id, "succeeded")
         return {"job_id": job_id, "user_message": user_message, "agent_message": agent_message,
@@ -336,3 +345,10 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
+
+
+async def ask(agent_id: str, question: str, notebook_id: str | None = None,
+              extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
+    agents.get(agent_id)
+    with runtime_trace.span("agent_chat", agent_id=agent_id):
+        return await _ask(agent_id, question, notebook_id, extra_sources)

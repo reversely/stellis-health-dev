@@ -33,5 +33,11 @@ def inference_url() -> str:
 
 def model_id() -> str:
     if local_inference():
+        from stellis import storage
+        path = storage.data_dir() / "local-inference-model"
+        if path.is_file():
+            value = path.read_text().strip()
+            if value and len(value) <= 200:
+                return value
         return os.environ.get("STELLIS_LOCAL_INFERENCE_MODEL", "nemotron-3-nano:latest")
     return "nvidia/Nemotron-3_5-Lightning"

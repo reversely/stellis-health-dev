@@ -15,7 +15,7 @@ from pathlib import Path
 
 import httpx
 
-from stellis import runtime_profile, storage
+from stellis import runtime_trace, runtime_profile, storage
 
 MODEL_ID = "nvidia/Nemotron-3_5-Lightning"
 BASE_URL = "https://api.tokenfactory.nebius.com/v1"
@@ -500,7 +500,7 @@ def _validate_answer(payload: object, allowed_ids: set[str]) -> dict[str, object
             "insufficient_evidence": payload["insufficient_evidence"]}
 
 
-def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str, object], kind: str) -> object:
+def _request_impl(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str, object], kind: str) -> object:
     key = _key()
     provider = "Local inference" if runtime_profile.local_inference() else "Nebius"
     if not key:
@@ -533,6 +533,7 @@ def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str
         raise AIError("provider", f"{provider} request failed (HTTP {response.status_code})")
     try:
         data = response.json()
+        runtime_trace.report(model=data.get("model"))
         usage = data.get("usage") or {}
         for field in ("prompt_tokens", "completion_tokens", "total_tokens"):
             metadata["usage"][field] = metadata["usage"].get(field, 0) + int(usage.get(field) or 0)
@@ -745,3 +746,14 @@ def _run(run_id: str) -> None:
         _persist_metadata(run_id, metadata)
         storage.update_ai_run(run_id, state="failed", stage="failed", error_code="unexpected",
                               error_message="AI analysis stopped unexpectedly", updated_at=_now())
+
+
+def _request(messages: list[dict[str, str]], max_tokens: int, metadata: dict[str, object], kind: str) -> object:
+    provider = "Ollama" if runtime_profile.local_inference() else "Token Factory"
+    before = dict(metadata.get("usage", {}))
+    with runtime_trace.span(kind, model=runtime_profile.model_id(), provider=provider):
+        runtime_trace.event("model_requested")
+        result = _request_impl(messages, max_tokens, metadata, kind)
+        runtime_trace.report(usage={k: v-before.get(k, 0) for k, v in metadata.get("usage", {}).items()})
+        runtime_trace.event("structured_reply_received")
+        return result

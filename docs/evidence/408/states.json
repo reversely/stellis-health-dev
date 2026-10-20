@@ -1,0 +1,14 @@
+[
+  {
+    "profile": "cloud",
+    "inference": "not_configured",
+    "picker_hidden": true,
+    "page_errors": []
+  },
+  {
+    "profile": "local",
+    "inference": "unavailable",
+    "picker_hidden": true,
+    "page_errors": []
+  }
+]

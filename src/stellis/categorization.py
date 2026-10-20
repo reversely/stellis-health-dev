@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from stellis import ai, runtime_profile, storage
+from stellis import runtime_trace, ai, runtime_profile, storage
 
 MODEL_ID = "zai-org/GLM-5.3-Flash"
 PROMPT_VERSION = "six-choice-v1"
@@ -118,7 +118,7 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
     return {name: value / total for name, value in weights.items()}
 
 
-def classify(source: str, key: str) -> tuple[str, float]:
+def _classify_impl(source: str, key: str) -> tuple[str, float]:
     scores = {name: 0.0 for name in LABELS}
     rotations = len(LABELS) - 1
     for shift in range(rotations):
@@ -219,3 +219,11 @@ def _run(conversation_id: str, revision: int, key: str) -> None:
     finally:
         with _LOCK:
             _RUNNING.discard(conversation_id)
+
+
+def classify(source: str, key: str) -> tuple[str, float]:
+    with runtime_trace.span("categorization", model=_model_id(),
+                            provider="Ollama" if runtime_profile.local_inference() else "Token Factory"):
+        result = _classify_impl(source, key)
+        runtime_trace.event("category_scored", reads=len(LABELS)-1)
+        return result
