@@ -55,7 +55,7 @@
     copy.append(node('span', null, 'brand-mark'), node('h1', 'Welcome to Stellis'), node('strong', 'Stellis is a private AI team for your entire life.'));
     copy.append(node('p', 'Bring what you do, see and say into one workspace. Organize your knowledge into collections, and give each part of your life persistent AI agents.'));
     copy.append(node('p', 'Research, write, coordinate and learn with agents that work from your notebooks. Review their work before it changes your plans or leaves your workspace.'));
-    copy.append(node('p', state.runtime.local_inference ? 'Completely local inference on GN100, with OpenClaw inside NemoClaw.' : 'Agents run on Nebius Cloud with Token Factory inference.', 'setup-hint'));
+    copy.append(node('p', state.runtime.local_inference ? 'AI responses run on your connected computer.' : 'Agents run on Nebius Cloud with Token Factory inference.', 'setup-hint'));
     copy.append(button('Get started', async () => { await save('uses'); render(); }, true)); scene.append(copy);
     const orbit = [['Meetings','microphone'],['Chief of Staff',null],['Screen','layout-dashboard'],['Deep research',null],['Mail','inbox'],['Writing',null],['Home','folder'],['Collections','folder-plus'],['Calendar','calendar'],['Slide Deck Designer',null],['Work','folder'],['Tutor',null],['Learning','notebook'],['Schedule',null],['Family','users'],['Private','key']];
     orbit.forEach(([name, glyph], index) => {
@@ -65,16 +65,16 @@
   }
   function runtimePanel() {
     const panel = node('section', null, 'setup-runtime');
-    panel.append(node('h2', state.runtime.local_inference ? 'Completely local inference' : 'Nebius Cloud + Token Factory'));
-    panel.append(node('p', state.runtime.local_inference ? 'Your models run on GN100. No cloud inference key is needed.' : 'Connect your cloud agent deployment and Token Factory key.'));
-    const result = node('p', state.ready ? `Ready: ${state.ready.model}` : 'Check that your team can reply.', 'setup-hint'); result.role = 'status';
+    panel.append(node('h2', state.runtime.local_inference ? 'Local AI' : 'Cloud AI'));
+    panel.append(node('p', state.runtime.local_inference ? 'AI responses run on your connected computer, without a cloud AI service.' : 'Connect your cloud agent deployment and Token Factory key.'));
+    const result = node('p', state.ready ? 'AI is ready.' : 'Test that your AI team can respond.', 'setup-hint'); result.role = 'status';
     panel.append(result, button('Check setup', async () => {
-      result.textContent = 'Asking your managed agent…';
-      try { const checked = await api('/onboarding/check', 'POST'); state.ready = checked.ready; result.textContent = `Ready. Live reply from ${state.ready.model}`; }
+      result.textContent = 'Checking AI responses…';
+      try { const checked = await api('/onboarding/check', 'POST'); state.ready = checked.ready; result.textContent = 'AI is ready.'; }
       catch (e) { result.textContent = e.message; throw e; }
     }));
     const details = node('details', null, 'setup-runtime-details'); details.append(node('summary', 'Models and speech'));
-    details.append(node('p', `Teaching: ${state.runtime.agent_model}`, 'setup-hint'));
+    details.append(node('p', `AI model: ${state.runtime.agent_model}`, 'setup-hint'));
     if (state.runtime.tutor_vision_model) details.append(node('p', `Screen reading: ${state.runtime.tutor_vision_model}`, 'setup-hint'));
     const speech = state.runtime.speech || {};
     details.append(node('p', `Live speech: ${speech.live_installed ? 'Installed' : 'Not configured'}. Saved speech: ${speech.transcribe && speech.diarize ? 'Installed' : 'Not configured'}.`, 'setup-hint'));
