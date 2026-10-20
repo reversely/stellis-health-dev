@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -706,10 +706,17 @@ def agent_jobs(agent_id: str) -> list[dict[str, object]]:
     return _agent_result(lambda: agents.jobs(agent_id))
 
 
+@api.post("/agents/{agent_id}/jobs/{job_id}/stop")
+async def stop_agent_job(agent_id: str, job_id: str):
+    return _agent_result(lambda: agent_runtime.stop_job(agent_id, job_id))
+
+
 @api.post("/agents/{agent_id}/ask")
 async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
     try:
         return await agent_runtime.ask(agent_id, request.question, request.notebook_id)
+    except asyncio.CancelledError as exc:
+        raise HTTPException(status_code=409, detail="Reply stopped") from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -1229,6 +1236,26 @@ def export_folder(scope: Literal["collection", "notebook", "all"] = "all", id: s
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return FileResponse(path, media_type="application/zip", filename=name,
                         background=BackgroundTask(path.unlink, missing_ok=True))
+
+
+class NotebookInstructions(BaseModel):
+    instructions: str = Field(max_length=4000)
+    revision: int = Field(ge=0)
+
+
+@api.get("/notebooks/work")
+def notebook_work_overview():
+    return notebook_work.overview()
+
+
+@api.get("/notebooks/{notebook_id}/activity")
+def notebook_activity(notebook_id: str):
+    return _agent_result(lambda: notebook_work.activity(notebook_id))
+
+
+@api.put("/notebooks/{notebook_id}/instructions")
+def notebook_instructions(notebook_id: str, request: NotebookInstructions):
+    return _agent_result(lambda: notebook_work.save_instructions(notebook_id, request.instructions, request.revision))
 
 
 @api.get("/notebooks")

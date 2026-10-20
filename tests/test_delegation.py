@@ -130,6 +130,21 @@ class DelegationTest(unittest.TestCase):
                   "are needed; please provide both by October 22 before closure.")
         self.assertFalse(delegation._usable_draft(unsafe, True))
 
+    def test_real_delegation_keeps_draft_local_and_uses_general_instructions(self):
+        from stellis import storage, agent_artifacts
+        job=self._job()
+        with storage.connect() as conn:conn.execute("UPDATE agent_delegations SET fixture=0 WHERE id=?",(job['id'],))
+        async def turn(_specialist,instruction,sources,_session,**kwargs):
+            self.assertNotIn('October 22',instruction)
+            self.assertNotIn('certificate compliance',instruction)
+            if 'Research this' in instruction:return 'The practice notes describe the next exercise. [Practice notes](/page/practice)'
+            return 'Hello, the practice notes describe a constrained sketch exercise. Please review the dimensions and record your observations before deciding what to practice next. Keep the notes available for our next review.'
+        with patch.object(delegation,'_sources',AsyncMock(return_value=([self.source],['Stellis source search']))),patch.object(delegation,'_managed_turn',side_effect=turn),patch.object(delegation.gmail_api,'create_draft',AsyncMock()) as external:
+            asyncio.run(delegation._run(job['id']))
+        external.assert_not_called()
+        self.assertEqual(delegation.jobs(self.steward['id'])[0]['state'],'succeeded',delegation.jobs(self.steward['id'])[0].get('error'))
+        drafts=agent_artifacts.list_for(self.steward['id']);self.assertEqual(len(drafts),1);self.assertEqual(drafts[0]['state'],'draft')
+
 
 if __name__ == "__main__":
     unittest.main()

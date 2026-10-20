@@ -4155,6 +4155,7 @@ function renderNotebooks() {
   acceptDrops(none, {[CONVERSATION_DRAG]: id => moveConversation(conversationById(id), null),
     [PAGE_DRAG]: id => movePage(pageById(id), null)});
   root.replaceChildren(...sections, none);
+  window.StellisNotebookWork?.home();
 }
 
 const notebookDialog = document.querySelector('#notebook-dialog');
@@ -4349,11 +4350,22 @@ async function loadNotebookItems(notebook) {
     tagsByConversation: tags, counts});
   paintNotebookItems();
 }
+const notebookTabs = ['activity','overview','conversations','files','tasks','list'];
 function showNotebookTab(tab) {
-  for (const name of ['overview', 'list']) document.querySelector(`#notebook-tab-${name}`).setAttribute('aria-selected', String(name === tab));
+  for (const name of notebookTabs) document.querySelector(`#notebook-tab-${name}`).setAttribute('aria-selected', String(name === tab));
   document.querySelector('#notebook-panel').setAttribute('aria-labelledby', `notebook-tab-${tab}`);
-  document.querySelector('#notebook-overview').hidden = tab !== 'overview';
+  document.querySelector('#notebook-activity').hidden = tab !== 'activity';
+  document.querySelector('#notebook-brief-empty').hidden = tab !== 'overview' || document.querySelector('#notebook-view').dataset.hasSummary === 'true';
+  document.querySelector('#notebook-overview').classList.toggle('no-summary', tab === 'tasks');
+  document.querySelector('#notebook-overview').hidden = !['overview','tasks'].includes(tab);
+  document.querySelector('#notebook-todos').hidden = tab !== 'tasks';
+  document.querySelector('#notebook-summary').hidden = tab !== 'overview' || document.querySelector('#notebook-view').dataset.hasSummary !== 'true';
+  document.querySelector('#notebook-panel .notebook-items').hidden = !['list','conversations','files'].includes(tab);
+  document.querySelector('#notebook-filters').hidden = tab !== 'list';
+  notebookFilter = tab === 'conversations' ? 'conversation' : tab === 'files' ? 'page' : 'all';
+  paintNotebookItems();
 }
+
 async function showNotebook(id) {
   await leaveForAppPage('notebook-page', 'Notebook');
   const [books, conversations, collections, categories] = await Promise.all([fetch(`${API}/notebooks`).then(json),
@@ -4374,6 +4386,7 @@ async function showNotebook(id) {
   // Latest summary: the newest meeting's Summary overview, shown as written.
   const lines = new Map(conversations.map(item => [item.id, item.summary_line]));
   const latest = window.StellisNotebookItems.latestSummary(notebook.conversations, lines);
+  document.querySelector('#notebook-view').dataset.hasSummary = String(Boolean(latest));
   const summary = document.querySelector('#notebook-summary'); summary.hidden = !latest;
   document.querySelector('#notebook-overview').classList.toggle('no-summary', !latest);
   if (latest) {
@@ -4383,11 +4396,15 @@ async function showNotebook(id) {
     when.dateTime = String(latest.date); when.textContent = window.StellisListDate.formatListDate(latest.date);
     document.querySelector('#notebook-summary-text').textContent = latest.text;
   }
-  showNotebookTab('overview');
+  showNotebookTab('activity');
   document.querySelector('#notebook-view').hidden = false;
+  const rail=document.querySelector('#home-rail');document.querySelector('main').prepend(rail);
+  rail.querySelectorAll('.rail-pin').forEach(link=>link.removeAttribute('aria-current'));
+  await reloadLibrary();
   notebookTodos?.destroy?.();
   notebookTodos = mountTodos(document.querySelector('#notebook-todos'), {scope: id, onChange: refreshNotebookItems});
   await loadNotebookItems(notebook);
+  await window.StellisNotebookWork.mount(document.querySelector('#notebook-activity'),notebook,async()=>{await refreshNotebookItems();notebookTodos?.refresh?.();});
   captureControls();
 }
 // Adding or completing a to-do changes the counts, and adding one can create the notebook's To-dos note.
@@ -4396,7 +4413,10 @@ async function refreshNotebookItems() {
   const books = await json(await fetch(`${API}/notebooks`)); libraryNotebooks = books.notebooks;
   const notebook = activeNotebook(); if (notebook) await loadNotebookItems(notebook);
 }
-for (const tab of ['overview', 'list']) document.querySelector(`#notebook-tab-${tab}`).addEventListener('click', () => showNotebookTab(tab));
+for (const tab of notebookTabs) {
+  const button=document.querySelector(`#notebook-tab-${tab}`);button.addEventListener('click',()=>showNotebookTab(tab));
+  button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?notebookTabs.length-1:(notebookTabs.indexOf(tab)+(event.key==='ArrowRight'?1:-1)+notebookTabs.length)%notebookTabs.length;showNotebookTab(notebookTabs[next]);document.querySelector('#notebook-tab-'+notebookTabs[next]).focus();});
+}
 document.querySelector('#notebook-add').addEventListener('click', () => { const notebook = activeNotebook(); if (notebook) openNotebookAdd(notebook); });
 document.querySelector('#notebook-new-note').addEventListener('click', event => { const notebook = activeNotebook(); if (notebook) newNoteIn(notebook, event.currentTarget); });
 document.querySelector('#notebook-record').addEventListener('click', () => {

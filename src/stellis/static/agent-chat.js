@@ -587,11 +587,12 @@
         if (job.error) item.append(el('p', '', job.error));
         if (job.tools_used.length) item.append(el('small', '', `Tools: ${job.tools_used.join(', ')}`));
         if (job.research) item.append(el('h4', '', 'Research notes'), messageBody(job.research));
-        if (job.draft_body) {
+        if (job.artifact) item.append(artifactCard(job.artifact,refresh));
+        else if (job.draft_body) {
           item.append(el('h4', '', 'Draft'), messageBody(job.draft_body));
           if (job.gmail_draft_id && !job.fixture) {
             const link = el('a', '', 'Open Gmail drafts');
-            link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(job.gmail_draft_id)}`;
+            link.href = 'https://mail.google.com/mail/#drafts';
             link.target = '_blank'; link.rel = 'noopener noreferrer'; item.append(link);
           }
         }
@@ -897,5 +898,5 @@
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }
   });
-  window.StellisAgentChat = {show, stopScreen: () => tutorModule?.stop()};
+  window.StellisAgentChat = {show, artifactCard, messageBody, stopScreen: () => tutorModule?.stop()};
 })();

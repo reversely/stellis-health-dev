@@ -1,0 +1,116 @@
+{
+  "generated": "2026-10-20T22:48:30.674Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium-1243/chrome-linux-arm64/chrome",
+  "dark": false,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/notebook/4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_360.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 2555
+          },
+          "findings": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_390.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 2555
+          },
+          "findings": []
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_768.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 2387
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_1024.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 1299
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_1280.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 1197
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_1440.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 1197
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/tmp/stellis-work-audit/light/127-0-0-1-8824-notebook-4083977d-ff7a-4a5d-a84d-0fff2b9cfdd4_1920.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1197
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 0
+  }
+}
