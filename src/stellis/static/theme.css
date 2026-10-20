@@ -2248,3 +2248,6 @@ details.more-menu:not([open]) > .more-menu-items { display: none; }
 .notes-editor .note-column { min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; }
 .notes-editor .note-column > :last-child { margin-bottom: 0; }
 @media (max-width: 640px) { .notes-editor .note-columns { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); } }
+
+/* The local inference profile has no Nebius credential form. */
+#nebius-key-form[hidden] { display: none; }

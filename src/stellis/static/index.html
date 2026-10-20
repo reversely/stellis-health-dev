@@ -154,7 +154,8 @@
         </section>
         <section class="settings-section" aria-labelledby="settings-ai-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg><h3 id="settings-ai-title">AI features</h3></div>
-          <p class="settings-note">Summaries, chat, and automatic categories send the transcript text they need to Nebius with your API key. Recordings and audio stay on this device.</p>
+          <p id="runtime-profile-status" role="status"></p>
+          <p id="runtime-profile-note" class="settings-note">Loading AI configuration…</p>
           <form id="nebius-key-form" class="settings-form">
             <label for="nebius-key-input">Nebius API key</label>
             <input id="nebius-key-input" type="password" autocomplete="off" spellcheck="false" maxlength="512" placeholder="Paste your key" />

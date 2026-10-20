@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from email.utils import getaddresses
 
-from stellis import agent_runtime, agents, gmail_api, storage
+from stellis import agent_gateway, runtime_profile, agent_runtime, agents, gmail_api, storage
 
 
 def _now() -> str:
@@ -164,20 +164,27 @@ async def _draft_body(agent_id: str, brief: str, subject: str, examples: list[di
                             "instructions": agent["instructions"]},
                   "subject": subject, "request": brief,
                   "sent_examples": [item["cleaned_body"][:2000] for item in examples]}, ensure_ascii=False))
-    process = await asyncio.create_subprocess_exec(
-        agent_runtime._command(), os.environ["STELLIS_NEMOCLAW_SANDBOX"], "agent", "--agent", "main",
-        "--session-id", str(uuid.uuid4()), "-m", prompt, "--json", "--timeout", "90",
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+    process = None
     try:
-        stdout, _ = await asyncio.wait_for(process.communicate(), timeout=120)
-        if process.returncode or len(stdout) > 1_048_576:
-            raise RuntimeError("Could not draft the reply")
-        body, _ = agent_runtime._openclaw_reply(json.loads(stdout))
+        if runtime_profile.cloud():
+            try:
+                body, _ = await agent_gateway.turn(prompt, str(uuid.uuid4()))
+            except agent_gateway.GatewayError as exc:
+                raise RuntimeError(str(exc)) from exc
+        else:
+            process = await asyncio.create_subprocess_exec(
+                agent_runtime._command(), os.environ["STELLIS_NEMOCLAW_SANDBOX"], "agent", "--agent", "main",
+                "--session-id", str(uuid.uuid4()), "-m", prompt, "--json", "--timeout", "90",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+            stdout, _ = await asyncio.wait_for(process.communicate(), timeout=120)
+            if process.returncode or len(stdout) > 1_048_576:
+                raise RuntimeError("Could not draft the reply")
+            body, _ = agent_runtime._openclaw_reply(json.loads(stdout))
         if not body.strip() or len(body) > 6000:
             raise RuntimeError("Could not draft the reply")
         return body.strip()
     finally:
-        if process.returncode is None:
+        if process is not None and process.returncode is None:
             process.terminate()
             await process.wait()
 

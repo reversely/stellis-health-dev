@@ -84,7 +84,7 @@ def start(conversation_id: str, summary_run_id: str) -> str | None:
             return None
         conn.execute("""INSERT INTO transcript_agent_runs (id, conversation_id, summary_run_id, model_id,
             prompt_version, state, stage, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'queued', 'queued', ?, ?)""",
-                     (run_id, conversation_id, summary_run_id, ai.MODEL_ID, PROMPT_VERSION, stamp, stamp))
+                     (run_id, conversation_id, summary_run_id, ai.runtime_profile.model_id(), PROMPT_VERSION, stamp, stamp))
     threading.Thread(target=_run, args=(run_id,), daemon=True).start()
     return run_id
 

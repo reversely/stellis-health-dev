@@ -11,7 +11,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-from stellis import agent_mail, agents, gmail_api, source_search
+from stellis import agent_gateway, runtime_profile, agent_mail, agents, gmail_api, source_search
 
 
 class AgentRunError(Exception):
@@ -75,10 +75,13 @@ def _reconcile_managed_mcp() -> None:
 
 async def ensure_managed_mcp() -> None:
     """Keep a gateway restart from leaving a user turn without managed tools."""
-    await asyncio.to_thread(_reconcile_managed_mcp)
+    if not runtime_profile.cloud():
+        await asyncio.to_thread(_reconcile_managed_mcp)
 
 
 def configured() -> bool:
+    if runtime_profile.cloud():
+        return agent_gateway.configured()
     return bool(os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip())
 
 
@@ -228,8 +231,8 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
               extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
     """Save a Chat request and its managed headless reply."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
-    if not sandbox:
-        raise AgentRunError("Agent replies are unavailable on this device")
+    if not configured():
+        raise AgentRunError("Agent replies are unavailable for this deployment")
     question = " ".join(question.split())
     if not question or len(question) > 2000:
         raise ValueError("Question must be 1–2000 characters")
@@ -263,18 +266,24 @@ async def ask(agent_id: str, question: str, notebook_id: str | None = None,
     process = None
     try:
         for attempt in range(2):
-            command = _command()
-            env = _cli_env(command)
-            # A canceled OpenClaw turn may still finish; keep its sandbox session out of later jobs.
-            process = await asyncio.create_subprocess_exec(
-                command, sandbox, "agent", "--agent", "main", "--session-id", job_id,
-                "-m", prompt, "--json", "--timeout", "90",
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-                env=env)
-            stdout, _ = await asyncio.wait_for(process.communicate(), timeout=150)
-            if process.returncode or len(stdout) > 1_048_576:
-                raise AgentRunError("Agent reply failed. Try again.")
-            answer, session_id = _openclaw_reply(json.loads(stdout))
+            if runtime_profile.cloud():
+                try:
+                    answer, session_id = await agent_gateway.turn(prompt, job_id)
+                except agent_gateway.GatewayError as exc:
+                    raise AgentRunError(str(exc)) from exc
+            else:
+                command = _command()
+                env = _cli_env(command)
+                # A canceled OpenClaw turn may still finish; keep its sandbox session out of later jobs.
+                process = await asyncio.create_subprocess_exec(
+                    command, sandbox, "agent", "--agent", "main", "--session-id", job_id,
+                    "-m", prompt, "--json", "--timeout", "90",
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+                    env=env)
+                stdout, _ = await asyncio.wait_for(process.communicate(), timeout=150)
+                if process.returncode or len(stdout) > 1_048_576:
+                    raise AgentRunError("Agent reply failed. Try again.")
+                answer, session_id = _openclaw_reply(json.loads(stdout))
             answer = _normalize_citations(answer)
             cited_indices = {int(index) - 1 for index in re.findall(r"\[\[source:(\d+)\]\]", answer)}
             unmarked = re.sub(r"\[\[source:\d+\]\]", "", answer)
