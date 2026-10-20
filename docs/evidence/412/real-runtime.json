@@ -1,0 +1,23 @@
+{
+  "actual_ui_capture": true,
+  "vision_model": "qwen3.5:9b",
+  "point": {
+    "x": 0.125,
+    "y": 0.9375,
+    "label": "Add agent"
+  },
+  "cited_sources": [
+    {
+      "source_id": "cbfd1923-441e-40f3-bf5d-26948dc84b9b",
+      "target": "/chat/6602c8dc-7fd8-4957-8b3b-1c1e1e50e541#message-cbfd1923-441e-40f3-bf5d-26948dc84b9b"
+    }
+  ],
+  "reply": "Click the \u201cAdd agent\u201d button to add the Tutor to the selected notebook. [Shared screen observation](/chat/6602c8dc-7fd8-4957-8b3b-1c1e1e50e541#message-cbfd1923-441e-40f3-bf5d-26948dc84b9b)",
+  "point_inside_target": true,
+  "target": {
+    "x": 19,
+    "y": 530.171875,
+    "width": 117,
+    "height": 44
+  }
+}

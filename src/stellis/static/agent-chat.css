@@ -80,3 +80,25 @@
 .agent-new-form select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .agent-new-form .agent-template-preview{display:block}
 .agent-enabled input[type=checkbox]{min-height:20px;padding:0}
+
+.screen-tutor [hidden]{display:none!important}
+.tutor-local-mode{font-weight:650;color:var(--ink)}
+.tutor-preview{position:relative;max-width:760px;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-block:16px;background:var(--raised)}
+.tutor-preview img,.tutor-preview video{display:block;width:100%;height:auto}
+.tutor-pointer{position:absolute;width:24px;height:24px;border:3px solid white;outline:3px solid #9c3e25;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;background:transparent}
+.tutor-question{display:grid;gap:14px;margin-block:18px}
+.tutor-question label{display:grid;gap:6px;font-size:14px}
+.tutor-question textarea,.tutor-question select{width:100%;min-width:0;min-height:44px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);font:inherit}
+.tutor-question textarea{min-height:90px;resize:vertical}
+.tutor-question button{justify-self:start}
+.screen-tutor button{min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);cursor:pointer}
+.screen-tutor button:not(.agent-quiet){background:var(--ink);color:var(--surface)}
+.tutor-status{min-height:24px;font-size:14px}
+.tutor-answer{max-width:65ch;overflow-wrap:anywhere}
+.tutor-answer summary{cursor:pointer;min-height:44px}
+.tutor-answer h4{font-size:16px}
+.tutor-question :focus-visible,.screen-tutor button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.tutor-preview{animation:tutor-frame-in 180ms cubic-bezier(.32,.72,0,1)}
+@keyframes tutor-frame-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.tutor-preview{animation:none;transition:none}}
+.agent-chat-page .back-link,.agent-message a,.tutor-answer a{display:inline-block;min-height:24px;line-height:24px;max-width:100%}

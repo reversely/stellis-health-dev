@@ -645,6 +645,47 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@api.get("/agents/{agent_id}/tutor")
+def tutor_status(agent_id: str) -> dict:
+    from stellis import screen_tutor
+    return _agent_result(lambda: screen_tutor.status(agent_id))
+
+
+@api.post("/agents/{agent_id}/tutor")
+async def ask_screen_tutor(agent_id: str, request: Request, question: str = Form(...),
+                           notebook_id: str | None = Form(None), image: UploadFile = File(...)) -> dict:
+    from stellis import screen_tutor
+    task = disconnected = None
+    async def wait_for_disconnect():
+        while True:
+            if (await request.receive())["type"] == "http.disconnect":
+                return
+    try:
+        content = await image.read(screen_tutor.MAX_IMAGE_BYTES + 1)
+        task = asyncio.create_task(screen_tutor.ask(agent_id, question, notebook_id, content))
+        # Await the receive channel directly: nonblocking is_disconnected probes can miss
+        # disconnects behind Starlette's HTTP middleware cancellation checkpoints.
+        disconnected = asyncio.create_task(wait_for_disconnect())
+        done, _ = await asyncio.wait({task, disconnected}, return_when=asyncio.FIRST_COMPLETED)
+        if disconnected in done:
+            task.cancel()
+            return Response(status_code=499)
+        return await task
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except agent_runtime.AgentRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    finally:
+        await image.close()
+        pending = [item for item in (task, disconnected) if item is not None]
+        for item in pending:
+            if not item.done():
+                item.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+
+
 class VoiceOffer(BaseModel):
     sdp: str = Field(min_length=1, max_length=100_000)
     type: Literal["offer"]

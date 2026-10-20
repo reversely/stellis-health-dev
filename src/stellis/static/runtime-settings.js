@@ -1,7 +1,7 @@
 const $ = selector => document.querySelector(selector);
 let current;
 let busy = false;
-const kindLabels = {agent_chat: 'Agent chat', specialist: 'Specialist', email_draft: 'Email draft',
+const kindLabels = {tutor_vision: 'Tutor screen reading', agent_chat: 'Agent chat', specialist: 'Specialist', email_draft: 'Email draft',
   answer: 'Transcript question', summary: 'Summary', clean: 'Transcript cleanup', agent: 'To-do extraction', categorization: 'Category scoring'};
 const stateLabels = {running: 'Running', succeeded: 'Completed', failed: 'Failed', interrupted: 'Interrupted'};
 const eventLabels = {request_started: 'Request started', sources_selected: 'Sources selected',
@@ -44,7 +44,9 @@ function render(data) {
         data.agent_configured ? 'Configured, not checked' : 'Not configured'),
     route('Transcript AI', data.inference_provider, data.inference_model,
       observed ? checkLabels[observed.inference.state] : data.inference_configured ? 'Configured, not checked' : 'Not configured'),
-    route('Categories', data.inference_provider, data.category_model, 'Configured model'));
+    route('Categories', data.inference_provider, data.category_model, 'Configured model'),
+    route('Tutor screen reading', data.local_inference ? 'GN100 Ollama' : 'Cloud', data.tutor_vision_model,
+      data.tutor_vision_model ? 'Configured vision model' : 'Not configured'));
   $('#inference-checked-at').textContent = observed ? 'Last checked ' + time(observed.checked_at) : 'No connection check yet.';
   $('#local-model-controls').hidden = !data.can_switch;
   const select = $('#local-model-select');

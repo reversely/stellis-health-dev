@@ -10,6 +10,8 @@
   let runtimeConfigured = false;
   let delegationTimer = null;
   let activeCall = null;
+  let tutorModule = null;
+  let detailRevision = 0;
   let callTimer = null;
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -165,7 +167,7 @@
     const jobsById = new Map(jobs.map(job => [job.id, job]));
     if (!messages.length) section.append(el('p', 'agent-empty', 'No messages yet'));
     for (const message of messages) {
-      const item = el('article', `agent-message agent-message-${message.role}`);
+      const item = el('article', `agent-message agent-message-${message.role}`); item.id = 'message-' + message.id;
       const author = el('strong', 'agent-message-author', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name);
       if (message.role === 'agent') author.prepend(agentAvatar(agent, 24));
       item.append(author, messageBody(message.content));
@@ -588,6 +590,7 @@
     return identity;
   }
   async function renderDetail(agent) {
+    const revision = ++detailRevision;
     const target = document.querySelector('#agent-detail');
     const head = el('div', 'agent-detail-head');
     const settings = el('a', 'agent-quiet agent-link-button', 'Settings'); settings.href = '/chat/settings';
@@ -595,8 +598,20 @@
     if (!agent.enabled) head.append(el('p', 'agent-empty', 'This agent is off. Turn it on in Agent settings.'));
     clearTimeout(delegationTimer);
     const [thread, drafts, delegation] = await Promise.all([threadSection(agent), draftSection(agent), delegationSection(agent)]);
-    if (selectedId !== agent.id || view !== 'thread') return;
-    target.replaceChildren(head, thread, drafts, delegation);
+    if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
+    tutorModule?.stop();
+    let tutor = null;
+    if (agent.template_id === 'tutor') {
+      tutorModule = await import('/static/screen-tutor.js');
+      if (revision !== detailRevision || selectedId !== agent.id || view !== 'thread') return;
+      tutor = await tutorModule.create(agent, async () => {
+        if (selectedId !== agent.id || view !== 'thread') return;
+        const updated = await threadSection(agent); target.querySelector('.agent-thread')?.replaceWith(updated);
+      }, messageBody);
+    }
+    if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) {tutor?.stopSharing?.();return;}
+    target.replaceChildren(head, ...(tutor ? [tutor] : []), thread, drafts, delegation);
+    if (location.hash.startsWith('#message-')) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   }
   function glyph(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -649,6 +664,7 @@
     if (next === 'settings') link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
   }
   async function select(id, navigate) {
+    tutorModule?.stop();
     setView('thread');
     selectedId = id;
     renderList();
@@ -657,6 +673,7 @@
     if (agent) await renderDetail(agent);
   }
   async function show(requestedId) {
+    tutorModule?.stop();
     status('');
     const [items, books, groups, runtime, catalog] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime'), request('/agents/templates')]);
     templates = catalog;
@@ -747,5 +764,5 @@
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }
   });
-  window.StellisAgentChat = {show};
+  window.StellisAgentChat = {show, stopScreen: () => tutorModule?.stop()};
 })();

@@ -12,7 +12,7 @@ The owner's later instructions supersede P1 and Q7's deferral: two deployment ve
 
 Observed directly in the PDF: pages 7–8 welcome and uses/connections; page 9 reviewed collection/notebook proposals with agent choices; page 10 grouped agent row and Home; page 11 agent management with function, run mode, approval and memory information. These are static references, not proof of live interactions. Counts, schedules and project examples remain illustrative, never fabricated live data.
 
-Implementation order: template/deployment controls (#410 and ADR 0063), functional local screen tutor (#395 follow-up), welcome/uses/local setup (#391), reviewed notebook setup (#393), updated contextual tour (#392), then cross-flow browser verification and newly discovered gaps. Existing unrelated platform/stretch tickets are not prerequisites.
+Implementation order: template/deployment controls (#410 and ADR 0063), functional local screen tutor (#412, ADR 0064; actual local screenshot grounding verified), welcome/uses/local setup (#391), reviewed notebook setup (#393), updated contextual tour (#392), then cross-flow browser verification and newly discovered gaps. Existing unrelated platform/stretch tickets are not prerequisites.
 
 ## 1. Decision ledger
 

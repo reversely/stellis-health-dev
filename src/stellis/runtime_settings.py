@@ -40,6 +40,8 @@ def status():
             "inference_provider": "Ollama" if runtime_profile.local_inference() else "Token Factory",
             "inference_model": runtime_profile.model_id(), "inference_configured": bool(ai._key()),
             "category_model": categorization._model_id(), "can_switch": can_switch(),
+            "tutor_vision_model": (os.environ.get("STELLIS_TUTOR_VISION_MODEL", "qwen3.5:9b")
+                                   if runtime_profile.local_inference() else None),
             "observed": observed, "traces": runtime_trace.recent()}
 
 
