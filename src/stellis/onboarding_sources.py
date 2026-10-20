@@ -72,7 +72,7 @@ async def plan(sources):
 def _update(scan_id, **changes):
     with onboarding._LOCK:
         state=onboarding._read()
-        if state.get("scan",{}).get("id")!=scan_id:return
+        if (state.get("scan") or {}).get("id")!=scan_id:return
         state["scan"].update(changes);onboarding._save(state)
 
 
@@ -133,7 +133,7 @@ def start(account_id,days):
     if not google.get("connected"):raise ValueError("Connect Google before reading mail & calendar events")
     with onboarding._LOCK:
         state=onboarding._read()
-        active=_TASKS.get(state.get("scan",{}).get("id"))
+        active=_TASKS.get((state.get("scan") or {}).get("id"))
         if active and not active.done():raise ValueError("Reading is already in progress")
         scan={"id":str(uuid.uuid4()),"state":"reading","days":days,"count":0,"sources":[],"groups":[],"limited":False,"message":"Reading mail & calendar events…"}
         state["scan"]=scan;onboarding._save(state)

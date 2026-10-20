@@ -1,6 +1,6 @@
 # Interface spec: onboarding, agents on Home, agent settings
 
-Status: draft for tickets, 2026-10-20. Every requirement cites an ID from the [decision ledger](ui-wireframe-decisions.md). A requirement with no ledger ID is not in this spec; it goes to the open questions in that ledger. Wireframe details listed in the ledger's section 3 are not requirements.
+Status: superseded as an acceptance checklist by [the full-screen audit](progress/wireframe-acceptance-audit.md), after owner rejection on 2026-10-20. Historical ticket decomposition follows. Every requirement cites an ID from the [decision ledger](ui-wireframe-decisions.md). A requirement with no ledger ID is not in this spec; it goes to the open questions in that ledger. Wireframe details listed in the ledger's section 3 are not requirements.
 
 The owner’s later 2026-10-20 instructions supersede P1: fully local inference on GN100 is now adopted for this workflow, alongside the separate cloud deployment. Build functioning agent templates and the tutor before completing PDF-aligned onboarding. Use real fresh-account setup and local inference for acceptance. See the current direction in the decision ledger and ADR 0063.
 

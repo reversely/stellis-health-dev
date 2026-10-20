@@ -32,6 +32,20 @@ TEMPLATES = {
         "revision. Cite each requirement and supporting evidence. Missing evidence is an open gap, "
         "not proof of compliance. Do not claim certification.",
     },
+    "schedule": {
+        "name": "Schedule", "does": "Plans around your calendar and commitments",
+        "returns": "A proposed schedule", "asks_first": "Any calendar change",
+        "instructions": "Use the supplied calendar events, deadlines and constraints to propose a realistic "
+        "schedule. Cite commitments and surface conflicts. Preserve pickups, focus time and hard stops. "
+        "Never claim an event was created or changed without a confirmed tool result and user approval.",
+    },
+    "slides": {
+        "name": "Slide Deck Designer", "does": "Turns notebook sources into a first slide deck",
+        "returns": "A source-backed slide draft", "asks_first": "Publishing or sharing",
+        "instructions": "Draft a coherent presentation from the supplied notebook sources. Give each slide "
+        "a title, concise content, speaker notes and source references. Separate slides with --- so the "
+        "draft can be exported. Do not invent figures, evidence, images or a downloadable file.",
+    },
     "tutor": {
         "name": "Tutor", "does": "Guides learning one step at a time",
         "returns": "Explanation and next step", "asks_first": "Sharing a window or starting voice",

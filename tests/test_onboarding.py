@@ -46,3 +46,34 @@ class OnboardingTest(unittest.TestCase):
             conn.execute("INSERT INTO account VALUES(1,'existing',X'01',X'01','2026-01-01')")
         self.assertFalse(auth.needs_onboarding(1))
         self.assertTrue(auth.needs_onboarding(self.account()))
+
+    def test_agent_plan_survives_back_and_applies_exact_selection(self):
+        account=self.account()
+        onboarding.choose(account,['learning','family'],'review',{'learning':['writing'],'family':[]})
+        onboarding.choose(account,['learning','family'],'uses')
+        state=onboarding.choose(account,['learning','family'],'review')
+        self.assertEqual(state['agent_choices'],{'learning':['writing'],'family':[]})
+        result=onboarding.complete(account)
+        learning=next(b for b in result['created'] if b['name']=='Learning Onshape')
+        family=next(b for b in result['created'] if b['name']=='Family')
+        self.assertEqual([agents.get(i)['template_id'] for i in learning['agent_ids']],['writing'])
+        self.assertEqual(family['agent_ids'],[])
+        self.assertEqual(onboarding.complete(account),result)
+
+    def test_reopen_is_additive_and_repeated_completion_is_idempotent(self):
+        account=self.account();onboarding.choose(account,['learning'],'review');first=onboarding.complete(account)
+        old_id=first['created'][0]['notebook_id']
+        state=onboarding.reopen(account)
+        self.assertTrue(state['required']);self.assertFalse(auth.needs_onboarding(account))
+        self.assertEqual(state['uses'],[])
+        onboarding.choose(account,['family','slides'],'review',{'family':['schedule'],'slides':['slides']})
+        second=onboarding.complete(account)
+        self.assertEqual(len(notebooks.list_notebooks()),3)
+        self.assertTrue(any(book['id']==old_id for book in notebooks.list_notebooks()))
+        self.assertFalse(onboarding.status(account)['required'])
+        self.assertEqual(onboarding.complete(account),second)
+
+    def test_invalid_agent_plan_does_not_mutate_setup(self):
+        account=self.account();before=onboarding.status(account)
+        with self.assertRaises(ValueError):onboarding.choose(account,['learning'],'review',{'learning':['invented']})
+        self.assertEqual(onboarding.status(account)['step'],before['step'])

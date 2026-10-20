@@ -959,7 +959,8 @@ def save_calendar_event_notes(request: EventNotesSave) -> dict[str, object]:
 
 @app.get("/onboarding", include_in_schema=False)
 def onboarding_page(request: Request):
-    if not auth.needs_onboarding(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))):
+    from stellis import onboarding
+    if not onboarding.available(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))):
         return RedirectResponse("/", status_code=303)
     return FileResponse(_STATIC / "onboarding.html")
 
@@ -967,6 +968,7 @@ def onboarding_page(request: Request):
 class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
     step: Literal["uses", "review"] = "review"
+    agent_choices: dict[str, list[str]] | None = None
 
 
 @api.get("/onboarding")
@@ -979,9 +981,15 @@ def onboarding_state(request: Request):
 def onboarding_choices(choices: OnboardingChoices, request: Request):
     from stellis import onboarding
     try:
-        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step)
+        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.agent_choices)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/onboarding/reopen")
+def onboarding_reopen(request: Request):
+    from stellis import onboarding
+    return onboarding.reopen(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
 
 
 @api.post("/onboarding/check")

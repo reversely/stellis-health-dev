@@ -1,0 +1,8 @@
+{
+  "signup_via_ui": true,
+  "real_local_inference": true,
+  "persisted_agent_choices": true,
+  "back_preserves_uses": true,
+  "reopen_preserves_notebooks": true,
+  "page_errors": []
+}

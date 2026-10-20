@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from stellis import agents, agent_runtime, auth, collections, notebooks, pages, runtime_settings, storage
+from stellis import agent_templates, agents, agent_runtime, auth, collections, notebooks, pages, runtime_settings, storage
 
 _LOCK = threading.Lock()
 USES = [
@@ -13,8 +13,9 @@ USES = [
     {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning Onshape", "agents":["steward","tutor"], "description":"Learn with a tutor that can read a screen you share."},
     {"id":"projects", "name":"Projects", "icon":"folder", "collection":"Work", "notebook":"Projects", "agents":["steward","writing"], "description":"Give a project its own notes, sources and agents."},
     {"id":"home", "name":"Home projects", "icon":"folder-plus", "collection":"Home", "notebook":"Home projects", "agents":["steward"], "description":"Keep plans, decisions and next steps in one place."},
-    {"id":"family", "name":"Family", "icon":"calendar", "collection":"Home", "notebook":"Family", "agents":["steward"], "description":"Organize shared plans and the details you want to remember."},
+    {"id":"family", "name":"Family", "icon":"calendar", "collection":"Home", "notebook":"Family", "agents":["steward","schedule"], "description":"Organize shared plans and the details you want to remember."},
     {"id":"research", "name":"Deep research", "icon":"search", "collection":"Work", "notebook":"Research", "agents":["steward","research"], "description":"Ask an agent to investigate and cite its sources."},
+    {"id":"slides", "name":"Slide decks", "icon":"layout-dashboard", "collection":"Work", "notebook":"Presentations", "agents":["steward","slides"], "description":"Turn notebook sources into a first slide deck."},
 ]
 ONSHAPE = """# Learning Onshape
 
@@ -51,23 +52,48 @@ def _save(state):
         conn.execute("INSERT OR REPLACE INTO onboarding_setup VALUES (1, ?)", (json.dumps(state),))
 
 
+def available(account_id):
+    return auth.needs_onboarding(account_id) or bool(_read().get("editing"))
+
+
+def reopen(account_id):
+    with _LOCK:
+        state = _read()
+        if not auth.needs_onboarding(account_id) and not state.get("editing"):
+            state.update(step="welcome", editing=True, uses=[], agent_choices={}, scan=None)
+            _save(state)
+    return status(account_id)
+
+
 def _require(account_id):
-    if not auth.needs_onboarding(account_id):
+    if not available(account_id):
         raise ValueError("This account has already finished setup")
 
 
 def status(account_id):
     state = _read()
-    return {**state, "required":auth.needs_onboarding(account_id), "catalog":USES,
+    return {**state, "required":available(account_id), "catalog":USES,
             "proposals":[item for item in USES if item["id"] in state["uses"]], "runtime":runtime_settings.status()}
 
 
-def choose(account_id, uses, step):
+def choose(account_id, uses, step, agent_choices=None):
     _require(account_id)
     if any(item not in {entry["id"] for entry in USES} for item in uses):
         raise ValueError("Choose a listed use")
+    if agent_choices is not None:
+        if not isinstance(agent_choices, dict) or len(agent_choices) > 32:
+            raise ValueError("Choose agents for the proposed notebooks")
+        allowed = set(agent_templates.TEMPLATES)
+        for key, values in agent_choices.items():
+            if not isinstance(key, str) or len(key) > 100 or not isinstance(values, list) or len(values) > len(allowed):
+                raise ValueError("Invalid notebook agent selection")
+            if any(not isinstance(value, str) or value not in allowed for value in values):
+                raise ValueError("Choose an available agent template")
     with _LOCK:
-        state = _read(); state.update(uses=list(dict.fromkeys(uses)),step=step); _save(state)
+        state = _read(); state.update(uses=list(dict.fromkeys(uses)),step=step)
+        if agent_choices is not None:
+            state["agent_choices"] = {key:list(dict.fromkeys(values)) for key,values in agent_choices.items()}
+        _save(state)
     return status(account_id)
 
 
@@ -87,13 +113,13 @@ async def check(account_id):
 
 
 def complete(account_id, proposal_id=None, group_ids=None):
-    if not auth.needs_onboarding(account_id):
+    if not available(account_id):
         return {"complete":True, "created":_read()["created"]}
     with _LOCK:
         state = _read()
         if state["step"] != "review":
             raise ValueError("Review your notebooks before finishing setup")
-        if state.get("scan",{}).get("state") in {"reading","planning"}:
+        if (state.get("scan") or {}).get("state") in {"reading","planning"}:
             raise ValueError("Wait for reading to finish or stop it before setup")
         from stellis import onboarding_sources
         imported = onboarding_sources.reviewed(proposal_id, group_ids or [])
@@ -107,7 +133,7 @@ def complete(account_id, proposal_id=None, group_ids=None):
             if book is None:
                 book = notebooks.create(item["notebook"])
                 collections.assign_notebook(book["id"],collection["id"])
-            deployed = [agents.deploy(template, book["id"]) for template in item["agents"]]
+            deployed = [agents.deploy(template, book["id"]) for template in state.get("agent_choices", {}).get(item["id"], item["agents"])]
             if item["id"] == "learning" and not any(p["title"]=="Start learning Onshape" for p in pages.list_pages(book["id"])):
                 pages.create("Start learning Onshape", book["id"], ONSHAPE)
             if item.get("sources"):
@@ -116,6 +142,6 @@ def complete(account_id, proposal_id=None, group_ids=None):
         default = next(item for item in agents.list_agents() if item["is_default"])
         if default["name"] == "General" and not any(a["name"]=="Chief of Staff" for a in agents.list_agents()):
             agents.update(default["id"],name="Chief of Staff",role="Coordinates your notebooks and agents")
-        state.update(step="complete",created=created); _save(state)
+        state.update(step="complete",created=created,editing=False); _save(state)
         auth.complete_onboarding(account_id)
     return {"complete":True, "created":created}

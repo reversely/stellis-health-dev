@@ -1,52 +1,179 @@
 (() => {
-  const main = document.querySelector('#setup-main'), error = document.querySelector('#setup-error');
-  let state, selected = new Set(), templates = [], username;
-  const node = (tag, text, cls) => {const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e;};
-  const icon = name => {const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','icon');svg.setAttribute('aria-hidden','true');const use=document.createElementNS(svg.namespaceURI,'use');use.setAttribute('href','#i-'+name);svg.append(use);return svg;};
-  const avatar = (name,coordinator=false,size=40) => window.StellisAgentAvatar.avatarElement(document,{seed:name,coordinator,size});
-  async function api(path,method='GET',body) {const response=await fetch('/api/v1'+path,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Could not complete setup. Try again.');return data;}
-  function button(text,action,primary=false){const b=node('button',text,primary?'primary':'quiet');b.type='button';b.addEventListener('click',async()=>{b.disabled=true;error.textContent='';try{await action();}catch(e){error.textContent=e.message;}finally{b.disabled=false;}});return b;}
-  async function save(step){state=await api('/onboarding','PUT',{uses:[...selected],step});}
-  function render(focus=true){window.StellisOnboardingSources?.stop();error.textContent='';main.replaceChildren();const review=state.step==='review';document.body.classList.toggle('onboarding-review',review);document.querySelector('#setup-rail').hidden=!review;const scene=node('section',null,'setup-scene');main.append(scene);if(state.step==='welcome')welcome(scene);else if(review)reviewScreen(scene);else usesScreen(scene);if(focus){main.focus();window.scrollTo(0,0);}}
-  function welcome(scene){scene.classList.add('setup-welcome');const copy=node('div',null,'welcome-copy');copy.append(node('span',null,'brand-mark'),node('h1','Welcome to Stellis'),node('p','Stellis is a private AI team for your entire life.'));
-    copy.append(node('p','Bring your notes, conversations and projects into collections. Give each part of your life persistent agents that can research, write and guide you.'));
-    copy.append(node('p',state.runtime.local_inference?'This workspace uses completely local inference on GN100, with OpenClaw inside NemoClaw. Language and screen models run on GN100.':'This workspace runs agents on Nebius Cloud and uses Token Factory for inference. Your cloud configuration controls data retention.'));
-    copy.append(button('Get started',async()=>{await save('uses');render();},true));scene.append(copy);
-    for(const [name,glyph,agent] of [['Meetings','microphone'],['Chief of Staff',null,true],['Collections','folder'],['Learning','notebook'],['Tutor',null,true],['Writing','pencil']]){const item=node('div',null,'setup-orbit');item.append(agent?avatar(name,name==='Chief of Staff'):icon(glyph),node('span',name));scene.append(item);}
+  const main = document.querySelector('#setup-main');
+  const error = document.querySelector('#setup-error');
+  let state, templates = [], selected = new Set(), choices = {};
+  let saves = Promise.resolve();
+  const node = (tag, text, cls) => {
+    const element = document.createElement(tag);
+    if (text != null) element.textContent = text;
+    if (cls) element.className = cls;
+    return element;
+  };
+  const icon = name => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(svg.namespaceURI, 'use');
+    use.setAttribute('href', '#i-' + name); svg.append(use); return svg;
+  };
+  const avatar = (name, coordinator = false, size = 40) => window.StellisAgentAvatar.avatarElement(document, {seed:name, coordinator, size});
+  async function api(path, method = 'GET', body) {
+    const response = await fetch('/api/v1' + path, {method, headers:body ? {'Content-Type':'application/json'} : {}, body:body ? JSON.stringify(body) : undefined});
+    const data = await response.json();
+    if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : 'Could not complete setup. Try again.');
+    return data;
   }
-  function runtimePanel(){const panel=node('section',null,'setup-runtime');panel.append(node('h2',state.runtime.local_inference?'Completely local inference':'Nebius Cloud + Token Factory'));
-    panel.append(node('p',state.runtime.local_inference?'Models run on GN100. No cloud inference key is needed.':'Agents run on your Nebius Cloud deployment. Add a Token Factory key for workspace AI.'));
-    const detail=node('p',`Teaching model: ${state.runtime.inference_model}`,'setup-hint');panel.append(detail);
-    if(state.runtime.local_inference)panel.append(node('p',`Screen reading: ${state.runtime.tutor_vision_model}`,'setup-hint'));
-    const speech=state.runtime.speech||{};
-    panel.append(node('p',`Live transcription models: ${speech.live_installed?'Installed':'Not configured'}. Saved transcription models: ${speech.transcribe&&speech.diarize?'Installed':'Not configured'}.`,'setup-hint'));
-    const result=node('p',state.ready?`Live reply received from ${state.ready.model}`:'Not checked yet','setup-hint');result.role='status';panel.append(result);
-    panel.append(button('Check setup',async()=>{result.textContent='Checking the model and asking your managed agent…';try{state=await api('/onboarding/check','POST');result.textContent=`Ready. Live reply received from ${state.ready.model}`;}catch(e){result.textContent=e.message;throw e;}}));
-    panel.append(node('p','You can continue without AI and finish setup in Settings.','setup-hint'));return panel;
+  function button(text, action, primary = false) {
+    const result = node('button', text, primary ? 'primary' : 'quiet'); result.type = 'button';
+    result.addEventListener('click', async () => {
+      result.disabled = true; error.textContent = '';
+      try { await action(); } catch (e) { error.textContent = e.message; error.scrollIntoView({block:'nearest'}); }
+      finally { if (result.isConnected) result.disabled = false; }
+    }); return result;
   }
-  function keyRow(label,kind){const row=node('div',null,'setup-connection'),heading=node('div');heading.append(node('h3',label));const form=node('form');const input=node('input');input.type='password';input.autocomplete='off';input.maxLength=512;input.required=true;input.placeholder='API key';input.setAttribute('aria-label',label+' API key');const submit=node('button','Save');submit.type='submit';form.append(input,submit);const status=node('p','','connection-status');status.role='status';row.append(heading,form,status);
-    api('/settings/'+kind+'-key').then(data=>{status.textContent=data.configured?'Connected':'Not connected';}).catch(e=>{status.textContent=e.message;});
-    form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;status.textContent='Saving…';try{const data=await api('/settings/'+kind+'-key','PUT',{key:input.value});input.value='';status.textContent=data.message||(data.configured?'Connected':'Not connected');}catch(e){status.textContent=e.message;}finally{submit.disabled=false;}});return row;
+  function save(step) {
+    const payload = {uses:[...selected], step, agent_choices:structuredClone(choices)};
+    const result = saves.catch(() => {}).then(async () => { state = await api('/onboarding', 'PUT', payload); });
+    saves = result;
+    return saves;
   }
-  function connections(){const panel=node('section',null,'setup-connections');panel.append(node('h2','Connections'));const row=node('div',null,'setup-connection'),heading=node('div');heading.append(node('h3','Google'),node('p','Mail & calendar events'));const status=node('p','','connection-status');status.role='status';const connect=button('Connect',async()=>{await save('uses');const data=await api('/calendar/google/authorize?return_to=/onboarding');location.assign(data.url);});row.append(heading,connect,status);panel.append(row);
-    api('/calendar/connections').then(data=>{const google=data.find(c=>c.provider==='google');status.textContent=google?.mail_connected?'Mail and calendar connected':google?.connected?'Calendar connected; reconnect to add mail':'Not connected';if(google?.connected)connect.textContent='Reconnect';}).catch(e=>{status.textContent=e.message;});
-    panel.append(keyRow('Tavily','tavily'));if(!state.runtime.local_inference)panel.append(keyRow('Nebius Token Factory','nebius'));return panel;
+  function render(focus = true) {
+    window.StellisOnboardingSources?.stop(); error.textContent = ''; main.replaceChildren();
+    const review = state.step === 'review';
+    document.body.classList.toggle('onboarding-review', review);
+    document.querySelector('#setup-rail').hidden = !review;
+    const scene = node('section', null, 'setup-scene'); main.append(scene);
+    if (state.step === 'welcome') welcome(scene); else if (review) reviewScreen(scene); else usesScreen(scene);
+    if (focus) { main.focus(); window.scrollTo(0, 0); }
   }
-  function usesScreen(scene){scene.append(node('h1','What will you use Stellis for?'));const columns=node('div',null,'setup-columns'),left=node('div'),right=node('div'),tiles=node('div',null,'setup-uses');tiles.setAttribute('role','group');tiles.setAttribute('aria-label','Uses');const guide=node('div',null,'setup-guide'),explanation=node('div');explanation.append(node('h3','Chief of Staff'),node('p','Choose what matters to you. We’ll suggest notebooks and agents to match.'));guide.append(avatar('Chief of Staff',true),explanation);
-    for(const item of state.catalog){const tile=node('button');tile.type='button';tile.setAttribute('aria-label',item.name);tile.setAttribute('aria-pressed',String(selected.has(item.id)));tile.append(icon(item.icon),node('span',item.name));tile.addEventListener('click',()=>{if(selected.has(item.id))selected.delete(item.id);else selected.add(item.id);tile.setAttribute('aria-pressed',String(selected.has(item.id)));explanation.replaceChildren(node('h3',item.name),node('p',item.description));});tiles.append(tile);}
-    left.append(tiles,connections());right.append(guide,runtimePanel());columns.append(left,right);scene.append(columns);const actions=node('div',null,'setup-actions');actions.append(button('Continue',async()=>{await save('review');render();},true),button('Start empty',async()=>{selected.clear();await save('review');render();}));scene.append(actions);
+  function welcome(scene) {
+    scene.classList.add('setup-welcome');
+    const copy = node('div', null, 'welcome-copy');
+    copy.append(node('span', null, 'brand-mark'), node('h1', 'Welcome to Stellis'), node('strong', 'Stellis is a private AI team for your entire life.'));
+    copy.append(node('p', 'Bring what you do, see and say into one workspace. Organize your knowledge into collections, and give each part of your life persistent AI agents.'));
+    copy.append(node('p', 'Research, write, coordinate and learn with agents that work from your notebooks. Review their work before it changes your plans or leaves your workspace.'));
+    copy.append(node('p', state.runtime.local_inference ? 'Completely local inference on GN100, with OpenClaw inside NemoClaw.' : 'Agents run on Nebius Cloud with Token Factory inference.', 'setup-hint'));
+    copy.append(button('Get started', async () => { await save('uses'); render(); }, true)); scene.append(copy);
+    const orbit = [['Meetings','microphone'],['Chief of Staff',null],['Screen','layout-dashboard'],['Deep research',null],['Mail','inbox'],['Writing',null],['Home','folder'],['Collections','folder-plus'],['Calendar','calendar'],['Slide Deck Designer',null],['Work','folder'],['Tutor',null],['Learning','notebook'],['Schedule',null],['Family','users'],['Private','key']];
+    orbit.forEach(([name, glyph], index) => {
+      const item = node('div', null, 'setup-orbit'); item.style.setProperty('--orbit-index', index % 8); item.dataset.side = index < 8 ? 'left' : 'right';
+      item.append(glyph ? icon(glyph) : avatar(name, name === 'Chief of Staff', 36), node('span', name)); scene.append(item);
+    });
   }
-  function reviewScreen(scene){const proposals=state.proposals;scene.append(node('h1','Review your notebooks'));
-    scene.append(node('p',proposals.length?'Starter notebooks based on your choices. Review them before anything is created.':'Start with Chief of Staff. Add notebooks and agents whenever you need them.','setup-hint'));
-    const tree=document.querySelector('#setup-tree');tree.replaceChildren();const grid=node('div',null,'setup-grid');const groups=Map.groupBy(proposals,p=>p.collection);
-    for(const [name,items] of groups){const card=node('section',null,'setup-group'),heading=node('h2');heading.append(icon('folder'),document.createTextNode(name));card.append(heading);const branch=node('div',null,'setup-tree-group');branch.append(node('strong',name));for(const item of items){branch.append(node('div',item.notebook));const book=node('div',null,'setup-book');book.append(node('h3',item.notebook),node('p',item.id==='learning'?'Includes a learning plan and links to the official Onshape guides.':'An empty notebook for your own sources.','setup-hint'));const team=node('div',null,'setup-agents');for(const id of item.agents){const template=templates.find(t=>t.id===id);const entry=node('div',null,'setup-agent');const text=node('span',template?.name||id);text.append(node('small',template?.does||''));entry.append(avatar(id,id==='steward',24),text);team.append(entry);}book.append(team);card.append(book);}grid.append(card);tree.append(branch);}scene.append(grid);
-    let importChoice={proposal_id:null,group_ids:[],groups:[],busy:false};
-    const importedTree=node('div');tree.append(importedTree);
-    scene.append(node('p',state.runtime.local_inference?'Completely local inference on GN100. Agents run when you ask.':'Nebius Cloud + Token Factory. Agents run when you ask.','setup-hint'));
-    const actions=node('div',null,'setup-actions');const finish=button(proposals.length?`Set up ${proposals.length} notebooks`:'Open workspace',async()=>{await api('/onboarding/complete','POST',{proposal_id:importChoice.proposal_id,group_ids:importChoice.group_ids});try{window.StellisTour?.markSignup(localStorage,username);}catch{}location.assign('/');},true);
-    const sourceReview=window.StellisOnboardingSources.create(api,state.scan,value=>{importChoice=value;finish.disabled=value.busy;const count=new Set([...proposals.map(p=>p.notebook.toLowerCase()),...value.groups.map(g=>g.name.toLowerCase())]).size;const files=value.groups.reduce((n,g)=>n+g.source_ids.length,0);finish.textContent=count?`Set up ${count} notebooks${files?` and file ${files} sources`:''}`:'Open workspace';importedTree.replaceChildren();for(const g of value.groups){const branch=node('div',null,'setup-tree-group');branch.append(node('strong',g.collection),node('div',g.name));importedTree.append(branch);}});scene.append(sourceReview);
-    actions.append(finish,button('Back',async()=>{await save('uses');render();}));scene.append(actions);
+  function runtimePanel() {
+    const panel = node('section', null, 'setup-runtime');
+    panel.append(node('h2', state.runtime.local_inference ? 'Completely local inference' : 'Nebius Cloud + Token Factory'));
+    panel.append(node('p', state.runtime.local_inference ? 'Your models run on GN100. No cloud inference key is needed.' : 'Connect your cloud agent deployment and Token Factory key.'));
+    const result = node('p', state.ready ? `Ready: ${state.ready.model}` : 'Check that your team can reply.', 'setup-hint'); result.role = 'status';
+    panel.append(result, button('Check setup', async () => {
+      result.textContent = 'Asking your managed agent…';
+      try { const checked = await api('/onboarding/check', 'POST'); state.ready = checked.ready; result.textContent = `Ready. Live reply from ${state.ready.model}`; }
+      catch (e) { result.textContent = e.message; throw e; }
+    }));
+    const details = node('details', null, 'setup-runtime-details'); details.append(node('summary', 'Models and speech'));
+    details.append(node('p', `Teaching: ${state.runtime.inference_model}`, 'setup-hint'));
+    if (state.runtime.tutor_vision_model) details.append(node('p', `Screen reading: ${state.runtime.tutor_vision_model}`, 'setup-hint'));
+    const speech = state.runtime.speech || {};
+    details.append(node('p', `Live speech: ${speech.live_installed ? 'Installed' : 'Not configured'}. Saved speech: ${speech.transcribe && speech.diarize ? 'Installed' : 'Not configured'}.`, 'setup-hint'));
+    panel.append(details); return panel;
   }
-  document.querySelector('#setup-theme').addEventListener('click',()=>{const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;try{localStorage.setItem('stellis-theme',theme);}catch{}});
-  (async()=>{try{const [setup,account,catalog]=await Promise.all([api('/onboarding'),api('/auth/status'),api('/agents/templates')]);state=setup;username=account.username;templates=catalog;selected=new Set(state.uses);if(!state.required){location.replace('/');return;}render(false);}catch(e){error.textContent=e.message;main.replaceChildren(node('h1','Setup could not load'),button('Try again',()=>location.reload()));}})();
+  function keyRow(label, kind, description) {
+    const row = node('div', null, 'setup-connection'), heading = node('div');
+    heading.append(node('h3', label), node('p', description));
+    const form = node('form'), input = node('input'); input.type = 'password'; input.autocomplete = 'off'; input.maxLength = 512; input.required = true; input.placeholder = kind === 'tavily' ? 'tvly-…' : 'API key'; input.setAttribute('aria-label', label + ' API key');
+    const submit = node('button', 'Save'); submit.type = 'submit'; form.append(input, submit);
+    const status = node('p', '', 'connection-status'); status.role = 'status'; row.append(heading, form, status);
+    api('/settings/' + kind + '-key').then(data => { status.textContent = data.configured ? 'Connected' : ''; }).catch(e => status.textContent = e.message);
+    form.addEventListener('submit', async e => { e.preventDefault(); submit.disabled = true; status.textContent = 'Saving…'; try { const data = await api('/settings/' + kind + '-key', 'PUT', {key:input.value}); input.value = ''; status.textContent = data.message || 'Connected'; } catch (e) { status.textContent = e.message; } finally { submit.disabled = false; } });
+    return row;
+  }
+  function connections() {
+    const panel = node('section', null, 'setup-connections'); panel.setAttribute('aria-label', 'Connections');
+    const row = node('div', null, 'setup-connection'), heading = node('div'); heading.append(node('h3', 'Google'), node('p', 'Gmail & Calendar'));
+    const status = node('p', '', 'connection-status'); status.role = 'status';
+    const connect = button('Connect', async () => { await save('uses'); const data = await api('/calendar/google/authorize?return_to=/onboarding'); location.assign(data.url); }, true);
+    row.append(heading, connect, status); panel.append(row);
+    api('/calendar/connections').then(data => { const google = data.find(c => c.provider === 'google'); status.textContent = google?.mail_connected ? 'Mail and calendar connected' : google?.connected ? 'Calendar connected; reconnect to add mail' : ''; if (google?.connected) connect.textContent = 'Reconnect'; }).catch(e => status.textContent = e.message);
+    panel.append(keyRow('Tavily', 'tavily', 'For deep research'));
+    if (!state.runtime.local_inference) panel.append(keyRow('Nebius Token Factory', 'nebius', 'For cloud inference'));
+    return panel;
+  }
+  function usesScreen(scene) {
+    scene.append(node('h1', 'What will you use Stellis for?'));
+    const columns = node('div', null, 'setup-columns'), left = node('div'), right = node('div'), tiles = node('div', null, 'setup-uses');
+    tiles.setAttribute('role', 'group'); tiles.setAttribute('aria-label', 'Uses');
+    const guide = node('div', null, 'setup-guide'), explanation = node('div', null, 'setup-guide-bubble');
+    const identity = node('div', null, 'setup-guide-identity'); identity.append(avatar('Chief of Staff', true, 64), node('span', 'Chief of Staff'));
+    const tips = {meetings:'I record your meetings and turn them into notes and to-dos.', emails:'I sort your mail into notebooks and help draft replies in your voice.', learning:'A Tutor joins you on screen and walks you through an app, like Onshape, step by step.', projects:'Keep a project’s notes and sources together, with agents to help.', home:'Compare quotes and keep plans and calls in one notebook.', family:'Keep school forms, plans and calendar commitments together.', research:'Research a question on the web and bring back sources.', slides:'Turn a notebook into a first slide deck.'};
+    function explain(item) { explanation.replaceChildren(node('h3', item.name), node('p', tips[item.id] || item.description)); }
+    explain(state.catalog.find(item => selected.has(item.id)) || state.catalog[0]); guide.append(identity, explanation);
+    for (const item of state.catalog) {
+      const tile = node('button'); tile.type = 'button'; tile.setAttribute('aria-label', item.name); tile.setAttribute('aria-pressed', String(selected.has(item.id))); tile.append(icon(item.icon), node('span', item.name));
+      tile.addEventListener('click', () => { if (selected.has(item.id)) selected.delete(item.id); else selected.add(item.id); tile.setAttribute('aria-pressed', String(selected.has(item.id))); explain(item); save('uses').catch(e => error.textContent = e.message); }); tiles.append(tile);
+    }
+    left.append(tiles, connections(), runtimePanel()); right.append(guide); columns.append(left, right); scene.append(columns);
+    const actions = node('div', null, 'setup-actions'); actions.append(button('Continue', async () => { await save('review'); render(); }, true), button('Skip any of this', async () => { selected.clear(); await save('review'); render(); })); scene.append(actions);
+  }
+  function teamChoice(key, defaults) {
+    const team = node('div', null, 'setup-agents'); team.setAttribute('role', 'group'); team.setAttribute('aria-label', 'Agents for ' + key);
+    const checked = new Set(choices[key] ?? defaults);
+    const more = node('details', null, 'setup-more-agents'); more.append(node('summary', 'More agents'));
+    for (const template of templates) {
+      const label = node('label', null, 'setup-agent'), input = node('input'); input.type = 'checkbox'; input.checked = checked.has(template.id); input.setAttribute('aria-label', template.name);
+      const text = node('span', template.name); text.append(node('small', template.does));
+      label.append(input, avatar(template.id, template.id === 'steward', 24), text); label.classList.toggle('selected', input.checked);
+      input.addEventListener('change', async () => {
+        const before = choices[key]; if (input.checked) checked.add(template.id); else checked.delete(template.id);
+        choices[key] = [...checked]; label.classList.toggle('selected', input.checked); input.disabled = true;
+        try { await save('review'); } catch (e) { choices[key] = before; input.checked = !input.checked; label.classList.toggle('selected', input.checked); if (input.checked) checked.add(template.id); else checked.delete(template.id); error.textContent = e.message; } finally { input.disabled = false; }
+      });
+      if (defaults.includes(template.id) || checked.has(template.id) || template.id === 'writing') team.append(label); else more.append(label);
+    }
+    if (more.childElementCount > 1) team.append(more);
+    return team;
+  }
+  function reviewScreen(scene) {
+    const title = node('h1', 'Review your notebooks'), subtitle = node('p', 'Choose the agents you want in each notebook. Nothing is filed until you finish.', 'setup-hint');
+    const head = node('div', null, 'setup-review-head'); head.append(title, subtitle); scene.append(head);
+    const tree = document.querySelector('#setup-tree'); tree.replaceChildren();
+    const grid = node('div', null, 'setup-grid setup-plan');
+    for (const [name, items] of Map.groupBy(state.proposals, p => p.collection)) {
+      const card = node('section', null, 'setup-group'), heading = node('h2'); heading.append(icon('folder'), document.createTextNode(name)); card.append(heading);
+      const branch = node('div', null, 'setup-tree-group'); branch.append(node('strong', name));
+      for (const item of items) {
+        branch.append(node('div', item.notebook)); const book = node('div', null, 'setup-book');
+        const name = node('div', null, 'setup-book-name'); name.append(node('h3', item.notebook), node('p', item.id === 'learning' ? 'Learning plan and official Onshape guides' : 'Starter notebook', 'setup-hint'));
+        book.append(name, teamChoice(item.id, item.agents)); card.append(book);
+      }
+      grid.append(card); tree.append(branch);
+    }
+    let importChoice = {proposal_id:null, group_ids:[], groups:[], busy:false};
+    const importedTree = node('div'); tree.append(importedTree);
+    const importedGrid = node('div', null, 'setup-grid setup-plan');
+    const actions = node('div', null, 'setup-actions');
+    const finish = button('Set up workspace', async () => {
+      await saves; await save('review');
+      await api('/onboarding/complete', 'POST', {proposal_id:importChoice.proposal_id, group_ids:importChoice.group_ids});
+      location.assign('/');
+    }, true);
+    const sourceReview = window.StellisOnboardingSources.create(api, state.scan, value => {
+      importChoice = value; finish.disabled = value.busy;
+      const count = new Set([...state.proposals.map(p => p.notebook.toLowerCase()), ...value.groups.map(g => g.name.toLowerCase())]).size;
+      title.textContent = count ? `${count} notebooks, ready to set up` : 'Start with your Chief of Staff';
+      finish.textContent = count ? `Set up ${count} notebooks` : 'Open workspace';
+      subtitle.textContent = value.groups.length ? 'From your mail & calendar events. Review the sources and choose each notebook’s agents.' : 'Based on your choices. Choose the agents you want in each notebook.';
+      importedTree.replaceChildren();
+      for (const group of value.groups) { const branch = node('div', null, 'setup-tree-group'); branch.append(node('strong', group.collection), node('div', `${group.name} (${group.source_ids.length})`)); importedTree.append(branch); }
+    }, {groupTarget:importedGrid, teamChoice});
+    scene.append(sourceReview, importedGrid, grid);
+    if (!state.proposals.length) scene.append(node('p', 'Connect sources to propose notebooks, or open an empty workspace.', 'setup-hint'));
+    actions.append(finish, node('span', 'Drafts only', 'setup-hint'), button('Back', async () => { await save('uses'); render(); })); scene.append(actions);
+  }
+  document.querySelector('#setup-theme').addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; try { localStorage.setItem('stellis-theme', theme); } catch {} });
+  (async () => {
+    try {
+      const [setup, account, catalog] = await Promise.all([api('/onboarding'), api('/auth/status'), api('/agents/templates')]);
+      state = setup; templates = catalog; selected = new Set(state.uses); choices = state.agent_choices || {};
+      if (!state.required) { location.replace('/'); return; } render(false);
+    } catch (e) { error.textContent = e.message; main.replaceChildren(node('h1', 'Setup could not load'), button('Try again', () => location.reload())); }
+  })();
 })();

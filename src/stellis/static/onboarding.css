@@ -53,3 +53,35 @@
 .setup-source-review .setup-grid{align-items:start}
 .setup-source-review details:not([open])>:not(summary){display:none}
 .setup-group-choice input{width:24px;min-height:24px;flex-shrink:0}
+/* The welcome, use choices and review share the prototype's hierarchy, not its placeholder data. */
+.setup-welcome{min-height:700px;padding-inline:220px}
+.setup-orbit:nth-of-type(n){top:calc(2% + var(--orbit-index)*12%);bottom:auto;width:120px}
+.setup-orbit[data-side=left]{left:calc(2% + mod(var(--orbit-index),2)*7%);right:auto}
+.setup-orbit[data-side=right]{right:calc(2% + mod(var(--orbit-index),2)*7%);left:auto}
+.setup-welcome .welcome-copy{max-width:510px}.welcome-copy>strong{display:block;margin-bottom:20px}
+.setup-columns{grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:32px}
+.setup-uses{grid-template-columns:repeat(4,minmax(0,1fr))}
+.setup-uses button[aria-pressed=true]::after{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--surface);font-size:12px}
+.setup-guide{position:sticky;top:24px;gap:16px}.setup-guide-identity{display:grid;justify-items:center;gap:8px;font-size:12px;flex:none}
+.setup-guide-bubble{padding:18px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);box-shadow:0 8px 24px color-mix(in srgb,var(--ink) 8%,transparent)}
+.setup-runtime{margin-top:24px}.setup-runtime h2{font-size:22px;margin-bottom:8px}.setup-runtime-details{margin-top:12px}.setup-runtime-details summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
+.setup-review-head{margin-bottom:24px}.setup-review-head h1{margin-bottom:10px}
+.setup-plan{margin-top:24px;align-items:start}.setup-plan:empty{display:none}
+.setup-book{display:grid;grid-template-columns:minmax(110px,.85fr) minmax(0,1.35fr);gap:18px;align-items:start}
+.setup-book-name{padding-top:10px}.setup-agents{display:grid;gap:8px;margin-top:0;min-width:0}
+.setup-agent{cursor:pointer;background:var(--surface);border-color:var(--line-soft);align-items:start;opacity:.75}
+.setup-agent.selected{border-color:var(--ink);opacity:1;background:var(--raised)}
+.setup-agent input{width:18px;height:18px;min-height:18px;padding:0;flex:none;margin:3px 0;accent-color:var(--ink)}
+.setup-agent .agent-avatar{flex:none}.setup-agent>span{min-width:0}.setup-agent small{line-height:1.35;margin-top:3px}
+.setup-more-agents summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--muted);font-size:13px}.setup-more-agents .setup-agent{margin-top:8px}
+.setup-source-review{margin-top:0;padding:18px 22px;border:1px solid var(--line-soft);border-radius:10px;background:var(--raised)}
+.setup-source-review h2{font:600 15px/1.4 Inter,sans-serif;margin:0}.setup-source-review .setup-actions{margin-bottom:0}.setup-source-review>p{margin:8px 0}.setup-source-status:empty{display:none}
+@media(max-width:1100px){.setup-columns{grid-template-columns:minmax(0,1fr) 250px}.setup-uses{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-guide{flex-direction:column}.setup-guide-identity{display:flex;align-items:center}.setup-welcome{padding-inline:160px}.setup-orbit:nth-of-type(n){width:100px}.setup-book{grid-template-columns:minmax(130px,1fr) minmax(0,1.5fr)}}
+@media(max-width:760px){.setup-welcome{padding:10px 0;min-height:0;grid-template-columns:repeat(4,minmax(0,1fr))}.setup-orbit:nth-of-type(n){position:static;inset:auto;width:auto;font-size:11px;margin-top:18px;overflow-wrap:anywhere}.setup-orbit .agent-avatar{width:28px;height:28px}.setup-columns{display:flex;flex-direction:column}.setup-columns>div{width:100%}.setup-columns>div:last-child{order:-1}.setup-guide{position:static;flex-direction:row}.setup-guide-identity{display:grid;max-width:76px;text-align:center}.setup-guide-bubble{flex:1}.setup-book{grid-template-columns:1fr;gap:8px}.setup-grid{gap:16px}.setup-source-review{padding:18px}.setup-review-head h1{font-size:32px}}
+@media(min-width:761px) and (max-width:900px){.setup-welcome{padding:0;min-height:0;grid-template-columns:repeat(8,minmax(0,1fr))}.setup-orbit:nth-of-type(n){position:static;inset:auto;width:auto;font-size:11px}.setup-book{grid-template-columns:1fr}}
+#setup-main details:not([open])>:not(summary){display:none}
+.setup-plan summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.setup-agent input{width:24px;height:24px;min-height:24px}
+.setup-source-book{padding:18px 0;border-top:1px solid var(--line-soft)}
+.setup-source-book>.setup-hint{margin:0 0 12px}
+.setup-source-book:last-child{padding-bottom:0}
