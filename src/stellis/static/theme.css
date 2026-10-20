@@ -1807,6 +1807,22 @@ body.no-ai.recording-page .recording-workspace-grid { grid-template-columns: min
 .record-more .more-menu-items { right: 0; }
 .widget-off { display: none !important; }
 .home-columns { display: grid; gap: 44px; align-items: start; }
+.home-agents { display: grid; gap: 12px; margin: 0 0 40px; }
+.home-agents h2 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink); font: 400 26px/1.15 Piazzolla, Georgia, serif; }
+.home-agents h2 .icon { width: 22px; height: 22px; color: var(--muted); }
+.home-agent-groups { display: grid; gap: 18px; }
+.home-agent-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.home-agent {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; max-width: 100%; padding: 6px 14px 6px 6px; box-sizing: border-box;
+  border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none;
+}
+.home-agent:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .home-agent:hover { border-color: var(--accent); } }
+.home-agent-text { display: grid; min-width: 0; }
+.home-agent-text strong { font: 600 14px/1.3 Inter, sans-serif; overflow-wrap: anywhere; }
+.home-agent-text small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.home-agent-tag { padding: 2px 8px; border-radius: 999px; background: var(--raised); color: var(--muted); font: 600 11px Inter, sans-serif; }
+.todos-widget { grid-template-columns: minmax(0, 1fr); }
 .home-col { display: grid; align-content: start; gap: 40px; min-width: 0; }
 .home-col > section { margin: 0 !important; min-width: 0; }
 @container (min-width: 720px) {
