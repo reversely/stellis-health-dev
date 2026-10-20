@@ -1,5 +1,5 @@
 // Contextual feature tour after onboarding (#392). Each step points at a real control: a spotlight over it and a small card with
-// Back / Next / Skip. Progress is kept per account in localStorage (no account-scoped settings store exists yet).
+// Back / Next / Skip. Tour progress is kept per account in localStorage; first-run setup is stored separately on the server.
 // The pure helpers at the top are covered by tests/test_tour.cjs; the DOM controller below only runs in a browser.
 (function (root) {
   const STORAGE_PREFIX = 'stellis-tour:';
