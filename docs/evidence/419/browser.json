@@ -1,0 +1,15 @@
+{
+  "destination_before_start": true,
+  "live_destination_persisted": true,
+  "invalid_destination_kept_previous": true,
+  "recovery_destination_persisted": true,
+  "no_notebook_recovery": true,
+  "real_pipewire_inputs": 2,
+  "measured_audio_peak": 0.013467038981616497,
+  "continuous_track": true,
+  "paused_switch": true,
+  "missing_device_retained_capture": true,
+  "finalized": true,
+  "remembered_after_reload": true,
+  "page_errors": []
+}

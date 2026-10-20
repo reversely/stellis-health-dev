@@ -2300,3 +2300,16 @@ details.more-menu:not([open]) > .more-menu-items { display: none; }
 #recording-input-status:empty { display:none; }
 @media(max-width:700px) { .recording-inputs label { flex:1 1 140px; } .recording-inputs p { flex-basis:100%; margin:0; } }
 body.recording-page #back-from-recording { min-height:44px; }
+
+.recording-destination { display:grid; gap:6px; min-width:0; color:#F7F5F6; font-size:14px; }
+.recording-destination > span { color:#CDBFCE; font-size:13px; }
+.recording-destination strong { overflow-wrap:anywhere; }
+.recording-destination > button { justify-self:start; min-height:44px; background:transparent; color:inherit; text-decoration:underline; border:0; padding:0 4px; }
+.recording-destination form:not([hidden]) { display:grid; gap:8px; }
+.recording-destination select { width:100%; min-width:0; min-height:44px; padding:8px; background:#302A35; color:#F7F5F6; border:1px solid #605465; border-radius:8px; font:inherit; }
+.recording-destination form div { display:flex; gap:8px; }
+.recording-destination p { margin:0; font-size:13px; color:#CDBFCE; }
+.recording-destination p:empty { display:none; }
+.recording-destination label { color:#F7F5F6; font-size:14px; }
+.recording-destination form button { min-height:44px; padding:8px 14px; border:1px solid #605465; border-radius:8px; background:#37303D; color:#F7F5F6; font:inherit; cursor:pointer; }
+.recording-destination form button[type='submit'] { background:#F7F5F6; color:#27222B; border-color:#F7F5F6; }

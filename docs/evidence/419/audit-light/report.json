@@ -1,0 +1,116 @@
+{
+  "generated": "2026-10-20T20:15:11.722Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium-1243/chrome-linux-arm64/chrome",
+  "dark": false,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/recording",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_360.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 1416
+          },
+          "findings": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_390.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 1435
+          },
+          "findings": []
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_768.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 1829
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_1024.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 1212
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_1280.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 1200
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_1440.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 1157
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/recording-destination/docs/evidence/419/audit-light/127-0-0-1-8824-recording_1920.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1157
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 0
+  }
+}

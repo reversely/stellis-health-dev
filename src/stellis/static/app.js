@@ -2879,6 +2879,7 @@ async function loadSavedRecordingChat(conversationId) {
     setTimeout(() => loadSavedRecordingChat(conversationId).catch(() => {}), 2000);
 }
 function captureControls() {
+  document.querySelector('#recording-notebook-change').disabled = captureRequesting || captureFinalizing || recordingDestinationSaving;
   document.querySelector('#recording-microphone').disabled = captureRequesting || captureFinalizing || microphoneSwitching;
   const active = Boolean(capture?.recorder && capture.recorder.state !== 'inactive');
   if (active && (captureHeartbeatId !== capture.session.id || Date.now() - captureHeartbeatAt >= 1000)) {
@@ -2944,6 +2945,7 @@ function showRecordingWorkspace() {
   document.querySelector('#person-view').hidden = true; hideAppPages();
   document.querySelector('#vocabulary-panel').hidden = true;
   recordingPanel.hidden = false;
+  refreshRecordingDestination();
   document.querySelector('#page-title').textContent = 'New recording';
   showRecordingView('notes');
   if (!capture) {
@@ -3020,6 +3022,7 @@ async function loadRecoveries() {
       try {
         history.pushState({}, '', '/recording'); showRecordingWorkspace();
         document.querySelector('#recording-title').value = session.title;
+        await refreshRecordingDestination(session);
         await loadNotes('recording', session.id);
         await loadImages('recording', session.id);
         await loadRecordingChat(session.id);
@@ -3066,6 +3069,44 @@ async function loadRecoveries() {
     container.append(row);
   }
 }
+let recordingDestinationSession=null,recordingDestinationSaving=false;
+const recordingDestinationForm=document.querySelector('#recording-notebook-form');
+const recordingDestinationStatus=document.querySelector('#recording-notebook-status');
+async function refreshRecordingDestination(session=null){
+  recordingDestinationSession=session;
+  recordingDestinationForm.hidden=true;
+  recordingDestinationStatus.textContent='';
+  try{
+    const response=await json(await fetch(`${API}/notebooks`));
+    const books=response.notebooks||response;
+    const selected=capture?.session.notebook_id??recordingDestinationSession?.notebook_id??pendingNotebookId;
+    document.querySelector('#recording-notebook-name').textContent=books.find(b=>b.id===selected)?.name||'No notebook';
+    const select=document.querySelector('#recording-notebook-select');select.replaceChildren(new Option('No notebook',''));
+    books.forEach(b=>select.add(new Option(b.name,b.id)));select.value=selected||'';
+  }catch(error){recordingDestinationStatus.textContent=error.message;}
+}
+document.querySelector('#recording-notebook-change').addEventListener('click',async()=>{
+  await refreshRecordingDestination(recordingDestinationSession);recordingDestinationForm.hidden=false;document.querySelector('#recording-notebook-select').focus();
+});
+document.querySelector('#recording-notebook-cancel').addEventListener('click',()=>{recordingDestinationForm.hidden=true;document.querySelector('#recording-notebook-change').focus();});
+recordingDestinationForm.addEventListener('submit',async event=>{
+  event.preventDefault();if(recordingDestinationSaving)return;
+  const current=capture,session=current?.session||recordingDestinationSession;
+  const notebookId=document.querySelector('#recording-notebook-select').value||null;
+  recordingDestinationSaving=true;recordingDestinationForm.querySelectorAll('button,select').forEach(e=>e.disabled=true);captureControls();
+  const save=async()=>{
+    try{
+      if(session){
+        await current?.titleUpdate;
+        const updated=await json(await fetch(`${API}/recordings/${encodeURIComponent(session.id)}/notebook`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({notebook_id:notebookId})}));
+        if(current)current.session=updated;else recordingDestinationSession=updated;
+      }else pendingNotebookId=notebookId;
+      await refreshRecordingDestination(recordingDestinationSession);recordingDestinationStatus.textContent='Notebook saved.';
+    }catch(error){recordingDestinationStatus.textContent=error.message;}
+    finally{recordingDestinationSaving=false;recordingDestinationForm.querySelectorAll('button,select').forEach(e=>e.disabled=false);captureControls();}
+  };
+  const update=save();if(current)current.destinationUpdate=update;await update;
+});
 const microphonePicker=document.querySelector('#recording-microphone');
 const microphoneStatus=document.querySelector('#recording-input-status');
 let microphoneSwitching=false;
@@ -3172,6 +3213,7 @@ async function startCapture() {
       }
     };
     recorder.start(1000);
+    refreshRecordingDestination();
     try {capture.stopWaveform = drawRecordingWaveform(capture, waveformContext);} catch {
       waveformContext?.close().catch(() => {}); capture.stopWaveform = () => {};}
     capture.timer = setInterval(captureControls, 250);
@@ -3219,6 +3261,7 @@ async function finishCapture() {
   }
   try {
     await current.titleUpdate;
+    await current.destinationUpdate;
     await saveRecordingTitle(current);
     const result = await json(await fetch(`${API}/recordings/${encodeURIComponent(current.session.id)}/finalize`, {method:'POST'}));
     recordingState.textContent = 'Recording saved'; recordingDetail.textContent = '';

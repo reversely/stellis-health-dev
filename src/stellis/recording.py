@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
+from contextlib import contextmanager
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +20,25 @@ from stellis.importer import ImportFailure, MAX_AUDIO_BYTES, import_upload
 
 MAX_CHUNK_BYTES = 8_000_000
 RECORDING_TYPES = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a"}
+
+
+_MUTATING = set()
+_MUTATION_LOCK = threading.Lock()
+
+
+@contextmanager
+def _mutation(recording_id):
+    """Reject overlapping finalization/metadata writes without blocking the event loop."""
+    key = (str(storage.data_dir()), recording_id)
+    with _MUTATION_LOCK:
+        if key in _MUTATING:
+            raise RuntimeError("Recording is being saved. Try again shortly.")
+        _MUTATING.add(key)
+    try:
+        yield
+    finally:
+        with _MUTATION_LOCK:
+            _MUTATING.discard(key)
 
 
 def _stamp() -> str:
@@ -37,7 +58,7 @@ def _directory(recording_id: str) -> Path:
 
 def _public(row) -> dict[str, object]:
     return {key: row[key] for key in ("id", "title", "media_type", "state",
-                                      "conversation_id", "created_at", "updated_at")}
+                                      "conversation_id", "notebook_id", "created_at", "updated_at")}
 
 
 def create_session(title: str, media_type: str, notebook_id: str | None = None,
@@ -82,6 +103,11 @@ def get_session(recording_id: str) -> dict[str, object] | None:
 
 
 def rename_session(recording_id: str, title: str) -> dict[str, object]:
+    with _mutation(recording_id):
+        return _rename_session(recording_id, title)
+
+
+def _rename_session(recording_id: str, title: str) -> dict[str, object]:
     """Save the visible title while a recording remains unfinished."""
     cleaned = title.strip()[:180]
     if not cleaned:
@@ -100,7 +126,28 @@ def rename_session(recording_id: str, title: str) -> dict[str, object]:
     return _public(session)
 
 
+def assign_notebook(recording_id: str, notebook_id: str | None) -> dict[str, object]:
+    """Save a validated destination before finalization freezes recording metadata."""
+    notebook_id = notebook_id or None
+    with _mutation(recording_id), storage.connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT state FROM recording_sessions WHERE id=?", (recording_id,)).fetchone()
+        if row is None:
+            raise LookupError("Recording session not found")
+        if row["state"] != "recording":
+            raise RuntimeError("Recording is already finalized")
+        if notebook_id and not conn.execute("SELECT 1 FROM notebooks WHERE id=?", (notebook_id,)).fetchone():
+            raise ValueError("Notebook not found")
+        conn.execute("UPDATE recording_sessions SET notebook_id=?, updated_at=? WHERE id=?", (notebook_id, _stamp(), recording_id))
+    return _public(get_session(recording_id))
+
+
 def discard_session(recording_id: str) -> bool:
+    with _mutation(recording_id):
+        return _discard_session(recording_id)
+
+
+def _discard_session(recording_id: str) -> bool:
     """Delete an unfinished capture after the user explicitly discards it."""
     from stellis import recording_preview
     recording_preview.stop(recording_id)
@@ -194,6 +241,11 @@ def save_chunk(recording_id: str, sequence: int, data: bytes) -> dict[str, objec
 
 
 async def finalize_session(recording_id: str) -> dict[str, object]:
+    with _mutation(recording_id):
+        return await _finalize_session(recording_id)
+
+
+async def _finalize_session(recording_id: str) -> dict[str, object]:
     """Concatenate ordered chunks and import the resulting browser audio."""
     session = get_session(recording_id)
     if session is None:

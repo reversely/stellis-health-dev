@@ -70,6 +70,31 @@ class RecordingWorkflowTest(unittest.TestCase):
         self.assertEqual(self.client.post(f"/api/v1/recordings/{session['id']}/finalize").status_code, 200)
         self.assertEqual(self.client.patch(f"/api/v1/recordings/{session['id']}", json={"title":"Later"}).status_code, 409)
 
+    def test_notebook_assignment_survives_rename_recovery_and_finalization(self):
+        from stellis import notebooks, recording
+        book = notebooks.create("Recording destination")
+        session = self.client.post("/api/v1/recordings", json={"title":"Destination", "media_type":"audio/webm"}).json()
+        endpoint = f"/api/v1/recordings/{session['id']}"
+        destination = endpoint + "/notebook"
+        self.assertEqual(self.client.put(destination, json={"notebook_id":"missing"}).status_code, 400)
+        self.assertIsNone(recording.get_session(session['id'])['notebook_id'])
+        assigned = self.client.put(destination, json={"notebook_id":book['id']})
+        self.assertEqual(assigned.status_code, 200)
+        self.assertEqual(assigned.json()['notebook_id'], book['id'])
+        renamed = self.client.patch(endpoint, json={"title":"Renamed"})
+        self.assertEqual(renamed.json()['notebook_id'], book['id'])
+        self.assertEqual(self.client.put(destination, json={"notebook_id":None}).status_code, 200)
+        self.assertIsNone(recording.get_session(session['id'])['notebook_id'])
+        with recording._mutation(session['id']):
+            self.assertEqual(self.client.put(destination, json={"notebook_id":book['id']}).status_code, 409)
+        self.client.put(destination, json={"notebook_id":book['id']})
+        self.assertEqual(self.client.get('/api/v1/recordings').json()[0]['notebook_id'], book['id'])
+        self.client.put(endpoint+'/chunks/0', content=self._webm())
+        result=self.client.post(endpoint+'/finalize')
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()['conversation']['notebook_id'], book['id'])
+        self.assertEqual(self.client.put(destination, json={"notebook_id":None}).status_code, 409)
+
     def test_empty_or_gapped_recording_remains_recoverable(self) -> None:
         session = self.client.post("/api/v1/recordings", json={"title":"Gap", "media_type":"audio/webm"}).json()
         endpoint = f"/api/v1/recordings/{session['id']}"

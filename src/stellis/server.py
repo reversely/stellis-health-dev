@@ -1728,6 +1728,18 @@ def rename_recording(recording_id: str, request: RecordingRename) -> dict[str, o
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
+@api.put("/recordings/{recording_id}/notebook")
+def recording_notebook(recording_id: str, request: NotebookAssignment) -> dict[str, object]:
+    try:
+        return recording.assign_notebook(recording_id, request.notebook_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @api.put("/recordings/{recording_id}/chunks/{sequence}")
 async def store_recording_chunk(recording_id: str, sequence: int, request: Request) -> dict[str, object]:
     data = bytearray()
