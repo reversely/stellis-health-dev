@@ -10,41 +10,20 @@ _LOCK = threading.Lock()
 USES = [
     {"id":"meetings", "name":"Meetings", "icon":"microphone", "collection":"Work", "notebook":"Meetings", "agents":["steward"], "description":"Keep recordings, notes and to-dos together."},
     {"id":"emails", "name":"Emails", "icon":"inbox", "collection":"Work", "notebook":"Correspondence", "agents":["steward","writing"], "description":"Keep correspondence and prepare drafts for review."},
-    {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning Onshape", "agents":["steward","tutor"], "description":"Learn with a tutor that can read a screen you share."},
+    {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning", "agents":["steward","tutor"], "description":"Learn with a tutor that can read a screen you share."},
     {"id":"projects", "name":"Projects", "icon":"folder", "collection":"Work", "notebook":"Projects", "agents":["steward","writing"], "description":"Give a project its own notes, sources and agents."},
     {"id":"home", "name":"Home projects", "icon":"folder-plus", "collection":"Home", "notebook":"Home projects", "agents":["steward"], "description":"Keep plans, decisions and next steps in one place."},
     {"id":"family", "name":"Family", "icon":"calendar", "collection":"Home", "notebook":"Family", "agents":["steward","schedule"], "description":"Organize shared plans and the details you want to remember."},
     {"id":"research", "name":"Deep research", "icon":"search", "collection":"Work", "notebook":"Research", "agents":["steward","research"], "description":"Ask an agent to investigate and cite its sources."},
     {"id":"slides", "name":"Slide decks", "icon":"layout-dashboard", "collection":"Work", "notebook":"Presentations", "agents":["steward","slides"], "description":"Turn notebook sources into a first slide deck."},
 ]
-ONSHAPE = """# Learning Onshape
-
-Goal: learn to make a simple part, one step at a time.
-
-Open a Part Studio in your Onshape account. Tell your Tutor what you want to make and what you already know. Share a window or screenshot when you want guidance on a visible control; you stay in control of every action.
-
-## First practice session
-
-- Find the sketch tools and choose a sketch plane.
-- Draw a closed profile and add dimensions.
-- Explore Extrude to turn that profile into a solid.
-- Save a note about what worked and the next question to ask.
-
-## Official guides
-
-[Sketch basics](https://cad.onshape.com/help/Content/Sketch/sketch_basics.htm)
-
-[Extrude](https://cad.onshape.com/help/Content/PartStudio/extrude.htm)
-
-This starter is a learning plan, not a record of completed work. Your Onshape account is separate from Stellis.
-"""
 
 
 def _read():
     with storage.connect() as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS onboarding_setup (id INTEGER PRIMARY KEY CHECK(id=1), state_json TEXT NOT NULL)")
         row = conn.execute("SELECT state_json FROM onboarding_setup WHERE id=1").fetchone()
-    return json.loads(row[0]) if row else {"step":"welcome", "uses":["meetings","learning"], "ready":None, "created":[]}
+    return json.loads(row[0]) if row else {"step":"welcome", "uses":[], "ready":None, "created":[]}
 
 
 def _save(state):
@@ -134,8 +113,6 @@ def complete(account_id, proposal_id=None, group_ids=None):
                 book = notebooks.create(item["notebook"])
                 collections.assign_notebook(book["id"],collection["id"])
             deployed = [agents.deploy(template, book["id"]) for template in state.get("agent_choices", {}).get(item["id"], item["agents"])]
-            if item["id"] == "learning" and not any(p["title"]=="Start learning Onshape" for p in pages.list_pages(book["id"])):
-                pages.create("Start learning Onshape", book["id"], ONSHAPE)
             if item.get("sources"):
                 onboarding_sources.file_sources(book["id"],item["sources"])
             created.append({"notebook_id":book["id"], "name":book["name"], "agent_ids":[a["id"] for a in deployed]})

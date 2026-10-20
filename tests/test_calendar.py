@@ -24,10 +24,8 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
             "STELLIS_AUTH_MODE": "off",
         })
         self.env.start()
-        calendar._pending.clear()
 
     def tearDown(self):
-        calendar._pending.clear()
         self.env.stop()
         self.temp.cleanup()
 
@@ -48,6 +46,7 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
             state = query["state"][0]
             with self.assertRaises(calendar.CalendarError):
                 calendar.consume_state("microsoft" if provider == "google" else "google", state)
+            calendar.consume_state(provider, state)
             with self.assertRaises(calendar.CalendarError):
                 calendar.consume_state(provider, state)
         with TestClient(app, base_url="http://example.com:8765") as client:
@@ -210,12 +209,12 @@ class CalendarRouteTest(unittest.TestCase):
         state = parse_qs(urlparse(authorization.json()["url"]).query)["state"][0]
         response = self.client.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
         self.assertEqual(response.status_code, 303)
-        self.assertEqual(response.headers["location"], "http://127.0.0.1:8765/?calendar=failed")
+        self.assertTrue(response.headers["location"].startswith("http://127.0.0.1:8765/?calendar=failed&connection_error="))
         self.assertEqual(self.client.get("/api/v1/calendar/meetings").json()["meetings"], [])
         from_settings = self.client.get("/api/v1/calendar/google/authorize", params={"return_to": "/settings"})
         state = parse_qs(urlparse(from_settings.json()["url"]).query)["state"][0]
         response = self.client.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
-        self.assertEqual(response.headers["location"], "http://127.0.0.1:8765/settings?calendar=failed")
+        self.assertTrue(response.headers["location"].startswith("http://127.0.0.1:8765/settings?calendar=failed&connection_error="))
         self.assertEqual(self.client.get("/api/v1/calendar/google/authorize",
                                          params={"return_to": "https://evil.example"}).status_code, 422)
 

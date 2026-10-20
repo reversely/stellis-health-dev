@@ -13,7 +13,7 @@ import sqlite3
 import subprocess
 import threading
 from typing import Literal
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlencode
 
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
@@ -884,10 +884,13 @@ async def calendar_callback(provider: str, state: str = "", code: str = "", erro
             raise calendar.CalendarError("Calendar connection was cancelled")
         await calendar.exchange(provider, code, verifier, uri)
         result = "connected"
-    except calendar.CalendarError:
+    except calendar.CalendarError as exc:
+        return_origin = return_origin or getattr(exc, "return_origin", "/onboarding")
         result = "failed"
+        message = str(exc)
     # return_origin carries the page that started the connection, home or Settings.
-    response = RedirectResponse(f"{return_origin or '/'}?calendar={result}", status_code=303)
+    query = urlencode({"calendar": result, **({"connection_error": message} if result == "failed" else {})})
+    response = RedirectResponse(f"{return_origin or '/onboarding'}?{query}", status_code=303)
     response.headers["Cache-Control"] = "no-store"
     return response
 

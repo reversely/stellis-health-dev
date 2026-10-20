@@ -14,7 +14,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from starlette.background import BackgroundTask
 
-from stellis import auth, server, storage
+from stellis import auth, calendar, server, storage
 from stellis.processing import model_paths
 
 _PUBLIC = {"/auth", "/api/health", "/api/v1/health"}
@@ -148,7 +148,13 @@ class AccountGateway:
         if (path in _PUBLIC or path.startswith(("/static/", "/shared/", "/api/v1/auth/"))):
             await server.app(scope, receive, send)
             return
-        if path == "/mcp":
+        if request.method == "GET" and path in {
+                "/api/v1/calendar/google/callback", "/api/v1/calendar/microsoft/callback"}:
+            account_id = calendar.callback_account(path.split("/")[-2], request.query_params.get("state", ""))
+            if account_id is None:
+                await RedirectResponse("/onboarding?calendar=expired", status_code=303)(scope, receive, send)
+                return
+        elif path == "/mcp":
             account_id = 1  # Existing bearer-protected managed MCP belongs to the owner workspace.
         else:
             account_id = auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))

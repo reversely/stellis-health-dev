@@ -3743,8 +3743,9 @@ let addingToNotebook = null;
 let activeNotebookId = null;
 let notebookTodos = null; let notebookItems = []; let notebookFilter = 'all';
 let calendarOutcome = new URLSearchParams(location.search).get('calendar');
+const connectionError = new URLSearchParams(location.search).get('connection_error');
 if (calendarOutcome) history.replaceState(history.state, '', location.pathname);
-function calendarOutcomeText() { return calendarOutcome === 'connected' ? 'Connected' : 'Connection failed'; }
+function calendarOutcomeText() { return calendarOutcome === 'connected' ? 'Connected' : (connectionError || 'Connection expired. Connect again.'); }
 function icon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');

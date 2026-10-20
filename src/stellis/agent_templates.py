@@ -36,7 +36,7 @@ TEMPLATES = {
         "name": "Schedule", "does": "Plans around your calendar and commitments",
         "returns": "A proposed schedule", "asks_first": "Any calendar change",
         "instructions": "Use the supplied calendar events, deadlines and constraints to propose a realistic "
-        "schedule. Cite commitments and surface conflicts. Preserve pickups, focus time and hard stops. "
+        "schedule. Cite commitments and surface conflicts. Respect the user’s stated constraints and hard stops. "
         "Never claim an event was created or changed without a confirmed tool result and user approval.",
     },
     "slides": {

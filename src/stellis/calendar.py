@@ -9,7 +9,6 @@ import os
 import re
 import secrets
 import sqlite3
-import threading
 import time
 from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
@@ -36,8 +35,6 @@ _TOKEN = {
     "google": "https://oauth2.googleapis.com/token",
     "microsoft": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
 }
-_pending: dict[str, tuple[str, str, str, str, float]] = {}
-_pending_lock = threading.Lock()
 
 
 class CalendarError(Exception):
@@ -137,12 +134,11 @@ def authorize(provider: str, port: int, return_origin: str) -> str:
     verifier = secrets.token_urlsafe(48)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     uri = redirect_uri(provider, port)
-    with _pending_lock:
-        now = time.time()
-        for old, entry in list(_pending.items()):
-            if entry[4] < now:
-                del _pending[old]
-        _pending[state] = (provider, verifier, uri, return_origin, now + 600)
+    with _oauth_db() as conn:
+        conn.execute("DELETE FROM oauth_pending WHERE expires < ?", (time.time() - 86400,))
+        conn.execute("INSERT INTO oauth_pending VALUES (?, ?, ?, ?, ?, ?, ?)",
+                     (hashlib.sha256(state.encode()).hexdigest(), provider,
+                      int(os.environ.get("STELLIS_ACCOUNT_ID", "0")), verifier, uri, return_origin, time.time() + 600))
     params = {"client_id": configured_id, "response_type": "code", "redirect_uri": uri,
               "scope": _SCOPE[provider], "state": state, "code_challenge": challenge,
               "code_challenge_method": "S256"}
@@ -152,12 +148,40 @@ def authorize(provider: str, port: int, return_origin: str) -> str:
     return f"{_AUTH[provider]}?{urlencode(params)}"
 
 
+def _oauth_db() -> sqlite3.Connection:
+    root = Path(os.environ.get("STELLIS_AUTH_DB_DIR") or storage.data_dir())
+    root.mkdir(parents=True, exist_ok=True)
+    path = root / "oauth_pending.sqlite3"
+    conn = sqlite3.connect(path)
+    path.chmod(0o600)
+    conn.row_factory = sqlite3.Row
+    conn.execute("""CREATE TABLE IF NOT EXISTS oauth_pending (
+        state TEXT PRIMARY KEY, provider TEXT NOT NULL, account_id INTEGER NOT NULL,
+        verifier TEXT NOT NULL, uri TEXT NOT NULL, return_origin TEXT NOT NULL, expires REAL NOT NULL)""")
+    return conn
+
+
+def callback_account(provider: str, state: str) -> int | None:
+    """Route a callback by its unguessable authorization state, never a host cookie."""
+    with _oauth_db() as conn:
+        row = conn.execute("SELECT account_id FROM oauth_pending WHERE state = ? AND provider = ?",
+                           (hashlib.sha256(state.encode()).hexdigest(), provider)).fetchone()
+    return row["account_id"] if row else None
+
+
 def consume_state(provider: str, state: str) -> tuple[str, str, str]:
-    with _pending_lock:
-        entry = _pending.pop(state, None)
-    if not entry or entry[0] != provider or entry[4] < time.time():
-        raise CalendarError("Calendar connection expired. Try again.")
-    return entry[1], entry[2], entry[3]
+    with _oauth_db() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        key = hashlib.sha256(state.encode()).hexdigest()
+        entry = conn.execute("SELECT * FROM oauth_pending WHERE state = ? AND provider = ? AND account_id = ?",
+                             (key, provider, int(os.environ.get("STELLIS_ACCOUNT_ID", "0")))).fetchone()
+        if entry:
+            conn.execute("DELETE FROM oauth_pending WHERE state = ?", (key,))
+    if not entry or entry["expires"] < time.time():
+        error = CalendarError("Connection expired. Connect again to continue setup.")
+        error.return_origin = entry["return_origin"] if entry else "/onboarding"
+        raise error
+    return entry["verifier"], entry["uri"], entry["return_origin"]
 
 
 def _save(provider: str, response: dict, existing_refresh: str = "", existing_scopes: str = "") -> None:

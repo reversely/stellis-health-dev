@@ -3,6 +3,9 @@
   const error = document.querySelector('#setup-error');
   let state, templates = [], selected = new Set(), choices = {};
   let saves = Promise.resolve();
+  const outcome = new URLSearchParams(location.search);
+  const connectionMessage = outcome.get('calendar') === 'connected' ? 'Mail and calendar connected' : outcome.has('calendar') ? (outcome.get('connection_error') || 'Connection expired. Connect again to continue setup.') : '';
+  if (outcome.has('calendar')) history.replaceState(history.state, '', location.pathname);
   const node = (tag, text, cls) => {
     const element = document.createElement(tag);
     if (text != null) element.textContent = text;
@@ -43,6 +46,7 @@
     document.querySelector('#setup-rail').hidden = !review;
     const scene = node('section', null, 'setup-scene'); main.append(scene);
     if (state.step === 'welcome') welcome(scene); else if (review) reviewScreen(scene); else usesScreen(scene);
+    if (connectionMessage) error.textContent = connectionMessage;
     if (focus) { main.focus(); window.scrollTo(0, 0); }
   }
   function welcome(scene) {
@@ -103,7 +107,7 @@
     tiles.setAttribute('role', 'group'); tiles.setAttribute('aria-label', 'Uses');
     const guide = node('div', null, 'setup-guide'), explanation = node('div', null, 'setup-guide-bubble');
     const identity = node('div', null, 'setup-guide-identity'); identity.append(avatar('Chief of Staff', true, 64), node('span', 'Chief of Staff'));
-    const tips = {meetings:'I record your meetings and turn them into notes and to-dos.', emails:'I sort your mail into notebooks and help draft replies in your voice.', learning:'A Tutor joins you on screen and walks you through an app, like Onshape, step by step.', projects:'Keep a project’s notes and sources together, with agents to help.', home:'Compare quotes and keep plans and calls in one notebook.', family:'Keep school forms, plans and calendar commitments together.', research:'Research a question on the web and bring back sources.', slides:'Turn a notebook into a first slide deck.'};
+    const tips = {meetings:'I record your meetings and turn them into notes and to-dos.', emails:'I sort your mail into notebooks and help draft replies in your voice.', learning:'A Tutor helps you learn a topic or skill you choose.', projects:'Keep a project’s notes and sources together, with agents to help.', home:'Keep your home projects and their information together.', family:'Keep shared information and plans together.', research:'Research a question on the web and bring back sources.', slides:'Turn a notebook into a first slide deck.'};
     function explain(item) { explanation.replaceChildren(node('h3', item.name), node('p', tips[item.id] || item.description)); }
     explain(state.catalog.find(item => selected.has(item.id)) || state.catalog[0]); guide.append(identity, explanation);
     for (const item of state.catalog) {
@@ -141,7 +145,7 @@
       const branch = node('div', null, 'setup-tree-group'); branch.append(node('strong', name));
       for (const item of items) {
         branch.append(node('div', item.notebook)); const book = node('div', null, 'setup-book');
-        const name = node('div', null, 'setup-book-name'); name.append(node('h3', item.notebook), node('p', item.id === 'learning' ? 'Learning plan and official Onshape guides' : 'Starter notebook', 'setup-hint'));
+        const name = node('div', null, 'setup-book-name'); name.append(node('h3', item.notebook), node('p', 'Starter notebook', 'setup-hint'));
         book.append(name, teamChoice(item.id, item.agents)); card.append(book);
       }
       grid.append(card); tree.append(branch);

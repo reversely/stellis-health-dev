@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
+from urllib.parse import parse_qs, urlparse
 from pathlib import Path
 
 import httpx
@@ -29,6 +30,7 @@ class AccountGatewayTest(unittest.TestCase):
         for key in ("STELLIS_DEV_ACCOUNT", "STELLIS_DEV_PASSWORD", "STELLIS_NEMOCLAW_SANDBOX",
                     "STELLIS_TAVILY_MCP_READY", "STELLIS_MCP_TOKEN"):
             env.pop(key, None)
+        env["STELLIS_GOOGLE_CALENDAR_CLIENT_ID"] = "test-client"
         self.env = env
         self.command = [sys.executable, "-m", "uvicorn", "stellis.account_gateway:app", "--host", "127.0.0.1",
                         "--port", str(port), "--no-access-log"]
@@ -104,3 +106,22 @@ class AccountGatewayTest(unittest.TestCase):
         finally:
             owner.close()
             second.close()
+
+    def test_oauth_callback_uses_initiating_account_after_restart(self):
+        with httpx.Client(base_url=self.url, timeout=30) as owner, httpx.Client(base_url=self.url, timeout=30) as second:
+            for client, username in ((owner, "owner"), (second, "second")):
+                self.assertEqual(client.post("/api/v1/auth/register", json={"username":username,"password":"correct horse battery staple"}).status_code, 200)
+            second.put("/api/v1/onboarding", json={"uses":["learning"],"step":"uses","agent_choices":{}})
+            url = second.get("/api/v1/calendar/google/authorize?return_to=/onboarding").json()["url"]
+            state = parse_qs(urlparse(url).query)["state"][0]
+            self.process.terminate(); self.process.wait(timeout=20); self.start_gateway()
+            # Wrong account's cookie on the callback host must not change ownership.
+            result = owner.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
+            self.assertEqual(result.status_code, 303)
+            self.assertTrue(result.headers["location"].startswith(self.url + "/onboarding?calendar=failed&connection_error="))
+            setup = second.get("/api/v1/onboarding").json()
+            self.assertTrue(setup["required"])
+            self.assertEqual(setup["step"], "uses")
+            self.assertEqual(setup["uses"], ["learning"])
+            replay = owner.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
+            self.assertEqual(replay.headers["location"], "/onboarding?calendar=expired")
