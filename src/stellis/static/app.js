@@ -1272,6 +1272,9 @@ async function showPerson(id) {
   document.querySelector('#person-delete').hidden = person.total_link_count > 0;
 }
 async function showDetail(id) {
+  const query = new URLSearchParams(location.search);
+  const sourceNavigation = query.has('at') || query.has('t');
+  if (sourceNavigation) highlightsOnly = false;
   await flushNotes(notesStates.conversation);
   await leaveNote();
   await flushEnhanced();
@@ -1351,7 +1354,6 @@ async function showDetail(id) {
   await loadAIRuns(id);
   await loadSavedRecordingChat(id);
   await loadCleanRuns(id);
-  const query = new URLSearchParams(location.search);
   const targetSegmentId = query.get('at');
   if (targetSegmentId) {
     showConversationTab('transcript');
@@ -1373,7 +1375,7 @@ async function showDetail(id) {
       if (player.readyState >= 1) seek(); else player.addEventListener('loadedmetadata', seek, {once: true});
     }
   }
-  await loadEnhancedRuns(id, !targetSegmentId);
+  await loadEnhancedRuns(id, !sourceNavigation);
 }
 function showConversationTab(tab) {
   const summary = tab === 'summary';
@@ -2792,6 +2794,13 @@ function recordingAnswerer(agentId) {
   line.append(avatar, name);
   return line;
 }
+function showLiveSource(startMs) {
+  if (!Number.isFinite(startMs) || startMs < 0) return;
+  showRecordingView('transcript');
+  const row = [...document.querySelectorAll('#recording-transcript-preview [data-start-ms]')]
+    .find(item => Number(item.dataset.startMs) === startMs);
+  if (row) { row.tabIndex = -1; row.focus({preventScroll:true}); row.scrollIntoView({block:'center'}); }
+}
 function renderRecordingChat(runs, container, saved = false) {
   container.replaceChildren();
   for (const run of runs) {
@@ -2806,11 +2815,7 @@ function renderRecordingChat(runs, container, saved = false) {
       answer.append(document.createTextNode(answerText.slice(offset, match.index)));
       const link = document.createElement('a'); link.href = match[2]; link.textContent = match[1];
       if (!saved && match[2].startsWith('/recording?t=')) link.addEventListener('click', event => {
-        event.preventDefault(); showRecordingView('transcript');
-        const startMs = Number(new URL(link.href).searchParams.get('t'));
-        document.querySelectorAll('#recording-transcript-preview [data-start-ms]').forEach(row => {
-          if (Number(row.dataset.startMs) === startMs) row.scrollIntoView({block:'center'});
-        });
+        event.preventDefault(); showLiveSource(Number(new URL(link.href).searchParams.get('t')));
       });
       answer.append(link); offset = match.index + match[0].length;
     }
@@ -2825,12 +2830,8 @@ function renderRecordingChat(runs, container, saved = false) {
           if (!Number.isFinite(startMs)) continue;
           const button = document.createElement('button'); button.type = 'button';
           button.textContent = time(startMs / 1000);
-          button.addEventListener('click', () => {
-            showRecordingView('transcript');
-            document.querySelectorAll('#recording-transcript-preview [data-start-ms]').forEach(row => {
-              if (Number(row.dataset.startMs) === startMs) row.scrollIntoView({block:'center'});
-            });
-          });
+          button.setAttribute('aria-label', `Show live transcript at ${time(startMs / 1000)}`);
+          button.addEventListener('click', () => showLiveSource(startMs));
           times.append(button);
         }
         card.append(times);}
@@ -4921,8 +4922,6 @@ document.querySelector('#nebius-key-remove').addEventListener('click', async () 
   try { showNebiusKey(await json(await fetch(`${API}/settings/nebius-key`, {method: 'DELETE'}))); await refreshAI(); }
   catch (error) { document.querySelector('#nebius-key-status').textContent = error.message; }
 });
-
-route().catch(error => setStatus(error.message));
 
 // Edit widgets: choose which Home widgets show. The choice is kept per browser.
 const WIDGETS_KEY = 'stellis-home-widgets';

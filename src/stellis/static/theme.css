@@ -1191,7 +1191,7 @@ body:has(#list-view:not([hidden])):has(#capture-header-controls:not([hidden])) .
   white-space: nowrap;
   cursor: pointer;
   transform: none;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: none; /* Frequent tab changes stay immediate, including keyboard navigation. */
 }
 .recording-view-tabs button:hover, .conversation-tabs button:hover, .view-tabs button:hover { color: var(--ink); }
 .recording-view-tabs button[aria-selected='true'], .conversation-tabs button[aria-selected='true'],
@@ -2313,3 +2313,12 @@ body.recording-page #back-from-recording { min-height:44px; }
 .recording-destination label { color:#F7F5F6; font-size:14px; }
 .recording-destination form button { min-height:44px; padding:8px 14px; border:1px solid #605465; border-radius:8px; background:#37303D; color:#F7F5F6; font:inherit; cursor:pointer; }
 .recording-destination form button[type='submit'] { background:#F7F5F6; color:#27222B; border-color:#F7F5F6; }
+
+.recording-chat-messages a { display:inline-block; min-height:24px; padding:3px 2px; color:var(--ink); text-decoration:underline; text-underline-offset:3px; overflow-wrap:anywhere; }
+.recording-chat-messages small { display:block; margin-top:8px; }
+.recording-chat-messages small button { min-width:44px; min-height:44px; margin-right:8px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--raised); color:var(--ink); font:inherit; cursor:pointer; }
+.recording-chat-messages a:focus-visible, .recording-chat-messages small button:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+@media(pointer:coarse) { .recording-chat-messages a { min-height:44px; } }
+@media(max-width:700px) {
+  body.recording-page .recording-workspace-grid.recording-chat-open .recording-workspace-main { min-height:0; padding-bottom:16px; }
+}

@@ -1,0 +1,10 @@
+{
+  "actual_asr": "Whisper",
+  "actual_summary": "GN100 local Nemotron",
+  "initial_conversation_requests": 1,
+  "search_and_summary_citations": true,
+  "without_and_with_summary": true,
+  "desktop_and_phone": true,
+  "timestamp_bounds_preserved": true,
+  "page_errors": []
+}
