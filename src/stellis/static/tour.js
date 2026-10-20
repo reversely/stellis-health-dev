@@ -1,30 +1,28 @@
-// First-run guided tour (#301). Each step points at a real control: a spotlight over it and a small card with
+// Contextual feature tour after onboarding (#392). Each step points at a real control: a spotlight over it and a small card with
 // Back / Next / Skip. Progress is kept per account in localStorage (no account-scoped settings store exists yet).
 // The pure helpers at the top are covered by tests/test_tour.cjs; the DOM controller below only runs in a browser.
 (function (root) {
-  const KEYS_URL = 'https://tokenfactory.nebius.com/project/api-keys';
   const STORAGE_PREFIX = 'stellis-tour:';
 
   // `dock` is the side the card takes when the target is too large to sit beside. `available(ctx)` false skips the step. `needsTarget` skips it when no target appears. `route(ctx)` is the path to show.
   // `targets(ctx)` lists selectors in order of preference; the first visible one is spotlit.
   const STEPS = [
-    {id: 'welcome', icon: 'sparkles', title: 'Welcome to Stellis',
-      body: 'Stellis records and imports meetings, turns them into transcripts and summaries, and keeps your notes and to-dos beside them. This tour takes about 3 minutes, and you can skip it at any time.',
-      route: () => '/', targets: () => ['#home-title']},
-    {id: 'connect', icon: 'key', title: 'Connect Nebius Token Factory', extra: 'key',
-      body: 'Summaries, chat, and automatic tags need a Nebius Token Factory API key. Create a project-based key under API keys in the console and copy it at once, because Nebius shows it only once. Keys from before projects stopped working after January 31, 2026. Stellis sends only the transcript or note text an AI feature needs; audio stays on this device. You can skip this and add a key later in Account settings.',
-      route: () => '/', targets: () => ['#settings-link', '#home-title']},
-    {id: 'samples', icon: 'folder-plus', title: 'Add the sample workspace or start empty', extra: 'samples',
-      body: 'The sample workspace adds example notebooks, notes, to-dos, and three recorded meetings (about 110 MB, downloaded now), so the next steps have something to look at. Press Next to start empty instead.',
-      available: ctx => !ctx.samplesComplete,
-      route: () => '/', targets: () => ['#samples-card', '#home-title']},
-    {id: 'sidebar', icon: 'list', title: 'Your library in the sidebar',
+    {id: 'sidebar', needsTarget: true, icon: 'list', title: 'Your library in the sidebar',
       body: 'Meetings and To-dos are pinned at the top. Below them, collections hold notebooks, and notebooks hold meetings and notes. Drag a row onto a notebook to move it, or use its Move to button.',
       route: () => '/', targets: () => ['#home-rail']},
-    {id: 'home', icon: 'layout-dashboard', title: 'Home',
+    {id: 'home', needsTarget: true, icon: 'layout-dashboard', title: 'Home',
       body: 'Home lists your to-dos on the left. On the right are Coming up when a calendar is connected, your notebooks, and recent conversations. New note starts a note, and Record or Import recording starts a meeting.',
       route: () => '/', targets: () => ['.home-actions']},
-    {id: 'note', icon: 'note', title: 'Write a note with shortcuts',
+    {id: 'agents', icon: 'users', title: 'Your agents', needsTarget: true,
+      body: 'Agents are grouped with their notebooks. Open one to ask a question; replies link back to their sources.',
+      route: () => '/', targets: () => ['#home-agent-groups']},
+    {id: 'chat', icon: 'users', title: 'Talk to your team', needsTarget: true,
+      body: 'Each agent keeps its own thread and memory. A Tutor can guide you through a screenshot or window you choose to share.',
+      route: () => '/chat', targets: () => ['#agent-detail']},
+    {id: 'agent-settings', icon: 'settings', title: 'Shape how agents work', needsTarget: true,
+      body: 'Choose a template, edit instructions, assign notebooks and manage memory. Turn an agent off to stop new work.',
+      route: () => '/chat/settings', targets: () => ['.agent-settings-group']},
+    {id: 'note', needsTarget: true, icon: 'note', title: 'Write a note with shortcuts',
       body: ctx => ctx.page
         ? 'Type / for the block menu: headings, lists, callouts, tables, link cards, and more. Type # and a space for a heading or - and a space for a bullet. Type [ ] and a space for a to-do, and add a date in words such as "Send the draft tomorrow at 3pm"; the date shows at the right of the line.'
         : 'Press New note to open a blank note. In it, type / for the block menu with callouts, tables, and link cards, type # and a space for a heading, or type [ ] and a space for a to-do with a date in words such as "tomorrow at 3pm".',
@@ -60,7 +58,7 @@
   function saveProgress(storage, username, progress) {
     try { storage.setItem(progressKey(username), JSON.stringify({status: progress.status, step: progress.step})); } catch {}
   }
-  // Called by the sign-up page so the tour opens on the first load after the account exists.
+  // Called when reviewed onboarding completes.
   function markSignup(storage, username) { saveProgress(storage, username, {status: 'active', step: STEPS[0].id}); }
 
   const BODY = step => typeof step.body === 'function' ? step.body : () => step.body;
@@ -80,7 +78,7 @@
     return dock;
   }
 
-  const api = {STEPS, KEYS_URL, nextIndex, stepIndex, progressKey, loadProgress, saveProgress, markSignup, placeCard, stepBody};
+  const api = {STEPS, nextIndex, stepIndex, progressKey, loadProgress, saveProgress, markSignup, placeCard, stepBody};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.StellisTour = api;
   if (typeof document === 'undefined' || !document.querySelector('#library-more')) return;
@@ -112,14 +110,8 @@
     if (!response.ok) throw new Error('The request failed.');
     return response.json();
   }
-  function errorText(data) {
-    const detail = data && data.detail;
-    if (Array.isArray(detail)) return detail.map(item => item.msg).join(' ');
-    return typeof detail === 'string' && detail ? detail : 'The key could not be saved.';
-  }
-
   let layer, spot, card, titleEl, bodyEl, extraEl, counterEl, backButton, nextButton, skipButton;
-  let username = null, current = -1, ctx = {}, token = 0, opener = null, tracked = null, timer = null, samplesTimer = null;
+  let username = null, current = -1, ctx = {}, token = 0, opener = null, tracked = null, timer = null;
 
   function build() {
     layer = document.createElement('div'); layer.className = 'tour-layer'; layer.hidden = true;
@@ -180,15 +172,13 @@
 
   // The meeting to show: the newest one with a pending suggestion (checked for the ten newest), else the newest.
   async function loadContext() {
-    const [samples, conversations, pages] = await Promise.all([
-      getJson('/samples').catch(() => ({})), getJson('/conversations').catch(() => []), getJson('/pages').catch(() => [])]);
+    const [conversations, pages] = await Promise.all([getJson('/conversations').catch(() => []), getJson('/pages').catch(() => [])]);
     const recent = conversations.slice(0, 10);
     const pending = await Promise.all(recent.map(item =>
       getJson(`/suggestions?target_kind=conversation&target_id=${encodeURIComponent(item.id)}`)
         .then(data => data.suggestions.length > 0).catch(() => false)));
     const withSuggestion = recent.find((item, index) => pending[index]);
-    return {samplesComplete: Boolean(samples.complete),
-      page: (pages.find(item => item.title !== 'To-dos') || {}).id || null,
+    return {page: (pages.find(item => item.title !== 'To-dos') || {}).id || null,
       meeting: (withSuggestion || conversations[0] || {}).id || null};
   }
 
@@ -227,13 +217,10 @@
   }
 
   function render(step) {
-    clearTimeout(samplesTimer);
     layer.hidden = false;
     titleEl.replaceChildren(icon(step.icon), document.createTextNode(step.title));
     bodyEl.textContent = stepBody(step, ctx);
     extraEl.replaceChildren();
-    if (step.extra === 'key') mountKeyForm();
-    if (step.extra === 'samples') mountSamples();
     counterEl.textContent = `${current + 1} of ${STEPS.length}`;
     backButton.hidden = nextIndex(STEPS, current, -1, candidate => !candidate.available || candidate.available(ctx)) < 0;
     nextButton.setLabel(step.last ? 'Done' : 'Next');
@@ -243,68 +230,6 @@
     tracked = null;
     place();
     card.focus({preventScroll: true});
-  }
-
-  function mountKeyForm() {
-    const link = document.createElement('a');
-    link.className = 'tour-link'; link.href = KEYS_URL; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    link.append(icon('external-link'), Object.assign(document.createElement('span'), {textContent: 'Open API keys in Token Factory'}));
-    const form = document.createElement('form'); form.className = 'tour-form';
-    const label = document.createElement('label'); label.htmlFor = 'tour-key-input'; label.textContent = 'Nebius API key';
-    const input = document.createElement('input');
-    Object.assign(input, {id: 'tour-key-input', type: 'password', autocomplete: 'off', spellcheck: false, maxLength: 512, placeholder: 'Paste your key'});
-    const save = button('tour-save', 'Save key', 'key'); save.type = 'submit';
-    const status = document.createElement('p'); status.className = 'tour-status'; status.setAttribute('role', 'status');
-    form.append(label, input, save, status);
-    extraEl.append(link, form);
-    getJson('/settings/nebius-key').then(state => {
-      if (state.configured) status.textContent = 'A key is already saved on this device. Paste another to replace it.';
-    }).catch(() => {});
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
-      if (!input.value.trim()) { status.textContent = 'Paste your Nebius API key first.'; status.dataset.state = 'error'; return; }
-      save.disabled = true; status.dataset.state = ''; status.textContent = 'Saving the key…';
-      try {
-        const response = await fetch('/api/v1/settings/nebius-key', {method: 'PUT',
-          headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: input.value})});
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(errorText(data));
-        input.value = '';
-        status.dataset.state = 'ok'; status.textContent = 'The key is saved on this device. Summaries, chat, and tags are on.';
-        document.body.classList.remove('no-ai');
-      } catch (error) { status.dataset.state = 'error'; status.textContent = error.message; }
-      finally { save.disabled = false; }
-    });
-  }
-
-  function mountSamples() {
-    const add = button('tour-save', 'Add sample workspace', 'folder-plus');
-    const status = document.createElement('p'); status.className = 'tour-status'; status.setAttribute('role', 'status');
-    const progress = document.createElement('progress'); progress.max = 1; progress.value = 0; progress.hidden = true;
-    extraEl.append(add, progress, status);
-    async function refresh() {
-      let state;
-      try { state = await getJson('/samples'); } catch { return; }
-      const busy = state.state === 'downloading';
-      progress.hidden = !busy; progress.value = state.progress || 0;
-      add.hidden = busy || state.complete;
-      add.setLabel(state.state === 'failed' ? 'Try again' : 'Add sample workspace');
-      status.dataset.state = state.state === 'failed' ? 'error' : state.complete ? 'ok' : '';
-      status.textContent = busy ? `Downloading ${state.meeting || 'the samples'}: ${Math.round((state.progress || 0) * 100)}%`
-        : state.state === 'failed' ? `The sample workspace could not be added (${state.error}). Check your connection and try again.`
-        : state.complete ? 'The sample workspace is in your library.' : '';
-      if (busy) samplesTimer = setTimeout(refresh, 1500);
-    }
-    add.addEventListener('click', async () => {
-      add.disabled = true;
-      try {
-        const response = await fetch('/api/v1/samples', {method: 'POST'});
-        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || 'The request failed.');
-      } catch (error) { status.dataset.state = 'error'; status.textContent = error.message; }
-      finally { add.disabled = false; }
-      refresh();
-    });
-    refresh();
   }
 
   function open(startId) {
@@ -321,7 +246,7 @@
   function close(status) {
     token++;
     saveProgress(safeStorage(), username, {status, step: STEPS[Math.max(current, 0)].id});
-    clearInterval(timer); clearTimeout(samplesTimer);
+    clearInterval(timer);
     document.removeEventListener('keydown', onKey, true);
     window.removeEventListener('resize', place);
     document.removeEventListener('scroll', place, true);
@@ -358,7 +283,7 @@
       open(null);
     });
     const saved = loadProgress(safeStorage(), username);
-    if (saved && saved.status === 'active' && stepIndex(STEPS, saved.step) >= 0) open(saved.step);
+    if (saved && saved.status === 'active') open(stepIndex(STEPS, saved.step) >= 0 ? saved.step : null);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })(typeof window !== 'undefined' ? window : globalThis);

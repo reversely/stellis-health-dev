@@ -1,0 +1,114 @@
+{
+  "generated": "2026-10-20T19:33:43.731Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux-arm64/chrome-headless-shell",
+  "dark": false,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/onboarding",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_360.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 858
+          },
+          "findings": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_390.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 844
+          },
+          "findings": []
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_768.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 1024
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_1024.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 770
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_1280.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 800
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_1440.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 900
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/tmp/stellis-onboarding-audit-welcome-light/127-0-0-1-8824-onboarding_1920.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1080
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 0
+  }
+}

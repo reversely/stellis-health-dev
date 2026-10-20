@@ -41,7 +41,7 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
-    if (path.startswith("/static/") or path in {"/auth", "/api/health", "/api/v1/health", "/mcp"}
+    if (path.startswith(("/static/", "/shared/")) or path in {"/auth", "/api/health", "/api/v1/health", "/mcp"}
             or path.startswith("/api/v1/auth/")
             or (request.method == "GET" and path in {
                 "/api/v1/calendar/google/callback", "/api/v1/calendar/microsoft/callback"})):
@@ -54,6 +54,9 @@ async def session_gate(request: Request, call_next):
         if path.startswith("/api/"):
             return JSONResponse({"detail": "Login required"}, status_code=401)
         return RedirectResponse("/auth", status_code=303)
+    if (request.method == "GET" and not path.startswith("/api/") and path != "/onboarding"
+            and auth.needs_onboarding(account_id)):
+        return RedirectResponse("/onboarding", status_code=303)
     return await call_next(request)
 
 
@@ -71,7 +74,7 @@ async def development_cache_policy(request: Request, call_next):
         response.headers["Cache-Control"] = "private, no-cache"
     elif path.startswith(("/api/v1/calendar/", "/api/calendar/")):
         response.headers["Cache-Control"] = "no-store"
-    elif (path in {"/", "/auth", "/recording", "/vocabulary", "/settings", "/todos"} or
+    elif (path in {"/", "/auth", "/onboarding", "/recording", "/vocabulary", "/settings", "/todos"} or
           path.startswith(("/conversation/", "/person/", "/vocabulary/", "/notebook/", "/page/"))):
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -88,7 +91,7 @@ class LoginCredentials(BaseModel):
 
 
 def _session_response(token: str, username: str) -> JSONResponse:
-    response = JSONResponse({"username": username})
+    response = JSONResponse({"username": username, "onboarding_required": auth.needs_onboarding(auth.current_account_id(token))})
     response.set_cookie(auth.COOKIE_NAME, token, max_age=auth.SESSION_DAYS * 86400,
                         httponly=True, samesite="lax", secure=False, path="/")
     response.headers["Cache-Control"] = "no-store"
@@ -103,6 +106,7 @@ def auth_page() -> FileResponse:
 @app.get("/api/v1/auth/status")
 def auth_status(request: Request) -> dict[str, object]:
     return {"required": auth.enabled(), "registration_open": auth.enabled(), "has_accounts": auth.has_account(),
+            "onboarding_required": auth.needs_onboarding(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))) if auth.enabled() else False,
             "username": auth.current_account(request.cookies.get(auth.COOKIE_NAME)) if auth.enabled() else None}
 
 
@@ -853,7 +857,7 @@ def calendar_connections() -> list[dict[str, object]]:
 
 @api.get("/calendar/{provider}/authorize")
 def calendar_authorize(provider: str, request: Request,
-                       return_to: Literal["/", "/settings"] = "/") -> dict[str, str]:
+                       return_to: Literal["/", "/settings", "/onboarding"] = "/") -> dict[str, str]:
     if request.url.hostname not in {"127.0.0.1", "localhost"} or request.url.port is None:
         raise HTTPException(status_code=400, detail="Open Stellis on its local address to connect a calendar")
     try:
@@ -951,6 +955,51 @@ def save_calendar_event_notes(request: EventNotesSave) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/onboarding", include_in_schema=False)
+def onboarding_page(request: Request):
+    if not auth.needs_onboarding(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))):
+        return RedirectResponse("/", status_code=303)
+    return FileResponse(_STATIC / "onboarding.html")
+
+
+class OnboardingChoices(BaseModel):
+    uses: list[str] = Field(default_factory=list, max_length=8)
+    step: Literal["uses", "review"] = "review"
+
+
+@api.get("/onboarding")
+def onboarding_state(request: Request):
+    from stellis import onboarding
+    return onboarding.status(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
+
+
+@api.put("/onboarding")
+def onboarding_choices(choices: OnboardingChoices, request: Request):
+    from stellis import onboarding
+    try:
+        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/onboarding/check")
+async def onboarding_check(request: Request):
+    from stellis import onboarding
+    try:
+        return await onboarding.check(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
+    except (ValueError, agent_runtime.AgentRunError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/onboarding/complete")
+def onboarding_complete(request: Request):
+    from stellis import onboarding
+    try:
+        return onboarding.complete(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/", include_in_schema=False)

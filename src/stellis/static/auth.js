@@ -27,7 +27,7 @@ signUp.addEventListener('click', () => showMode(true));
     if (!response.ok) throw new Error();
     const status = await response.json();
     const creating = new URLSearchParams(location.search).get('create') === '1';
-    if (!status.required || (status.username && !creating)) { location.replace('/'); return; }
+    if (!status.required || (status.username && !creating)) { location.replace(status.onboarding_required ? '/onboarding' : '/'); return; }
     registrationOpen = status.registration_open;
     document.querySelector('.auth-modes').hidden = false;
     showMode(creating || !status.has_accounts);
@@ -48,9 +48,7 @@ form.addEventListener('submit', async event => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Sign in failed');
-    // A new account starts the first-run tour on its first load of the app.
-    if (registration) { try { window.StellisTour?.markSignup(localStorage, result.username); } catch {} }
-    location.replace('/');
+    location.replace(result.onboarding_required ? '/onboarding' : '/');
   } catch (problem) { error.textContent = problem.message; }
   finally { button.disabled = false; }
 });

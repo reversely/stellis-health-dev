@@ -1,0 +1,1156 @@
+{
+  "generated": "2026-10-20T19:35:33.637Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux-arm64/chrome-headless-shell",
+  "dark": true,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/onboarding",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_360_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 1149
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 340,
+                "bottom": 198,
+                "width": 320,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 40,
+                "top": 88,
+                "right": 320,
+                "bottom": 109,
+                "width": 280,
+                "height": 21
+              },
+              "detail": "280x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 340,
+                "bottom": 198,
+                "width": 320,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 40,
+                "top": 117,
+                "right": 81,
+                "bottom": 137,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 340,
+                "bottom": 198,
+                "width": 320,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 56,
+                "top": 149,
+                "right": 117,
+                "bottom": 166,
+                "width": 61,
+                "height": 17
+              },
+              "detail": "61x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 340,
+                "bottom": 198,
+                "width": 320,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 141,
+                "top": 117,
+                "right": 210,
+                "bottom": 137,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 340,
+                "bottom": 198,
+                "width": 320,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 157,
+                "top": 149,
+                "right": 278,
+                "bottom": 166,
+                "width": 121,
+                "height": 17
+              },
+              "detail": "121x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_390_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 1149
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 370,
+                "bottom": 198,
+                "width": 350,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 40,
+                "top": 88,
+                "right": 350,
+                "bottom": 109,
+                "width": 310,
+                "height": 21
+              },
+              "detail": "310x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 370,
+                "bottom": 198,
+                "width": 350,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 40,
+                "top": 117,
+                "right": 81,
+                "bottom": 137,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 370,
+                "bottom": 198,
+                "width": 350,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 56,
+                "top": 149,
+                "right": 117,
+                "bottom": 166,
+                "width": 61,
+                "height": 17
+              },
+              "detail": "61x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 370,
+                "bottom": 198,
+                "width": 350,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 141,
+                "top": 117,
+                "right": 210,
+                "bottom": 137,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 20,
+                "top": 68,
+                "right": 370,
+                "bottom": 198,
+                "width": 350,
+                "height": 130
+              },
+              "otherRect": {
+                "left": 157,
+                "top": 149,
+                "right": 278,
+                "bottom": 166,
+                "width": 121,
+                "height": 17
+              },
+              "detail": "121x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_768_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 1024
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "a.brand \"stellis\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 28,
+                "right": 118,
+                "bottom": 56,
+                "width": 96,
+                "height": 28
+              },
+              "detail": "96x28px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "h2 \"Library\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 107,
+                "right": 218,
+                "bottom": 141,
+                "width": 196,
+                "height": 34
+              },
+              "detail": "196x34px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 157,
+                "right": 218,
+                "bottom": 177,
+                "width": 196,
+                "height": 21
+              },
+              "detail": "196x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 201,
+                "right": 63,
+                "bottom": 221,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 233,
+                "right": 218,
+                "bottom": 250,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 274,
+                "right": 91,
+                "bottom": 294,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1024,
+                "width": 240,
+                "height": 1024
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 306,
+                "right": 218,
+                "bottom": 323,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_1024_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 900
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "a.brand \"stellis\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 28,
+                "right": 118,
+                "bottom": 56,
+                "width": 96,
+                "height": 28
+              },
+              "detail": "96x28px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "h2 \"Library\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 107,
+                "right": 218,
+                "bottom": 141,
+                "width": 196,
+                "height": 34
+              },
+              "detail": "196x34px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 157,
+                "right": 218,
+                "bottom": 177,
+                "width": 196,
+                "height": 21
+              },
+              "detail": "196x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 201,
+                "right": 63,
+                "bottom": 221,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 233,
+                "right": 218,
+                "bottom": 250,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 274,
+                "right": 91,
+                "bottom": 294,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 768,
+                "width": 240,
+                "height": 768
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 306,
+                "right": 218,
+                "bottom": 323,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_1280_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 800
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "a.brand \"stellis\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 28,
+                "right": 118,
+                "bottom": 56,
+                "width": 96,
+                "height": 28
+              },
+              "detail": "96x28px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "h2 \"Library\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 107,
+                "right": 218,
+                "bottom": 141,
+                "width": 196,
+                "height": 34
+              },
+              "detail": "196x34px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 157,
+                "right": 218,
+                "bottom": 177,
+                "width": 196,
+                "height": 21
+              },
+              "detail": "196x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 201,
+                "right": 63,
+                "bottom": 221,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 233,
+                "right": 218,
+                "bottom": 250,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 274,
+                "right": 91,
+                "bottom": 294,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 800,
+                "width": 240,
+                "height": 800
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 306,
+                "right": 218,
+                "bottom": 323,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_1440_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 900
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "a.brand \"stellis\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 28,
+                "right": 118,
+                "bottom": 56,
+                "width": 96,
+                "height": 28
+              },
+              "detail": "96x28px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "h2 \"Library\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 107,
+                "right": 218,
+                "bottom": 141,
+                "width": 196,
+                "height": 34
+              },
+              "detail": "196x34px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 157,
+                "right": 218,
+                "bottom": 177,
+                "width": 196,
+                "height": 21
+              },
+              "detail": "196x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 201,
+                "right": 63,
+                "bottom": 221,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 233,
+                "right": 218,
+                "bottom": 250,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 274,
+                "right": 91,
+                "bottom": 294,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 900,
+                "width": 240,
+                "height": 900
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 306,
+                "right": 218,
+                "bottom": 323,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/tmp/stellis-onboarding-audit-review-dark/127-0-0-1-8824-onboarding_1920_dark.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1080
+          },
+          "findings": [
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "a.brand \"stellis\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 28,
+                "right": 118,
+                "bottom": 56,
+                "width": 96,
+                "height": 28
+              },
+              "detail": "96x28px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "h2 \"Library\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 107,
+                "right": 218,
+                "bottom": 141,
+                "width": 196,
+                "height": 34
+              },
+              "detail": "196x34px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "p \"Proposed\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 157,
+                "right": 218,
+                "bottom": 177,
+                "width": 196,
+                "height": 21
+              },
+              "detail": "196x21px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Work\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 201,
+                "right": 63,
+                "bottom": 221,
+                "width": 41,
+                "height": 20
+              },
+              "detail": "41x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Meetings\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 233,
+                "right": 218,
+                "bottom": 250,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "strong \"Learning\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 22,
+                "top": 274,
+                "right": 91,
+                "bottom": 294,
+                "width": 69,
+                "height": 20
+              },
+              "detail": "69x20px shared (one side is a positioned overlay)"
+            },
+            {
+              "check": "overlap",
+              "level": "warn",
+              "element": "canvas#rail-shader",
+              "other": "div \"Learning Onshape\"",
+              "rect": {
+                "left": 0,
+                "top": 0,
+                "right": 240,
+                "bottom": 1080,
+                "width": 240,
+                "height": 1080
+              },
+              "otherRect": {
+                "left": 38,
+                "top": 306,
+                "right": 218,
+                "bottom": 323,
+                "width": 180,
+                "height": 17
+              },
+              "detail": "180x17px shared (one side is a positioned overlay)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 45
+  }
+}

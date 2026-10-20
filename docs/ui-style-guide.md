@@ -63,3 +63,9 @@ The **desktop home left rail** is a WebGL fill (`static/rail-shader.js`) of five
 1. Inspect each named reference and relevant existing screen state. Recheck earlier feedback for the same workflow in [the reference ledger](otter-ui-reference.md) and [the contrast experiment](contrast-workspace-experiment.md).
 2. Compare the rendered result in a browser at desktop and narrow widths, in both themes where available. Check the relevant default, hover, focus, disabled, loading, error, and alternate states. Check for horizontal overflow and page errors.
 3. Verify behavior as well as appearance: tab changes, live updates, status transitions, and form submission where touched. Record observed results separately from inference and update this guide if an accepted design decision changes.
+
+## First-run setup
+
+The first-run screens follow PDF pages 7–9 by workflow, while retaining the shipped fonts, logo, Tabler icons, generated agent avatars and the rich sidebar shader. Welcome and uses have no library rail; reviewed proposals introduce it. Tablet and phone layouts move the surrounding welcome icons into a stable grid. Scene changes use a 220ms opacity/8px transform transition, disabled by reduced motion; there is no continuous decorative icon motion.
+
+Local setup explicitly says Completely local inference and names GN100. Cloud setup names Nebius Cloud + Token Factory separately. Readiness requires a live check, and errors use the server response. Starter notebooks are labelled as based on choices; illustrative wireframe counts and schedules are never presented as real data. Use tiles expose pressed state and retain stable accessible names. Existing accounts bypass first-run setup.

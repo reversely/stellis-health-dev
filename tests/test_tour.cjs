@@ -7,7 +7,7 @@ const all = () => true;
 const ids = list => list.map(step => step.id);
 
 test('the tour has the eight steps in order', () => {
-  assert.deepEqual(ids(STEPS), ['welcome', 'connect', 'samples', 'sidebar', 'home', 'note', 'meeting', 'done']);
+  assert.deepEqual(ids(STEPS), ['sidebar', 'home', 'agents', 'chat', 'agent-settings', 'note', 'meeting', 'done']);
   assert.equal(STEPS.filter(step => step.last).length, 1);
 });
 test('next and back move one step', () => {
@@ -24,11 +24,6 @@ test('moving past either end returns -1', () => {
   assert.equal(nextIndex(STEPS, STEPS.length - 1, 1, all), -1);
   assert.equal(nextIndex(STEPS, 0, -1, all), -1);
   assert.equal(nextIndex(STEPS, 0, 1, () => false), -1);
-});
-test('the sample step skips itself once the workspace is added', () => {
-  const samples = STEPS[stepIndex(STEPS, 'samples')];
-  assert.equal(samples.available({samplesComplete: false}), true);
-  assert.equal(samples.available({samplesComplete: true}), false);
 });
 test('the meeting step needs a meeting and routes to it', () => {
   const meeting = STEPS[stepIndex(STEPS, 'meeting')];
@@ -58,7 +53,7 @@ test('sign-up marks the tour active at the first step, replacing old progress', 
   const storage = memory();
   saveProgress(storage, 'ada', {status: 'done', step: 'done'});
   markSignup(storage, 'ada');
-  assert.deepEqual(loadProgress(storage, 'ada'), {status: 'active', step: 'welcome'});
+  assert.deepEqual(loadProgress(storage, 'ada'), {status: 'active', step: 'sidebar'});
 });
 test('corrupt or unavailable storage never throws', () => {
   const storage = memory();

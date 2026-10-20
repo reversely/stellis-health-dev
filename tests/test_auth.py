@@ -94,7 +94,7 @@ class LocalAuthTest(unittest.TestCase):
     def test_registration_has_no_recovery_step(self):
         registered = self.client.post('/api/v1/auth/register', json=self.credentials)
         self.assertEqual(registered.status_code, 200)
-        self.assertEqual(registered.json(), {'username': self.credentials['username']})
+        self.assertEqual(registered.json(), {'username': self.credentials['username'], 'onboarding_required': True})
         self.assertEqual(self.client.post('/api/v1/auth/recover', json={}).status_code, 404)
 
     def test_cli_serve_requires_login_by_default(self):

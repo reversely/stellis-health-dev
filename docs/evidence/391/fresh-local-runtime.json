@@ -1,0 +1,20 @@
+{
+  "fresh_data_directory": "/tmp/stellis-onboarding-fresh-1792524707",
+  "ready": {
+    "checked_at": "2026-10-20T19:31:51.901138+00:00",
+    "model": "nemotron-3-nano:latest",
+    "local": true,
+    "job_id": "f71be40c-8fef-441b-9c76-344c8f03a716"
+  },
+  "notebooks": [
+    "Learning Onshape",
+    "Meetings"
+  ],
+  "agents": [
+    "Chief of Staff",
+    "Learning Onshape Steward",
+    "Meetings Steward",
+    "Tutor"
+  ],
+  "browser_errors": []
+}

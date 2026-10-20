@@ -12,6 +12,8 @@ The owner's later instructions supersede P1 and Q7's deferral: two deployment ve
 
 Observed directly in the PDF: pages 7–8 welcome and uses/connections; page 9 reviewed collection/notebook proposals with agent choices; page 10 grouped agent row and Home; page 11 agent management with function, run mode, approval and memory information. These are static references, not proof of live interactions. Counts, schedules and project examples remain illustrative, never fabricated live data.
 
+The first-run implementation (#391/#392, ADR 0065) follows the actual PDF pages 7–9. The welcome retains the owner's private-team framing while describing explicit shared inputs and the now-adopted GN100 local inference, rather than claiming continuous observation or an unchecked cloud retention setting. Choices are Meetings, Emails, Learning, Projects, Home projects, Family and Deep research; each maps to a reviewed starter notebook and shipped templates. Slide decks and unattended Schedule remain unimplemented. Starter review does not pretend to have analysed mail; that extension remains #393. Legacy accounts skip setup; fresh accounts can start empty. Existing rich rail effects, icons and avatars are retained.
+
 Implementation order: template/deployment controls (#410 and ADR 0063), functional local screen tutor (#412, ADR 0064; actual local screenshot grounding verified), welcome/uses/local setup (#391), reviewed notebook setup (#393), updated contextual tour (#392), then cross-flow browser verification and newly discovered gaps. Existing unrelated platform/stretch tickets are not prerequisites.
 
 ## 1. Decision ledger

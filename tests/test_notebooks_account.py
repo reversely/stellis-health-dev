@@ -43,6 +43,7 @@ class NotebookAccountTest(unittest.TestCase):
         self.client = TestClient(app, follow_redirects=False)
         self.password = "correct horse battery staple"
         self.client.post("/api/v1/auth/register", json={"username": "owner", "password": self.password})
+        auth.complete_onboarding(auth.account_id_for_username("owner"))
         self.capabilities = patch("stellis.server.processing.capabilities",
                                   return_value={"features": {"transcribe": False, "diarize": False}})
         self.capabilities.start()

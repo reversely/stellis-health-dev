@@ -62,6 +62,8 @@ def _connect() -> Iterator[sqlite3.Connection]:
     for column in ("name", "email"):
         if column not in account_columns:
             conn.execute(f"ALTER TABLE account ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+    if "onboarding_completed" not in account_columns:
+        conn.execute("ALTER TABLE account ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 1")
     conn.execute("""CREATE TABLE IF NOT EXISTS sessions (
         token_hash BLOB PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES account(id),
         expires_at TEXT NOT NULL
@@ -99,7 +101,7 @@ def register(username: str, password: str) -> str:
     stamp = datetime.now(timezone.utc).isoformat()
     with _connect() as conn:
         try:
-            conn.execute("INSERT INTO account (username, salt, verifier, created_at) VALUES (?, ?, ?, ?)",
+            conn.execute("INSERT INTO account (username, salt, verifier, created_at, onboarding_completed) VALUES (?, ?, ?, ?, 0)",
                          (username, salt, _verifier(password, salt), stamp))
         except sqlite3.IntegrityError as exc:
             raise RuntimeError("That username is taken") from exc
@@ -244,3 +246,16 @@ def delete_account(account_id: int = 1) -> None:
     with _connect() as conn:
         conn.execute("DELETE FROM sessions WHERE account_id = ?", (account_id,))
         conn.execute("DELETE FROM account WHERE id = ?", (account_id,))
+
+
+def needs_onboarding(account_id: int | None) -> bool:
+    if account_id is None:
+        return False
+    with _connect() as conn:
+        row = conn.execute("SELECT onboarding_completed FROM account WHERE id = ?", (account_id,)).fetchone()
+    return bool(row and not row[0])
+
+
+def complete_onboarding(account_id: int) -> None:
+    with _connect() as conn:
+        conn.execute("UPDATE account SET onboarding_completed = 1 WHERE id = ?", (account_id,))
