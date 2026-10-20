@@ -75,13 +75,15 @@ class MailStyleTest(unittest.TestCase):
                 "brief": "Say we are still reviewing the package"})
         self.assertEqual(response.status_code, 200, response.text)
         draft = response.json()
-        self.assertEqual(draft["gmail_draft_id"], "gmail-draft-one")
-        self.assertEqual(len(draft["examples"]), 1)
-        self.assertEqual(draft["examples"][0]["subject"], "RFI 91")
-        create.assert_awaited_once()
-        persisted = self.client.get("/api/v1/mail-style").json()["drafts"][0]
-        self.assertEqual(persisted["example_ids"], draft["example_ids"])
-        self.assertEqual(persisted["examples"][0]["subject"], "RFI 91")
+        self.assertIsNone(draft["gmail_draft_id"])
+        self.assertEqual(draft["state"], "draft")
+        self.assertEqual(len(draft["sources"]), 1)
+        self.assertIn("RFI 91", draft["sources"][0]["title"])
+        create.assert_not_awaited()
+        persisted = self.client.get(f"/api/v1/agents/{mira['id']}/artifacts").json()[0]
+        self.assertEqual(persisted["sources"], draft["sources"])
+        self.assertEqual(persisted["body"], "Hi Sam,\n\nEngineering is reviewing the package.")
+
 
 
 if __name__ == "__main__":

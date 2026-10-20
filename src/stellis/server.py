@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
-from stellis import agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
+from stellis import agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -449,6 +449,7 @@ def start_speech_worker() -> None:
     images.recover_orphans()
     storage.fail_interrupted_ai_runs()
     agents.interrupt_running_jobs()
+    agent_artifacts.interrupt_saves()
     from stellis import runtime_trace
     runtime_trace.interrupt_running()
     delegation.interrupt_running()
@@ -639,6 +640,65 @@ def remove_agent_memory(agent_id: str, memory_id: str) -> dict[str, bool]:
 @api.get("/agents/{agent_id}/messages")
 def agent_messages(agent_id: str) -> list[dict[str, object]]:
     return _agent_result(lambda: agents.messages(agent_id))
+
+
+class ArtifactRevision(BaseModel):
+    revision: int
+
+
+class ArtifactEdit(ArtifactRevision):
+    title: str
+    body: str
+    recipients: list[str] = []
+
+
+@api.get("/agents/{agent_id}/artifacts")
+def agent_drafts(agent_id: str):
+    return _agent_result(lambda: agent_artifacts.list_for(agent_id))
+
+
+@api.get("/artifacts/{artifact_id}")
+def get_agent_draft(artifact_id: str):
+    return _agent_result(lambda: agent_artifacts.get(artifact_id))
+
+
+@api.patch("/artifacts/{artifact_id}")
+def edit_agent_draft(artifact_id: str, request: ArtifactEdit):
+    return _agent_result(lambda: agent_artifacts.edit(artifact_id, request.revision, request.title, request.body, request.recipients))
+
+
+@api.post("/artifacts/{artifact_id}/discard")
+def discard_agent_draft(artifact_id: str, request: ArtifactRevision):
+    return _agent_result(lambda: agent_artifacts.discard(artifact_id, request.revision))
+
+
+@api.post("/artifacts/{artifact_id}/note")
+def file_agent_draft(artifact_id: str, request: ArtifactRevision):
+    return _agent_result(lambda: agent_artifacts.save_note(artifact_id, request.revision))
+
+
+@api.post("/artifacts/{artifact_id}/gmail")
+async def save_agent_draft(artifact_id: str, request: ArtifactRevision):
+    try:
+        return await agent_artifacts.save_to_gmail(artifact_id, request.revision)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except agent_artifacts.gmail_api.GmailError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.post("/artifacts/{artifact_id}/gmail-status")
+async def check_agent_draft(artifact_id: str):
+    try:
+        return await agent_artifacts.reconcile(artifact_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except agent_artifacts.gmail_api.GmailError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.get("/agents/{agent_id}/jobs")

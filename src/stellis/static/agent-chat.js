@@ -173,10 +173,39 @@
     const chip = el('a', 'agent-context-chip', book.name); chip.href = `/notebook/${encodeURIComponent(id)}`;
     return chip;
   }
+  const artifactEdits=new Map();
+  function artifactCard(draft,onChange) {
+    const card=el('section','agent-artifact');card.dataset.artifactId=draft.id;
+    const state={draft:draft.kind==='email'?'Not sent':'Draft',filed:draft.notebook_id?'Saved to notebook':'Saved as note',saving:'Saving to Gmail…',saved:'Saved to Gmail drafts · Not sent',discarded:'Discarded',save_unknown:'Save status unknown · Not sent'}[draft.state]||draft.state;
+    card.append(el('h4','',draft.title),el('p','artifact-meta',(draft.kind==='email'?(draft.recipients.length?'To '+draft.recipients.join(', '):'Recipient not set')+' · ':'')+state));
+    if(draft.state==='discarded')return card;
+    card.append(messageBody(draft.body));
+    if(draft.sources.length){const evidence=el('details','artifact-sources');evidence.append(el('summary','','Draft sources'));for(const source of draft.sources){const link=el('a','',source.title||'Source');link.href=source.target;if(source.target.startsWith('https://')){link.target='_blank';link.rel='noopener noreferrer';}evidence.append(link);}card.append(evidence);}
+    const actions=el('div','artifact-actions'),notice=el('p','artifact-notice');notice.setAttribute('role','status');notice.textContent=draft.error||'';
+    const button=(label,action)=>{const control=el('button','agent-quiet',label);control.type='button';control.addEventListener('click',async()=>{actions.querySelectorAll('button').forEach(b=>b.disabled=true);try{const updated=await action();if(updated){artifactEdits.delete(draft.id);await onChange(updated);}}catch(error){notice.textContent=error.message;}finally{actions.querySelectorAll('button').forEach(b=>b.disabled=false);}});actions.append(control);return control;};
+    const send=(suffix,data)=>request(`/artifacts/${draft.id}${suffix}`,{method:suffix?'POST':'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    if(draft.state==='draft'){
+      if(draft.kind==='email')button('Save to Gmail drafts',async()=>{if(artifactEdits.has(draft.id))throw Error('Save your edits first.');try{return await send('/gmail',{revision:draft.revision});}catch(error){await onChange(await request(`/artifacts/${draft.id}`));status(error.message);throw error;}});
+      else {button(draft.notebook_id?'Save to notebook':'Save as note',()=>{if(artifactEdits.has(draft.id))throw Error('Save your edits first.');return send('/note',{revision:draft.revision});});button('Copy draft',async()=>{await navigator.clipboard.writeText(draft.body);notice.textContent='Copied';});}
+      const editor=el('form','artifact-editor');editor.hidden=!artifactEdits.has(draft.id);
+      const values=artifactEdits.get(draft.id)||{title:draft.title,body:draft.body,recipients:draft.recipients.join(', ')};
+      function input(label,name,multiline=false){const wrap=el('label','',label),control=el(multiline?'textarea':'input');control.name=name;control.value=values[name];control.required=name!=='recipients';control.maxLength=name==='body'?20000:name==='title'?200:2000;wrap.append(control);editor.append(wrap);control.addEventListener('input',()=>artifactEdits.set(draft.id,Object.fromEntries(new FormData(editor))));return control;}
+      input(draft.kind==='email'?'Subject':'Title','title');if(draft.kind==='email')input('To (comma separated)','recipients');input('Draft','body',true);
+      const save=el('button','','Save changes');save.type='submit';const cancel=el('button','agent-quiet','Cancel');cancel.type='button';cancel.addEventListener('click',()=>{artifactEdits.delete(draft.id);for(const control of editor.querySelectorAll('input,textarea'))control.value=control.name==='recipients'?draft.recipients.join(', '):draft[control.name];editor.hidden=true;});editor.append(save,cancel);
+      editor.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{const values=Object.fromEntries(new FormData(editor));const updated=await send('',{revision:draft.revision,title:values.title,body:values.body,recipients:(values.recipients||'').split(',').map(v=>v.trim()).filter(Boolean)});artifactEdits.delete(draft.id);await onChange(updated);}catch(error){notice.textContent=error.message;}finally{save.disabled=false;}});
+      button('Edit',async()=>{editor.hidden=false;artifactEdits.set(draft.id,Object.fromEntries(new FormData(editor)));editor.querySelector('input').focus();});
+      button('Discard',()=>send('/discard',{revision:draft.revision}));card.append(editor);
+    }
+    if(draft.state==='save_unknown')button('Check Gmail status',()=>request(`/artifacts/${draft.id}/gmail-status`,{method:'POST'}));
+    if(draft.state==='filed'){const link=el('a','agent-link-button','Open note');link.href='/page/'+encodeURIComponent(draft.id);actions.append(link);}
+    if(draft.state==='saved'){const link=el('a','agent-link-button','Open Gmail drafts');link.href=`https://mail.google.com/mail/?authuser=${encodeURIComponent(draft.account_email||'')}#drafts`;link.target='_blank';link.rel='noopener noreferrer';actions.append(link);card.append(el('p','artifact-meta','Saved in '+draft.account_email));}
+    card.append(actions,notice);return card;
+  }
   async function refreshThread(section, agent) {
-    const [messages, jobs] = await Promise.all([
+    const [messages, jobs, artifacts] = await Promise.all([
       request(`/agents/${encodeURIComponent(agent.id)}/messages`),
       request(`/agents/${encodeURIComponent(agent.id)}/jobs`),
+      request(`/agents/${encodeURIComponent(agent.id)}/artifacts`),
     ]);
     if (selectedId !== agent.id) return;
     const feed = section.querySelector('.agent-thread-feed');
@@ -187,7 +216,9 @@
       const item = el('article', `agent-message agent-message-${message.role}`); item.id = 'message-' + message.id;
       const author = el('strong', 'agent-message-author', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name);
       if (message.role === 'agent') author.prepend(agentAvatar(agent, 24));
-      item.append(author, messageBody(message.content));
+      item.append(author);
+      const draft=artifacts.find(item=>item.message_id===message.id);
+      if(draft)item.append(artifactCard(draft,()=>refreshThread(section,agent)));else item.append(messageBody(message.content));
       const chip = contextChip(message.notebook_id); if (chip) item.append(chip);
       const job = byJob.get(message.job_id);
       if (message.role === 'user' && job && job.state !== 'succeeded')
@@ -204,7 +235,7 @@
       const chip = contextChip(pending.notebook); if (chip) item.append(chip); nodes.push(item);
     }
     if (!nodes.length) nodes.push(el('p', 'agent-empty', `Ask ${agent.name} a question or choose a notebook to work from.`));
-    const signature = JSON.stringify([messages,jobs,pending?.question]);
+    const signature = JSON.stringify([messages,jobs,artifacts,pending?.question]);
     if (feed.dataset.signature !== signature) {feed.replaceChildren(...nodes);feed.dataset.signature = signature;}
     if (nearBottom || pending) feed.scrollTop = feed.scrollHeight;
     clearTimeout(threadTimer);
@@ -470,7 +501,7 @@
     const subject = el('label', '', 'Subject'); subject.append(subjectInput);
     const briefInput = el('textarea'); briefInput.required = true; briefInput.maxLength = 2000;
     const brief = el('label', '', 'What should the draft say?'); brief.append(briefInput);
-    const create = el('button', '', 'Create Gmail draft'); create.type = 'submit';
+    const create = el('button', '', 'Create draft'); create.type = 'submit';
     const result = el('div', 'mail-style-draft-result');
     form.append(to, subject, brief, create);
     form.addEventListener('submit', async event => {
@@ -479,16 +510,8 @@
         const draft = await request(`/agents/${encodeURIComponent(agent.id)}/style-draft`,
           {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
             recipients:[recipients.value], subject:subjectInput.value, brief:briefInput.value})});
-        const link = el('a', '', 'Open Gmail draft');
-        link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(draft.gmail_draft_id)}`;
-        link.target = '_blank'; link.rel = 'noopener noreferrer';
-        result.replaceChildren(el('p', '', draft.body), link, el('strong', '', 'Examples used'));
-        for (const example of draft.examples) {
-          const source = el('a', '', `${example.subject || 'Untitled email'} · ${example.group_name}`);
-          source.href = example.url; source.target = '_blank'; source.rel = 'noopener noreferrer';
-          result.append(source);
-        }
-        status('Draft created. Review it in Gmail before sending.');
+        const renderDraft=updated=>result.replaceChildren(artifactCard(updated,renderDraft));renderDraft(draft);
+        status('Draft ready for review.');
       } catch (error) { status(error.message); }
       finally { create.disabled = false; }
     });
@@ -498,7 +521,7 @@
     for (const draft of previous) {
       const item = el('div', 'mail-style-previous-draft');
       const link = el('a', '', draft.subject);
-      link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(draft.gmail_draft_id)}`;
+      link.href = `https://mail.google.com/mail/u/0/#drafts`;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
       item.append(link, el('small', '', draft.recipients.join(', ')), el('span', '', 'Examples used'));
       for (const example of draft.examples) {
@@ -567,7 +590,7 @@
         if (job.draft_body) {
           item.append(el('h4', '', 'Draft'), messageBody(job.draft_body));
           if (job.gmail_draft_id && !job.fixture) {
-            const link = el('a', '', 'Open Gmail draft');
+            const link = el('a', '', 'Open Gmail drafts');
             link.href = `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(job.gmail_draft_id)}`;
             link.target = '_blank'; link.rel = 'noopener noreferrer'; item.append(link);
           }

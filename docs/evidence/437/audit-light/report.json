@@ -1,0 +1,116 @@
+{
+  "generated": "2026-10-20T22:22:43.140Z",
+  "browser": "/home/springbuilt/.cache/ms-playwright/chromium-1243/chrome-linux-arm64/chrome",
+  "dark": false,
+  "pages": [
+    {
+      "url": "http://127.0.0.1:8824/chat/56dd0347-1a52-455f-b189-087584033f09",
+      "viewports": [
+        {
+          "width": 360,
+          "height": 800,
+          "label": "phone-narrow",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_360.png",
+          "consoleErrors": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ],
+          "viewport": {
+            "width": 360,
+            "height": 800,
+            "scrollWidth": 360,
+            "scrollHeight": 2221
+          },
+          "findings": []
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "label": "phone",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_390.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 390,
+            "height": 844,
+            "scrollWidth": 390,
+            "scrollHeight": 2226
+          },
+          "findings": []
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "label": "tablet-portrait",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_768.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 768,
+            "height": 1024,
+            "scrollWidth": 768,
+            "scrollHeight": 2111
+          },
+          "findings": []
+        },
+        {
+          "width": 1024,
+          "height": 768,
+          "label": "tablet-landscape",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_1024.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1024,
+            "height": 768,
+            "scrollWidth": 1024,
+            "scrollHeight": 768
+          },
+          "findings": []
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "label": "laptop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_1280.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "scrollWidth": 1280,
+            "scrollHeight": 800
+          },
+          "findings": []
+        },
+        {
+          "width": 1440,
+          "height": 900,
+          "label": "desktop",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_1440.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1440,
+            "height": 900,
+            "scrollWidth": 1440,
+            "scrollHeight": 900
+          },
+          "findings": []
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "label": "wide",
+          "screenshot": "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/reviewable-agent-artifacts/docs/evidence/437/audit-light/127-0-0-1-8824-chat-56dd0347-1a52-455f-b189-087584033f09_1920.png",
+          "consoleErrors": [],
+          "viewport": {
+            "width": 1920,
+            "height": 1080,
+            "scrollWidth": 1920,
+            "scrollHeight": 1080
+          },
+          "findings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "warn": 0
+  }
+}

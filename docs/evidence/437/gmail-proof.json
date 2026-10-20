@@ -1,0 +1,8 @@
+{
+  "browser_save_after_review": true,
+  "same_id_on_repeated_save": true,
+  "saved_state_survives_reload": true,
+  "located_by_identity_header": true,
+  "sent": false,
+  "test_draft_deleted": true
+}

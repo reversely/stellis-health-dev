@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from email.utils import getaddresses
 
-from stellis import runtime_trace, agent_gateway, runtime_profile, agent_runtime, agents, gmail_api, storage
+from stellis import agent_artifacts, runtime_trace, agent_gateway, runtime_profile, agent_runtime, agents, gmail_api, storage
 
 
 def _now() -> str:
@@ -190,7 +190,7 @@ async def _draft_body_impl(agent_id: str, brief: str, subject: str, examples: li
 
 
 async def create_draft(agent_id: str, recipients: list[str], subject: str, brief: str) -> dict[str, object]:
-    """Draft with visible examples; the only Gmail mutation is draft creation."""
+    """Generate a local reviewable draft; saving to Gmail is a separate action."""
     agents.require_enabled(agent_id)
     if not recipients or not subject.strip() or not brief.strip() or len(brief) > 2000:
         raise ValueError("Enter recipients, subject, and a short request")
@@ -200,19 +200,10 @@ async def create_draft(agent_id: str, recipients: list[str], subject: str, brief
         raise ValueError("No included sent examples match these recipients")
     account = used[0]["account_email"]
     body = await _draft_body(agent_id, brief, subject, used)
-    gmail = await gmail_api.create_draft(recipients, subject, body)
-    draft_id = str(uuid.uuid4())
-    with storage.connect() as conn:
-        conn.execute("""INSERT INTO mail_style_drafts
-            (id, account_email, agent_id, group_id, gmail_draft_id, recipients_json, subject, body, example_ids_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (draft_id, account, agent_id, used[0]["group_id"], gmail["id"], json.dumps(recipients),
-             subject, body, json.dumps([item["id"] for item in used]), _now()))
-    return {"id": draft_id, "gmail_draft_id": gmail["id"], "body": body,
-            "example_ids": [item["id"] for item in used],
-            "examples": [{"id": item["id"], "subject": item["subject"],
-                          "group_name": item["group_name"],
-                          "url": f"https://mail.google.com/mail/u/0/#sent/{item['thread_id']}"} for item in used]}
+    message = agents.append_message(agent_id, "agent", "Draft ready for review.")
+    return agent_artifacts.create(agent_id, message["id"], None, "email", subject, body, recipients,
+        [{"source_id": item["id"], "title": (item["subject"] or "Sent example") + " · " + item["group_name"],
+          "target": f"https://mail.google.com/mail/u/0/#sent/{item['thread_id']}"} for item in used])
 
 
 def group_examples(group_id: str) -> list[dict[str, object]]:

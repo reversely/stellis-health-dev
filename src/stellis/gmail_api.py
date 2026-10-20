@@ -143,7 +143,8 @@ async def get_thread(threadId: str, messageFormat: str = "FULL_CONTENT") -> dict
 
 
 async def create_draft(to: list[str], subject: str, body: str, cc: list[str] | None = None,
-                       bcc: list[str] | None = None, replyToMessageId: str | None = None) -> dict:
+                       bcc: list[str] | None = None, replyToMessageId: str | None = None,
+                       message_id: str | None = None) -> dict:
     """Create a Gmail draft for the user to review; this module has no send call."""
     recipients = [*to, *(cc or []), *(bcc or [])]
     if not to or not subject.strip() or not body.strip() or any("\n" in value or "\r" in value
@@ -152,6 +153,10 @@ async def create_draft(to: list[str], subject: str, body: str, cc: list[str] | N
     message = EmailMessage()
     message["To"] = ", ".join(to)
     message["Subject"] = subject.strip()
+    if message_id:
+        if not re.fullmatch(r"stellis-[a-f0-9-]{36}@draft.stellis.local", message_id):
+            raise ValueError("Invalid draft identity")
+        message["X-Stellis-Draft-ID"] = message_id
     if cc:
         message["Cc"] = ", ".join(cc)
     if bcc:
@@ -172,3 +177,27 @@ async def create_draft(to: list[str], subject: str, body: str, cc: list[str] | N
     draft["raw"] = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     result = await _request("POST", "/drafts", payload={"message": draft})
     return {"id": str(result["id"])}
+
+
+async def find_draft(message_id: str) -> dict | None:
+    if not re.fullmatch(r"stellis-[a-f0-9-]{36}@draft.stellis.local", message_id):
+        raise ValueError("Invalid draft identity")
+    # Gmail rewrites Message-ID. Inspect our exact private header instead; an
+    # incomplete search never authorizes another create request.
+    token = None
+    found = None
+    for _ in range(10):
+        params = {"maxResults": 100}
+        if token:
+            params["pageToken"] = token
+        result = await _request("GET", "/drafts", params=params)
+        for item in result.get("drafts", []):
+            draft = await _request("GET", "/drafts/" + quote(str(item["id"]), safe=""), params={"format": "metadata"})
+            if _header(draft.get("message", {}).get("payload", {}), "X-Stellis-Draft-ID") == message_id:
+                if found:
+                    raise GmailError("Multiple matching Gmail drafts found. Review them in Gmail.")
+                found = {"id": str(item["id"])}
+        token = result.get("nextPageToken")
+        if not token:
+            return found
+    raise GmailError("Draft status check is incomplete. Review Gmail before taking another action.")
