@@ -738,6 +738,45 @@
     if(templateId){form.elements.template_id.value=templateId;form.elements.template_id.dispatchEvent(new Event('change'));}
     form.scrollIntoView({block:'nearest'});
   }
+  async function mailRulePanel(agent, book) {
+    const section=el('section','deployment-mail-rule'),heading=el('h4','','New mail');section.append(heading);
+    const path=`/agents/${agent.id}/notebooks/${book.id}/mail-rule`;
+    const rule=await request(path),form=el('form'),label=el('label','','Mail search'),input=el('input');
+    input.value=rule.query;input.maxLength=400;input.placeholder='from: or subject: or label:';input.setAttribute('aria-label','Mail search');label.append(input);
+    const enabledLabel=el('label','deployment-toggle'),enabled=el('input');enabled.type='checkbox';enabled.checked=rule.enabled;enabledLabel.append(enabled,el('span','','Prepare replies to new threads'));
+    const hint=el('p','agent-empty','Only new threads matching this search are checked. Drafts stay here until you review them. Checks run every minute while your workspace is running.');
+    const state=el('p','agent-empty',rule.active?rule.status:rule.enabled?'Paused while this agent is off':rule.status);state.setAttribute('role','status');
+    const save=el('button','agent-quiet','Save mail rule');save.type='submit';const check=el('button','agent-quiet','Check now');check.type='button';check.disabled=!rule.active;
+    const events=el('div','mail-run-events');
+    function showEvents(rows){
+      events.replaceChildren();
+      for(const event of rows){
+        const row=el('p','agent-empty'),link=el('a','','Open email');
+        link.href=`https://mail.google.com/mail/u/0/#all/${encodeURIComponent(event.thread_id)}`;
+        link.target='_blank';link.rel='noopener noreferrer';
+        const labels={draft:'Draft ready for review',skipped:'No reply prepared',working:'Reviewing thread',failed:'Could not finish',interrupted:'Stopped'};
+        row.append(el('span','',labels[event.state]||event.state),document.createTextNode(' · '),link);
+        if(event.state==='draft'){
+          const review=el('a','','Review draft');review.href=`/chat/${agent.id}`;
+          row.append(document.createTextNode(' · '),review);
+        }
+        if(['failed','interrupted'].includes(event.state))row.append(el('span','', ' · '+event.detail));
+        events.append(row);
+      }
+    }
+    showEvents(rule.events);form.append(label,enabledLabel,hint,save,check,state,events);section.append(form);
+    async function refreshMailState(){
+      if(!section.isConnected)return;
+      try{const next=await request(path);state.textContent=next.active?next.status:next.enabled?'Paused while this agent is off':next.status;showEvents(next.events);}
+      catch(error){state.textContent=error.message;}
+      if(section.isConnected)setTimeout(refreshMailState,5000);
+    }
+    setTimeout(refreshMailState,5000);
+
+    form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{const next=await request(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:input.value,enabled:enabled.checked})});state.textContent=next.status;check.disabled=!next.active;showEvents(next.events);}catch(error){state.textContent=error.message;}finally{save.disabled=false;}});
+    check.addEventListener('click',async()=>{check.disabled=true;state.textContent='Checking new threads…';try{const next=await request(path+'/check',{method:'POST'});state.textContent=next.status;showEvents(next.events);}catch(error){state.textContent=error.message;}finally{check.disabled=!enabled.checked;}});
+    return section;
+  }
   async function managementPanel(selection) {
     const panel=el('aside','deployment-detail');panel.setAttribute('aria-label','Selected agent');panel.tabIndex=-1;
     const agent=agents.find(item=>item.id===selection?.agentId),book=notebooks.find(item=>item.id===selection?.bookId);
@@ -767,6 +806,7 @@
       remove.disabled=true;try{await request(`/agents/${agent.id}/notebooks/${book.id}`,{method:'DELETE'});managementSelection={bookId:book.id};await reloadAgent(agent.id);status('Removed from '+book.name+'. Chat and memory kept.');}catch(error){remove.disabled=false;status(error.message);}
     });}
     panel.append(actions,editor);
+    if(book && agent.template_id==='writing')panel.append(await mailRulePanel(agent,book));
     const customize=el('details','deployment-customize');customize.append(el('summary','','Instructions and memory'),el('p','agent-template-text',templates.find(item=>item.id===agent.template_id)?.instructions||agent.role),await memorySection(agent));
     const instructions=identityForm(agent);instructions.querySelector('input[name=name]').closest('label').hidden=true;instructions.querySelector('input[name=role]').closest('label').hidden=true;customize.append(instructions);panel.append(customize);
     if(book){const suggestions=el('section','deployment-suggestions');suggestions.append(el('h4','','Add to '+book.name));

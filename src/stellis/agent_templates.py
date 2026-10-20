@@ -57,7 +57,7 @@ TEMPLATES = {
 }
 RUNS = {
     "steward": "When you ask about this notebook or delegate work",
-    "writing": "When you request a draft; new-mail monitoring is not enabled",
+    "writing": "When you request a draft; new threads when a notebook mail rule is enabled",
     "research": "When you ask or a notebook steward delegates research",
     "regulations": "When you ask to check a supplied specification",
     "schedule": "When you request a schedule; no automatic calendar changes",

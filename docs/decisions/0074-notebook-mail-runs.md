@@ -1,0 +1,11 @@
+# Opt-in notebook mail runs
+
+Writing deployments may have one persisted Gmail search rule per notebook. Enabling or changing a rule starts its time window at that moment. No past inbox sweep is implied. A per-account worker polls enabled rules once per minute while that account workspace process is running. Rules require the connected Gmail grant and an enabled notebook assignment. Removed or disabled assignments stop work.
+
+The provider query uses epoch seconds to avoid date/timezone ambiguity; this is supported by [Gmail filtering](https://developers.google.com/workspace/gmail/api/guides/filtering). A bounded pass reads at most 125 matching threads and reports when the search should be narrowed. The first message timestamp must fall after rule enablement. Sent/draft, bulk, social and promotional messages are excluded. The latest message is rechecked after classification so an intervening reply prevents drafting.
+
+Each agent/notebook/thread is claimed durably before inference. Completed, skipped, failed and interrupted claims are not silently reprocessed. A restart converts working claims to interrupted; users can inspect the thread and request a fresh draft explicitly. This favors avoiding duplicate output over an automatic retry after uncertain completion.
+
+Classification and drafting use the configured managed local/cloud agent route, notebook instructions and selected message evidence. Automatic requests are system messages and have mail_review traces. They do not invoke the ordinary chat path's additional mailbox search. The worker has no Gmail write or send operation; it creates the same account-local artifact used by manual drafting. Saving a Gmail draft remains a separate explicit review action. The Stellis MCP surface is read-only source search.
+
+A per-run watcher cancels work when its assignment is disabled. Rule edits cancel the current run. Managed runtime cancellation terminates the CLI turn and preserves interrupted state. Agent enablement is checked again before publishing a reply. The management panel shows saved rule state, refreshes recent results, and links to original mail or local draft review. Safe provider errors remain visible rather than being replaced with a generic connection failure.

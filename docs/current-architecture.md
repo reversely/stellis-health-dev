@@ -363,3 +363,8 @@ Settings persists managed-agent, transcript-AI, category, notebook-planning and 
 ### Notebook agent management (#438)
 
 Agent settings presents collection/notebook deployment rows and a selected-agent detail panel. `agent_notebooks.enabled` adds notebook-specific On/Off alongside identity-wide enablement; scoped runtime entry points and steward resolution enforce both. Removing a deployment preserves identity, chat and memory. The shared library rail and template/copy creation flow remain. Runs describes actual manual/delegated entry points; automatic new-mail monitoring remains open. See ADR 0070.
+
+
+### Notebook mail monitoring
+
+Writing agents can opt into a notebook-specific Gmail search rule. While the account workspace process is active, an account-local asynchronous worker polls enabled rules every minute, claims new threads durably, classifies whether a response is needed, and prepares a local reviewable artifact. Disabling a rule or notebook agent cancels active work. Automatic requests use the configured managed inference route and notebook instructions, with mail_review traces; they do not perform additional mailbox searches. No provider draft/save/send action is part of the worker. Interrupted claims remain visible and are not automatically rerun. See [ADR 0074](decisions/0074-notebook-mail-runs.md) for timing, limits and recovery.

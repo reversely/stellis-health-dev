@@ -467,8 +467,16 @@ def start_speech_worker() -> None:
         _retention_thread.start()
 
 
+@app.on_event("startup")
+async def start_mail_monitoring() -> None:
+    from stellis import mail_runs
+    await mail_runs.start()
+
+
 @app.on_event("shutdown")
 async def stop_retention_worker() -> None:
+    from stellis import mail_runs
+    await mail_runs.stop()
     _retention_stop.set()
     # Wait for an in-flight sweep so it cannot touch the data directory after shutdown returns.
     if _retention_thread is not None:
@@ -924,6 +932,42 @@ async def create_style_draft(agent_id: str, request: MailStyleDraft) -> dict[str
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (GmailError, agent_runtime.AgentRunError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class MailRuleRequest(BaseModel):
+    query: str = Field(max_length=400)
+    enabled: bool
+
+
+@api.get("/agents/{agent_id}/notebooks/{notebook_id}/mail-rule")
+def mail_rule_status(agent_id: str, notebook_id: str) -> dict:
+    from stellis import mail_runs
+    try:
+        return mail_runs.status(agent_id, notebook_id)
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.put("/agents/{agent_id}/notebooks/{notebook_id}/mail-rule")
+async def mail_rule_configure(agent_id: str, notebook_id: str, request: MailRuleRequest) -> dict:
+    from stellis import mail_runs
+    try:
+        return mail_runs.configure(agent_id, notebook_id, request.query, request.enabled)
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/agents/{agent_id}/notebooks/{notebook_id}/mail-rule/check")
+async def mail_rule_check(agent_id: str, notebook_id: str) -> dict:
+    from stellis import mail_runs
+    try:
+        return await mail_runs.check(agent_id, notebook_id)
+    except asyncio.CancelledError:
+        raise HTTPException(status_code=409, detail="Mail check stopped")
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=mail_runs.error_message(exc)) from exc
 
 
 @api.get("/calendar/connections")

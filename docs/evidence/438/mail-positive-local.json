@@ -1,0 +1,8 @@
+{
+  "source": "Explicit local verification message; not a received Gmail message",
+  "actual_local_classification": true,
+  "actual_local_draft": true,
+  "draft_words": 30,
+  "automatic_request_label": true,
+  "provider_writes": false
+}

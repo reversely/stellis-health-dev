@@ -2333,3 +2333,10 @@ body.recording-page #back-from-recording { min-height:44px; }
 
 .inference-route-editor{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}.inference-route-editor :is(input,select){min-height:44px;min-width:0;max-width:100%;flex:1;border:1px solid var(--line);border-radius:8px;background:var(--input);color:var(--ink);padding:8px 10px;font:inherit}.inference-route-editor button{min-height:44px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:var(--surface);padding:8px 16px;font:inherit;cursor:pointer}.inference-route-editor button:disabled{opacity:.5;cursor:default}
 .settings-page .back-link { display: inline-flex; align-items: center; min-height: 32px; }
+
+.deployment-mail-rule {border-top:1px solid var(--line);margin-top:1rem;padding-top:1rem;}
+.deployment-mail-rule form {display:grid;gap:.7rem;}
+.deployment-mail-rule label:not(.deployment-toggle) {display:grid;gap:.4rem;}
+.deployment-mail-rule input:not([type=checkbox]) {width:100%;min-width:0;min-height:44px;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--ink);font:inherit;}
+.deployment-mail-rule :is(button,.deployment-toggle) {min-height:44px;}
+.mail-run-events a {display:inline-flex;align-items:center;min-height:28px;}

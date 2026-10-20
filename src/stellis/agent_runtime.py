@@ -257,7 +257,7 @@ def _openclaw_reply(result: object) -> tuple[str, str | None]:
 
 
 async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False) -> dict[str, object]:
     """Save a Chat request and its managed headless reply."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
     if not configured():
@@ -277,7 +277,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                 if item["notebook_id"] is None or (item["notebook_id"] in active_books
                     and (notebook_id is None or item["notebook_id"] == notebook_id))]
     try:
-        mail_sources = await agent_mail.sources(agent, question, notebook_id, memories)
+        mail_sources = [] if automatic else await agent_mail.sources(agent, question, notebook_id, memories)
     except gmail_api.GmailError:
         mail_sources = []
     sources = []
@@ -300,7 +300,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     _RUNNING_JOBS[job_id] = asyncio.current_task()
     runtime_trace.job(job_id)
     runtime_trace.event("sources_selected", source_count=len(sources))
-    user_message = agents.append_message(agent_id, "user", question, notebook_id, job_id)
+    user_message = agents.append_message(agent_id, "system" if automatic else "user", question, notebook_id, job_id)
     process = None
     try:
         for attempt in range(2):
@@ -357,6 +357,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
         if len(answer) > 12000:
             raise AgentRunError("Agent reply was too long. Try again.")
         runtime_trace.event("sources_validated", citation_count=len(cited_indices))
+        agents.require_enabled(agent_id, notebook_id)
         agent_message = agents.append_message(agent_id, "agent", "Draft ready for review." if artifact_kind else answer, notebook_id, job_id)
         if artifact_kind:
             artifact_sources = [{"source_id": sources[index].get("source_id"), "title": sources[index]["title"],
@@ -398,7 +399,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 
 
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False) -> dict[str, object]:
     agents.require_enabled(agent_id, notebook_id)
-    with runtime_trace.span("agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
-        return await _ask(agent_id, question, notebook_id, extra_sources)
+    with runtime_trace.span("mail_review" if automatic else "agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
+        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic)

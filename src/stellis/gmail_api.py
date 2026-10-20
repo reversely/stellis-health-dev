@@ -75,7 +75,7 @@ def _message(item: dict, full: bool) -> dict:
               "sender": _header(payload, "From"),
               "toRecipients": [value.strip() for value in _header(payload, "To").split(",") if value.strip()],
               "ccRecipients": [value.strip() for value in _header(payload, "Cc").split(",") if value.strip()],
-              "date": stamp, "labelIds": list(item.get("labelIds") or []),
+              "date": stamp, "internalDate": str(item.get("internalDate", "0")), "labelIds": list(item.get("labelIds") or []),
               "snippet": str(item.get("snippet", "")),
               "bulk_mail": bool(_header(payload, "List-Unsubscribe") or _header(payload, "List-Id"))}
     if full:
