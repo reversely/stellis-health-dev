@@ -56,6 +56,7 @@
     const {api = '/api/v1', icon, kind, panel, toolbar, saveLine, editorRoot, savedMarkdown, flush, reload,
       resolveSegment = () => null, openEvidence = () => {}, setStatus = () => {}} = options;
     const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; };
+    const authorAvatar = author => root.StellisAgentAvatar.avatarElement(document, {seed: author || 'agent'});
     const iconButton = (name, label, className) => {
       const button = el('button', className); button.type = 'button'; button.setAttribute('aria-label', label); button.title = label;
       button.append(icon(name)); return button;
@@ -124,8 +125,7 @@
     function cardFor(suggestion) {
       const card = el('article', 'suggestion-card'); card.tabIndex = -1; card.dataset.suggestionId = suggestion.id;
       const who = el('div', 'suggestion-author');
-      const avatar = el('span', 'agent-avatar'); avatar.setAttribute('aria-hidden', 'true'); avatar.append(icon('sparkles'));
-      who.append(avatar, el('span', 'agent-name', agentName(suggestion.author)));
+      who.append(authorAvatar(suggestion.author), el('span', 'agent-name', agentName(suggestion.author)));
       const words = el('p', 'suggestion-words'); paintWords(suggestion, words);
       const actions = el('div', 'suggestion-actions');
       const accept = iconButton('check', 'Accept suggestion', 'suggestion-accept');

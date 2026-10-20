@@ -2111,9 +2111,14 @@ a.todo-source:hover { text-decoration: underline; text-underline-offset: 3px; }
 .suggestion-card { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); text-align: left; }
 .suggestion-card:focus-visible, .suggestion-card:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 .suggestion-author { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.agent-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-strong); }
-.agent-avatar .icon { width: 14px; height: 14px; }
+.agent-avatar { display: inline-grid; place-items: center; flex: none; width: var(--avatar-size, 24px); height: var(--avatar-size, 24px); border-radius: 50%; }
+.agent-avatar svg { width: 62%; height: 62%; }
+.agent-avatar-coordinator { background: var(--avatar-color); }
+.agent-avatar-coordinator path { fill: #FFFFFF; }
+.agent-avatar-acting { background: #FFFFFF; box-shadow: inset 0 0 0 1px var(--line); }
+.agent-avatar-acting path { fill: var(--avatar-color); }
 .agent-name { font-weight: 600; color: var(--ink); }
+.recording-chat-agent { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
 .suggestion-words { margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
 .suggestion-quote { margin: 0; padding: 0 0 0 10px; border-left: 2px solid var(--line); border-radius: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .suggestion-quote p { margin: 0 0 4px; overflow-wrap: anywhere; }

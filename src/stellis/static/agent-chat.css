@@ -9,8 +9,10 @@
 #agent-chat-status{min-height:24px;color:var(--muted);font-size:14px}
 .agent-chat-layout{display:grid;grid-template-columns:minmax(190px,250px) minmax(0,1fr);gap:30px;align-items:start;margin-top:14px}
 .agent-list{display:grid;gap:4px}
-.agent-list-item{width:100%;min-height:56px;display:grid;gap:2px;text-align:left;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);padding:10px 12px;cursor:pointer}
+.agent-list-item{width:100%;min-height:56px;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);padding:10px 12px;cursor:pointer}
 .agent-list-item small{color:var(--muted)}
+.agent-list-text{display:grid;gap:2px;min-width:0}
+.agent-message-author{display:inline-flex;align-items:center;gap:8px}
 .agent-list-item[aria-current=page]{background:var(--raised);border-color:var(--line)}
 .agent-detail{min-width:0}
 .agent-detail-head h3{font-family:Piazzolla,serif;font-size:30px;font-weight:400;margin:0 0 4px}

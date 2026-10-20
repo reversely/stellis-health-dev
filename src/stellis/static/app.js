@@ -2773,6 +2773,20 @@ function drawRecordingWaveform(current, audioContext) {
   return () => {cancelAnimationFrame(frame); source.disconnect(); audioContext.close().catch(() => {});
     context.clearRect(0, 0, canvas.width, canvas.height);};
 }
+// Agents by ID for the answerer line on recording chat cards; refreshed when a recording chat loads.
+let recordingAgents = new Map();
+async function loadRecordingAgents() {
+  try { recordingAgents = new Map((await json(await fetch(`${API}/agents`))).map(agent => [agent.id, agent])); } catch {}
+}
+function recordingAnswerer(agentId) {
+  const agent = recordingAgents.get(agentId);
+  if (!agent) return null;
+  const line = document.createElement('span'); line.className = 'recording-chat-agent';
+  const avatar = window.StellisAgentAvatar.avatarElement(document, {seed: agent.id, coordinator: window.StellisAgentAvatar.isCoordinator(agent), size: 20});
+  const name = document.createElement('strong'); name.textContent = agent.name;
+  line.append(avatar, name);
+  return line;
+}
 function renderRecordingChat(runs, container, saved = false) {
   container.replaceChildren();
   for (const run of runs) {
@@ -2796,7 +2810,8 @@ function renderRecordingChat(runs, container, saved = false) {
       answer.append(link); offset = match.index + match[0].length;
     }
     answer.append(document.createTextNode(answerText.slice(offset)));
-    card.append(heading, answer);
+    const answerer = recordingAnswerer(run.agent_id);
+    card.append(heading, ...(answerer ? [answerer] : []), answer);
     if (run.state === 'succeeded' && run.result.source_segment_ids.length) {
       if (saved) card.append(sourceButtons(run.result.source_segment_ids, run.source_starts));
       else {const times = document.createElement('small');
@@ -2823,7 +2838,7 @@ function renderRecordingChat(runs, container, saved = false) {
 }
 async function loadRecordingChat(recordingId) {
   clearTimeout(recordingChatTimer);
-  const runs = await json(await fetch(`${API}/recordings/${encodeURIComponent(recordingId)}/chat`));
+  const [runs] = await Promise.all([json(await fetch(`${API}/recordings/${encodeURIComponent(recordingId)}/chat`)), loadRecordingAgents()]);
   if (capture?.session.id !== recordingId && notesStates.recording?.id !== recordingId) return;
   renderRecordingChat(runs, document.querySelector('#recording-chat-messages'));
   if (runs.some(run => run.state === 'queued' || run.state === 'running'))
@@ -2849,7 +2864,7 @@ document.querySelector('#recording-chat-form').addEventListener('submit', event 
 document.querySelectorAll('[data-live-question]').forEach(button => button.addEventListener('click', () =>
   askRecordingChat(button.dataset.liveQuestion)));
 async function loadSavedRecordingChat(conversationId) {
-  const runs = await json(await fetch(`${API}/conversations/${encodeURIComponent(conversationId)}/recording-chat`));
+  const [runs] = await Promise.all([json(await fetch(`${API}/conversations/${encodeURIComponent(conversationId)}/recording-chat`)), loadRecordingAgents()]);
   if (conversationId !== activeConversationId) return;
   const container = document.querySelector('#saved-recording-chat'); container.replaceChildren();
   if (!runs.length) return;

@@ -20,6 +20,9 @@
     return result;
   }
   function status(message) { document.querySelector('#agent-chat-status').textContent = message; }
+  function agentAvatar(agent, size) {
+    return window.StellisAgentAvatar.avatarElement(document, {seed: agent.id, coordinator: window.StellisAgentAvatar.isCoordinator(agent), size});
+  }
   function messageBody(content) {
     const body = el('p');
     const links = /\[([^\]\n]{1,120})\]\((\/(?!\/)[^\s)]+|https:\/\/[^\s)]+)\)/g;
@@ -47,7 +50,9 @@
   function agentButton(agent) {
     const button = el('button', 'agent-list-item');
     button.type = 'button';
-    button.append(el('strong', '', agent.name), el('small', '', agent.role));
+    const text = el('span', 'agent-list-text');
+    text.append(el('strong', '', agent.name), el('small', '', agent.role));
+    button.append(agentAvatar(agent, 32), text);
     if (agent.id === selectedId) button.setAttribute('aria-current', 'page');
     button.addEventListener('click', () => select(agent.id, true).catch(error => status(error.message)));
     return button;
@@ -154,7 +159,9 @@
     if (!messages.length) section.append(el('p', 'agent-empty', 'No messages yet'));
     for (const message of messages) {
       const item = el('article', `agent-message agent-message-${message.role}`);
-      item.append(el('strong', '', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name), messageBody(message.content));
+      const author = el('strong', 'agent-message-author', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name);
+      if (message.role === 'agent') author.prepend(agentAvatar(agent, 24));
+      item.append(author, messageBody(message.content));
       if (message.notebook_id) {
         const book = notebooks.find(entry => entry.id === message.notebook_id);
         if (book) item.append(el('small', '', book.name));
