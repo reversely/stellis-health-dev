@@ -163,6 +163,24 @@
             <p id="nebius-key-status" role="status" aria-live="polite"></p>
           </form>
         </section>
+        <section class="settings-section" aria-labelledby="settings-routing-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><h3 id="settings-routing-title">Models and routing</h3></div>
+          <div id="inference-routes" class="inference-routes"></div>
+          <div class="settings-actions"><button id="inference-check" type="button">Check connections</button><p id="inference-check-status" role="status" aria-live="polite"></p></div>
+          <p id="inference-checked-at" class="settings-note"></p>
+          <div id="local-model-controls" class="settings-form" hidden>
+            <label for="local-model-select">Local model</label>
+            <select id="local-model-select" aria-describedby="local-model-hint"></select>
+            <p id="local-model-hint" class="settings-note">Changes the agent and transcript model. Only installed models with tool support can be selected.</p>
+            <div class="settings-actions"><button id="local-model-apply" type="button" disabled>Use model</button><p id="local-model-status" role="status" aria-live="polite"></p></div>
+          </div>
+        </section>
+        <section class="settings-section" aria-labelledby="settings-traces-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-notebook"/></svg><h3 id="settings-traces-title">Recent requests</h3></div>
+          <p class="settings-note">Execution steps and token counts when reported. Prompts and response text are not saved here.</p>
+          <div class="settings-actions"><button id="inference-refresh" type="button">Refresh</button><button id="inference-clear" type="button">Clear history</button><p id="inference-trace-status" role="status" aria-live="polite"></p></div>
+          <div id="inference-traces" class="inference-traces"></div>
+        </section>
         <section class="settings-section" aria-labelledby="settings-dates-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><h3 id="settings-dates-title">Date format</h3></div>
           <div class="settings-form">

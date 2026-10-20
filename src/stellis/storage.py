@@ -141,6 +141,20 @@ def connect() -> Iterator[sqlite3.Connection]:
         created_at TEXT NOT NULL
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS agent_messages_thread ON agent_messages(agent_id, created_at)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS inference_traces (
+        id TEXT PRIMARY KEY, kind TEXT NOT NULL,
+        agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL,
+        job_id TEXT, profile TEXT NOT NULL, execution TEXT NOT NULL,
+        model TEXT, provider TEXT, model_source TEXT NOT NULL DEFAULT 'configured',
+        state TEXT NOT NULL, created_at TEXT NOT NULL, finished_at TEXT,
+        duration_ms INTEGER, events_json TEXT NOT NULL DEFAULT '[]',
+        usage_json TEXT NOT NULL DEFAULT '{}'
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS inference_trace_time ON inference_traces(created_at)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS runtime_observations (
+        id INTEGER PRIMARY KEY CHECK(id = 1), signature TEXT NOT NULL,
+        checked_at TEXT NOT NULL, result_json TEXT NOT NULL
+    )""")
     conn.execute("""CREATE TABLE IF NOT EXISTS agent_jobs (
         id TEXT PRIMARY KEY, agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
         notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,

@@ -4748,6 +4748,7 @@ async function showSettings() {
   loadDateFormat();
   await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
   await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });
+  import("/static/runtime-settings.js").then(module => module.load());
   watchSamples();
   captureControls();
   if (focusKeyInput()) {

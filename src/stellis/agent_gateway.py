@@ -9,6 +9,8 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from stellis import runtime_trace
+
 
 class GatewayError(Exception):
     """A safe runtime error without credentials or remote response bodies."""
@@ -55,6 +57,14 @@ def _reply(payload: object) -> str:
     answer = "\n".join(texts).strip()
     if not answer:
         raise GatewayError("Agent reply failed. Try again.")
+    model = payload.get("model")
+    if isinstance(model, str) and model.startswith("openclaw"):
+        model = None  # A routing alias is not a concrete inference model.
+    usage = payload.get("usage")
+    if isinstance(usage, dict):
+        usage = {"input": usage.get("input_tokens"), "output": usage.get("output_tokens"),
+                 "total": usage.get("total_tokens")}
+    runtime_trace.report(model=model, usage=usage)
     return answer
 
 

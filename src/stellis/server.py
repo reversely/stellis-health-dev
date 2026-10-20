@@ -445,6 +445,8 @@ def start_speech_worker() -> None:
     images.recover_orphans()
     storage.fail_interrupted_ai_runs()
     agents.interrupt_running_jobs()
+    from stellis import runtime_trace
+    runtime_trace.interrupt_running()
     delegation.interrupt_running()
     storage.fail_interrupted_clean_runs()
     categorization.fail_interrupted()
@@ -1112,6 +1114,40 @@ def categories() -> list[dict[str, object]]:
 
 class NebiusKey(BaseModel):
     key: str = Field(min_length=1, max_length=512)
+
+
+@api.get("/settings/inference")
+def inference_settings() -> dict[str, object]:
+    from stellis import runtime_settings
+    return runtime_settings.status()
+
+
+@api.post("/settings/inference/check")
+def check_inference_settings() -> dict[str, object]:
+    from stellis import runtime_settings
+    return runtime_settings.check()
+
+
+class LocalModelSelection(BaseModel):
+    model: str = Field(min_length=1, max_length=200)
+
+
+@api.put("/settings/inference/model")
+def select_local_model(request: LocalModelSelection) -> dict[str, object]:
+    from stellis import runtime_settings
+    try:
+        return runtime_settings.switch_model(request.model)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.delete("/settings/inference/traces")
+def clear_inference_traces() -> dict[str, object]:
+    from stellis import runtime_settings, runtime_trace
+    runtime_trace.clear()
+    return runtime_settings.status()
 
 
 @api.get("/settings/runtime-profile")

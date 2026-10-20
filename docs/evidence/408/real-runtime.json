@@ -1,0 +1,127 @@
+{
+  "original_model": "nemotron-3-nano:latest",
+  "tested_model": "qwen3.5:9b",
+  "traces": [
+    {
+      "id": "cfaf6102-ea4e-420b-a27d-0d401c96bc25",
+      "kind": "answer",
+      "agent_id": null,
+      "job_id": null,
+      "profile": "local",
+      "execution": "GN100 Ollama",
+      "model": "stellis-deliberately-missing-model",
+      "provider": "Ollama",
+      "model_source": "configured",
+      "state": "failed",
+      "created_at": "2026-10-20T18:27:43.486958+00:00",
+      "finished_at": "2026-10-20T18:27:43.521042+00:00",
+      "duration_ms": 36,
+      "agent_name": null,
+      "events": [
+        {
+          "name": "request_started",
+          "at": "2026-10-20T18:27:43.490553+00:00"
+        },
+        {
+          "name": "model_requested",
+          "at": "2026-10-20T18:27:43.493821+00:00"
+        },
+        {
+          "name": "request_failed",
+          "at": "2026-10-20T18:27:43.518806+00:00",
+          "error_type": "AIError"
+        }
+      ],
+      "usage": {}
+    },
+    {
+      "id": "60974c06-ab0a-4398-b269-fd620d2f6df0",
+      "kind": "agent_chat",
+      "agent_id": "3fa984ea-ad6e-4761-be5a-f165ba996560",
+      "job_id": "afeb70a0-b1c3-4d2b-a197-55b2d36ad93a",
+      "profile": "local",
+      "execution": "GN100",
+      "model": null,
+      "provider": null,
+      "model_source": "configured",
+      "state": "interrupted",
+      "created_at": "2026-10-20T18:27:43.416437+00:00",
+      "finished_at": "2026-10-20T18:27:43.481103+00:00",
+      "duration_ms": 66,
+      "agent_name": "Trace verifier",
+      "events": [
+        {
+          "name": "request_started",
+          "at": "2026-10-20T18:27:43.420464+00:00"
+        },
+        {
+          "name": "sources_selected",
+          "at": "2026-10-20T18:27:43.460114+00:00",
+          "source_count": 1
+        },
+        {
+          "name": "model_requested",
+          "at": "2026-10-20T18:27:43.467742+00:00",
+          "attempt": 1
+        },
+        {
+          "name": "request_interrupted",
+          "at": "2026-10-20T18:27:43.477548+00:00",
+          "error_type": "CancelledError"
+        }
+      ],
+      "usage": {}
+    },
+    {
+      "id": "f6cf9af8-a6cf-4e9f-b6e6-229e18808866",
+      "kind": "agent_chat",
+      "agent_id": "3fa984ea-ad6e-4761-be5a-f165ba996560",
+      "job_id": "59f378d5-4bf2-447f-b8fc-c9089d5de1cd",
+      "profile": "local",
+      "execution": "GN100",
+      "model": "qwen3.5:9b",
+      "provider": "inference",
+      "model_source": "reported",
+      "state": "succeeded",
+      "created_at": "2026-10-20T18:27:28.448221+00:00",
+      "finished_at": "2026-10-20T18:27:43.408377+00:00",
+      "duration_ms": 14962,
+      "agent_name": "Trace verifier",
+      "events": [
+        {
+          "name": "request_started",
+          "at": "2026-10-20T18:27:28.451960+00:00"
+        },
+        {
+          "name": "sources_selected",
+          "at": "2026-10-20T18:27:28.494936+00:00",
+          "source_count": 1
+        },
+        {
+          "name": "model_requested",
+          "at": "2026-10-20T18:27:28.502240+00:00",
+          "attempt": 1
+        },
+        {
+          "name": "model_replied",
+          "at": "2026-10-20T18:27:43.389824+00:00",
+          "attempt": 1
+        },
+        {
+          "name": "sources_validated",
+          "at": "2026-10-20T18:27:43.393477+00:00",
+          "citation_count": 1
+        },
+        {
+          "name": "request_completed",
+          "at": "2026-10-20T18:27:43.404358+00:00"
+        }
+      ],
+      "usage": {
+        "input": 21642,
+        "output": 108,
+        "total": 21750
+      }
+    }
+  ]
+}

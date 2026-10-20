@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from email.utils import parseaddr
 
-from stellis import agent_gateway, runtime_profile, agent_mail, agent_runtime, agents, fixture_mailbox, gmail_api, sample_rfi91, storage, tavily
+from stellis import runtime_trace, agent_gateway, runtime_profile, agent_mail, agent_runtime, agents, fixture_mailbox, gmail_api, sample_rfi91, storage, tavily
 
 _tasks: dict[str, asyncio.Task] = {}
 
@@ -132,7 +132,7 @@ _RFI91_SAMPLE_DRAFT = ("Hello,\n\nRFI 91 remains under engineering review. The r
                        "We will update you after engineering sign-off.")
 
 
-async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
+async def _managed_turn_impl(specialist: dict, instruction: str, sources: list[dict],
                         session_id: str, require_citations: bool = True,
                         use_tavily: bool = False) -> str:
     """Call only NemoClaw's managed OpenClaw agent and validate local source markers."""
@@ -322,3 +322,16 @@ def interrupt_running() -> None:
         conn.execute("""UPDATE agent_delegations SET state = 'interrupted', stage = 'stopped',
             error = 'Job stopped when the app restarted', updated_at = ?
             WHERE state IN ('queued', 'running')""", (_now(),))
+
+
+async def _managed_turn(specialist: dict, instruction: str, sources: list[dict],
+                        session_id: str, require_citations: bool = True,
+                        use_tavily: bool = False) -> str:
+    with runtime_trace.span("specialist", agent_id=specialist["id"]):
+        runtime_trace.job(session_id)
+        runtime_trace.event("sources_selected", source_count=len(sources))
+        runtime_trace.event("model_requested")
+        answer = await _managed_turn_impl(specialist, instruction, sources, session_id,
+                                         require_citations, use_tavily)
+        runtime_trace.event("answer_validated")
+        return answer
