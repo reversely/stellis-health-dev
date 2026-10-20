@@ -58,6 +58,23 @@ def _model_dir(name: str) -> str:
     return value
 
 
+def installed() -> bool:
+    """Report asset presence, separately from a successful live recognition run."""
+    try:
+        binary = _binary()
+        if not os.access(binary, os.X_OK):
+            return False
+        for name in ("STELLIS_ONLINE_ASR_MODEL_DIR", "STELLIS_PARAKEET_MODEL_DIR"):
+            directory = Path(_model_dir(name))
+            for choices in (("tokens.txt",), ("encoder.int8.onnx", "encoder.onnx"),
+                            ("decoder.int8.onnx", "decoder.onnx"), ("joiner.int8.onnx", "joiner.onnx")):
+                if not any((directory / file).is_file() and (directory / file).stat().st_size for file in choices):
+                    return False
+        return True
+    except (OSError, RuntimeError):
+        return False
+
+
 class _Worker:
     """One ffmpeg decoder and one Rust recognizer for one recording session."""
 

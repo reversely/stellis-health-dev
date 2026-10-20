@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from stellis import agent_runtime, ai, categorization, runtime_profile, runtime_trace, storage
+from stellis import agent_runtime, ai, categorization, runtime_profile, runtime_trace, storage, recording_preview, processing
 
 _SWITCH_LOCK = threading.Lock()
 
@@ -42,6 +42,7 @@ def status():
             "category_model": categorization._model_id(), "can_switch": can_switch(),
             "tutor_vision_model": (os.environ.get("STELLIS_TUTOR_VISION_MODEL", "qwen3.5:9b")
                                    if runtime_profile.local_inference() else None),
+            "speech": {"live_installed": recording_preview.installed(), **processing.capabilities()["features"]},
             "observed": observed, "traces": runtime_trace.recent()}
 
 

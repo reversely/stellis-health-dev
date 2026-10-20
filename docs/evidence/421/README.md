@@ -1,0 +1,11 @@
+# #421: Fresh-account local speech and agent proof
+
+The new `stellis-local.service` had local NemoClaw/Ollama routing but no live speech environment paths. The existing host worker, Parakeet Unified streaming model, Parakeet TDT endpoint model, Whisper and speaker models are now explicitly configured for that service. No model was downloaded or copied; the original service and account data remain untouched. The reusable configuration command validates assets, preserves unrelated environment settings and writes atomically with mode 0600.
+
+A fresh isolated account went through welcome, uses, a real local managed-agent setup check, reviewed starter creation and Home. Both onboarding and Settings show installed live and saved speech assets independently of inference connection checks. Desktop/390px readiness screens were checked in both themes with no overflow or browser errors.
+
+The browser then recorded the public JFK fixture through actual PipeWire audio inputs and full Chromium. The installed Rust worker produced three live Parakeet segments. After the complete country phrase appeared, a real NemoClaw-managed local agent answered the question with a live-transcript citation. Verification waited for the visible Based on live transcript state, not just API success, then finalized the recording. See live-proof.json and live-transcript-and-agent.png. Provisional recognition contains wording errors; this proves the local workflow, not verbatim accuracy or cross-platform physical microphone acceptance.
+
+317 Python tests and 25 subtests passed (one skipped), including configuration preservation and failure atomicity; 158 JavaScript tests passed. Speech readiness labels mean installed files, not a model benchmark. #345 remains open for Windows/macOS runtime evidence. Review of the actual answer exposed default-blue recording citation links; that follow-up is included in #191's citation navigation/legibility work.
+
+The former #237 phone overflow is resolved: the current recording view has scrollWidth equal to 390 at 390px, and its seven-width/two-theme reports under ../419 show zero geometry findings. The home rail and conversation list no longer contribute horizontal recording layout.

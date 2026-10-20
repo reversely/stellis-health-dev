@@ -46,7 +46,11 @@ function render(data) {
       observed ? checkLabels[observed.inference.state] : data.inference_configured ? 'Configured, not checked' : 'Not configured'),
     route('Categories', data.inference_provider, data.category_model, 'Configured model'),
     route('Tutor screen reading', data.local_inference ? 'GN100 Ollama' : 'Cloud', data.tutor_vision_model,
-      data.tutor_vision_model ? 'Configured vision model' : 'Not configured'));
+      data.tutor_vision_model ? 'Configured vision model' : 'Not configured'),
+    route('Live transcription', data.agent_execution, 'Local Parakeet speech worker',
+      data.speech?.live_installed ? 'Worker and model files installed' : 'Not configured'),
+    route('Saved transcription', data.agent_execution, 'Whisper + local speaker models',
+      data.speech?.transcribe && data.speech?.diarize ? 'Model files installed' : 'Not configured'));
   $('#inference-checked-at').textContent = observed ? 'Last checked ' + time(observed.checked_at) : 'No connection check yet.';
   $('#local-model-controls').hidden = !data.can_switch;
   const select = $('#local-model-select');

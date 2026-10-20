@@ -18,6 +18,8 @@
     panel.append(node('p',state.runtime.local_inference?'Models run on GN100. No cloud inference key is needed.':'Agents run on your Nebius Cloud deployment. Add a Token Factory key for workspace AI.'));
     const detail=node('p',`Teaching model: ${state.runtime.inference_model}`,'setup-hint');panel.append(detail);
     if(state.runtime.local_inference)panel.append(node('p',`Screen reading: ${state.runtime.tutor_vision_model}`,'setup-hint'));
+    const speech=state.runtime.speech||{};
+    panel.append(node('p',`Live transcription models: ${speech.live_installed?'Installed':'Not configured'}. Saved transcription models: ${speech.transcribe&&speech.diarize?'Installed':'Not configured'}.`,'setup-hint'));
     const result=node('p',state.ready?`Live reply received from ${state.ready.model}`:'Not checked yet','setup-hint');result.role='status';panel.append(result);
     panel.append(button('Check setup',async()=>{result.textContent='Checking the model and asking your managed agent…';try{state=await api('/onboarding/check','POST');result.textContent=`Ready. Live reply received from ${state.ready.model}`;}catch(e){result.textContent=e.message;throw e;}}));
     panel.append(node('p','You can continue without AI and finish setup in Settings.','setup-hint'));return panel;

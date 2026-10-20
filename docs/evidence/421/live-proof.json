@@ -1,0 +1,11 @@
+{
+  "fresh_onboarding": true,
+  "live_setup_reply": true,
+  "actual_audio_backend": "PipeWire and Chromium",
+  "speech_worker": "Rust Parakeet",
+  "live_segments": 3,
+  "live_agent_run": "586a949f-9f1b-437f-af36-025cc302bb9d",
+  "live_citations": 1,
+  "finalized": true,
+  "page_errors": []
+}
