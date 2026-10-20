@@ -299,12 +299,12 @@ def _microsoft_event(item: dict) -> dict | None:
             "all_day": bool(item.get("isAllDay"))}
 
 
-async def events(provider: str, now: datetime | None = None) -> list[dict]:
+async def events(provider: str, now: datetime | None = None, until: datetime | None = None) -> list[dict]:
     token = await _access_token(provider)
     if not token:
         return []
     now = now or datetime.now(timezone.utc)
-    until = now + timedelta(days=14)
+    until = until or now + timedelta(days=14)
     if provider == "google":
         calendars = ["primary"]
         if demo_id := demo_calendar_id():

@@ -993,11 +993,56 @@ async def onboarding_check(request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+class OnboardingFinish(BaseModel):
+    proposal_id: str | None = Field(default=None, max_length=80)
+    group_ids: list[str] = Field(default_factory=list, max_length=8)
+
+
+class OnboardingRead(BaseModel):
+    days: Literal[7, 30, 90] = 30
+
+
+@api.get("/onboarding/sources")
+def onboarding_source_state():
+    from stellis import onboarding_sources
+    return {"scan": onboarding_sources.status()}
+
+
+@api.post("/onboarding/sources")
+async def onboarding_read_sources(request: Request, choices: OnboardingRead):
+    from stellis import onboarding_sources
+    try:
+        return onboarding_sources.start(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.days)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.put("/onboarding/sources")
+def onboarding_select_sources(request: Request, choices: OnboardingFinish):
+    from stellis import onboarding_sources
+    if not choices.proposal_id:
+        raise HTTPException(status_code=400, detail="Choose a current proposal")
+    try:
+        return onboarding_sources.select(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.proposal_id, choices.group_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.delete("/onboarding/sources")
+async def onboarding_cancel_sources(request: Request):
+    from stellis import onboarding_sources
+    try:
+        return await onboarding_sources.cancel(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @api.post("/onboarding/complete")
-def onboarding_complete(request: Request):
+def onboarding_complete(request: Request, choices: OnboardingFinish | None = None):
     from stellis import onboarding
     try:
-        return onboarding.complete(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
+        return onboarding.complete(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)),
+                                   choices.proposal_id if choices else None, choices.group_ids if choices else [])
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

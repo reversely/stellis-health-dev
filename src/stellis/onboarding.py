@@ -86,17 +86,21 @@ async def check(account_id):
     return status(account_id)
 
 
-def complete(account_id):
+def complete(account_id, proposal_id=None, group_ids=None):
     if not auth.needs_onboarding(account_id):
         return {"complete":True, "created":_read()["created"]}
     with _LOCK:
         state = _read()
         if state["step"] != "review":
             raise ValueError("Review your notebooks before finishing setup")
+        if state.get("scan",{}).get("state") in {"reading","planning"}:
+            raise ValueError("Wait for reading to finish or stop it before setup")
+        from stellis import onboarding_sources
+        imported = onboarding_sources.reviewed(proposal_id, group_ids or [])
         created = []
-        for item in USES:
-            if item["id"] not in state["uses"]:
-                continue
+        chosen = [item for item in USES if item["id"] in state["uses"]]
+        chosen += [{"id":g["id"],"notebook":g["name"],"collection":g["collection"],"agents":["steward", "writing"],"sources":g["sources"]} for g in imported]
+        for item in chosen:
             collection = next((c for c in collections.list_collections() if c["name"].casefold()==item["collection"].casefold()),None)
             if collection is None: collection = collections.create(item["collection"])
             book = next((b for b in notebooks.list_notebooks() if b["name"].casefold()==item["notebook"].casefold()),None)
@@ -106,6 +110,8 @@ def complete(account_id):
             deployed = [agents.deploy(template, book["id"]) for template in item["agents"]]
             if item["id"] == "learning" and not any(p["title"]=="Start learning Onshape" for p in pages.list_pages(book["id"])):
                 pages.create("Start learning Onshape", book["id"], ONSHAPE)
+            if item.get("sources"):
+                onboarding_sources.file_sources(book["id"],item["sources"])
             created.append({"notebook_id":book["id"], "name":book["name"], "agent_ids":[a["id"] for a in deployed]})
         default = next(item for item in agents.list_agents() if item["is_default"])
         if default["name"] == "General" and not any(a["name"]=="Chief of Staff" for a in agents.list_agents()):

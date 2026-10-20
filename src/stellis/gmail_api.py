@@ -37,6 +37,8 @@ async def _request(method: str, path: str, *, params: dict | None = None,
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.request(method, BASE + path, params=params, json=payload,
                                             headers={"Authorization": f"Bearer {token}"})
+        if response.status_code == 429:
+            raise GmailError("Gmail rate limit reached. Wait a moment and try again.")
         response.raise_for_status()
         result = response.json()
     except (httpx.HTTPError, ValueError) as exc:
@@ -74,7 +76,8 @@ def _message(item: dict, full: bool) -> dict:
               "toRecipients": [value.strip() for value in _header(payload, "To").split(",") if value.strip()],
               "ccRecipients": [value.strip() for value in _header(payload, "Cc").split(",") if value.strip()],
               "date": stamp, "labelIds": list(item.get("labelIds") or []),
-              "snippet": str(item.get("snippet", ""))}
+              "snippet": str(item.get("snippet", "")),
+              "bulk_mail": bool(_header(payload, "List-Unsubscribe") or _header(payload, "List-Id"))}
     if full:
         result.update(plaintextBody=_plain(payload) or result["snippet"], htmlBody="",
                       attachmentIds=[], attachments=[])
@@ -93,9 +96,21 @@ async def search_threads(query: str = "", pageSize: int = 20, pageToken: str = "
         params["pageToken"] = pageToken
     listed = await _request("GET", "/threads", params=params)
     identifiers = [str(item["id"]) for item in listed.get("threads", []) if item.get("id")]
-    threads = await asyncio.gather(*(get_thread(identifier, "METADATA_ONLY" if
-                               view == "THREAD_VIEW_METADATA_ONLY" else "MINIMAL")
-                               for identifier in identifiers))
+    slots = asyncio.Semaphore(4)
+    async def read(identifier):
+        async with slots:
+            result = await get_thread(identifier, "METADATA_ONLY" if view == "THREAD_VIEW_METADATA_ONLY" else "MINIMAL")
+            # Bound bursts as well as concurrency: Gmail charges quota per thread read.
+            await asyncio.sleep(.2)
+            return result
+    reads = [asyncio.create_task(read(identifier)) for identifier in identifiers]
+    try:
+        threads = await asyncio.gather(*reads)
+    except BaseException:
+        for task in reads:
+            task.cancel()
+        await asyncio.gather(*reads, return_exceptions=True)
+        raise
     result = {"threads": threads, "resultCountEstimate": str(listed.get("resultSizeEstimate", 0))}
     if listed.get("nextPageToken"):
         result["nextPageToken"] = str(listed["nextPageToken"])
