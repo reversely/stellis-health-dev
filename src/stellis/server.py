@@ -40,6 +40,16 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
+        # Refuse an oversized body before multipart parsing spools it to the volume.
+        from stellis import importer
+        length = request.headers.get("content-length", "")
+        if length.isdigit() and int(length) > importer.MAX_UPLOAD_BYTES + 1_000_000:
+            return JSONResponse({"detail": f"The upload is larger than the {importer.MAX_UPLOAD_LABEL} limit."},
+                                status_code=413)
+        # Browsers label every request's initiator; a write started by another site is refused
+        # even when the browser omits Origin. Clients without the header (scripts, tests) pass.
+        if request.headers.get("sec-fetch-site", "same-origin") not in {"same-origin", "none"}:
+            return JSONResponse({"detail": "Origin rejected"}, status_code=403)
     if (path.startswith(("/static/", "/shared/")) or path in {"/auth", "/api/health", "/api/v1/health"}
             or path.startswith("/api/v1/auth/")
             or (request.method == "GET" and path in {
@@ -61,8 +71,10 @@ async def session_gate(request: Request, call_next):
 
 @app.middleware("http")
 async def development_cache_policy(request: Request, call_next):
-    """Revalidate mutable assets so a normal reload uses the current local build."""
+    """Revalidate mutable assets so a normal reload uses the current local build, and set security headers."""
+    from stellis import security_headers
     response = await call_next(request)
+    security_headers.apply(response.headers, https=request.url.scheme == "https")
     path = request.url.path
     if path.startswith(("/static/", "/shared/")):
         response.headers["Cache-Control"] = "private, no-cache"
@@ -106,12 +118,22 @@ def auth_status(request: Request) -> dict[str, object]:
             "username": auth.current_account(request.cookies.get(auth.COOKIE_NAME)) if auth.enabled() else None}
 
 
+def _paused(wait: int, activity: str) -> HTTPException:
+    minutes = max(1, (wait + 59) // 60)
+    return HTTPException(status_code=429, headers={"Retry-After": str(wait)},
+                         detail=f"{activity} is paused for {minutes} minute{'s' if minutes != 1 else ''} after too many attempts")
+
+
 @app.post("/api/v1/auth/register")
-def auth_register(credentials: Credentials) -> JSONResponse:
+def auth_register(credentials: Credentials, request: Request) -> JSONResponse:
+    from stellis import rate_limit
     if not auth.enabled():
         raise HTTPException(status_code=404, detail="Login is disabled")
     if not auth.registration_open():
         raise HTTPException(status_code=403, detail="Sign-up is closed")
+    client = request.client.host if request.client else "unknown"
+    if wait := rate_limit.SIGNUPS_BY_CLIENT.retry_after(client):
+        raise _paused(wait, "Sign-up")
     if not auth.invite_accepted(credentials.invite_code):
         raise HTTPException(status_code=403, detail="That invite code is not valid")
     try:
@@ -120,16 +142,26 @@ def auth_register(credentials: Credentials) -> JSONResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    rate_limit.SIGNUPS_BY_CLIENT.record(client)
     return _session_response(auth.create_session(auth.account_id_for_username(username)), username)
 
 
 @app.post("/api/v1/auth/login")
-def auth_login(credentials: LoginCredentials) -> JSONResponse:
+def auth_login(credentials: LoginCredentials, request: Request) -> JSONResponse:
+    from stellis import rate_limit
     if not auth.enabled():
         raise HTTPException(status_code=404, detail="Login is disabled")
+    client = request.client.host if request.client else "unknown"
+    username = credentials.username.strip().casefold()
+    if wait := max(rate_limit.LOGIN_FAILURES_BY_USERNAME.retry_after(username),
+                   rate_limit.LOGIN_FAILURES_BY_CLIENT.retry_after(client)):
+        raise _paused(wait, "Sign-in")
     token = auth.login(credentials.username, credentials.password)
     if token is None:
+        rate_limit.LOGIN_FAILURES_BY_USERNAME.record(username)
+        rate_limit.LOGIN_FAILURES_BY_CLIENT.record(client)
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    rate_limit.LOGIN_FAILURES_BY_USERNAME.clear(username)
     return _session_response(token, credentials.username)
 
 

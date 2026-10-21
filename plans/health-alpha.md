@@ -100,4 +100,3 @@ Proposed term list for U-01:
 ## Known gaps in the scaffolding
 
 - `tests/test_worker_shutdown.py::test_stop_worker_ends_the_whole_process_group` fails in the cloud development container on unmodified stellis-dev, which suggests the container's process handling rather than the code. Run it on a Fly machine during H-01.
-- The image runs as root. Move to a non-root user with H-03.

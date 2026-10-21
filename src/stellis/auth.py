@@ -100,6 +100,9 @@ def _connect() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+_UNKNOWN_SALT = secrets.token_bytes(32)
+
+
 def _verifier(password: str, salt: bytes) -> bytes:
     return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600_000)
 
@@ -139,6 +142,8 @@ def login(username: str, password: str) -> str | None:
     with _connect() as conn:
         row = conn.execute("SELECT id, username, salt, verifier FROM account WHERE username = ?", (username,)).fetchone()
     if row is None:
+        # Spend the same hashing time so response timing does not reveal which usernames exist.
+        _verifier(password, _UNKNOWN_SALT)
         return None
     candidate = _verifier(password, row["salt"])
     if not hmac.compare_digest(row["verifier"], candidate):

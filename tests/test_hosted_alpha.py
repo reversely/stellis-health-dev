@@ -89,6 +89,19 @@ class OperatorSettingsTest(unittest.TestCase):
                     self.assertNotEqual(client.put("/api/v1/settings/tavily-key", json={"key": "tvly-new"}).status_code, 403)
 
 
+class UploadLimitTest(unittest.TestCase):
+    def test_oversized_upload_is_refused_before_the_body_is_read(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required",
+                                        "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": ""}), \
+                TestClient(app, follow_redirects=False) as client:
+            client.post("/api/v1/auth/register", json={"username": "Riley", "password": "correct horse battery staple"})
+            response = client.post("/api/v1/conversations/import", content=b"x",
+                                   headers={"Content-Length": "300000000", "Content-Type": "multipart/form-data; boundary=b"})
+            self.assertEqual(response.status_code, 413)
+            self.assertEqual(response.json()["detail"], "The upload is larger than the 250 MB limit.")
+
+
 class SharedProviderKeyTest(unittest.TestCase):
     def test_other_accounts_use_the_deployment_keys_only_when_shared(self):
         base = {"STELLIS_ACCOUNT_ID": "2", "NEBIUS_API_KEY": "nebius-shared", "TAVILY_API_KEY": "tavily-shared"}
@@ -159,6 +172,46 @@ class ProxyOptionsTest(unittest.TestCase):
             self.assertEqual(cli.proxy_options(), {"proxy_headers": True, "forwarded_allow_ips": "*"})
 
 
+class SecurityHeaderTest(unittest.TestCase):
+    def test_pages_carry_policy_headers_and_hsts_only_over_https(self):
+        import base64
+        import hashlib
+        import re
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required"}):
+            with TestClient(app, base_url="https://health.example") as client:
+                page = client.get("/auth")
+            with TestClient(app, base_url="http://127.0.0.1:8765") as client:
+                local = client.get("/api/health")
+        policy = page.headers["content-security-policy"]
+        self.assertIn("frame-ancestors 'none'", policy)
+        self.assertIn("object-src 'none'", policy)
+        self.assertNotIn("unsafe-inline", policy)
+        inline = re.search(r"<script>(.*?)</script>", (Path("src/stellis/static") / "auth.html").read_text(), re.DOTALL)
+        digest = base64.b64encode(hashlib.sha256(inline.group(1).encode()).digest()).decode()
+        self.assertIn(f"'sha256-{digest}'", policy)
+        self.assertEqual(page.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(page.headers["strict-transport-security"], "max-age=31536000")
+        self.assertNotIn("strict-transport-security", local.headers)
+        self.assertIn("content-security-policy", local.headers)
+
+
+class AccessLogTest(unittest.TestCase):
+    def test_access_lines_omit_query_strings(self):
+        import io
+        import logging.config
+        from stellis import cli
+        output = io.StringIO()
+        config = cli.log_config()
+        config["handlers"]["access"]["stream"] = output
+        logging.config.dictConfig(config)
+        logging.getLogger("uvicorn.access").info('%s - "%s %s HTTP/%s" %d', "203.0.113.5:4000", "GET",
+                                                 "/api/v1/search?q=insulin+dose", "1.1", 200)
+        self.assertIn('"GET /api/v1/search HTTP/1.1" 200', output.getvalue())
+        self.assertNotIn("insulin", output.getvalue())
+
+
 @unittest.skipIf(os.name == "nt", "Account child Unix sockets need a Windows transport")
 class TlsProxyOriginTest(unittest.TestCase):
     """Behind a TLS proxy the browser's https Origin must match, in the gateway and in account workspaces."""
@@ -214,6 +267,16 @@ class TlsProxyOriginTest(unittest.TestCase):
                                 headers={**forwarded, "Origin": "https://attacker.example",
                                          "Cookie": f"stellis_session={cookie}"})
             self.assertEqual(other.status_code, 403)
+            for site in ("cross-site", "same-site"):
+                with self.subTest(site=site):
+                    labelled = client.post("/api/v1/notebooks", json={"name": "Labelled"},
+                                           headers={**forwarded, "Sec-Fetch-Site": site,
+                                                    "Cookie": f"stellis_session={cookie}"})
+                    self.assertEqual(labelled.status_code, 403)
+            same = client.post("/api/v1/notebooks", json={"name": "Same"},
+                               headers={**forwarded, "Sec-Fetch-Site": "same-origin",
+                                        "Cookie": f"stellis_session={cookie}"})
+            self.assertEqual(same.status_code, 200, same.text)
 
 
 class RemovedSurfacesTest(unittest.TestCase):
