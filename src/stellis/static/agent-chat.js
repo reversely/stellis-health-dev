@@ -18,10 +18,7 @@
   let managementSelection = null;
   let selectedId = null;
   let runtimeConfigured = false;
-  let activeCall = null;
-  let tutorModule = null;
   let detailRevision = 0;
-  let callTimer = null;
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -296,43 +293,6 @@
     const feed = el('div', 'agent-thread-feed'); feed.setAttribute('role', 'log'); feed.setAttribute('aria-label', `Conversation with ${agent.name}`); feed.setAttribute('aria-live', 'polite');
     section.append(feed);
     await refreshThread(section, agent);
-    const callStatus = await request('/agents/voice/availability').catch(() => ({ready:false,reason:'Voice availability could not be checked.'}));
-    const callControls = el('div', 'agent-call-controls');
-    const callButton = el('button', '', activeCall?.agentId === agent.id ? 'End call' : 'Call');
-    callButton.type = 'button';
-    const stopReply = el('button', 'agent-quiet', 'Stop reply');
-    stopReply.type = 'button'; stopReply.hidden = activeCall?.agentId !== agent.id;
-    if (!callStatus.ready && activeCall?.agentId !== agent.id) {
-      callButton.disabled = true;
-      callControls.append(el('small', '', callStatus.reason));
-    }
-    callButton.addEventListener('click', async () => {
-      callButton.disabled = true;
-      try {
-        if (activeCall?.agentId === agent.id) {
-          await endCall();
-          status('Call saved in Conversations.');
-        } else {
-          await startCall(agent.id, callStatus.ice_servers);
-          status('Call connected');
-        }
-        await reloadAgent();
-      } catch (error) { status(error.message); callButton.disabled = false; }
-    });
-    stopReply.addEventListener('click', async () => {
-      if (!activeCall) return;
-      try {
-        await request(`/agents/${encodeURIComponent(agent.id)}/call/${encodeURIComponent(activeCall.id)}/stop-reply`, {method:'POST'});
-        activeCall.audio.pause();
-        const remote = activeCall.audio.srcObject;
-        activeCall.audio.srcObject = null;
-        activeCall.audio.srcObject = remote;
-        activeCall.audio.play().catch(() => {});
-        status('Reply stopped. Call continues.');
-      } catch (error) { status(error.message); }
-    });
-    callControls.prepend(callButton, stopReply);
-    section.callControls = callControls;
     const form = el('form', 'agent-ask-form agent-composer');
     const draft = readDraft(agent.id);
     const context = el('div', 'agent-composer-context');
@@ -381,159 +341,6 @@
     });
     section.append(form); return section;
   }
-  async function beginCallCapture(agentId, stream, remoteStream) {
-    const mediaType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
-      .find(candidate => MediaRecorder.isTypeSupported(candidate));
-    if (!mediaType) throw Error('Call recording is unavailable in this browser.');
-    const context = new AudioContext();
-    const output = context.createMediaStreamDestination();
-    context.createMediaStreamSource(stream).connect(output);
-    let remoteSource = null;
-    const addRemote = remote => {
-      if (remote && !remoteSource) {
-        remoteSource = context.createMediaStreamSource(remote);
-        remoteSource.connect(output);
-      }
-    };
-    addRemote(remoteStream);
-    let session;
-    try {
-      await context.resume();
-      const agent = agents.find(item => item.id === agentId);
-      session = await request('/recordings', {method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({title:`Voice call with ${agent?.name || 'agent'}`, media_type:mediaType.split(';')[0]})});
-      const recorder = new MediaRecorder(output.stream, {mimeType:mediaType});
-      const capture = {context, recorder, session, addRemote, sequence:0, pending:Promise.resolve(), failure:null};
-      capture.stopped = new Promise(resolve => recorder.addEventListener('stop', resolve, {once:true}));
-      recorder.addEventListener('dataavailable', event => {
-        if (!event.data.size) return;
-        const sequence = capture.sequence++;
-        capture.pending = capture.pending.then(async () => {
-          if (capture.failure) return;
-          await request(`/recordings/${encodeURIComponent(session.id)}/chunks/${sequence}`,
-            {method:'PUT', headers:{'Content-Type':session.media_type}, body:event.data});
-        }).catch(error => {
-          capture.failure = error;
-          if (recorder.state !== 'inactive') recorder.stop();
-        });
-      });
-      recorder.addEventListener('error', event => { capture.failure = event.error || Error('Call recording stopped.'); });
-      recorder.start(1000);
-      return capture;
-    } catch (error) {
-      await context.close();
-      if (session) await request(`/recordings/${encodeURIComponent(session.id)}`, {method:'DELETE'}).catch(() => {});
-      throw error;
-    }
-  }
-  async function finishCallCapture(capture, agentId) {
-    if (capture.recorder.state !== 'inactive') capture.recorder.stop();
-    try {
-      await capture.stopped;
-      await capture.pending;
-      if (capture.failure) throw capture.failure;
-      const saved = await request(`/recordings/${encodeURIComponent(capture.session.id)}/finalize`, {method:'POST'});
-      try {
-        await request(`/agents/${encodeURIComponent(agentId)}/call-recordings`, {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({conversation_id:saved.conversation.id}),
-        });
-      } catch (error) {
-        throw Error(`Call saved in Conversations, but its Chat link failed. ${error.message}`);
-      }
-      return saved.conversation;
-    } catch (error) {
-      if (error.message.startsWith('Call saved in Conversations')) throw error;
-      throw Error(`Call audio could not be saved. Recover it from Home. ${error.message}`);
-    } finally {
-      await capture.context.close();
-    }
-  }
-  async function startCall(agentId, iceServers) {
-    if (activeCall) await endCall();
-    status('Connecting call…');
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
-    const peer = new RTCPeerConnection({iceServers:iceServers || []});
-    peer.createDataChannel('chat');
-    const audio = new Audio(); audio.autoplay = true;
-    let capture = null;
-    let remoteStream = null;
-    peer.ontrack = event => {
-      remoteStream = event.streams[0] || new MediaStream([event.track]);
-      audio.srcObject = remoteStream;
-      capture?.addRemote(remoteStream);
-      audio.play().catch(() => status('Tap Call to hear the reply.'));
-    };
-    stream.getTracks().forEach(track => peer.addTrack(track, stream));
-    let answer = null;
-    try {
-      await peer.setLocalDescription(await peer.createOffer());
-      if (peer.iceGatheringState !== 'complete') {
-        await Promise.race([
-          new Promise(resolve => peer.addEventListener('icegatheringstatechange', () => {
-            if (peer.iceGatheringState === 'complete') resolve();
-          })),
-          new Promise(resolve => setTimeout(resolve, 5000)),
-        ]);
-      }
-      answer = await request(`/agents/${encodeURIComponent(agentId)}/call`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({sdp:peer.localDescription.sdp, type:'offer'}),
-      });
-      await peer.setRemoteDescription({sdp:answer.sdp, type:answer.type});
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => finish(Error('Call could not connect. Try again.')), 15000);
-        function finish(error) {
-          clearTimeout(timeout);
-          peer.removeEventListener('connectionstatechange', changed);
-          if (error) reject(error); else resolve();
-        }
-        function changed() {
-          if (peer.connectionState === 'connected') finish();
-          else if (['failed', 'closed'].includes(peer.connectionState))
-            finish(Error('Call could not connect. Try again.'));
-        }
-        peer.addEventListener('connectionstatechange', changed);
-        changed();
-      });
-      capture = await beginCallCapture(agentId, stream, remoteStream);
-      activeCall = {id:answer.pc_id, agentId, peer, stream, audio, capture};
-      status('Call connected');
-      clearInterval(callTimer);
-      callTimer = setInterval(() => {
-        const editor = document.querySelector('.agent-thread textarea');
-        if (selectedId === agentId && !document.querySelector('#agent-chat-view').hidden &&
-            document.activeElement !== editor && !editor?.value)
-          reloadAgent().catch(error => status(error.message));
-      }, 4000);
-      peer.addEventListener('connectionstatechange', () => {
-        if (['closed','failed'].includes(peer.connectionState) && activeCall?.peer === peer)
-          endCall().then(() => reloadAgent()).catch(error => status(error.message));
-      });
-    } catch (error) {
-      if (capture) {
-        if (capture.recorder.state !== 'inactive') capture.recorder.stop();
-        await capture.context.close();
-      }
-      if (answer?.pc_id) {
-        await request(`/agents/${encodeURIComponent(agentId)}/call/${encodeURIComponent(answer.pc_id)}`, {method:'DELETE'}).catch(() => {});
-      }
-      peer.close(); stream.getTracks().forEach(track => track.stop());
-      throw error;
-    }
-  }
-  async function endCall() {
-    const call = activeCall; if (!call) return;
-    activeCall = null; clearInterval(callTimer); callTimer = null;
-    if (call.capture.recorder.state !== 'inactive') call.capture.recorder.stop();
-    try {
-      await request(`/agents/${encodeURIComponent(call.agentId)}/call/${encodeURIComponent(call.id)}`, {method:'DELETE'}).catch(() => {});
-    } finally {
-      call.audio.pause(); call.audio.srcObject = null;
-      call.stream.getTracks().forEach(track => track.stop()); call.peer.close();
-    }
-    return finishCallCapture(call.capture, call.agentId);
-  }
   function identityForm(agent) {
     const identity = el('form', 'agent-identity-form');
     identity.append(field('Name', agent.name, 'name'), field('Role', agent.role, 'role'),
@@ -576,23 +383,16 @@
   async function renderDetail(agent) {
     const revision = ++detailRevision;
     const target = document.querySelector('#agent-detail');
-    clearTimeout(threadTimer); tutorModule?.stop();
+    clearTimeout(threadTimer);
     const head = el('div', 'agent-detail-head'); const identity=el('div','agent-workspace-identity'),text=el('div');
     text.append(el('h3', '', agent.name), el('p', '', agent.behavior?.does || agent.role));identity.append(agentAvatar(agent,44),text);head.append(identity);
     const tabs=el('div','agent-workspace-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Agent workspace');
     const thread=await threadSection(agent);
     if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
-    head.append(thread.callControls);
     const shell=el('div','agent-workspace'),center=el('div','agent-workspace-center');
     const threadPanel=el('div','agent-workspace-panel'),setupPanel=el('div','agent-workspace-panel');
     const panels={thread:threadPanel,setup:setupPanel}; let setupLoaded=false;
     threadPanel.append(thread);
-    if (agent.template_id === 'tutor') {
-      tutorModule=await import('/static/screen-tutor.js');
-      const tutor=await tutorModule.create(agent, () => refreshThread(thread,agent), messageBody);
-      if (selectedId !== agent.id || revision !== detailRevision) {tutor.stopSharing?.();return;}
-      const screen=el('details','agent-screen-tools');screen.append(el('summary','','Share a screen with your Tutor'),tutor);threadPanel.prepend(screen);
-    }
     async function activate(name) {
       workspaceTab=name;
       for (const [key,panel] of Object.entries(panels)) {panel.hidden=key!==name;tabs.querySelector(`[data-tab="${key}"]`).setAttribute('aria-selected',String(key===name));}
@@ -668,7 +468,7 @@
     return panel;
   }
   async function renderSettings(focus=false) {
-    const revision=++detailRevision;clearTimeout(threadTimer);tutorModule?.stop();
+    const revision=++detailRevision;clearTimeout(threadTimer);
     const head=el('div','agent-detail-head');head.append(el('h3','','Agents'));
     const layout=el('div','deployment-layout'),list=el('div','deployment-list');
     function group(name,books){if(!books.length)return;const section=el('section','deployment-group');section.append(el('h4','notebook-group-head',name));
@@ -690,7 +490,6 @@
   }
   async function select(id, navigate) {
     clearTimeout(threadTimer);
-    tutorModule?.stop();
     setView('thread');
     if (selectedId !== id) workspaceTab = 'thread';
     selectedId = id;
@@ -700,7 +499,6 @@
     if (agent) await renderDetail(agent);
   }
   async function show(requestedId) {
-    tutorModule?.stop();
     status('');
     const [items, books, groups, runtime, catalog] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime'), request('/agents/templates')]);
     accountScope = (await request('/auth/status')).username || 'local';
@@ -792,5 +590,5 @@
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }
   });
-  window.StellisAgentChat = {show, artifactCard, suggestionCard, messageBody, stopScreen: () => tutorModule?.stop()};
+  window.StellisAgentChat = {show, artifactCard, suggestionCard, messageBody};
 })();

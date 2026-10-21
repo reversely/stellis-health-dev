@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 let current;
 let busy = false;
 const draftRoutes = new Map();
-const kindLabels = {tutor_vision: 'Tutor screen reading', onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', agent_plan: 'Work planning', agent_review: 'Agent review',
+const kindLabels = {onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', agent_plan: 'Work planning', agent_review: 'Agent review',
   answer: 'Transcript question', summary: 'Summary', clean: 'Transcript cleanup', agent: 'To-do extraction', categorization: 'Category scoring'};
 const stateLabels = {running: 'Running', succeeded: 'Completed', failed: 'Failed', interrupted: 'Interrupted'};
 const eventLabels = {request_started: 'Request started', sources_selected: 'Sources selected',
@@ -66,7 +66,6 @@ function editableRoute(entry, data) {
   row.lastElementChild.append(form);
   if (!entry.editable) row.lastElementChild.append(element('p','The deployment owner manages this route.','settings-note'));
   else if (input.disabled) row.lastElementChild.append(element('p','Check connections to load installed models.','settings-note'));
-  if (entry.role === 'vision' && !data.local_inference) row.lastElementChild.append(element('p','Choose a vision-capable model. Screenshots are sent to Token Factory only when you ask.','settings-note'));
   return row;
 }
 function render(data) {

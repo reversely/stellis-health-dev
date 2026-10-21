@@ -2688,7 +2688,6 @@ async function showVocabulary(section = null) {
   captureControls();
 }
 async function route() {
-  window.StellisAgentChat?.stopScreen();
   const match = location.pathname.match(/^\/conversation\/([^/]+)$/);
   if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && (!match || decodeURIComponent(match[1]) !== activeConversationId)) {
     if (!window.confirm('Discard unsaved transcript changes and leave this conversation?')) {

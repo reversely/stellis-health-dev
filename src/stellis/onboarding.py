@@ -9,7 +9,7 @@ from stellis import agent_templates, agents, agent_runtime, auth, collections, n
 _LOCK = threading.Lock()
 USES = [
     {"id":"meetings", "name":"Meetings", "icon":"microphone", "collection":"Work", "notebook":"Meetings", "agents":["steward"], "description":"Keep recordings, notes and to-dos together."},
-    {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning", "agents":["steward","tutor"], "description":"Learn with a tutor that can read a screen you share."},
+    {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning", "agents":["steward","tutor"], "description":"Learn a topic one step at a time with a tutor."},
     {"id":"projects", "name":"Projects", "icon":"folder", "collection":"Work", "notebook":"Projects", "agents":["steward","writing"], "description":"Give a project its own notes, sources and agents."},
     {"id":"home", "name":"Home projects", "icon":"folder-plus", "collection":"Home", "notebook":"Home projects", "agents":["steward"], "description":"Keep plans, decisions and next steps in one place."},
     {"id":"family", "name":"Family", "icon":"calendar", "collection":"Home", "notebook":"Family", "agents":["steward","schedule"], "description":"Organize shared plans and the details you want to remember."},

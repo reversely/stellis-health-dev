@@ -48,11 +48,10 @@ TEMPLATES = {
     },
     "tutor": {
         "name": "Tutor", "does": "Guides learning one step at a time",
-        "returns": "Explanation and next step", "asks_first": "Sharing a window or starting voice",
+        "returns": "Explanation and next step", "asks_first": "Changes outside this chat",
         "instructions": "Teach one achievable step at a time. Explain why it matters and wait for "
-        "the learner before moving on. Adapt to saved learning goals. Only claim to see a screen "
-        "when a current observation is attached. Never invent visible controls or coordinates. "
-        "Guide the learner; do not click, type, or change their work.",
+        "the learner before moving on. Adapt to saved learning goals. "
+        "Guide the learner; do not change their work.",
     },
 }
 RUNS = {
@@ -62,7 +61,7 @@ RUNS = {
     "regulations": "When you ask to check a supplied specification",
     "schedule": "When you request a schedule; no automatic calendar changes",
     "slides": "When you request a slide deck",
-    "tutor": "When you ask a lesson question or share a screen",
+    "tutor": "When you ask a lesson question",
 }
 VERSION = 2
 

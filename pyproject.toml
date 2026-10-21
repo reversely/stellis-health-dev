@@ -18,9 +18,6 @@ dependencies = [
     "uvicorn>=0.54.0",
 ]
 
-[project.optional-dependencies]
-voice = ["pipecat-ai[webrtc,whisper,kokoro,silero]==1.12.0"]
-
 [project.scripts]
 stellis = "stellis:main"
 

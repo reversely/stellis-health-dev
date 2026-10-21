@@ -54,7 +54,7 @@ class TemplateTest(unittest.TestCase):
         prompt = agent_runtime._prompt(agent, [], [], "Teach me", [])
         self.assertIn("Teach one achievable step", prompt)
         self.assertIn("Start with one sketch", prompt)
-        self.assertEqual(agent["behavior"]["runs"], "When you ask a lesson question or share a screen")
+        self.assertEqual(agent["behavior"]["runs"], "When you ask a lesson question")
     def test_default_and_active_agent_deletion_guards(self):
         default = agents.list_agents()[0]
         with self.assertRaisesRegex(ValueError, "remain on"):

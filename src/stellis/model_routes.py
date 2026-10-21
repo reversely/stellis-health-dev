@@ -11,7 +11,6 @@ ROLES = {
     "transcript": ("Transcript AI", "completion"),
     "categories": ("Categories", "completion"),
     "planning": ("Notebook planning", "completion"),
-    "vision": ("Tutor screen reading", "vision"),
 }
 
 
@@ -28,6 +27,8 @@ def choices():
     data = json.loads(file.read_text())
     if not isinstance(data, dict):
         raise ValueError("Saved model routes are unreadable")
+    # Saved files can name a role that a later release removed.
+    data = {role: model for role, model in data.items() if role in ROLES}
     validate(data)
     return data
 
