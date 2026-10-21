@@ -46,9 +46,9 @@
   }
 
   let dispose = () => {};
-  async function mount(host, book, {onAdd, onNote} = {}) {
+  async function mount(host, book, {onRecord, onNote} = {}) {
     dispose(); host.replaceChildren();
-    let stopped = false, timer, sources = [], agents = [];
+    let stopped = false, timer, sources = [], agents = [], limit = 50;
     dispose = () => { stopped = true; clearTimeout(timer); };
     const wide = window.matchMedia('(min-width: 761px)');
     const layout = el('div', null, 'notebook-chat'); layout.dataset.sources = wide.matches ? 'open' : 'closed';
@@ -62,7 +62,8 @@
     const actions = el('div', null, 'nb-sources-actions');
     const add = el('button', null, 'nb-source-add'); add.type = 'button'; add.append(icon('plus'), el('span', 'Add source'));
     const note = el('button', null); note.type = 'button'; note.append(icon('note'), el('span', 'Note'));
-    add.addEventListener('click', () => onAdd?.()); note.addEventListener('click', event => onNote?.(event.currentTarget));
+    add.addEventListener('click', () => root.StellisAddSource.open({book, count: sources.length, limit, onRecord, trigger: add,
+      onChanged: () => refreshSources().catch(() => {})})); note.addEventListener('click', event => onNote?.(event.currentTarget));
     actions.append(add, note);
     const all = el('label', null, 'nb-source-all'), allBox = el('input'); allBox.type = 'checkbox'; all.append(el('span', 'Select all'), allBox);
     const list = el('ul', null, 'nb-source-list'), empty = el('p', 'Add a recording, note or document to ask about it', 'nb-empty');
@@ -170,7 +171,7 @@
     async function refreshSources() {
       const data = await api(`/notebooks/${book.id}/sources`);
       if (stopped) return;
-      sources = data.sources; paintSources();
+      sources = data.sources; limit = data.limit; paintSources();
       clearTimeout(timer);
       // Transcription finishes in the background; check again until every source has text.
       if (sources.some(item => item.status === 'processing')) timer = setTimeout(() => { if (location.pathname === '/notebook/' + book.id) refreshSources().catch(() => {}); }, 5000);

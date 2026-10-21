@@ -163,6 +163,15 @@ def list_for(notebook_id: str) -> list[dict[str, object]]:
     return [dict(row) for row in rows]
 
 
+def list_all() -> list[dict[str, object]]:
+    """Every document without page text, newest first."""
+    with storage.connect() as conn:
+        _table(conn)
+        rows = conn.execute("""SELECT id, title, media_type, page_count, status, notebook_id, created_at FROM documents
+            ORDER BY created_at DESC""").fetchall()
+    return [dict(row) for row in rows]
+
+
 def pages_for(document_ids: list[str]) -> dict[str, list[tuple[int, str]]]:
     """Page text per document, in page order, for search and chat."""
     if not document_ids:

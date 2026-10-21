@@ -93,6 +93,23 @@ class NotebookSourcesTest(unittest.TestCase):
         self.assertEqual(self.client.get("/api/v1/notebooks/missing/sources").status_code, 404)
         self.assertEqual(self.client.put("/api/v1/notebooks/missing/sources/selection", json={"excluded": []}).status_code, 404)
 
+    def test_a_full_notebook_refuses_new_sources_from_every_path(self):
+        from stellis import sample_records
+        loose = pages.create("Loose note", None, "text")["id"]
+        elsewhere = self.conversation("Elsewhere", 6, transcript=True, notebook_id=notebooks.create("Other")["id"])
+        pdf = (sample_records.FOLDER / "lung-pathology-report.pdf").read_bytes()
+        with patch.object(notebook_sources, "LIMIT", 3):
+            attempts = [self.client.post("/api/v1/pages", json={"title": "New", "notebook_id": self.book}),
+                        self.client.put(f"/api/v1/pages/{loose}/notebook", json={"notebook_id": self.book}),
+                        self.client.put(f"/api/v1/conversations/{elsewhere}/notebook", json={"notebook_id": self.book}),
+                        self.client.post("/api/v1/documents", files={"file": ("lung.pdf", pdf)}, data={"notebook_id": self.book})]
+            for response in attempts:
+                self.assertEqual((response.status_code, response.json()["detail"]), (409, "This notebook is full at 3 sources"))
+            self.assertEqual(self.client.put(f"/api/v1/pages/{self.note}/notebook", json={"notebook_id": self.book}).status_code, 200)
+            self.assertEqual(self.client.post("/api/v1/pages", json={"title": "Loose"}).status_code, 201)
+        self.assertEqual(len(notebook_sources.list_sources(self.book)), 3)
+        self.assertEqual(self.client.get("/api/v1/documents").json(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

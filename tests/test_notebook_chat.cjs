@@ -30,3 +30,19 @@ test('parseTarget reads conversation, document and note links and rejects others
   assert.equal(parseTarget('https://example.com/page/x'), null);
   assert.equal(parseTarget('/page/x/extra'), null);
 });
+
+const {uploadKind, candidates} = require('../src/stellis/static/notebook-add-source.js');
+
+test('uploadKind routes audio and documents and refuses other files', () => {
+  assert.equal(uploadKind('visit.MP3'), 'audio');
+  for (const name of ['lab.pdf', 'scan.PNG', 'photo.jpeg', 'photo.jpg']) assert.equal(uploadKind(name), 'document');
+  for (const name of ['notes.txt', 'clip.m4a', 'pdf']) assert.equal(uploadKind(name), null);
+});
+
+test('candidates leaves out this notebook, filters by title and sorts newest first', () => {
+  const items = [{title: 'Lung report', notebook_id: 'a', at: '2026-01-02'}, {title: 'Lung visit', notebook_id: null, at: '2026-03-01'},
+    {title: 'Skin note', notebook_id: 'b', at: '2026-02-01'}];
+  assert.deepEqual(candidates(items, 'a', '').map(item => item.title), ['Lung visit', 'Skin note']);
+  assert.deepEqual(candidates(items, 'a', ' lung ').map(item => item.title), ['Lung visit']);
+  assert.equal(candidates(Array.from({length: 40}, (_, i) => ({title: `n${i}`, notebook_id: null, at: String(i)})), 'a', '').length, 30);
+});

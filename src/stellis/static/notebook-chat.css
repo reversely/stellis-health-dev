@@ -95,3 +95,42 @@
   .notebook-chat[data-sources=closed] .nb-sources-toggle { justify-content: flex-start; padding: 0 8px; }
   .notebook-chat[data-sources=closed] .nb-sources-label, .notebook-chat[data-sources=closed] .nb-sources-count { display: inline; }
 }
+
+/* Add source dialog */
+.nb-add { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.nb-add[open] { display: grid; gap: 14px; align-content: start; overflow: auto; padding: 16px 20px 20px; }
+.nb-add::backdrop { background: color-mix(in oklch, var(--field) 70%, transparent); }
+.nb-add button, .nb-add input, .nb-add textarea { font: inherit; color: var(--ink); }
+.nb-add button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--surface); cursor: pointer; transition: border-color 120ms; }
+.nb-add button:disabled { cursor: default; color: var(--quiet); }
+@media (hover: hover) and (pointer: fine) { .nb-add button:not(:disabled):hover { border-color: var(--accent); } }
+.nb-add :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.nb-add-head { display: flex; align-items: center; gap: 12px; }
+.nb-add-head h2 { margin: 0; font-size: 20px; }
+.nb-add-count { margin-left: auto; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.nb-add .nb-add-close { width: 44px; padding: 0; font-size: 22px; }
+.nb-add-drop { display: grid; justify-items: center; gap: 6px; padding: 24px 16px; border: 1.5px dashed var(--line); border-radius: 12px; text-align: center;
+  cursor: pointer; transition: border-color 120ms, background-color 120ms; }
+.nb-add-drop span { color: var(--accent); }
+.nb-add-drop.is-over { border-color: var(--accent); background: var(--selected); }
+.nb-add-drop[aria-disabled=true] { cursor: default; color: var(--quiet); }
+.nb-add-progress { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.nb-add-progress:empty { display: none; }
+.nb-add-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.nb-add-paste { display: grid; gap: 10px; }
+.nb-add-paste[hidden] { display: none; }
+.nb-add-paste label { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+.nb-add-paste input, .nb-add-paste textarea, .nb-add-records input { min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--input); font-size: 16px; }
+.nb-add-paste textarea { resize: vertical; }
+.nb-add-paste button { justify-self: end; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.nb-add-records { display: grid; gap: 8px; }
+.nb-add-records h3 { margin: 4px 0 0; font-size: 15px; }
+.nb-add-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 280px; overflow: auto; }
+.nb-add-row { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 8px; border-radius: 8px; }
+.nb-add-row .icon { flex: none; color: var(--muted); }
+.nb-add-row-text { flex: 1; min-width: 0; display: grid; }
+.nb-add-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.nb-add-row small { color: var(--muted); font-size: 12px; }
