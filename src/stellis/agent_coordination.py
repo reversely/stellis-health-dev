@@ -87,7 +87,7 @@ async def plan(origin: dict, notebook_id: str, question: str, eligible: list[dic
         await agent_runtime.ensure_managed_mcp()
         runtime_trace.event('model_requested')
         try:
-            if runtime_profile.cloud():
+            if runtime_profile.remote_agents():
                 answer, _ = await agent_gateway.turn(prompt, job_id + '-plan')
             else:
                 command = agent_runtime._command()

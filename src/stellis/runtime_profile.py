@@ -1,16 +1,26 @@
-"""Explicit execution profiles; cloud never falls back to a local runtime."""
+"""Explicit execution profiles; cloud and direct never fall back to a local runtime."""
 import os
 
 
 def selected() -> str:
     value = os.environ.get("STELLIS_RUNTIME_PROFILE", "local").strip()
-    if value not in {"local", "cloud"}:
-        raise ValueError("STELLIS_RUNTIME_PROFILE must be local or cloud")
+    if value not in {"local", "cloud", "direct"}:
+        raise ValueError("STELLIS_RUNTIME_PROFILE must be local, cloud or direct")
     return value
 
 
 def cloud() -> bool:
     return selected() == "cloud"
+
+
+def direct() -> bool:
+    """Agent turns call Token Factory from this process, with no agent sandbox or tools."""
+    return selected() == "direct"
+
+
+def remote_agents() -> bool:
+    """Agent turns run over HTTPS instead of a NemoClaw subprocess on this machine."""
+    return selected() in {"cloud", "direct"}
 
 
 def local_inference() -> bool:

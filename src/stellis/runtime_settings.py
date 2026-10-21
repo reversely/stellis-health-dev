@@ -35,14 +35,14 @@ def status():
         row = conn.execute("SELECT * FROM runtime_observations WHERE id = 1").fetchone()
     observed = json.loads(row["result_json"]) if row and row["signature"] == _signature() else None
     return {"profile": runtime_profile.selected(), "local_inference": runtime_profile.local_inference(),
-            "agent_execution": "Nebius Cloud" if runtime_profile.cloud() else "GN100",
+            "agent_execution": "Token Factory" if runtime_profile.direct() else "Nebius Cloud" if runtime_profile.cloud() else "GN100",
             "agent_configured": agent_runtime.configured(),
             "inference_provider": "Ollama" if runtime_profile.local_inference() else "Token Factory",
             "inference_model": runtime_profile.model_id(), "agent_model": runtime_profile.model_id("agent"), "inference_configured": bool(ai._key()),
             "category_model": categorization._model_id(), "can_switch": can_switch(),
             "tutor_vision_model": runtime_profile.model_id("vision") or None,
             "routes": [{"role":role,"label":label,"model":runtime_profile.model_id(role),
-                        "capability":capability,"editable": role != "agent" or can_switch() or runtime_profile.cloud(),
+                        "capability":capability,"editable": role != "agent" or can_switch() or runtime_profile.remote_agents(),
                         "observed": (observed or {}).get("routes",{}).get(role)}
                        for role,(label,capability) in model_routes.ROLES.items()],
             "speech": {"live_installed": recording_preview.installed(), **processing.capabilities()["features"]},
@@ -92,7 +92,7 @@ def check():
         except (httpx.HTTPError, ValueError, KeyError, TypeError):
             result["inference"] = {"state": "unavailable"}
     if agent_runtime.configured():
-        if runtime_profile.cloud():
+        if runtime_profile.remote_agents():
             # Configuration is not proof of gateway health or the cloud's inference route.
             result["agent"] = {"state": "remote_unverified"}
         else:
@@ -143,7 +143,7 @@ def save_routes(changes):
     model_routes.validate(changes)
     if not changes:
         raise ValueError("Choose a model route to save")
-    if "agent" in changes and not (can_switch() or runtime_profile.cloud()):
+    if "agent" in changes and not (can_switch() or runtime_profile.remote_agents()):
         raise ValueError("Managed model switching is available to the deployment owner")
     if not _SWITCH_LOCK.acquire(blocking=False):
         raise ValueError("A model change is already running")

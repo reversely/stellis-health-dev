@@ -88,12 +88,12 @@ def _reconcile_managed_mcp() -> None:
 
 async def ensure_managed_mcp() -> None:
     """Keep a gateway restart from leaving a user turn without managed tools."""
-    if not runtime_profile.cloud():
+    if not runtime_profile.remote_agents():
         await asyncio.to_thread(_reconcile_managed_mcp)
 
 
 def configured() -> bool:
-    if runtime_profile.cloud():
+    if runtime_profile.remote_agents():
         return agent_gateway.configured()
     return bool(os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip())
 
@@ -330,7 +330,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     try:
         for attempt in range(2):
             runtime_trace.event("model_requested", attempt=attempt + 1)
-            if runtime_profile.cloud():
+            if runtime_profile.remote_agents():
                 try:
                     answer, session_id = await agent_gateway.turn(prompt, job_id)
                 except agent_gateway.GatewayError as exc:

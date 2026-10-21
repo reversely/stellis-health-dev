@@ -1539,7 +1539,7 @@ def runtime_profile_status() -> dict[str, object]:
     local = runtime_profile.local_inference()
     cloud = runtime_profile.cloud()
     return {"profile": runtime_profile.selected(), "local_inference": local,
-            "label": "Nebius Cloud + Token Factory" if cloud else
+            "label": "Token Factory" if runtime_profile.direct() else "Nebius Cloud + Token Factory" if cloud else
                      "GN100 + local inference" if local else "GN100 + Token Factory (existing configuration)",
             "model": runtime_profile.model_id(), "agent_configured": agent_runtime.configured()}
 

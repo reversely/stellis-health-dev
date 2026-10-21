@@ -162,7 +162,7 @@ async def _managed_turn_impl(specialist: dict, instruction: str, sources: list[d
     await agent_runtime.ensure_managed_mcp()
     process = None
     try:
-        if runtime_profile.cloud():
+        if runtime_profile.remote_agents():
             try:
                 answer, _ = await agent_gateway.turn(prompt, session_id)
             except agent_gateway.GatewayError as exc:

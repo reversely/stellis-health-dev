@@ -1,4 +1,4 @@
-"""Authenticated cloud OpenClaw transport; never starts a local runtime."""
+"""Authenticated cloud OpenClaw transport, or direct Token Factory turns; never starts a local runtime."""
 
 from __future__ import annotations
 
@@ -31,6 +31,9 @@ def _settings() -> tuple[str, str]:
 
 
 def configured() -> bool:
+    if runtime_profile.direct():
+        from stellis import ai
+        return bool(ai._key())
     try:
         _settings()
         return True
@@ -74,6 +77,8 @@ async def turn(prompt: str, session_id: str) -> tuple[str, str]:
     Closing this request cancels the gateway run, including on task cancellation.
     No retries occur here: callers own durable jobs and answer-format retries.
     """
+    if runtime_profile.direct():
+        return await _direct_turn(prompt, session_id)
     endpoint, token = _settings()
     if not session_id or len(session_id) > 200 or any(c not in
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in session_id):
@@ -101,3 +106,39 @@ async def turn(prompt: str, session_id: str) -> tuple[str, str]:
         raise GatewayError("Agent reply timed out. Try again.") from exc
     except (httpx.HTTPError, ValueError, UnicodeError) as exc:
         raise GatewayError("Cloud agent reply failed. Try again.") from exc
+
+
+async def _direct_turn(prompt: str, session_id: str) -> tuple[str, str]:
+    """Run one job as a single Token Factory chat completion, without tools or a sandbox.
+
+    The prompt already carries the agent's instructions, memories and numbered sources,
+    so the caller's citation checks and retries apply unchanged.
+    """
+    from stellis import ai
+    key = ai._key()
+    if not key:
+        raise GatewayError("Add a Nebius API key first")
+    body = {"model": runtime_profile.model_id("agent"), "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2, "max_tokens": 4096, "chat_template_kwargs": {"enable_thinking": False}}
+    try:
+        async with asyncio.timeout(150):
+            async with httpx.AsyncClient(timeout=150, follow_redirects=False, trust_env=False) as client:
+                response = await client.post(runtime_profile.inference_url() + "/chat/completions",
+                                             headers={"Authorization": "Bearer " + key}, json=body)
+        if response.status_code == 429:
+            raise GatewayError("Token Factory rate limit reached. Try again later.")
+        if response.status_code != 200:
+            raise GatewayError("Token Factory is unavailable. Try again.")
+        data = response.json()
+        runtime_trace.report(model=data.get("model"))
+        choice = data["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise GatewayError("Agent reply was too long. Try again.")
+        answer = (choice["message"]["content"] or "").strip()
+    except (TimeoutError, httpx.TimeoutException) as exc:
+        raise GatewayError("Agent reply timed out. Try again.") from exc
+    except (httpx.HTTPError, ValueError, UnicodeError, KeyError, IndexError, TypeError) as exc:
+        raise GatewayError("Agent reply failed. Try again.") from exc
+    if not answer:
+        raise GatewayError("Agent reply failed. Try again.")
+    return answer, session_id
