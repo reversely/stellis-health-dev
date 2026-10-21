@@ -214,6 +214,16 @@ class TlsProxyOriginTest(unittest.TestCase):
                                 headers={**forwarded, "Origin": "https://attacker.example",
                                          "Cookie": f"stellis_session={cookie}"})
             self.assertEqual(other.status_code, 403)
+            for site in ("cross-site", "same-site"):
+                with self.subTest(site=site):
+                    labelled = client.post("/api/v1/notebooks", json={"name": "Labelled"},
+                                           headers={**forwarded, "Sec-Fetch-Site": site,
+                                                    "Cookie": f"stellis_session={cookie}"})
+                    self.assertEqual(labelled.status_code, 403)
+            same = client.post("/api/v1/notebooks", json={"name": "Same"},
+                               headers={**forwarded, "Sec-Fetch-Site": "same-origin",
+                                        "Cookie": f"stellis_session={cookie}"})
+            self.assertEqual(same.status_code, 200, same.text)
 
 
 class RemovedSurfacesTest(unittest.TestCase):

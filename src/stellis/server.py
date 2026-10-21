@@ -40,6 +40,10 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
+        # Browsers label every request's initiator; a write started by another site is refused
+        # even when the browser omits Origin. Clients without the header (scripts, tests) pass.
+        if request.headers.get("sec-fetch-site", "same-origin") not in {"same-origin", "none"}:
+            return JSONResponse({"detail": "Origin rejected"}, status_code=403)
     if (path.startswith(("/static/", "/shared/")) or path in {"/auth", "/api/health", "/api/v1/health"}
             or path.startswith("/api/v1/auth/")
             or (request.method == "GET" and path in {
