@@ -1,0 +1,111 @@
+{
+  "patient": "Denver Lang",
+  "source": "Synthetic record of Denver Lang written for Stellis Health. Not a real person.",
+  "records": [
+    {
+      "file": "2024-03-20-referral-dietitian-physiotherapy.pdf",
+      "title": "Referrals to dietitian and physiotherapy 2024-03-20",
+      "record_date": "2024-03-20"
+    },
+    {
+      "file": "2024-04-08-dietitian-initial-assessment.pdf",
+      "title": "Dietitian initial assessment 2024-04-08",
+      "record_date": "2024-04-08"
+    },
+    {
+      "file": "2024-04-12-food-diary-photo.png",
+      "title": "Food diary 2024-04-12",
+      "record_date": "2024-04-12"
+    },
+    {
+      "file": "2024-04-15-physiotherapy-initial-assessment.pdf",
+      "title": "Physiotherapy initial assessment 2024-04-15",
+      "record_date": "2024-04-15"
+    },
+    {
+      "file": "2024-05-02-gym-readiness-questionnaire.pdf",
+      "title": "Gym readiness questionnaire 2024-05-02",
+      "record_date": "2024-05-02"
+    },
+    {
+      "file": "2024-05-06-exercise-clearance-letter.pdf",
+      "title": "Exercise clearance letter 2024-05-06",
+      "record_date": "2024-05-06"
+    },
+    {
+      "file": "2024-05-13-personal-training-program.pdf",
+      "title": "Personal training program 2024-05-13",
+      "record_date": "2024-05-13"
+    },
+    {
+      "file": "2024-06-10-dietitian-follow-up.pdf",
+      "title": "Dietitian follow-up 2024-06-10",
+      "record_date": "2024-06-10"
+    },
+    {
+      "file": "2024-06-24-physiotherapy-progress-report.pdf",
+      "title": "Physiotherapy progress report 2024-06-24",
+      "record_date": "2024-06-24"
+    },
+    {
+      "file": "2024-08-31-smart-scale-report.pdf",
+      "title": "Smart scale report April to August 2024",
+      "record_date": "2024-08-31"
+    },
+    {
+      "file": "2024-09-14-home-blood-pressure-log.pdf",
+      "title": "Home blood pressure log September 2024",
+      "record_date": "2024-09-14"
+    },
+    {
+      "file": "2024-09-16-dietitian-follow-up.pdf",
+      "title": "Dietitian follow-up 2024-09-16",
+      "record_date": "2024-09-16"
+    },
+    {
+      "file": "2024-09-19-telephone-encounter-dizziness.pdf",
+      "title": "Telephone encounter 2024-09-19",
+      "record_date": "2024-09-19"
+    },
+    {
+      "file": "2024-11-04-personal-training-progress.pdf",
+      "title": "Personal training progress report 2024-11-04",
+      "record_date": "2024-11-04"
+    },
+    {
+      "file": "2024-12-09-dental-visit.pdf",
+      "title": "Dental visit 2024-12-09",
+      "record_date": "2024-12-09"
+    },
+    {
+      "file": "2025-01-14-walk-in-clinic-wrist-sprain.pdf",
+      "title": "Walk-in clinic visit 2025-01-14",
+      "record_date": "2025-01-14"
+    },
+    {
+      "file": "2025-02-10-dietitian-follow-up.pdf",
+      "title": "Dietitian follow-up 2025-02-10",
+      "record_date": "2025-02-10"
+    },
+    {
+      "file": "2025-06-02-physiotherapy-shoulder-assessment.pdf",
+      "title": "Physiotherapy shoulder assessment 2025-06-02",
+      "record_date": "2025-06-02"
+    },
+    {
+      "file": "2025-09-08-personal-training-progress.pdf",
+      "title": "Personal training progress report 2025-09-08",
+      "record_date": "2025-09-08"
+    },
+    {
+      "file": "2025-11-17-dietitian-review.pdf",
+      "title": "Dietitian review 2025-11-17",
+      "record_date": "2025-11-17"
+    },
+    {
+      "file": "2026-03-22-questions-for-annual-exam-photo.png",
+      "title": "Questions for my annual exam 2026-03-22",
+      "record_date": "2026-03-22"
+    }
+  ]
+}

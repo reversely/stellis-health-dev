@@ -43,6 +43,23 @@ class CleanPageTextTest(unittest.TestCase):
             "Glucose was within range and the creatinine was stable.\n"
             "Plan:\nRecheck in a year.")
 
+    def test_headings_list_items_and_table_rows_keep_their_lines(self):
+        text = ("History:\n"
+                "No chest pain, palpitations, fainting, falls or vomiting.\n"
+                "Assessment:\n"
+                "Plan:\n"
+                "1. Stop hydrochlorothiazide 25 mg. Continue lisinopril.\n"
+                "2. Fluids as advised.\n"
+                "Weight (kg)           93.8          91.0\n"
+                "Waist (cm)            110           107")
+
+        self.assertEqual(
+            documents.clean_page_text(text),
+            "History:\nNo chest pain, palpitations, fainting, falls or "
+            "vomiting.\nAssessment:\nPlan:\n1. Stop hydrochlorothiazide "
+            "25 mg. Continue lisinopril.\n2. Fluids as advised.\n"
+            "Weight (kg) 93.8 91.0\nWaist (cm) 110 107")
+
     def test_empty_page(self):
         self.assertEqual(documents.clean_page_text(" \n\n"), "")
 
@@ -193,32 +210,40 @@ class SampleRecordsTest(unittest.TestCase):
         environment.start()
         self.addCleanup(environment.stop)
 
-    def test_one_patient_loads_once_in_date_order(self):
+    def test_one_patient_loads_once_and_unsorted(self):
         first = sample_records.load()
         second = sample_records.load()
 
-        filed = documents.list_all(str(first["notebook_id"]))
+        loaded = documents.list_all()
         self.assertEqual((first["added"], first["total"], second["added"]),
-                         (29, 29, 0))
-        self.assertEqual(len(filed), 29)
-        dates = [item["record_date"] for item in filed]
+                         (50, 50, 0))
+        self.assertIsNone(first["notebook_id"])
+        self.assertEqual({item["notebook_id"] for item in loaded}, {None})
+        dates = [item["record_date"] for item in loaded]
         self.assertEqual(dates, sorted(dates, reverse=True))
         self.assertEqual((dates[-1], dates[0]), ("1997-12-04", "2026-04-02"))
-        needs_text = [
-            item["title"] for item in filed if item["status"] == "needs_text"
-        ]
-        self.assertEqual(needs_text, ["Lab results 2025-03-23"])
+        needs_text = sorted(
+            item["title"] for item in loaded if item["status"] == "needs_text")
+        self.assertEqual(needs_text, [
+            "Food diary 2024-04-12", "Lab results 2025-03-23",
+            "Questions for my annual exam 2026-03-22"
+        ])
 
-    def test_manifest_lists_every_sample_file(self):
-        files = {
-            record["file"] for record in sample_records.manifest()["records"]
-        }
+    def test_loads_into_one_notebook_on_request(self):
+        result = sample_records.load("Denver")
+
+        self.assertEqual(len(documents.list_all(str(result["notebook_id"]))),
+                         50)
+
+    def test_manifests_list_every_sample_file_once(self):
+        files = [record["file"] for record in sample_records.manifest()]
         on_disk = {
             path.name
             for path in sample_records.FOLDER.iterdir()
             if path.suffix in (".pdf", ".png")
         }
-        self.assertEqual(files, on_disk)
+        self.assertEqual(len(files), len(set(files)))
+        self.assertEqual(set(files), on_disk)
         self.assertIn(LAB_PHOTO, files)
 
 

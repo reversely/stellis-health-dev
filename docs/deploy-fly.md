@@ -72,10 +72,10 @@ Access logs list request paths. They must never contain health content; ticket H
 
 ## Sample records
 
-The image includes 29 records of one synthetic patient, Denver Lang, from Synthea's sample data: visit notes and yearly lab results from 1997 to 2026, rendered as 28 PDFs and one PNG photo of a lab printout. They load only on request, into a notebook named "Sample records", and each record keeps the date it describes. Account 1 keeps its data in `/data`, and account N keeps its data in `/data/accounts/N`. Run the loader as the app user so that the new files keep the right owner:
+The image includes 50 records of one synthetic patient, Denver Lang, from 1997 to 2026. 29 come from his Synthea bundle: visit notes and yearly lab results. 21 come from outside the hospital: a dietitian, a physiotherapist, a personal trainer, scale and blood pressure exports, and his own notes. Three are photos without a text layer. They load only on request and, by default, into no notebook, the way a person would drop all their files in one place before sorting them. Each record keeps the date it describes. Account 1 keeps its data in `/data`, and account N keeps its data in `/data/accounts/N`. Run the loader as the app user so that the new files keep the right owner:
 
 ```sh
 fly ssh console -a stellis-health -C "setpriv --reuid=stellis --regid=stellis --init-groups python -m stellis.sample_records --data-dir /data"
 ```
 
-A second run adds nothing, because the loader skips files the account already has. `scripts/make_sample_records.py` rebuilds the files from the patient's FHIR bundle.
+Add `--notebook NAME` to file every record in one notebook instead. A second run adds nothing, because the loader skips files the account already has. `scripts/make_sample_records.py` rebuilds the clinical records from the FHIR bundle, and `scripts/make_narrative_records.py` rebuilds the outside records from `scripts/sample_patients/denver-outside.txt`.

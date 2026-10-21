@@ -22,6 +22,8 @@ Native tools, installed by uv as Python packages
 
 Libraries
 - sherpa-onnx (Apache License 2.0).
+- PyMuPDF and MuPDF, which read PDF text (GNU Affero General Public License
+  version 3, or a commercial licence from Artifex).
 - Python and JavaScript dependencies listed in pyproject.toml, uv.lock,
   package.json, and package-lock.json, under their own licences.
 - Inter and Piazzolla fonts (SIL Open Font License 1.1), bundled with their
@@ -31,7 +33,10 @@ Test fixture
 - tests/fixtures/jfk.wav is the speech sample distributed with whisper.cpp (MIT).
 
 Sample records
-- src/stellis/sample_records holds 29 documents rendered from one synthetic
-  patient, Denver Lang, in Synthea's published sample data (FHIR R4). Synthea
-  (Apache License 2.0) generates synthetic people; no record describes a real
-  person. https://github.com/synthetichealth/synthea-sample-data
+- src/stellis/sample_records holds 50 records of one synthetic patient,
+  Denver Lang. 29 clinical records are rendered from his bundle in Synthea's
+  published sample data (FHIR R4); Synthea (Apache License 2.0) generates
+  synthetic people. https://github.com/synthetichealth/synthea-sample-data
+  21 records from outside the hospital (dietitian, physiotherapy, personal
+  training, device exports and his own notes) were written for Stellis
+  Health to match that bundle. No record describes a real person.

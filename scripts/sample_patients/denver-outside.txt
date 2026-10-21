@@ -1,0 +1,737 @@
+# Records from outside the hospital for Denver Lang, the synthetic Synthea
+# patient in src/stellis/sample_records (born 1947-08-14, Malden, MA).
+#
+# His Synthea record covers clinic and hospital care: type 2 diabetes and
+# hypertension since 1987, ischemic heart disease with bypass surgery in 1997,
+# knee osteoarthritis since 1992, a clavicle fracture in 2019 and an ankle
+# sprain in 2021. These documents add the rest of his health life from 2024 to
+# 2026: a weight loss effort with a dietitian, physiotherapy for knee and
+# shoulder pain, a personal trainer, device exports and his own notes. They
+# match his Synthea medications (metformin, lisinopril, hydrochlorothiazide,
+# simvastatin) and his low-normal blood pressure.
+#
+# Clinical notes follow MIMIC-IV-Note conventions: clinician names and
+# identifiers appear as "___". Every person, business and value is invented.
+#
+# Each document starts with a "=== file:" line, then "title:", "date:" and
+# "format:" lines (pdf or photo), then a "---" line and the text.
+
+=== file: 2024-03-20-referral-dietitian-physiotherapy.pdf
+title: Referrals to dietitian and physiotherapy 2024-03-20
+date: 2024-03-20
+format: pdf
+---
+                     ___ PRIMARY CARE ASSOCIATES
+                          REFERRAL LETTER
+
+Date:  2024-03-20
+From:  ___, MD, Primary Care
+Re:    Denver Lang, DOB 1947-08-14, Unit No ___
+
+To:    Malden Community Nutrition (Registered Dietitian)
+       Fellsway Physiotherapy
+
+Reason for Referral:
+Supported weight loss and treatment of knee pain limiting walking.
+
+Dear colleagues,
+
+Mr. Lang is a 76 year old man seen for his annual exam on
+2024-03-14. He would like to lose weight and walk more. He
+reports gaining about 8 kg since retiring and that bilateral knee
+pain, right worse than left, now stops him walking more than 15
+minutes.
+
+Problems:
+- Type 2 diabetes mellitus since 1987, with peripheral neuropathy
+  and nonproliferative retinopathy. HbA1c 5.4% on 2024-03-14.
+- Essential hypertension. BP 88/64 at the 2024-03-14 visit.
+- Ischemic heart disease, coronary artery bypass grafting 1997.
+  No angina.
+- Hyperlipidemia.
+- Osteoarthritis of the knees since 1992.
+
+Medications:
+- Metformin ER 500 mg daily
+- Lisinopril 10 mg daily
+- Hydrochlorothiazide 25 mg daily
+- Simvastatin 10 mg at night
+
+Allergies: no known allergies.
+
+Requests:
+Dietitian: weight loss plan suited to diabetes, target 0.5 kg per
+week. Physiotherapy: assessment and exercise program for knee
+osteoarthritis, with attention to balance given his neuropathy.
+He may also join a gym; I will provide exercise clearance on
+request.
+
+Sincerely,
+___, MD
+
+=== file: 2024-04-08-dietitian-initial-assessment.pdf
+title: Dietitian initial assessment 2024-04-08
+date: 2024-04-08
+format: pdf
+---
+                    MALDEN COMMUNITY NUTRITION
+              MEDICAL NUTRITION THERAPY - INITIAL VISIT
+
+Client:  Denver Lang                DOB:  1947-08-14
+Date:  2024-04-08                   Referring:  ___, MD
+Dietitian:  ___, RD, LDN            Visit length: 60 min
+
+ASSESSMENT
+Anthropometrics:
+  Height 176.8 cm   Weight 95.0 kg   BMI 30.4 kg/m2
+  Waist circumference 112 cm
+  Usual weight 87 kg in 2019; gain of 8 kg over 4 years.
+Biochemical (2024-03-14, from referral):
+  HbA1c 5.4%. LDL 130 mg/dL.
+Clinical:
+  Type 2 diabetes on metformin, hypertension, CABG 1997,
+  knee osteoarthritis. No hypoglycemia reported.
+Diet history (24-hour recall and usual intake):
+  Breakfast: white toast x2 with butter, coffee with 2 sugars.
+  Lunch: deli sandwich, chips, regular soda.
+  Afternoon: cookies or muffin.
+  Dinner: large portions of pasta or meat with potatoes; vegetables
+  2 to 3 times a week. Beer 1 to 2 most evenings.
+  Estimated intake 2,600 kcal/day; estimated need 2,000 kcal/day
+  for 0.5 kg/week loss.
+Activity: walks 10 to 15 minutes, limited by knee pain.
+
+DIAGNOSIS
+Excessive energy intake related to large portions and sugar-
+sweetened drinks as evidenced by 8 kg gain and estimated intake
+600 kcal above need.
+
+INTERVENTION
+1. Plate method: half vegetables, quarter lean protein, quarter
+   whole grains.
+2. Replace regular soda with sparkling water; coffee with 1 sugar
+   then none.
+3. Limit beer to 3 evenings a week.
+4. Keep a 3-day food diary before the next visit.
+5. Consistent carbohydrate at meals to match metformin.
+
+MONITORING AND EVALUATION
+Weight monthly; food diary review. Goal 0.5 kg per week, first
+target 90 kg by September 2024. Follow-up in 8 weeks.
+
+___, RD, LDN
+
+=== file: 2024-04-12-food-diary-photo.png
+title: Food diary 2024-04-12
+date: 2024-04-12
+format: photo
+---
+FOOD DIARY - Denver Lang - week of April 8
+Thu Apr 11
+  7:30  oatmeal with banana, coffee 1 sugar
+  12:30 turkey sandwich wheat bread, apple, sparkling water
+  3:30  handful of almonds
+  6:30  chicken, rice (1 cup), green beans, 1 beer
+Fri Apr 12
+  7:30  2 eggs, 1 toast, coffee 1 sugar
+  12:00 leftover chicken + rice, salad
+  4:00  cookie (only one!)
+  7:00  pizza night - 3 slices, 2 beers
+Sat Apr 13
+  8:00  oatmeal, berries, coffee no sugar (tried it)
+  1:00  tuna salad, crackers
+  6:30  salmon, potato, broccoli, 1 beer
+Notes: knee sore after walk to the store Saturday.
+
+=== file: 2024-04-15-physiotherapy-initial-assessment.pdf
+title: Physiotherapy initial assessment 2024-04-15
+date: 2024-04-15
+format: pdf
+---
+                       FELLSWAY PHYSIOTHERAPY
+                  INITIAL ASSESSMENT - LOWER LIMB
+
+Patient:  Denver Lang               DOB:  1947-08-14
+Date:  2024-04-15                   Referring:  ___, MD
+Physiotherapist:  ___, PT, DPT
+
+Diagnosis:  Bilateral knee osteoarthritis (M17.0), right > left
+
+SUBJECTIVE
+Knee pain for years, worse over the past 2 years. Right knee 6/10
+on stairs and after 15 minutes of walking, left 3/10. Morning
+stiffness 15 minutes. No locking or giving way. Numbness in both
+feet from diabetic neuropathy; unsteady on uneven ground. One
+fall in 2019 (clavicle fracture) and an ankle sprain in 2021.
+Goal: walk 45 minutes with grandchildren and lose weight.
+
+OBJECTIVE
+Gait: antalgic on right, reduced knee flexion in swing.
+ROM: right knee 0-115 degrees, left 0-125 degrees.
+Strength: quadriceps 4-/5 right, 4/5 left; hip abductors 4-/5
+both.
+Effusion: trace right.
+Outcome measures:
+  KOOS pain                    52/100
+  30-second chair stand         8 repetitions (below norm for age)
+  Timed Up and Go               12.8 seconds
+  Single-leg stance             right 3 s, left 5 s
+Monofilament: reduced sensation both feet.
+
+ASSESSMENT
+Knee osteoarthritis with quadriceps and hip weakness and reduced
+balance, increasing fall risk given neuropathy. Good candidate for
+progressive strengthening and a graded walking program.
+
+PLAN
+8 sessions over 10 weeks: quadriceps and hip strengthening, balance
+training, walking program starting at 10 minutes twice daily.
+Home exercise program issued. Supportive shoes advised. Cleared
+for supervised gym training with a trainer focused on low-impact
+strength work.
+
+___, PT, DPT
+
+=== file: 2024-05-02-gym-readiness-questionnaire.pdf
+title: Gym readiness questionnaire 2024-05-02
+date: 2024-05-02
+format: pdf
+---
+                      NORTHSIDE FITNESS STUDIO
+          PHYSICAL ACTIVITY READINESS QUESTIONNAIRE (PAR-Q+)
+
+Member:  Denver Lang                Age:  76
+Date:  2024-05-02                   Trainer:  ___ (CPT)
+
+General Health Questions                                  Answer
+1. Has your doctor ever said you have a heart condition
+   or high blood pressure?                                YES
+2. Do you feel pain in your chest at rest, during daily
+   activities, or when you do physical activity?          NO
+3. Do you lose balance because of dizziness or have you
+   lost consciousness in the last 12 months?              NO
+4. Have you been diagnosed with another chronic medical
+   condition?                                              YES
+   (type 2 diabetes, knee osteoarthritis)
+5. Are you taking prescribed medications for a chronic
+   condition?                                              YES
+6. Do you have a bone, joint or soft tissue problem that
+   could be made worse by becoming more active?           YES (knees)
+7. Has your doctor said you should only do medically
+   supervised physical activity?                          NO
+
+Result:
+YES answers to questions 1, 4, 5 and 6. Follow-up questions show
+heart disease (bypass surgery 1997) and diabetes with nerve
+damage in the feet. Member must obtain medical clearance before
+starting a training program.
+
+Action:
+Clearance form sent to Mr. Lang's physician on 2024-05-02.
+Starting date pending clearance.
+
+Member signature: Denver Lang
+Trainer signature: ___
+
+=== file: 2024-05-06-exercise-clearance-letter.pdf
+title: Exercise clearance letter 2024-05-06
+date: 2024-05-06
+format: pdf
+---
+                     ___ PRIMARY CARE ASSOCIATES
+                    MEDICAL CLEARANCE FOR EXERCISE
+
+Date:  2024-05-06
+To:    Northside Fitness Studio
+Re:    Denver Lang, DOB 1947-08-14
+
+Mr. Lang is cleared for moderate-intensity supervised exercise.
+
+Relevant history:
+Coronary artery bypass grafting in 1997, no angina since. Type 2
+diabetes with peripheral neuropathy. Knee osteoarthritis under
+physiotherapy care. Blood pressure runs low-normal (88 to 95
+systolic) on his current medicines.
+
+Recommendations:
+1. Moderate intensity: able to talk in full sentences; rate of
+   perceived exertion 11 to 13 of 20. Heart rate response may be
+   blunted, so use perceived exertion rather than heart rate.
+2. Warm up and cool down for 10 minutes. Avoid breath holding
+   during lifts.
+3. Inspect feet after sessions; wear proper shoes and socks.
+4. Stand up slowly after floor exercises; stop for dizziness.
+5. Stop and seek care for chest pain, unusual shortness of breath,
+   or fainting.
+6. Low-impact work only for the knees, following the
+   physiotherapy plan.
+
+___, MD
+
+=== file: 2024-05-13-personal-training-program.pdf
+title: Personal training program 2024-05-13
+date: 2024-05-13
+format: pdf
+---
+                      NORTHSIDE FITNESS STUDIO
+                  12-WEEK PROGRAM - DENVER LANG
+
+Start:  2024-05-13                  Trainer:  ___ (CPT)
+Sessions:  2 per week, 45 minutes, plus home walking
+
+Baseline (2024-05-13):
+  Weight 93.8 kg     Waist 110 cm
+  6-minute walk      380 m
+  30-s chair stand   9 reps
+  Grip strength      R 31 kg / L 29 kg
+  RPE target         11-13 (clearance letter 2024-05-06)
+
+Weeks 1-4  (foundation)
+  Warm-up: recumbent bike 8 min, easy
+  Sit-to-stand from bench       2 x 10
+  Wall push-up                  2 x 10
+  Band row                      2 x 12
+  Step-up, 10 cm step, with rail 2 x 8 each leg
+  Side-lying hip abduction      2 x 12
+  Supported single-leg stance   3 x 20 s each
+  Walk: 15 min daily, flat route
+
+Weeks 5-8  (build)
+  Bike 10 min; sit-to-stand 3 x 10 holding 4 kg; incline push-up
+  3 x 10; band row 3 x 12; step-up 15 cm 3 x 8; tandem stance 3 x
+  20 s; walk 25 min daily.
+
+Weeks 9-12 (progress)
+  Bike 12 min with 2 x 1-min brisk intervals; goblet squat to box
+  3 x 10 with 6 kg; cable row 3 x 12; step-up 20 cm 3 x 8; walk
+  35 min daily, include one hilly route.
+
+Rules from clearance letter: no breath holding, stand slowly after
+floor work, check feet after each session.
+
+=== file: 2024-06-10-dietitian-follow-up.pdf
+title: Dietitian follow-up 2024-06-10
+date: 2024-06-10
+format: pdf
+---
+                    MALDEN COMMUNITY NUTRITION
+               MEDICAL NUTRITION THERAPY - FOLLOW-UP
+
+Client:  Denver Lang                Date:  2024-06-10
+Dietitian:  ___, RD, LDN            Visit length: 30 min
+
+ASSESSMENT
+Weight 92.6 kg (-2.4 kg in 9 weeks). Waist 109 cm.
+Food diary reviewed: soda stopped; coffee without sugar; beer 3
+evenings a week. Pizza night weekly. Vegetables now at dinner 5
+days a week. Snacks: almonds or fruit.
+Activity: trainer twice a week since 2024-05-13; walking 20
+minutes daily.
+
+DIAGNOSIS
+Excessive energy intake, improving.
+
+INTERVENTION
+1. Pizza night: 2 slices with a side salad.
+2. Protein at breakfast (eggs or Greek yogurt) to reduce afternoon
+   cravings.
+3. Hydration: 6 to 8 glasses of water a day, more on training
+   days.
+
+MONITORING AND EVALUATION
+On track at 0.3 kg per week. Next visit in 3 months.
+
+___, RD, LDN
+
+=== file: 2024-06-24-physiotherapy-progress-report.pdf
+title: Physiotherapy progress report 2024-06-24
+date: 2024-06-24
+format: pdf
+---
+                       FELLSWAY PHYSIOTHERAPY
+                 PROGRESS REPORT AND DISCHARGE
+
+Patient:  Denver Lang               Date:  2024-06-24
+Physiotherapist:  ___, PT, DPT      Visits: 8 of 8
+
+Outcome measures (initial 2024-04-15 -> today)
+  Right knee pain on stairs     6/10 -> 3/10
+  KOOS pain                     52 -> 71
+  30-second chair stand         8 -> 12 repetitions
+  Timed Up and Go               12.8 -> 10.1 seconds
+  Single-leg stance right       3 s -> 9 s
+  Right knee flexion            115 -> 122 degrees
+
+Assessment:
+Good response to strengthening and balance training. Walking 30
+minutes on flat ground with mild discomfort only.
+
+Plan:
+Discharged to home exercise program and continued training at
+Northside Fitness. Return if pain rises above 5/10 for more than
+2 weeks.
+
+___, PT, DPT
+
+=== file: 2024-08-31-smart-scale-report.pdf
+title: Smart scale report April to August 2024
+date: 2024-08-31
+format: pdf
+---
+                    BODYTRACK SCALE - SUMMARY REPORT
+              Exported 2024-08-31 for Denver Lang (male, 77)
+
+Period:  2024-04-01 to 2024-08-31
+Goal weight:  86.0 kg
+
+Week starting    Avg weight (kg)   Body fat (%)   Avg steps/day
+2024-04-01           95.2              33.1            2,940
+2024-04-29           94.4              32.8            3,610
+2024-05-27           93.1              32.4            4,980
+2024-06-24           92.3              32.0            5,620
+2024-07-22           91.4              31.6            6,150
+2024-08-26           90.6              31.2            6,480
+
+Change over period:  -4.6 kg   (-0.21 kg per week)
+Lowest reading:  90.2 kg on 2024-08-29
+
+Body fat is estimated by bioimpedance and is approximate.
+
+=== file: 2024-09-14-home-blood-pressure-log.pdf
+title: Home blood pressure log September 2024
+date: 2024-09-14
+format: pdf
+---
+                     CUFFLINK BP MONITOR - READINGS
+              Exported 2024-09-14 for Denver Lang
+
+Date         Time    Position    Systolic   Diastolic   Pulse
+2024-09-01   07:40   sitting        102          64        68
+2024-09-03   07:35   sitting         98          62        70
+2024-09-05   07:50   standing        86          58        82   dizzy
+2024-09-07   07:45   sitting         96          60        69
+2024-09-09   18:10   after walk      90          58        78   lightheaded
+2024-09-11   07:40   sitting         94          61        66
+2024-09-13   07:42   standing        84          56        84   dizzy
+
+Averages (sitting):  97/62 mmHg, pulse 68
+Note entered by user: "Lightheaded when I stand up fast, mostly
+mornings and after long walks. No chest pain."
+
+=== file: 2024-09-16-dietitian-follow-up.pdf
+title: Dietitian follow-up 2024-09-16
+date: 2024-09-16
+format: pdf
+---
+                    MALDEN COMMUNITY NUTRITION
+               MEDICAL NUTRITION THERAPY - FOLLOW-UP
+
+Client:  Denver Lang                Date:  2024-09-16
+Dietitian:  ___, RD, LDN            Visit length: 30 min
+
+ASSESSMENT
+Weight 89.9 kg (-5.1 kg since 2024-04-08). Waist 106 cm.
+Intake about 2,000 kcal/day. Beer 2 evenings a week.
+Reports episodes of lightheadedness on standing over 2 weeks,
+recorded on his home monitor (lowest 84/56 standing). Fluid
+intake about 4 glasses a day in recent hot weather. No sweating,
+shaking or confusion to suggest low blood sugar; he does not take
+insulin or sulfonylureas.
+
+DIAGNOSIS
+Inadequate fluid intake related to hot weather and longer walks
+as evidenced by intake about 4 glasses a day and dizziness on
+standing.
+
+INTERVENTION
+1. Fluids 8 glasses a day; extra 500 mL on training days.
+2. Do not skip meals before training.
+3. Advised to contact his physician this week about the low
+   standing blood pressure readings, since he takes two blood
+   pressure medicines and has lost weight. Letter sent to
+   ___, MD.
+
+MONITORING AND EVALUATION
+Weight goal 86 kg. Next visit in 4 months.
+
+___, RD, LDN
+
+=== file: 2024-09-19-telephone-encounter-dizziness.pdf
+title: Telephone encounter 2024-09-19
+date: 2024-09-19
+format: pdf
+---
+                     ___ PRIMARY CARE ASSOCIATES
+                       TELEPHONE ENCOUNTER
+
+Name:  ___                          Unit No:   ___
+Date:  2024-09-19
+Caller:  Patient            Clinician:  ___, MD
+
+Reason for Call:
+Lightheadedness on standing for 2 weeks; dietitian letter and home
+BP log received.
+
+History:
+77 year old man with type 2 diabetes, hypertension, CABG 1997, on
+lisinopril 10 mg and hydrochlorothiazide 25 mg. Lost 5 kg since
+April with diet and exercise. Home standing readings 84/56 and
+86/58 with dizziness; sitting average 97/62. No chest pain,
+palpitations, fainting, falls, black stools or vomiting.
+
+Assessment:
+Orthostatic lightheadedness, likely from blood pressure treatment
+that is now more than he needs after weight loss, with lower fluid
+intake. Low blood sugar unlikely on metformin alone.
+
+Plan:
+1. Stop hydrochlorothiazide 25 mg. Continue lisinopril 10 mg.
+2. Fluids as advised by dietitian.
+3. Rise slowly; sit on the bed edge for 1 minute in the morning.
+4. Recheck home BP twice daily for 2 weeks and send readings.
+5. Basic metabolic panel next week given diuretic change.
+6. Seek urgent care for fainting, a fall or chest pain.
+
+Patient agreed with plan.
+
+___, MD
+
+=== file: 2024-11-04-personal-training-progress.pdf
+title: Personal training progress report 2024-11-04
+date: 2024-11-04
+format: pdf
+---
+                      NORTHSIDE FITNESS STUDIO
+                 PROGRESS REPORT - DENVER LANG
+
+Date:  2024-11-04                   Trainer:  ___ (CPT)
+Program week:  25 (twice weekly since 2024-05-13)
+
+                    Baseline      Week 12       Today
+                   2024-05-13    2024-08-05   2024-11-04
+Weight (kg)           93.8          91.0          88.9
+Waist (cm)            110           107           104
+6-minute walk (m)     380           445           490
+30-s chair stand       9            12            14
+Grip R/L (kg)        31/29         33/30         34/31
+
+Notes:
+Dizziness has stopped since his doctor stopped one blood pressure
+pill in September. Now walking 40 minutes daily, including a
+hilly route twice a week. Good form on goblet squat with 10 kg.
+Feet checked after sessions; no blisters.
+
+Next block: add farmer carries for grip and balance; introduce
+seated cable press. Reassess in February.
+
+___ (CPT)
+
+=== file: 2024-12-09-dental-visit.pdf
+title: Dental visit 2024-12-09
+date: 2024-12-09
+format: pdf
+---
+                       MALDEN FAMILY DENTISTRY
+                       CLINICAL CHART NOTE
+
+Patient:  Denver Lang               Chart No:  ___
+Date:  2024-12-09
+Provider:  ___, DMD     Hygienist:  ___, RDH
+
+Procedures:
+D0120 Periodic oral evaluation
+D4910 Periodontal maintenance
+
+Medical History Update:
+Type 2 diabetes (HbA1c 5.4%), CABG 1997, hydrochlorothiazide
+stopped 2024-09. No anticoagulants.
+
+Findings:
+Generalized gingival inflammation reduced since 2022 gingivitis
+treatment. Probing depths 2 to 4 mm, 4 mm sites at #3 and #14
+distal. Bleeding on probing at 6 sites. No caries. Mild dry mouth.
+
+Plan:
+1. Periodontal maintenance every 4 months, given diabetes.
+2. Electric toothbrush and interdental brushes.
+3. Sugar-free gum or lozenges for dry mouth.
+
+___, DMD
+
+=== file: 2025-01-14-walk-in-clinic-wrist-sprain.pdf
+title: Walk-in clinic visit 2025-01-14
+date: 2025-01-14
+format: pdf
+---
+                     ___ WALK-IN CLINIC
+                       PROVIDER NOTE
+
+Name:  ___                          Unit No:   ___
+Date of Service:  2025-01-14        Provider:  ___, PA-C
+
+Chief Complaint:
+Left wrist pain after slipping on ice this morning.
+
+History of Present Illness:
+77 year old man slipped on an icy driveway and landed on an
+outstretched left hand. No head strike, no loss of consciousness,
+no dizziness before the fall. Pain 5/10 on the back of the wrist.
+
+Physical Exam:
+Mild swelling dorsal left wrist. No snuffbox tenderness. Full
+finger movement. Grip painful. Sensation and pulses intact.
+
+Imaging:
+Left wrist X-ray, 3 views: no fracture or dislocation; mild
+degenerative change at the first carpometacarpal joint.
+
+Assessment:
+Left wrist sprain.
+
+Plan:
+1. Wrist splint for comfort for up to 2 weeks.
+2. Acetaminophen 500 to 1,000 mg every 8 hours as needed. Avoid
+   ibuprofen given his heart history.
+3. Ice-gripping shoe covers for winter walks.
+4. Return if pain persists beyond 2 weeks or snuffbox pain
+   develops.
+
+___, PA-C
+
+=== file: 2025-02-10-dietitian-follow-up.pdf
+title: Dietitian follow-up 2025-02-10
+date: 2025-02-10
+format: pdf
+---
+                    MALDEN COMMUNITY NUTRITION
+               MEDICAL NUTRITION THERAPY - FOLLOW-UP
+
+Client:  Denver Lang                Date:  2025-02-10
+Dietitian:  ___, RD, LDN            Visit length: 30 min
+
+ASSESSMENT
+Weight 88.4 kg (-6.6 kg since 2024-04-08). Plateau since
+November; holiday eating and fewer walks after a wrist sprain on
+2025-01-14. Dizziness resolved after hydrochlorothiazide was
+stopped. Protein at breakfast most days. Beer 2 evenings a week.
+
+DIAGNOSIS
+Weight plateau related to reduced activity and holiday intake.
+
+INTERVENTION
+1. Protein about 1.0 g per kg (90 g/day) to protect muscle during
+   weight loss at his age: eggs, yogurt, fish, beans.
+2. Swap evening snack for fruit or yogurt.
+3. Indoor walking at the mall on icy days.
+
+MONITORING AND EVALUATION
+Goal 86 kg by summer 2025. Next visit in 4 months.
+
+___, RD, LDN
+
+=== file: 2025-06-02-physiotherapy-shoulder-assessment.pdf
+title: Physiotherapy shoulder assessment 2025-06-02
+date: 2025-06-02
+format: pdf
+---
+                       FELLSWAY PHYSIOTHERAPY
+                  INITIAL ASSESSMENT - UPPER LIMB
+
+Patient:  Denver Lang               DOB:  1947-08-14
+Date:  2025-06-02                   Self-referred
+Physiotherapist:  ___, PT, DPT
+
+SUBJECTIVE
+Right shoulder ache for 3 weeks after adding overhead band presses
+at the gym. Pain 4/10 reaching overhead and at night lying on the
+right. History of right clavicle fracture in 2019, healed. No
+neck pain or arm numbness.
+
+OBJECTIVE
+Painful arc 80 to 120 degrees abduction. Flexion 160 degrees.
+External rotation strength 4/5 with pain. Hawkins-Kennedy
+positive. Neer positive. Empty can mildly painful, strength 4/5.
+
+ASSESSMENT
+Right rotator cuff related shoulder pain (tendinopathy) from load
+increase.
+
+PLAN
+4 sessions over 6 weeks. Pause overhead pressing; rotator cuff and
+scapular strengthening; return to pressing below shoulder height.
+Message sent to trainer with exercise changes, with patient's
+consent.
+
+___, PT, DPT
+
+=== file: 2025-09-08-personal-training-progress.pdf
+title: Personal training progress report 2025-09-08
+date: 2025-09-08
+format: pdf
+---
+                      NORTHSIDE FITNESS STUDIO
+                 PROGRESS REPORT - DENVER LANG
+
+Date:  2025-09-08                   Trainer:  ___ (CPT)
+
+                    Start         Nov 2024      Today
+                   2024-05-13    2024-11-04   2025-09-08
+Weight (kg)           93.8          88.9          86.8
+Waist (cm)            110           104           101
+6-minute walk (m)     380           490           520
+30-s chair stand       9            14            15
+Grip R/L (kg)        31/29         34/31         35/32
+
+Notes:
+Shoulder recovered after physiotherapy in June; overhead work
+back at light load with physiotherapist's progression. Joined the
+Tuesday senior walking group (5 km). Moving to once-weekly
+sessions plus independent gym work from October.
+
+___ (CPT)
+
+=== file: 2025-11-17-dietitian-review.pdf
+title: Dietitian review 2025-11-17
+date: 2025-11-17
+format: pdf
+---
+                    MALDEN COMMUNITY NUTRITION
+               MEDICAL NUTRITION THERAPY - REVIEW
+
+Client:  Denver Lang                Date:  2025-11-17
+Dietitian:  ___, RD, LDN            Visit length: 30 min
+
+ASSESSMENT
+Weight 86.6 kg (-8.4 kg since 2024-04-08, 8.8% of body weight).
+Waist 100 cm. BMI 27.7 kg/m2. Weight stable within 1 kg for 3
+months. Eating pattern sustainable; enjoys cooking fish twice a
+week.
+
+DIAGNOSIS
+No nutrition problem at this time.
+
+INTERVENTION
+Transition to maintenance: keep plate method, protein 90 g/day,
+beer up to 3 evenings a week, weigh weekly. If weight rises above
+89 kg, book a visit.
+
+MONITORING AND EVALUATION
+Discharged from regular follow-up. Summary sent to ___, MD.
+
+___, RD, LDN
+
+=== file: 2026-03-22-questions-for-annual-exam-photo.png
+title: Questions for my annual exam 2026-03-22
+date: 2026-03-22
+format: photo
+---
+QUESTIONS FOR DR ___ - annual exam March 26
+1. I'm down about 8 kg since 2024. Do I still need
+   lisinopril? BP at home now 100-105 / 62-66.
+2. Can I stop metformin if my A1c stays 5.4?
+3. Knees good, right one stiff in cold. OK to keep
+   doing squats?
+4. Shoulder fine now.
+5. Flu shot done in October at the pharmacy.
+6. Ask about the kidney test (creatinine) - the lab
+   sheet said 2.5 last year but the doctor said fine?

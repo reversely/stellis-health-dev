@@ -36,6 +36,9 @@ _SIGNATURES = {
 }
 # A line shorter than this share of the page's longest line ends a paragraph.
 _PARAGRAPH_END = 0.7
+_HEADING_CHARS = 60
+_LIST_ITEM = re.compile(r"^(\d+[.)]|[-*•])\s")
+_COLUMN_GAP = re.compile(r"\S {3,}\S")
 _SUMMARY_COLUMNS = ("id, title, media_type, page_count, status, notebook_id, "
                     "record_date, created_at")
 
@@ -97,6 +100,22 @@ def title_from_filename(filename: str) -> str:
     return (" ".join(stem.split()) or "Document")[:MAX_TITLE]
 
 
+def _starts_line(raw: str, line: str) -> bool:
+    """Whether a line begins a new line of its own rather than continuing.
+
+    Headings such as "Plan:", list items such as "2. Fluids" and table rows,
+    whose columns are padded with runs of spaces, each keep their own line.
+    """
+    return bool((line.endswith(":") and len(line) <= _HEADING_CHARS) or
+                _LIST_ITEM.match(line) or _COLUMN_GAP.search(raw.strip()))
+
+
+def _ends_line(raw: str, line: str) -> bool:
+    """Whether the next line must start fresh: after a heading or table row."""
+    return bool((line.endswith(":") and len(line) <= _HEADING_CHARS) or
+                _COLUMN_GAP.search(raw.strip()))
+
+
 def clean_page_text(text: str) -> str:
     """Rejoins lines a PDF wrapped and keeps paragraph breaks.
 
@@ -105,16 +124,21 @@ def clean_page_text(text: str) -> str:
 
     Returns:
         The page text with spacing collapsed within lines. A line much
-        shorter than the page's longest line ends a paragraph.
+        shorter than the page's longest line ends a paragraph, and headings,
+        list items and table rows keep their own lines.
     """
-    lines = [" ".join(raw.split()) for raw in text.splitlines()]
-    lines = [line for line in lines if line]
-    if not lines:
+    raws = [raw for raw in text.splitlines() if raw.strip()]
+    if not raws:
         return ""
+    lines = [" ".join(raw.split()) for raw in raws]
     paragraph_end = _PARAGRAPH_END * max(len(line) for line in lines)
     joined = lines[0]
-    for previous, line in zip(lines, lines[1:]):
-        joined += ("\n" if len(previous) < paragraph_end else " ") + line
+    for index in range(1, len(lines)):
+        previous, line = lines[index - 1], lines[index]
+        separate = (len(previous) < paragraph_end or
+                    _starts_line(raws[index], line) or
+                    _ends_line(raws[index - 1], previous))
+        joined += ("\n" if separate else " ") + line
     return joined
 
 
@@ -146,21 +170,22 @@ def check_upload(filename: str, content: bytes) -> str:
 
 
 def _read_pdf_pages(content: bytes) -> list[str]:
-    import pypdf  # Deferred: only PDF uploads need it.
+    import pymupdf  # Deferred: only PDF uploads need it.
     try:
-        reader = pypdf.PdfReader(io.BytesIO(content))
-        encrypted = reader.is_encrypted
-        pages = [] if encrypted else list(reader.pages)
-    except (pypdf.errors.PdfReadError, ValueError, KeyError, TypeError) as exc:
+        pdf = pymupdf.open(stream=content, filetype="pdf")
+    except (pymupdf.FileDataError, RuntimeError, ValueError) as exc:
         raise DocumentError("This PDF could not be read") from exc
-    if encrypted:
-        raise DocumentError("Remove the PDF password and upload it again")
-    if len(pages) > MAX_PAGES:
-        raise DocumentError(f"Upload a PDF of at most {MAX_PAGES} pages")
-    try:
-        return [clean_page_text(page.extract_text() or "") for page in pages]
-    except (pypdf.errors.PdfReadError, ValueError, KeyError, TypeError) as exc:
-        raise DocumentError("This PDF could not be read") from exc
+    with pdf:
+        if pdf.needs_pass:
+            raise DocumentError("Remove the PDF password and upload it again")
+        if pdf.page_count == 0:
+            raise DocumentError("This PDF could not be read")
+        if pdf.page_count > MAX_PAGES:
+            raise DocumentError(f"Upload a PDF of at most {MAX_PAGES} pages")
+        try:
+            return [clean_page_text(page.get_text("text")) for page in pdf]
+        except (RuntimeError, ValueError) as exc:
+            raise DocumentError("This PDF could not be read") from exc
 
 
 def _check_image(content: bytes) -> None:
