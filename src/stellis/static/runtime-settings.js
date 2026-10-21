@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 let current;
 let busy = false;
 const draftRoutes = new Map();
-const kindLabels = {tutor_vision: 'Tutor screen reading', onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', agent_plan: 'Work planning', agent_review: 'Agent review', specialist: 'Specialist', email_draft: 'Email draft',
+const kindLabels = {tutor_vision: 'Tutor screen reading', onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', agent_plan: 'Work planning', agent_review: 'Agent review',
   answer: 'Transcript question', summary: 'Summary', clean: 'Transcript cleanup', agent: 'To-do extraction', categorization: 'Category scoring'};
 const stateLabels = {running: 'Running', succeeded: 'Completed', failed: 'Failed', interrupted: 'Interrupted'};
 const eventLabels = {request_started: 'Request started', sources_selected: 'Sources selected',

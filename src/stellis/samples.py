@@ -70,24 +70,12 @@ def _expected_keys() -> set[str]:
 
 
 def status() -> dict[str, object]:
-    from stellis import sample_rfi91
     with _LOCK:
         state = dict(_STATE)
     present, items = added(), _items()
     complete = len(present) == len(SAMPLES) and _expected_keys() <= set(items)
     return {**state, "added": present, "total": len(SAMPLES), "complete": complete,
-            "rfi91": sample_rfi91.status(),
             "installed": bool(present or any(made for _, _, made in items.values()))}
-
-
-def add_rfi91() -> dict[str, object]:
-    from stellis import sample_rfi91
-    return sample_rfi91.seed()
-
-
-def reset_rfi91() -> dict[str, object]:
-    from stellis import sample_rfi91
-    return sample_rfi91.reset()
 
 
 def _set(**values: object) -> None:

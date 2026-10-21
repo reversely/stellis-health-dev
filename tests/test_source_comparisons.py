@@ -21,7 +21,7 @@ class ComparisonTest(unittest.TestCase):
         candidate=source_comparisons.validate(self.value,self.sources)
         job=agents.start_job(self.agent['id'],self.book)
         message=agents.append_message(self.agent['id'],'agent','Source review',self.book,job)
-        artifact=agent_artifacts.create(self.agent['id'],message['id'],self.book,'document','Source review','Review',[],[],comparison=candidate)
+        artifact=agent_artifacts.create(self.agent['id'],message['id'],self.book,'Source review','Review',[],comparison=candidate)
         return job,artifact
 
     def test_publish_dedupe_and_dismiss(self):

@@ -38,9 +38,7 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
             if provider == "google":
                 self.assertEqual(set(query["scope"][0].split()), {
                     "https://www.googleapis.com/auth/calendar.events.readonly",
-                    "https://www.googleapis.com/auth/calendar.app.created",
-                    "https://www.googleapis.com/auth/gmail.readonly",
-                    "https://www.googleapis.com/auth/gmail.compose"})
+                    "https://www.googleapis.com/auth/calendar.app.created"})
             else:
                 self.assertEqual(query["scope"], ["offline_access Calendars.ReadBasic"])
             state = query["state"][0]
@@ -51,25 +49,6 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
                 calendar.consume_state(provider, state)
         with TestClient(app, base_url="http://example.com:8765") as client:
             self.assertEqual(client.get("/api/v1/calendar/google/authorize").status_code, 400)
-
-    def test_existing_calendar_only_grant_needs_gmail_reconnect(self):
-        with calendar._connect() as conn:
-            conn.execute("""INSERT INTO connections
-                (provider, client_id, access_token, refresh_token, expires_at, scopes)
-                VALUES ('google', 'google-test-id', 'old-access', 'old-refresh', 9999999999,
-                        'https://www.googleapis.com/auth/calendar.events.readonly')""")
-        google = next(row for row in calendar.connections() if row["provider"] == "google")
-        self.assertTrue(google["connected"])
-        self.assertFalse(google["mail_connected"])
-        calendar._save("google", {"access_token": "new-access", "refresh_token": "new-refresh",
-                                  "expires_in": 3600, "scope": calendar._SCOPE["google"]})
-        self.assertTrue(next(row for row in calendar.connections() if row["provider"] == "google")["mail_connected"])
-
-    def test_token_without_scope_does_not_claim_mail_permission(self):
-        calendar._save("google", {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600})
-        google = next(row for row in calendar.connections() if row["provider"] == "google")
-        self.assertTrue(google["connected"])
-        self.assertFalse(google["mail_connected"])
 
     async def test_google_disconnect_revokes_shared_grant(self):
         calendar._save("google", {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600})

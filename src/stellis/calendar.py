@@ -1,4 +1,4 @@
-"""Local calendar connections and the shared Google Calendar/Gmail grant."""
+"""Local calendar connections and the Google Calendar grant."""
 
 from __future__ import annotations
 
@@ -22,9 +22,7 @@ from stellis import storage
 PROVIDERS = ("google", "microsoft")
 _SCOPE = {
     "google": " ".join(("https://www.googleapis.com/auth/calendar.events.readonly",
-                        "https://www.googleapis.com/auth/calendar.app.created",
-                        "https://www.googleapis.com/auth/gmail.readonly",
-                        "https://www.googleapis.com/auth/gmail.compose")),
+                        "https://www.googleapis.com/auth/calendar.app.created")),
     "microsoft": "offline_access Calendars.ReadBasic",
 }
 _AUTH = {
@@ -114,10 +112,7 @@ def connections() -> list[dict[str, object]]:
     with _connect() as conn:
         rows = {row["provider"]: row for row in conn.execute("SELECT provider, scopes FROM connections")}
     return [{"provider": provider, "configured": bool(client_id(provider)),
-             "connected": provider in rows,
-             "mail_connected": provider == "google" and provider in rows and
-                 {"https://www.googleapis.com/auth/gmail.readonly",
-                  "https://www.googleapis.com/auth/gmail.compose"}.issubset(set(rows[provider]["scopes"].split()))}
+             "connected": provider in rows}
             for provider in PROVIDERS]
 
 
@@ -195,7 +190,6 @@ def _save(provider: str, response: dict, existing_refresh: str = "", existing_sc
         raise CalendarError("Calendar token response was invalid") from exc
     with _connect() as conn:
         # A token response can omit scope during refresh; preserve the last verified grant.
-        # Do not infer Gmail access merely because it was requested during authorization.
         scopes = response.get("scope") or existing_scopes
         conn.execute("""INSERT INTO connections(provider, client_id, access_token, refresh_token, expires_at, scopes)
             VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(provider) DO UPDATE SET
@@ -230,7 +224,7 @@ def disconnect(provider: str) -> None:
 
 
 async def disconnect_grant(provider: str) -> None:
-    """Revoke Google's shared Calendar/Gmail grant before removing local tokens."""
+    """Revoke the Google Calendar grant before removing local tokens."""
     if provider not in PROVIDERS:
         raise CalendarError("Unknown calendar provider")
     if provider == "google":

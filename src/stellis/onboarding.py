@@ -9,7 +9,6 @@ from stellis import agent_templates, agents, agent_runtime, auth, collections, n
 _LOCK = threading.Lock()
 USES = [
     {"id":"meetings", "name":"Meetings", "icon":"microphone", "collection":"Work", "notebook":"Meetings", "agents":["steward"], "description":"Keep recordings, notes and to-dos together."},
-    {"id":"emails", "name":"Emails", "icon":"inbox", "collection":"Work", "notebook":"Correspondence", "agents":["steward","writing"], "description":"Keep correspondence and prepare drafts for review."},
     {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning", "agents":["steward","tutor"], "description":"Learn with a tutor that can read a screen you share."},
     {"id":"projects", "name":"Projects", "icon":"folder", "collection":"Work", "notebook":"Projects", "agents":["steward","writing"], "description":"Give a project its own notes, sources and agents."},
     {"id":"home", "name":"Home projects", "icon":"folder-plus", "collection":"Home", "notebook":"Home projects", "agents":["steward"], "description":"Keep plans, decisions and next steps in one place."},
@@ -23,7 +22,11 @@ def _read():
     with storage.connect() as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS onboarding_setup (id INTEGER PRIMARY KEY CHECK(id=1), state_json TEXT NOT NULL)")
         row = conn.execute("SELECT state_json FROM onboarding_setup WHERE id=1").fetchone()
-    return json.loads(row[0]) if row else {"step":"welcome", "uses":[], "ready":None, "created":[]}
+    state = json.loads(row[0]) if row else {"step":"welcome", "uses":[], "ready":None, "created":[]}
+    # Saved setups can name a use that a later release removed.
+    known = {entry["id"] for entry in USES}
+    state["uses"] = [item for item in state.get("uses", []) if item in known]
+    return state
 
 
 def _save(state):

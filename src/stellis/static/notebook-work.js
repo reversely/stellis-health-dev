@@ -39,7 +39,7 @@
       if(!items.length){feed.append(el('p',current.items.length?'No activity with this status.':'Ask an agent or add sources to start working in this notebook.','notebook-work-empty'));return;}
       for(const item of items){const card=el('article',null,'notebook-activity');card.dataset.activityId=item.id;const head=el('div',null,'notebook-activity-head');head.append(window.StellisAgentAvatar.avatarElement(document,{seed:item.agent_id||item.author,size:28}),el('strong',item.author),el('span',item.detail==='Stopped or interrupted'?'Stopped':item.detail==='Request failed'?'Failed':labels[item.state]),el('time',new Date(item.created_at).toLocaleString()));card.append(head);
         if(item.artifact){card.append(window.StellisAgentChat.artifactCard(item.artifact,()=>refresh(),false));}
-        else if(item.kind!=='suggestion'||item.suggestion.operation!=='add_todo'){card.append(['job','delegation'].includes(item.kind)?window.StellisAgentChat.messageBody(item.text):el('p',item.text));if(item.detail)card.append(el('p',item.detail,'notebook-work-detail'));}
+        else if(item.kind!=='suggestion'||item.suggestion.operation!=='add_todo'){card.append(item.kind==='job'?window.StellisAgentChat.messageBody(item.text):el('p',item.text));if(item.detail)card.append(el('p',item.detail,'notebook-work-detail'));}
         const actions=el('div',null,'notebook-work-actions');
         if(item.kind==='suggestion'){
           if(item.suggestion.operation==='add_todo')card.append(window.StellisAgentChat.suggestionCard(item.suggestion,async()=>{await refresh();await onChange?.();}));
@@ -66,7 +66,6 @@
           else actions.append(el('span','Filing undone'));
         }
         if(item.kind==='job'&&item.state==='working')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/jobs/'+item.id+'/stop','POST'));
-        if(item.kind==='delegation'&&item.state==='working')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/delegations/'+item.id,'DELETE'));
         if(item.kind!=='filing')actions.append(link(item.kind==='suggestion'?(item.suggestion.source_target?'Open task note':'Open source'):'Open thread',item.target));card.append(actions);feed.append(card);
       }
     }

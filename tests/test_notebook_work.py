@@ -26,7 +26,7 @@ class NotebookWorkTest(unittest.TestCase):
         self.assertEqual(notebook_work.activity(self.book['id'])['counts']['needs_you'],0)
         job=agents.start_job(self.agent['id'],self.book['id']);self.assertEqual(notebook_work.activity(self.book['id'])['counts']['working'],1)
         message=agents.append_message(self.agent['id'],'agent','Draft ready',self.book['id'],job)
-        draft=agent_artifacts.create(self.agent['id'],message['id'],self.book['id'],'document','Practice plan','Use constraints',[],[])
+        draft=agent_artifacts.create(self.agent['id'],message['id'],self.book['id'],'Practice plan','Use constraints',[])
         agents.finish_job(job,'succeeded');work=notebook_work.activity(self.book['id'])
         self.assertEqual(len(work['items']),1);self.assertEqual(work['items'][0]['artifact']['id'],draft['id'])
         self.assertEqual(notebook_work.activity(self.other['id'])['items'],[])

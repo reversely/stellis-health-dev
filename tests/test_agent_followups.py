@@ -19,7 +19,7 @@ class FollowupTest(unittest.TestCase):
     def artifact(self):
         job=agents.start_job(self.agent['id'],self.book['id'])
         message=agents.append_message(self.agent['id'],'agent','Draft ready',self.book['id'],job)
-        artifact=agent_artifacts.create(self.agent['id'],message['id'],self.book['id'],'document','Review','Approval is missing.',[],[self.source],self.candidate)
+        artifact=agent_artifacts.create(self.agent['id'],message['id'],self.book['id'],'Review','Approval is missing.',[self.source],self.candidate)
         return job,artifact
     def test_quotes_must_match_real_selected_source(self):
         for value in ({'text':'Obtain approval','source_index':2,'quote':self.page['markdown']},

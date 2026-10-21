@@ -36,7 +36,7 @@ class TemplateTest(unittest.TestCase):
         self.assertEqual(agents.memories(one["id"]), [])
         self.assertEqual(agents.memories(copy["id"])[0]["fact"], "Use the WT prefix")
         instructions = agent_templates.instructions(agents.get(copy["id"]))
-        self.assertIn("Never send mail", instructions)
+        self.assertIn("Present drafts for review", instructions)
         self.assertIn("Be concise", instructions)
     def test_disabled_agents_do_not_run_or_resolve_as_steward(self):
         one = agents.deploy("steward", self.one["id"])

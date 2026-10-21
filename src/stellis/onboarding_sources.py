@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-import html
 import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from stellis import ai, calendar, gmail_api, onboarding, runtime_profile, runtime_trace
+from stellis import ai, calendar, onboarding, runtime_profile, runtime_trace
 
 _TASKS: dict[str, asyncio.Task] = {}
 SCHEMA = {"type":"object", "properties":{"groups":{"type":"array","maxItems":8,"items":{
@@ -84,26 +83,13 @@ def status():
     return scan
 
 
-async def collect(days, progress=lambda count: None):
+async def collect(days):
     now=datetime.now(timezone.utc);since=now-timedelta(days=days)
     connections={c["provider"]:c for c in calendar.connections()};google=connections.get("google",{})
     sources=[];limited=False
-    if google.get("mail_connected"):
-        result=await gmail_api.search_threads(query=f"after:{since:%Y/%m/%d} before:{now+timedelta(days=1):%Y/%m/%d}",pageSize=25,view="THREAD_VIEW_MINIMAL")
-        limited=bool(result.get("nextPageToken"))
-        for thread in result["threads"]:
-            messages=thread.get("messages",[])
-            if not messages:continue
-            message=messages[-1];identifier=str(thread["id"])
-            excluded=bool(message.get("bulk_mail") or {"CATEGORY_PROMOTIONS","CATEGORY_SOCIAL"}.intersection(message.get("labelIds",[])))
-            sources.append({"id":"gmail:"+identifier,"kind":"Gmail","title":str(message.get("subject") or "Untitled email")[:180],
-                "excerpt":html.unescape(str(message.get("snippet") or ""))[:600],"date":str(message.get("date") or ""),
-                "excluded":excluded,
-                "url":f"https://mail.google.com/mail/u/0/#all/{identifier}"})
-        progress(len(sources))
     if google.get("connected"):
         events=await calendar.events("google",now=since,until=now)
-        limited=limited or len(events)>35
+        limited=len(events)>35
         for event in events[:35]:
             sources.append({"id":"calendar:"+event["id"],"kind":"Google Calendar","title":event["title"],
                 "excerpt":f"{event['title']}\nStarts: {event['start']}\nEnds: {event['end']}","date":event["start"],"url":""})
@@ -112,14 +98,14 @@ async def collect(days, progress=lambda count: None):
 
 async def _read(scan_id, days):
     try:
-        sources,limited=await collect(days,lambda count: _update(scan_id,count=count,message="Reading calendar events…"))
+        sources,limited=await collect(days)
         _update(scan_id,state="planning",count=len(sources),sources=sources,limited=limited,message="Proposing notebooks…")
         groups=await plan(sources)
         _update(scan_id,state="ready",groups=groups,message="Review the proposed notebooks and their sources.")
     except asyncio.CancelledError:
         _update(scan_id,state="interrupted",message="Reading stopped. Nothing was filed.")
         raise
-    except (ValueError,calendar.CalendarError,gmail_api.GmailError) as exc:
+    except (ValueError,calendar.CalendarError) as exc:
         _update(scan_id,state="failed",message=str(exc))
     except Exception:
         _update(scan_id,state="failed",message="Reading stopped unexpectedly. Try again.")
@@ -130,12 +116,12 @@ def start(account_id,days):
     onboarding._require(account_id)
     if days not in {7,30,90}:raise ValueError("Choose 7, 30 or 90 days")
     google=next((c for c in calendar.connections() if c["provider"]=="google"),{})
-    if not google.get("connected"):raise ValueError("Connect Google before reading mail & calendar events")
+    if not google.get("connected"):raise ValueError("Connect Google before reading calendar events")
     with onboarding._LOCK:
         state=onboarding._read()
         active=_TASKS.get((state.get("scan") or {}).get("id"))
         if active and not active.done():raise ValueError("Reading is already in progress")
-        scan={"id":str(uuid.uuid4()),"state":"reading","days":days,"count":0,"sources":[],"groups":[],"limited":False,"message":"Reading mail & calendar events…"}
+        scan={"id":str(uuid.uuid4()),"state":"reading","days":days,"count":0,"sources":[],"groups":[],"limited":False,"message":"Reading calendar events…"}
         state["scan"]=scan;onboarding._save(state)
         _TASKS[scan["id"]]=asyncio.create_task(_read(scan["id"],days))
     return scan

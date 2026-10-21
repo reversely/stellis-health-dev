@@ -11,7 +11,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-from stellis import notebook_work, agent_artifacts, agent_templates, runtime_trace, agent_gateway, runtime_profile, agent_mail, agents, gmail_api, source_search
+from stellis import notebook_work, agent_artifacts, agent_templates, runtime_trace, agent_gateway, runtime_profile, agents, source_search
 
 
 class AgentRunError(Exception):
@@ -163,13 +163,8 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
         "notebook_instructions": notebook_work.instructions(notebook_id)["instructions"] if notebook_id else "",
     }
     artifact_kind = None if review_only else agent_artifacts.kind_for(question)
-    if artifact_kind == "email":
-        from stellis import mail_style
-        recipients = re.findall(r"[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+", question)
-        context["writing_style_examples"] = [item["cleaned_body"][:2000] for item in mail_style.examples_for(recipients)]
     output = ("Produce the requested complete draft, up to 1800 words. Return only a JSON object with "
-              "title (subject for email), recipients (email addresses explicitly supplied, otherwise []), "
-              "and body (the full draft text with paragraph breaks and [[source:N]] citations). Do not invent recipients. "
+              "title and body (the full draft text with paragraph breaks and [[source:N]] citations). "
               if artifact_kind else "Answer the latest question in 1-4 sentences and at most 130 words. Return only the answer. ")
     if artifact_kind and notebook_id:
         from stellis import suggestions
@@ -201,8 +196,8 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
             "Markdown links yourself. Use tools "
             "to find more evidence when available. Do not claim to have read a source you did not read. "
             "If sources are supplied, an answer without a valid [[source:N]] marker will be discarded. "
-            "If a required source is unavailable, say so. Writing examples guide tone only, never facts. "
-            "Do not create or save external drafts and do not send email. Return the local draft for user review.\n\n"
+            "If a required source is unavailable, say so. "
+            "Do not create or save external drafts and do not send messages. Return the local draft for user review.\n\n"
             + json.dumps(context, ensure_ascii=False))
 
 
@@ -300,13 +295,9 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     memories = [item for item in agents.memories(agent_id)
                 if item["notebook_id"] is None or (item["notebook_id"] in active_books
                     and (notebook_id is None or item["notebook_id"] == notebook_id))]
-    try:
-        mail_sources = [] if automatic or only_supplied_sources else await agent_mail.sources(agent, question, notebook_id, memories)
-    except gmail_api.GmailError:
-        mail_sources = []
     sources = []
     seen_sources = set()
-    for source in [*(extra_sources or []), *mail_sources, *([] if only_supplied_sources else _sources(agent, question, notebook_id))]:
+    for source in [*(extra_sources or []), *([] if only_supplied_sources else _sources(agent, question, notebook_id))]:
         key = source.get("source_id") or source.get("target")
         if key in seen_sources:
             continue
@@ -371,7 +362,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                 if validation_error:
                     prompt += "\nCorrect this unsupported claim: " + validation_error
                 if artifact_kind:
-                    prompt += "\nReturn a valid JSON object with title, recipients and body, at most 1800 words. Put valid [[source:N]] citations in the body for supplied evidence. If no evidence is supplied, use no citations."
+                    prompt += "\nReturn a valid JSON object with title and body, at most 1800 words. Put valid [[source:N]] citations in the body for supplied evidence. If no evidence is supplied, use no citations."
                     if artifact_error:
                         prompt += "\nCorrect the rejected draft field: " + artifact_error
                 elif sources:
@@ -388,7 +379,6 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
             if artifact_kind and artifact_error:
                 raise AgentRunError("Agent could not produce a supported draft. Try again.")
             raise AgentRunError("Agent could not cite its sources clearly. Try again.")
-        raw_body = answer
         answer = _trusted_citations(answer, sources)
         if len(answer) > 12000:
             raise AgentRunError("Agent reply was too long. Try again.")
@@ -408,9 +398,8 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
         if artifact_kind:
             artifact_sources = [{"source_id": sources[index].get("source_id"), "title": sources[index]["title"],
                                  "target": sources[index]["target"]} for index in sorted(cited_indices)]
-            agent_artifacts.create(agent_id, agent_message["id"], notebook_id, artifact_kind, artifact_payload["title"],
-                re.sub(r"\[\[source:\d+\]\]", "", raw_body).strip() if artifact_kind == "email" else answer,
-                artifact_payload["recipients"], artifact_sources, follow_up=artifact_payload.get("follow_up"), comparison=artifact_payload.get("comparison"))
+            agent_artifacts.create(agent_id, agent_message["id"], notebook_id, artifact_payload["title"], answer,
+                artifact_sources, follow_up=artifact_payload.get("follow_up"), comparison=artifact_payload.get("comparison"))
         if not started_job_id:
             agents.finish_job(job_id, "succeeded")
         return {"job_id": job_id, "user_message": user_message, "agent_message": agent_message,
@@ -449,5 +438,5 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
               extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None, only_supplied_sources: bool = False) -> dict[str, object]:
     agents.require_enabled(agent_id, notebook_id)
-    with runtime_trace.span("agent_review" if review_only else "mail_review" if automatic else "agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
+    with runtime_trace.span("agent_review" if review_only else "agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
         return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic, started_job_id=started_job_id, review_only=review_only, collaboration=collaboration, record_request=record_request, answer_check=answer_check, only_supplied_sources=only_supplied_sources)

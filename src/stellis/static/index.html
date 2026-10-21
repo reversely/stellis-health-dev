@@ -97,7 +97,6 @@
             <p class="samples-status" role="status" aria-live="polite"></p>
             <progress class="samples-progress" max="1" value="0" hidden></progress>
             <button class="samples-add" type="button">Add sample workspace</button>
-            <button class="samples-rfi-add" type="button">Add RFI 91 case</button><p class="samples-rfi-status" role="status" aria-live="polite"></p>
           </section>
           <div class="home-columns">
             <div class="home-col home-col-left"><section id="home-todos" data-widget="todos" aria-label="To-dos"></section></div>
@@ -209,26 +208,17 @@
             <progress class="samples-progress" max="1" value="0" hidden></progress>
             <button class="samples-add" type="button">Add sample workspace</button>
             <button class="samples-remove" type="button" hidden>Remove sample workspace</button>
-            <button class="samples-rfi-add" type="button">Add RFI 91 case</button><button class="samples-rfi-reset" type="button" hidden>Reset RFI 91 case</button><p class="samples-rfi-status" role="status" aria-live="polite"></p>
         </section>
         <section class="settings-section" aria-labelledby="settings-integrations-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-plug-connected"/></svg><h3 id="settings-integrations-title">Integrations</h3></div>
-          <p class="settings-note">Google access includes Calendar and Gmail. Agents can read mail and create drafts; only you can send.</p><div id="settings-calendars" class="integration-list"></div><p id="settings-calendar-status" role="status" aria-live="polite"></p>
-          <p class="settings-note">Research queries are sent to Tavily when you delegate live research.</p>
+          <p class="settings-note">Stellis reads your calendar events</p><div id="settings-calendars" class="integration-list"></div><p id="settings-calendar-status" role="status" aria-live="polite"></p>
+          <p class="settings-note">Research agents send their search queries to Tavily</p>
           <form id="tavily-key-form" class="settings-form">
             <label for="tavily-key-input">Tavily API key</label>
             <input id="tavily-key-input" type="password" autocomplete="off" spellcheck="false" maxlength="512" placeholder="Paste your key" />
             <div class="settings-actions"><button id="tavily-key-save" type="submit">Save key</button><button id="tavily-key-remove" type="button" hidden>Remove key</button></div>
             <p id="tavily-key-status" role="status" aria-live="polite"></p>
           </form>
-        </section>
-        <section class="settings-section" aria-labelledby="settings-mail-style-title">
-          <div class="settings-section-head"><h3 id="settings-mail-style-title">Email writing style</h3></div>
-          <p class="settings-note">Use recent sent emails as examples for agent drafts. Review or exclude accounts and groups here.</p>
-          <button id="mail-style-sync" class="settings-button" type="button">Import sent examples</button>
-          <p id="mail-style-status" role="status" aria-live="polite"></p>
-          <div id="mail-style-accounts" class="mail-style-list"></div>
-          <div id="mail-style-groups" class="mail-style-list"></div>
         </section>
         <section class="settings-section settings-danger" aria-labelledby="settings-delete-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg><h3 id="settings-delete-title">Delete account</h3></div>

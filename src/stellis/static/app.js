@@ -4018,9 +4018,6 @@ async function watchSamples() {
     button.textContent = state.state === 'failed' ? 'Try again' : 'Add sample workspace';
     const remove = panel.querySelector('.samples-remove');
     if (remove) remove.hidden = busy || !state.installed;
-    panel.querySelector('.samples-rfi-add').hidden = busy || state.rfi91.installed;
-    const resetCase = panel.querySelector('.samples-rfi-reset');
-    if (resetCase) resetCase.hidden = busy || !state.rfi91.installed;
     panel.querySelector('.samples-status').textContent = busy
       ? `Downloading ${state.meeting || 'the samples'}: ${Math.round((state.progress || 0) * 100)}%`
       : state.state === 'failed' ? `The sample workspace could not be added (${state.error}). Check your connection and try again.`
@@ -4045,19 +4042,6 @@ document.querySelector('.samples-remove')?.addEventListener('click', async event
   const button = event.currentTarget; button.disabled = true;
   try { await json(await fetch(`${API}/samples`, {method: 'DELETE'})); await loadLibrary(); }
   catch (error) { button.closest('.samples-panel').querySelector('.samples-status').textContent = error.message; }
-  finally { button.disabled = false; }
-  watchSamples();
-});
-for (const button of document.querySelectorAll('.samples-rfi-add, .samples-rfi-reset')) button.addEventListener('click', async () => {
-  button.disabled = true;
-  const status = button.closest('.samples-panel').querySelector('.samples-rfi-status');
-  status.textContent = 'Loading case';
-  try {
-    await json(await fetch(`${API}/samples/rfi91${button.classList.contains('samples-rfi-reset') ? '/reset' : ''}`,
-      {method:button.classList.contains('samples-rfi-reset') ? 'PUT' : 'POST'}));
-    status.textContent = 'RFI 91 case is ready';
-    await loadLibrary();
-  } catch (error) { status.textContent = error.message; }
   finally { button.disabled = false; }
   watchSamples();
 });
@@ -4724,25 +4708,19 @@ async function loadSettingsCalendars() {
     const row = document.createElement('div'); row.className = 'integration-row';
     const text = document.createElement('div');
     const name = document.createElement('strong');
-    name.textContent = item.provider === 'google' ? 'Google Workspace' : window.StellisCalendar.labels[item.provider];
+    name.textContent = window.StellisCalendar.labels[item.provider];
     const state = document.createElement('small');
-    state.textContent = item.provider === 'google' && item.connected && item.mail_connected ?
-      'Calendar and Gmail connected' :
-      item.provider === 'google' && item.connected ?
-      'Calendar connected. Connect Gmail for agent mail' :
-      item.connected ? 'Connected' : item.configured ?
-      (item.provider === 'google' ? 'Calendar and Gmail not connected' : 'Not connected') :
+    state.textContent = item.connected ? 'Connected' : item.configured ? 'Not connected' :
       'Needs an OAuth client on this device';
     text.append(name, state);
     row.append(icon('calendar'), text);
     if (item.connected || item.configured) {
       const action = document.createElement('button'); action.type = 'button';
-      action.textContent = item.provider === 'google' && item.connected && !item.mail_connected ?
-        'Connect Gmail' : item.connected ? 'Disconnect' : 'Connect';
+      action.textContent = item.connected ? 'Disconnect' : 'Connect';
       action.addEventListener('click', async () => {
         action.disabled = true; document.querySelector('#settings-calendar-status').textContent = '';
         try {
-          if (item.connected && (item.provider !== 'google' || item.mail_connected)) {
+          if (item.connected) {
             await window.StellisCalendar.request(`/${item.provider}/disconnect`, {method:'POST'});
             await loadSettingsCalendars();
           }
@@ -4754,86 +4732,6 @@ async function loadSettingsCalendars() {
     return row;
   }));
 }
-async function mailStyleRequest(path, options = {}) {
-  const response = await fetch(`${API}/mail-style${path}`, options);
-  const result = await response.json();
-  if (!response.ok) throw Error(result.detail || 'Could not update writing style');
-  return result;
-}
-async function loadMailStyle() {
-  const data = await mailStyleRequest('');
-  const accounts = document.querySelector('#mail-style-accounts');
-  const groups = document.querySelector('#mail-style-groups');
-  const status = document.querySelector('#mail-style-status');
-  const heading = (label) => { const node = document.createElement('h4'); node.textContent = label; return node; };
-  const option = (label, checked, onChange) => {
-    const wrap = document.createElement('label'); wrap.className = 'mail-style-option';
-    const input = document.createElement('input'); input.type = 'checkbox'; input.checked = checked;
-    input.addEventListener('change', async () => {
-      input.disabled = true;
-      try { await onChange(input.checked); status.textContent = 'Writing style updated'; await loadMailStyle(); }
-      catch (error) { input.checked = !input.checked; input.disabled = false; status.textContent = error.message; }
-    });
-    wrap.append(input, document.createTextNode(label)); return wrap;
-  };
-  accounts.replaceChildren(); groups.replaceChildren();
-  if (data.accounts.length) accounts.append(heading('Accounts'));
-  for (const account of data.accounts) {
-    const row = document.createElement('div'); row.className = 'mail-style-row';
-    const name = document.createElement('strong'); name.textContent = account.email;
-    row.append(name, option('Include', !account.excluded, included =>
-      mailStyleRequest(`/accounts/${encodeURIComponent(account.email)}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({excluded:!included})})));
-    accounts.append(row);
-  }
-  if (data.groups.length) groups.append(heading('Recipient groups'));
-  for (const group of data.groups) {
-    const row = document.createElement('div'); row.className = 'mail-style-row';
-    const name = document.createElement('input'); name.value = group.name; name.maxLength = 80;
-    name.setAttribute('aria-label', `Name for ${group.recipient_domain}`);
-    const save = document.createElement('button'); save.type = 'button'; save.textContent = 'Save name';
-    save.addEventListener('click', async () => {
-      save.disabled = true;
-      try { await mailStyleRequest(`/groups/${encodeURIComponent(group.id)}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name.value})}); status.textContent = 'Group saved'; await loadMailStyle(); }
-      catch (error) { save.disabled = false; status.textContent = error.message; }
-    });
-    const count = document.createElement('small'); count.textContent = `${group.example_count} ${group.example_count === 1 ? 'example' : 'examples'} · ${group.recipient_domain}`;
-    const details = document.createElement('details');
-    const summary = document.createElement('summary'); summary.textContent = 'Review examples'; details.append(summary);
-    details.addEventListener('toggle', async () => {
-      if (!details.open || details.dataset.loaded) return;
-      try {
-        const examples = await mailStyleRequest(`/groups/${encodeURIComponent(group.id)}/examples`);
-        for (const example of examples) {
-          const item = document.createElement('div'); item.className = 'mail-style-example';
-          const link = document.createElement('a'); link.href = example.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = example.subject || 'Untitled email';
-          const snippet = document.createElement('p'); snippet.textContent = example.cleaned_body.slice(0, 240);
-          const move = document.createElement('select'); move.setAttribute('aria-label', 'Move example to group');
-          for (const target of data.groups.filter(candidate => candidate.account_email === group.account_email)) {
-            const choice = document.createElement('option'); choice.value = target.id; choice.textContent = target.name; move.append(choice);
-          }
-          move.value = group.id;
-          move.addEventListener('change', async () => {
-            try { await mailStyleRequest(`/examples/${encodeURIComponent(example.id)}/group`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({group_id:move.value})}); status.textContent = 'Example moved'; await loadMailStyle(); }
-            catch (error) { move.value = group.id; status.textContent = error.message; }
-          });
-          item.append(link, snippet, move); details.append(item);
-        }
-        details.dataset.loaded = '1';
-      } catch (error) { status.textContent = error.message; }
-    });
-    row.append(name, save, count, option('Include', !group.excluded, included =>
-      mailStyleRequest(`/groups/${encodeURIComponent(group.id)}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({excluded:!included})})), details);
-    groups.append(row);
-  }
-  if (!data.accounts.length) status.textContent = 'No sent examples imported yet';
-}
-document.querySelector('#mail-style-sync').addEventListener('click', async event => {
-  const button = event.currentTarget; const status = document.querySelector('#mail-style-status');
-  button.disabled = true; status.textContent = 'Importing sent examples…';
-  try { await mailStyleRequest('/sync', {method:'POST'}); status.textContent = 'Sent examples imported'; await loadMailStyle(); }
-  catch (error) { status.textContent = error.message; }
-  finally { button.disabled = false; }
-});
 async function showSettings() {
   await leaveForAppPage('settings-page', 'Account settings');
   for (const id of ['#profile-status', '#username-status', '#password-status', '#delete-status', '#settings-calendar-status'])
@@ -4855,7 +4753,6 @@ async function showSettings() {
   document.querySelector('#settings-vocabulary-count').textContent =
     `${names} ${names === 1 ? 'name' : 'names'} and ${terms.length - names} other ${terms.length - names === 1 ? 'term' : 'terms'}`;
   await loadSettingsCalendars().catch(error => { document.querySelector('#settings-calendar-status').textContent = error.message; });
-  await loadMailStyle().catch(error => { document.querySelector('#mail-style-status').textContent = error.message; });
   loadDateFormat();
   await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
   await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });

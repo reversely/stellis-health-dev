@@ -73,7 +73,7 @@ def span(kind: str, agent_id=None, model=None, provider=None):
     trace_id = str(uuid.uuid4())
     start = time.monotonic()
     execution = ("Token Factory" if runtime_profile.direct() else "Nebius Cloud" if runtime_profile.cloud() else "GN100") if kind in {
-        "agent_chat", "agent_plan", "agent_review", "specialist", "email_draft"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
+        "agent_chat", "agent_plan", "agent_review"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
     with _GUARD:
         if _SWITCHING:
             raise RuntimeError("A model change is running. Try again when it finishes.")
