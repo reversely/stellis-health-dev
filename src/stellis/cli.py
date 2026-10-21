@@ -50,7 +50,7 @@ def main() -> None:
     if args.command == "serve":
         os.environ.setdefault("STELLIS_AUTH_MODE", "required")
         models.ensure_in_background()
-        print(f"Stellis is running at http://{host}:{args.port}/")
+        print(f"Stellis Health is running at http://{host}:{args.port}/")
     target = ("stellis.sync_server:app" if args.command == "sync-serve" else
               "stellis.account_gateway:app" if os.environ.get("STELLIS_AUTH_MODE") == "required" else
               "stellis.server:app")

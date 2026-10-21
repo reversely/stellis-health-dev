@@ -52,7 +52,7 @@
   function welcome(scene) {
     scene.classList.add('setup-welcome');
     const copy = node('div', null, 'welcome-copy');
-    copy.append(node('span', null, 'brand-mark'), node('h1', 'Welcome to Stellis'), node('strong', 'Stellis is a private AI team for your entire life.'));
+    copy.append(node('span', null, 'brand-mark'), node('h1', 'Welcome to Stellis Health'), node('strong', 'Stellis Health is a private AI team for your entire life.'));
     copy.append(node('p', 'Bring what you do, see and say into one workspace. Organize your knowledge into collections, and give each part of your life persistent AI agents.'));
     copy.append(node('p', 'Research, write, coordinate and learn with agents that work from your notebooks. Review their work before it changes your plans or leaves your workspace.'));
     copy.append(node('p', state.runtime.local_inference ? 'AI responses run on your connected computer.' : 'Agents run on Nebius Cloud with Token Factory inference.', 'setup-hint'));
@@ -103,7 +103,7 @@
     return panel;
   }
   function usesScreen(scene) {
-    scene.append(node('h1', 'What will you use Stellis for?'));
+    scene.append(node('h1', 'What will you use Stellis Health for?'));
     const columns = node('div', null, 'setup-columns'), left = node('div'), right = node('div'), tiles = node('div', null, 'setup-uses');
     tiles.setAttribute('role', 'group'); tiles.setAttribute('aria-label', 'Uses');
     const guide = node('div', null, 'setup-guide'), explanation = node('div', null, 'setup-guide-bubble');

@@ -24,7 +24,7 @@ from pydantic import StrictBool, BaseModel, Field
 from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
-app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
+app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
 api = APIRouter()
 _retention_stop = threading.Event()
 _retention_thread: threading.Thread | None = None
