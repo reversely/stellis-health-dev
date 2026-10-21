@@ -155,7 +155,7 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
         "instructions": agent_templates.instructions(agent),
         "assigned_notebooks": [item["notebook_name"] for item in agent["notebooks"]],
         "memory": [item["fact"] for item in memories[-20:]],
-        "recent_messages": [{"role": item["role"], "content": item["content"]}
+        "recent_messages": [{"role": item["role"], "content": item["content"], "responding_agent": item.get("addressed_agent_name") if item["role"] == "agent" else None}
                             for item in history[-10:] if item["role"] in {"user", "agent"}],
         "retrieved_sources": sources,
         "question": question,
@@ -257,7 +257,7 @@ def _openclaw_reply(result: object) -> tuple[str, str | None]:
 
 
 async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None) -> dict[str, object]:
     """Save a Chat request and its managed headless reply."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
     if not configured():
@@ -296,7 +296,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     word_limit = 2000 if artifact_kind else 170
     artifact_payload = None
     prompt = _prompt(agent, memories, history, question, sources, notebook_id)
-    job_id = agents.start_job(agent_id, notebook_id)
+    job_id = started_job_id or agents.start_job(agent_id, notebook_id)
     _RUNNING_JOBS[job_id] = asyncio.current_task()
     runtime_trace.job(job_id)
     runtime_trace.event("sources_selected", source_count=len(sources))
@@ -358,6 +358,11 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
             raise AgentRunError("Agent reply was too long. Try again.")
         runtime_trace.event("sources_validated", citation_count=len(cited_indices))
         agents.require_enabled(agent_id, notebook_id)
+        if started_job_id:
+            from stellis import agent_handoffs, storage
+            with storage.connect() as conn:
+                handoff = conn.execute('SELECT origin_id FROM agent_handoffs WHERE id=?',(started_job_id,)).fetchone()
+            if handoff:agent_handoffs.validate(handoff['origin_id'], agent_id, notebook_id)
         agent_message = agents.append_message(agent_id, "agent", "Draft ready for review." if artifact_kind else answer, notebook_id, job_id)
         if artifact_kind:
             artifact_sources = [{"source_id": sources[index].get("source_id"), "title": sources[index]["title"],
@@ -365,7 +370,8 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
             agent_artifacts.create(agent_id, agent_message["id"], notebook_id, artifact_kind, artifact_payload["title"],
                 re.sub(r"\[\[source:\d+\]\]", "", raw_body).strip() if artifact_kind == "email" else answer,
                 artifact_payload["recipients"], artifact_sources)
-        agents.finish_job(job_id, "succeeded")
+        if not started_job_id:
+            agents.finish_job(job_id, "succeeded")
         return {"job_id": job_id, "user_message": user_message, "agent_message": agent_message,
                 "session_id": session_id,
                 "cited_sources": [{"source_id": sources[index].get("source_id"),
@@ -399,7 +405,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 
 
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None) -> dict[str, object]:
     agents.require_enabled(agent_id, notebook_id)
     with runtime_trace.span("mail_review" if automatic else "agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
-        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic)
+        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic, started_job_id=started_job_id)

@@ -368,3 +368,7 @@ Agent settings presents collection/notebook deployment rows and a selected-agent
 ### Notebook mail monitoring
 
 Writing agents can opt into a notebook-specific Gmail search rule. While the account workspace process is active, an account-local asynchronous worker polls enabled rules every minute, claims new threads durably, classifies whether a response is needed, and prepares a local reviewable artifact. Disabling a rule or notebook agent cancels active work. Automatic requests use the configured managed inference route and notebook instructions, with mail_review traces; they do not perform additional mailbox searches. No provider draft/save/send action is part of the worker. Interrupted claims remain visible and are not automatically rerun. See [ADR 0074](decisions/0074-notebook-mail-runs.md) for timing, limits and recovery.
+
+### Explicit agent addressing
+
+Chat and notebook composers accept a stable, notebook-scoped agent recipient through a shared keyboard picker. Cross-agent chat requests persist an agent_handoffs link, execute through the addressed agent's configured managed route, and retain an attributed reply in the origin thread. Both threads expose one cancellable job; the origin projects the responding agent's canonical review artifact. Assignment validation and an active watcher enforce Off/removal. Origin publication and job completion commit together. This is explicit dispatch, not automatic multi-step coordination. See [ADR 0075](decisions/0075-explicit-agent-addressing.md).

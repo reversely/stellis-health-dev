@@ -1,0 +1,4 @@
+Actual local mention routed to target, source cited, shared job and attribution survive reload
+Shared routed request stopped from origin thread without publishing a reply
+Routed artifact reviewed in origin thread updates one target-owned artifact
+Mention keyboard selection, persisted draft, layouts and off-recipient rejection passed

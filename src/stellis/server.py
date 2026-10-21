@@ -545,6 +545,7 @@ class AgentMemory(BaseModel):
 class AgentQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     notebook_id: str | None = None
+    target_agent_id: str | None = None
 
 
 def _agent_result(action):
@@ -722,6 +723,9 @@ async def stop_agent_job(agent_id: str, job_id: str):
 @api.post("/agents/{agent_id}/ask")
 async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
     try:
+        if request.target_agent_id:
+            from stellis import agent_handoffs
+            return await agent_handoffs.ask(agent_id, request.target_agent_id, request.question, request.notebook_id)
         return await agent_runtime.ask(agent_id, request.question, request.notebook_id)
     except asyncio.CancelledError as exc:
         raise HTTPException(status_code=409, detail="Reply stopped") from exc

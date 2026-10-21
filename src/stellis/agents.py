@@ -282,8 +282,17 @@ def delete_memory(agent_id: str, memory_id: str) -> None:
 def messages(agent_id: str) -> list[dict[str, object]]:
     with storage.connect() as conn:
         _record(conn, agent_id)
-        return [dict(row) for row in conn.execute("""SELECT * FROM agent_messages WHERE agent_id = ?
-            ORDER BY created_at, id""", (agent_id,))]
+        rows = [dict(row) for row in conn.execute("""SELECT m.*,h.target_id AS addressed_agent_id,
+            h.target_name AS addressed_agent_name,h.reply_id,h.target_message_id
+            FROM agent_messages m LEFT JOIN agent_handoffs h ON h.id=m.job_id
+            WHERE m.agent_id=? ORDER BY m.created_at,m.id""", (agent_id,))]
+        from stellis import agent_artifacts
+        for row in rows:
+            if row['id'] == row.get('reply_id') and row.get('target_message_id'):
+                artifact = conn.execute('SELECT * FROM agent_artifacts WHERE message_id=?', (row['target_message_id'],)).fetchone()
+                if artifact:row['routed_artifact'] = agent_artifacts._record(artifact)
+        return rows
+
 
 
 def append_message(agent_id: str, role: str, content: str, notebook_id: str | None = None,
@@ -322,8 +331,8 @@ def finish_job(job_id: str, state: str, error: str | None = None) -> None:
 def jobs(agent_id: str) -> list[dict[str, object]]:
     with storage.connect() as conn:
         _record(conn, agent_id)
-        return [dict(row) for row in conn.execute("""SELECT * FROM agent_jobs WHERE agent_id = ?
-            ORDER BY created_at, id""", (agent_id,))]
+        return [dict(row) for row in conn.execute("""SELECT j.* FROM agent_jobs j LEFT JOIN agent_handoffs h ON h.id=j.id WHERE j.agent_id = ? OR h.target_id = ?
+            ORDER BY j.created_at,j.id""", (agent_id,agent_id))]
 
 
 def interrupt_running_jobs() -> None:

@@ -214,15 +214,24 @@
     const nodes = [];
     for (const message of messages) {
       const item = el('article', `agent-message agent-message-${message.role}`); item.id = 'message-' + message.id;
-      const author = el('strong', 'agent-message-author', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : agent.name);
-      if (message.role === 'agent') author.prepend(agentAvatar(agent, 24));
+      const author = el('strong', 'agent-message-author', message.role === 'user' ? 'You' : message.role === 'system' ? 'Task update' : message.addressed_agent_name || agent.name);
+      if (message.role === 'agent') author.prepend(agentAvatar(agents.find(a=>a.id===message.addressed_agent_id)||agent, 24));
       item.append(author);
-      const draft=artifacts.find(item=>item.message_id===message.id);
+      if(message.role==='user' && message.addressed_agent_id && message.addressed_agent_id!==agent.id)item.append(el('small','agent-job-state','To '+message.addressed_agent_name));
+      const draft=message.routed_artifact || artifacts.find(item=>item.message_id===message.id);
       if(draft)item.append(artifactCard(draft,()=>refreshThread(section,agent)));else item.append(messageBody(message.content));
       const chip = contextChip(message.notebook_id); if (chip) item.append(chip);
       const job = byJob.get(message.job_id);
       if (message.role === 'user' && job && job.state !== 'succeeded')
-        item.append(el('small', 'agent-job-state', job.state === 'running' ? 'Working on your request…' : job.error || 'Reply interrupted. Try again.'));
+        item.append(el('small', 'agent-job-state', job.state === 'running' ? (message.addressed_agent_name?'Asking '+message.addressed_agent_name+'…':'Working on your request…') : job.error || 'Reply interrupted. Try again.'));
+      if(message.role==='user' && job?.state==='running'){
+        const stop=el('button','agent-job-stop','Stop reply');stop.type='button';
+        stop.addEventListener('click',async()=>{stop.disabled=true;try{
+          await request(`/agents/${agent.id}/jobs/${job.id}/stop`,{method:'POST'});
+          await refreshThread(section,agent);
+        }catch(error){status(error.message);stop.disabled=false;}});
+        item.append(stop);
+      }
       nodes.push(item);
     }
     const pending = pendingTurns.get(agent.id);
@@ -290,13 +299,16 @@
     const context = el('div', 'agent-composer-context');
     const select = el('select'); select.name = 'notebook_id'; select.setAttribute('aria-label', 'Notebook context');
     const any = el('option', '', 'No notebook'); any.value = ''; select.append(any);
-    for (const book of agent.notebooks) {
+    for (const book of (agent.is_default?notebooks.map(n=>({notebook_id:n.id,notebook_name:n.name,enabled:true})):agent.notebooks)) {
       const option = el('option', '', book.notebook_name + (book.enabled===false?' (Off)':'')); option.value = book.notebook_id; option.disabled=book.enabled===false;select.append(option);
     }
     select.value = draft.notebook || ''; context.append(glyph('notebook'), select); form.append(context);
     const input = el('textarea'); input.name = 'question'; input.maxLength = 2000; input.required = true; input.value = draft.question || '';
     input.placeholder = `Message ${agent.name}`; input.setAttribute('aria-label', `Message ${agent.name}`); form.append(input);
-    const remember = () => writeDraft(agent.id, {question:input.value, notebook:select.value});
+    let mention;
+    const remember = () => writeDraft(agent.id, {question:input.value, notebook:select.value, mention:mention?.selected||null});
+    mention=window.StellisAgentMentions.attach(input,{initial:draft.mention||null,onChange:remember,
+      candidates:()=>select.value?agents.filter(a=>a.enabled&&(a.is_default||a.notebooks.some(b=>b.notebook_id===select.value&&b.enabled!==false))):[]});
     input.addEventListener('input', remember); select.addEventListener('change', remember);
     const actions = el('div', 'agent-composer-actions');
     const state = el('span', 'agent-composer-state'); state.role = 'status';
@@ -305,20 +317,21 @@
     if (!agent.enabled) state.textContent = 'Turn on this agent in Setup.';
     else if (!runtimeConfigured) state.textContent = 'Configure inference in Settings to reply.';
     actions.append(state, send); form.append(actions);
-    input.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !send.disabled) {event.preventDefault(); form.requestSubmit();} });
+    input.addEventListener('keydown', event => { if (!event.defaultPrevented && (event.metaKey || event.ctrlKey) && event.key === 'Enter' && !send.disabled) {event.preventDefault(); form.requestSubmit();} });
     form.addEventListener('submit', async event => {
       event.preventDefault(); if (send.disabled || !input.value.trim()) return;
-      const submitted = {question:input.value.trim(), notebook:select.value, started:new Date().toISOString()};
+      let target;try{target=mention.resolve();}catch(error){state.textContent=error.message;return;}
+      const submitted = {question:input.value.trim(), notebook:select.value, mention:mention.selected, target, started:new Date().toISOString()};
       pendingTurns.set(agent.id, submitted); send.disabled = true; input.value = ''; remember(); state.textContent = 'Working…';
       const optimistic = el('article', 'agent-message agent-message-user'); optimistic.append(el('strong', 'agent-message-author', 'You'), messageBody(submitted.question), el('small', 'agent-job-state', 'Submitting…')); feed.querySelector('.agent-empty')?.remove(); feed.append(optimistic); feed.scrollTop = feed.scrollHeight;
       clearTimeout(threadTimer); threadTimer = setTimeout(() => refreshThread(section, agent).catch(error => status(error.message)), 700);
       try {
-        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null})});
+        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null,target_agent_id:submitted.target})});
         state.textContent = '';
       } catch (error) {
         state.textContent = error.message;
         if (!readDraft(agent.id).question) {
-          writeDraft(agent.id, {question:submitted.question, notebook:submitted.notebook});
+          writeDraft(agent.id, {question:submitted.question, notebook:submitted.notebook,mention:submitted.mention});
           const current = selectedId === agent.id ? document.querySelector('.agent-composer textarea') : null;
           if (current && !current.value) current.value = submitted.question;
         }

@@ -11,9 +11,22 @@
     const feed=el('div',null,'notebook-activity-feed'),status=el('p',null,'notebook-work-status');status.role='status';
     const filters=el('div',null,'notebook-work-filters');filters.setAttribute('role','group');filters.setAttribute('aria-label','Activity status');let filter='all',current;
     for(const [id,name] of [['all','All'],...Object.entries(labels)]){const button=el('button',name);button.type='button';button.dataset.filter=id;button.setAttribute('aria-pressed',String(id===filter));button.onclick=()=>{filter=id;renderFeed();};filters.append(button);}
-    const form=el('form',null,'notebook-composer'),select=el('select'),input=el('textarea'),send=el('button','Send');select.setAttribute('aria-label','Notebook agent');input.setAttribute('aria-label','Message this notebook');input.placeholder='Message this notebook';input.maxLength=2000;input.required=true;send.type='submit';form.append(select,input,send);
+    const form=el('form',null,'notebook-composer'),select=el('select'),input=el('textarea'),send=el('button','Send');select.setAttribute('aria-label','Notebook agent');input.setAttribute('aria-label','Message this notebook');input.placeholder='Message this notebook';input.maxLength=2000;input.required=true;send.type='submit';input.disabled=true;select.disabled=true;send.disabled=true;form.append(select,input,send);
     input.value=sessionStorage.getItem('stellis-notebook-draft:'+book.id)||'';input.addEventListener('input',()=>sessionStorage.setItem('stellis-notebook-draft:'+book.id,input.value));
-    form.addEventListener('submit',async event=>{event.preventDefault();send.disabled=true;status.textContent='Working…';const question=input.value;try{await api('/agents/'+select.value+'/ask','POST',{question,notebook_id:book.id});if(input.value===question){input.value='';sessionStorage.removeItem('stellis-notebook-draft:'+book.id);}await refresh();status.textContent='Reply ready';}catch(error){status.textContent=error.message;}finally{send.disabled=!select.options.length;}});
+    let savedMention=null;try{savedMention=JSON.parse(sessionStorage.getItem('stellis-notebook-mention:'+book.id)||'null');}catch{}
+    const mention=window.StellisAgentMentions.attach(input,{initial:savedMention,
+      candidates:()=>current?.agents.filter(a=>a.enabled&&a.notebooks.some(n=>n.notebook_id===book.id&&n.enabled!==false))||[],
+      onChange:value=>{if(value&&[...select.options].some(o=>o.value===value.id))select.value=value.id;if(value)sessionStorage.setItem('stellis-notebook-mention:'+book.id,JSON.stringify(value));else sessionStorage.removeItem('stellis-notebook-mention:'+book.id);}});
+    select.addEventListener('change',()=>mention.clear());
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();let target;try{target=mention.resolve()||select.value;}catch(error){status.textContent=error.message;return;}
+      if(!input.value.trim()||send.disabled)return;
+      send.disabled=true;status.textContent='Working…';const question=input.value;
+      try{await api('/agents/'+target+'/ask','POST',{question,notebook_id:book.id});
+        if(input.value===question){input.value='';sessionStorage.removeItem('stellis-notebook-draft:'+book.id);}
+        await refresh();status.textContent='Reply ready';
+      }catch(error){status.textContent=error.message;}finally{send.disabled=!select.options.length;}
+    });
     const team=el('div',null,'notebook-team');aside.append(el('h3','Agents here'),team,link('Add an agent','/chat/settings'),el('h3','Agents can use'),el('p','Notes, meetings and sources in this notebook.'),el('h3','Notebook instructions'));
     const policy=el('form',null,'notebook-policy'),policyInput=el('textarea'),save=el('button','Save instructions'),policyStatus=el('p');policyInput.setAttribute('aria-label','Notebook instructions');policyInput.maxLength=4000;policyStatus.role='status';save.type='submit';policy.append(policyInput,save,policyStatus);aside.append(policy);
     policy.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{const result=await api('/notebooks/'+book.id+'/instructions','PUT',{instructions:policyInput.value,revision:policyRevision});policyRevision=result.revision;policyStatus.textContent='Instructions saved';}catch(error){policyStatus.textContent=error.message;}finally{save.disabled=false;}};
@@ -38,6 +51,8 @@
     async function refresh(){if(stopped)return;try{const data=await api('/notebooks/'+book.id+'/activity');if(stopped)return;current=data;const next=JSON.stringify(data.items);if(next!==signature){signature=next;renderFeed();}}catch(error){if(!stopped)status.textContent=error.message;}}
     try{const data=await api('/notebooks/'+book.id+'/activity');if(stopped)return;current=data;policyInput.value=data.instructions;policyRevision=data.revision;
       for(const agent of data.agents){const assigned=agent.notebooks.find(n=>n.notebook_id===book.id),enabled=agent.enabled&&assigned?.enabled!==false;const row=el('div',null,'notebook-team-row');const agentLink=link(agent.name,'/chat/'+agent.id);agentLink.prepend(window.StellisAgentAvatar.avatarElement(document,{seed:agent.id,size:28}));row.append(agentLink,el('small',enabled?agent.role:'Off'));team.append(row);if(enabled){const option=el('option',agent.name);option.value=agent.id;select.append(option);}}
+      if(mention.selected&&[...select.options].some(o=>o.value===mention.selected.id))select.value=mention.selected.id;
+      input.disabled=!select.options.length;select.disabled=!select.options.length;
       send.disabled=!select.options.length;if(!select.options.length){team.append(el('p','Add an agent to work with this notebook.'));input.disabled=true;}
       signature=JSON.stringify(data.items);renderFeed();
     }catch(error){status.textContent=error.message;}

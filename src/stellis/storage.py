@@ -166,6 +166,14 @@ def connect() -> Iterator[sqlite3.Connection]:
         gmail_draft_id TEXT, account_email TEXT, error TEXT,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_handoffs (
+        id TEXT PRIMARY KEY REFERENCES agent_jobs(id) ON DELETE CASCADE,
+        origin_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        target_id TEXT REFERENCES agents(id) ON DELETE SET NULL, target_name TEXT NOT NULL,
+        notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+        reply_id TEXT REFERENCES agent_messages(id) ON DELETE SET NULL,
+        target_message_id TEXT REFERENCES agent_messages(id) ON DELETE SET NULL
+    )""")
     conn.execute("CREATE INDEX IF NOT EXISTS agent_messages_thread ON agent_messages(agent_id, created_at)")
     conn.execute("""CREATE TABLE IF NOT EXISTS inference_traces (
         id TEXT PRIMARY KEY, kind TEXT NOT NULL,

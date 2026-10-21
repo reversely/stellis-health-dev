@@ -41,7 +41,7 @@ def activity(notebook_id):
             if row['id'] in artifact_jobs:continue
             working=row['state'] in {'queued','running'}
             items.append({'kind':'delegation','id':row['id'],'agent_id':row['steward_id'],'author':row['author'],'state':'working' if working else 'done','text':row['error'] or row['research'] or row['question'],'detail':{'queued':'Queued','researching':'Researching','drafting':'Preparing draft','complete':'Draft prepared','stopped':'Stopped or interrupted'}.get(row['stage'],row['stage']),'created_at':row['updated_at'],'target':'/chat/'+row['steward_id']})
-        jobs=conn.execute('SELECT j.*,a.name AS author FROM agent_jobs j JOIN agents a ON a.id=j.agent_id WHERE j.notebook_id=? ORDER BY j.created_at DESC LIMIT 100',(notebook_id,)).fetchall()
+        jobs=conn.execute('SELECT j.*,COALESCE(h.target_name,a.name) AS author FROM agent_jobs j JOIN agents a ON a.id=j.agent_id LEFT JOIN agent_handoffs h ON h.id=j.id WHERE j.notebook_id=? ORDER BY j.created_at DESC LIMIT 100',(notebook_id,)).fetchall()
         for row in jobs:
             if row['id'] in artifact_jobs:continue
             message=conn.execute("SELECT id,content FROM agent_messages WHERE job_id=? AND role='agent' ORDER BY created_at DESC LIMIT 1",(row['id'],)).fetchone()

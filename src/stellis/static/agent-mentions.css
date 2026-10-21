@@ -1,0 +1,10 @@
+.agent-mentions{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;grid-column:1/-1}
+.agent-mentions button{max-width:100%;overflow-wrap:anywhere;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--raised);color:var(--ink);font:inherit;cursor:pointer}
+.agent-mention-chip[hidden],.agent-mention-list[hidden]{display:none!important}
+.agent-mention-list{position:relative;flex-basis:100%;min-width:0;width:100%;max-width:420px;max-height:250px;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 5px 20px #0003}
+.agent-mention-list button{display:block;width:100%;text-align:left;border:0;background:transparent}
+.agent-mention-list button[aria-selected=true]{background:var(--ink);color:var(--surface)}
+.agent-mention-list p{padding:8px;margin:0}
+.agent-mentions button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+.agent-job-stop{display:block;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
