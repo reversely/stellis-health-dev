@@ -1,0 +1,91 @@
+/* Health summary page. The rail layout lives in timeline.css. */
+.summary-view[hidden] {
+  display: none;
+}
+.summary-view {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  max-width: 820px;
+}
+.summary-head h2 {
+  margin: 0;
+  font:
+    300 30px/1.15 Piazzolla,
+    Georgia,
+    serif;
+  letter-spacing: -0.02em;
+}
+.summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.summary-meta,
+.summary-status,
+.summary-empty {
+  margin: 0;
+  color: var(--muted);
+}
+.summary-view .summary-update {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.summary-view .summary-update:disabled {
+  cursor: default;
+  background: var(--raised);
+  border-color: var(--line);
+  color: var(--quiet);
+}
+.summary-view :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.summary-body {
+  display: grid;
+  gap: 18px;
+}
+.summary-section {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+.summary-section h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.summary-section p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+  max-width: 72ch;
+}
+.summary-section p:last-child {
+  margin-bottom: 0;
+}
+.summary-section .nb-cite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin: 0 2px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  vertical-align: 1px;
+  font-variant-numeric: tabular-nums;
+}

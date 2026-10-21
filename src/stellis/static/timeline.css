@@ -1,6 +1,8 @@
-/* Health timeline page, and the rail layout it shares with the Records page. */
+/* Health timeline page, and the rail layout it shares with the Records and
+   Health summary pages. */
 body.timeline-page .heading,
-body.records-page .heading {
+body.records-page .heading,
+body.summary-page .heading {
   display: none;
 }
 .timeline-view[hidden] {
@@ -13,16 +15,19 @@ body.records-page .heading {
   max-width: 820px;
 }
 .timeline-page .home-rail .rail-pin,
-.records-page .home-rail .rail-pin {
+.records-page .home-rail .rail-pin,
+.summary-page .home-rail .rail-pin {
   min-height: 44px;
 }
 @media (min-width: 1001px) {
   body.timeline-page,
-  body.records-page {
+  body.records-page,
+  body.summary-page {
     --rail-width: 270px;
   }
   .timeline-page #timeline-view,
-  .records-page #records-view {
+  .records-page #records-view,
+  .summary-page #summary-view {
     grid-column: 2;
     grid-row: 1;
     margin: 0;
@@ -31,7 +36,8 @@ body.records-page .heading {
 }
 @media (max-width: 1000px) {
   .timeline-page main,
-  .records-page main {
+  .records-page main,
+  .summary-page main {
     display: flex;
     flex-direction: column;
     padding: 16px !important;
@@ -39,12 +45,14 @@ body.records-page .heading {
     box-sizing: border-box;
   }
   .timeline-page #timeline-view,
-  .records-page #records-view {
+  .records-page #records-view,
+  .summary-page #summary-view {
     order: 1;
     width: 100%;
   }
   .timeline-page .home-rail,
-  .records-page .home-rail {
+  .records-page .home-rail,
+  .summary-page .home-rail {
     order: 2;
     background: #27222b;
     padding: 24px;
