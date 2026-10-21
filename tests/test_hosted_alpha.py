@@ -172,6 +172,31 @@ class ProxyOptionsTest(unittest.TestCase):
             self.assertEqual(cli.proxy_options(), {"proxy_headers": True, "forwarded_allow_ips": "*"})
 
 
+class SecurityHeaderTest(unittest.TestCase):
+    def test_pages_carry_policy_headers_and_hsts_only_over_https(self):
+        import base64
+        import hashlib
+        import re
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required"}):
+            with TestClient(app, base_url="https://health.example") as client:
+                page = client.get("/auth")
+            with TestClient(app, base_url="http://127.0.0.1:8765") as client:
+                local = client.get("/api/health")
+        policy = page.headers["content-security-policy"]
+        self.assertIn("frame-ancestors 'none'", policy)
+        self.assertIn("object-src 'none'", policy)
+        self.assertNotIn("unsafe-inline", policy)
+        inline = re.search(r"<script>(.*?)</script>", (Path("src/stellis/static") / "auth.html").read_text(), re.DOTALL)
+        digest = base64.b64encode(hashlib.sha256(inline.group(1).encode()).digest()).decode()
+        self.assertIn(f"'sha256-{digest}'", policy)
+        self.assertEqual(page.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(page.headers["strict-transport-security"], "max-age=31536000")
+        self.assertNotIn("strict-transport-security", local.headers)
+        self.assertIn("content-security-policy", local.headers)
+
+
 class AccessLogTest(unittest.TestCase):
     def test_access_lines_omit_query_strings(self):
         import io

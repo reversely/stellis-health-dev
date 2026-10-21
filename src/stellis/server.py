@@ -71,8 +71,10 @@ async def session_gate(request: Request, call_next):
 
 @app.middleware("http")
 async def development_cache_policy(request: Request, call_next):
-    """Revalidate mutable assets so a normal reload uses the current local build."""
+    """Revalidate mutable assets so a normal reload uses the current local build, and set security headers."""
+    from stellis import security_headers
     response = await call_next(request)
+    security_headers.apply(response.headers, https=request.url.scheme == "https")
     path = request.url.path
     if path.startswith(("/static/", "/shared/")):
         response.headers["Cache-Control"] = "private, no-cache"
