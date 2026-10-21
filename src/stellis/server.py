@@ -1811,7 +1811,10 @@ def move_record(kind: str, item_id: str, request: RecordMove):
 
 @api.get("/summary")
 def health_summary_latest():
-    return {"summary": health_summary.latest()}
+    return {
+        "summary": health_summary.latest(),
+        "document_count": health_summary.ready_count()
+    }
 
 
 @api.post("/summary/refresh")

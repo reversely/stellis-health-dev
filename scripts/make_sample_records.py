@@ -237,11 +237,11 @@ def main(bundle_path: str) -> None:
     for visit in select_visits(resources):
         slug = visit.title.lower().replace(" ", "-").replace("_", "-")
         filename = f"{visit.date}-{slug}.pdf"
-        title = f"{visit.title} {visit.date}"
-        _write_pdf(OUT / filename, title, _note_blocks(visit.note))
+        _write_pdf(OUT / filename, f"{visit.title} {visit.date}",
+                   _note_blocks(visit.note))
         records.append({
             "file": filename,
-            "title": title,
+            "title": visit.title,
             "record_date": visit.date
         })
     for date, results in select_labs(resources).items():
@@ -253,7 +253,11 @@ def main(bundle_path: str) -> None:
         else:
             filename = f"{date}-lab-results.pdf"
             _write_pdf(OUT / filename, title, _lab_blocks(results))
-        records.append({"file": filename, "title": title, "record_date": date})
+        records.append({
+            "file": filename,
+            "title": "Lab results",
+            "record_date": date
+        })
     records.sort(key=lambda record: record["record_date"])
     manifest = {"patient": "Denver Lang", "source": SOURCE, "records": records}
     (OUT / MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n")
