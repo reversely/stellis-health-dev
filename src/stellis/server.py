@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -1072,6 +1072,11 @@ class SourceSelection(BaseModel):
     excluded: list[str] = Field(max_length=500)
 
 
+class NotebookQuestion(BaseModel):
+    question: str = Field(max_length=2000)
+    source_ids: list[str] = Field(max_length=500)
+
+
 @api.get("/daily-brief")
 def daily_brief_status():
     from stellis import daily_brief
@@ -1146,6 +1151,23 @@ def notebook_sources_list(notebook_id: str):
 def notebook_sources_selection(notebook_id: str, request: SourceSelection):
     return _agent_result(lambda: {"sources": notebook_sources.save_selection(notebook_id, request.excluded),
                                   "limit": notebook_sources.LIMIT})
+
+
+@api.get("/notebooks/{notebook_id}/chat")
+def notebook_chat_messages(notebook_id: str):
+    return _agent_result(lambda: {"messages": notebook_chat.messages(notebook_id)})
+
+
+@api.post("/notebooks/{notebook_id}/ask")
+async def notebook_chat_ask(notebook_id: str, request: NotebookQuestion):
+    try:
+        return await notebook_chat.ask(notebook_id, request.question, request.source_ids)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except notebook_chat.ChatError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.put("/notebooks/{notebook_id}/instructions")
