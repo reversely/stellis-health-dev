@@ -21,6 +21,14 @@
       return citation ? {citation} : {text: part};
     }));
   }
+  // A saved answer keeps its numbers as [n] and lists each cited source as a link.
+  function answerMarkdown(content, citations) {
+    const text = content.replace(/\[\[(\d+)\]\]/g, '[$1]');
+    if (!citations.length) return text;
+    const label = item => (item.page ? `${item.title}, page ${item.page}` : item.title).replace(/[[\]]/g, '');
+    return `${text}\n\n## Sources\n\n${citations.map(item => `- ${item.n}. [${label(item)}](${item.target})`).join('\n')}`;
+  }
+  const sourceTarget = id => { const [kind, value] = id.split(':'); return `/${kind}/${encodeURIComponent(value)}`; };
   function answerBody(content, citations) {
     const body = el('div', null, 'nb-answer');
     for (const parts of answerParts(content, citations)) {
@@ -70,7 +78,15 @@
     box.append(input, send);
     const status = el('p', null, 'nb-status'); status.setAttribute('role', 'status');
     form.append(answerWith, box, status); chat.append(log, form);
-    layout.append(panel, chat); host.append(layout);
+    const viewer = root.StellisNotebookViewer.create();
+    viewer.element.addEventListener('vieweropen', () => { layout.dataset.viewer = 'open'; });
+    viewer.element.addEventListener('viewerclose', () => { delete layout.dataset.viewer; });
+    layout.append(panel, chat, viewer.element); host.append(layout);
+    log.addEventListener('click', event => {
+      const link = event.target.closest('a.nb-cite');
+      if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button) return;
+      event.preventDefault(); viewer.show(link.getAttribute('href'), link);
+    });
 
     const ready = () => sources.filter(item => item.status === 'ready');
     const chosen = () => ready().filter(item => item.selected);
@@ -88,11 +104,14 @@
     function paintSources() {
       list.replaceChildren(...sources.map(source => {
         const row = el('li', null, 'nb-source'); row.dataset.status = source.status;
-        const title = el('span', source.title, 'nb-source-title');
-        if (source.status !== 'ready') { row.append(icon(ICONS[source.type] || 'file'), title, el('span', STATUS[source.status], 'nb-source-status')); return row; }
-        const label = el('label'), box = el('input'); box.type = 'checkbox'; box.checked = source.selected;
+        const open = el('button', null, 'nb-source-open'); open.type = 'button';
+        open.append(icon(ICONS[source.type] || 'file'), el('span', source.title, 'nb-source-title'));
+        open.addEventListener('click', () => viewer.show(sourceTarget(source.id), open));
+        row.append(open);
+        if (source.status !== 'ready') { row.append(el('span', STATUS[source.status], 'nb-source-status')); return row; }
+        const box = el('input'); box.type = 'checkbox'; box.checked = source.selected; box.setAttribute('aria-label', `Use ${source.title}`);
         box.addEventListener('change', () => { source.selected = box.checked; saveSelection(); });
-        label.append(icon(ICONS[source.type] || 'file'), title, box); row.append(label); return row;
+        const check = el('label', null, 'nb-source-check'); check.append(box); row.append(check); return row;
       }));
       empty.hidden = sources.length > 0; all.hidden = ready().length < 2;
       allBox.checked = ready().length > 0 && chosen().length === ready().length;
@@ -107,11 +126,22 @@
     allBox.addEventListener('change', () => { for (const source of ready()) source.selected = allBox.checked; saveSelection(); });
     toggle.addEventListener('click', () => { layout.dataset.sources = layout.dataset.sources === 'open' ? 'closed' : 'open'; paintToggle(); });
 
+    let lastQuestion = '';
     function message(item) {
-      if (item.role === 'user') { const node = el('div', null, 'nb-msg nb-msg-user'); node.append(el('p', item.content)); return node; }
+      if (item.role === 'user') { lastQuestion = item.content; const node = el('div', null, 'nb-msg nb-msg-user'); node.append(el('p', item.content)); return node; }
       const node = el('article', null, 'nb-msg');
       if (item.author) node.append(el('strong', item.author, 'nb-msg-author'));
       node.append(answerBody(item.content, item.citations || []));
+      const save = el('button', 'Save as note', 'nb-msg-save'); save.type = 'button';
+      const title = (lastQuestion || 'Saved answer').slice(0, 120);
+      save.addEventListener('click', async () => {
+        save.disabled = true;
+        try {
+          await api('/pages', 'POST', {title, notebook_id: book.id, markdown: answerMarkdown(item.content, item.citations || [])});
+          save.textContent = 'Saved as a note'; await refreshSources();
+        } catch (error) { status.textContent = error.message; save.disabled = false; }
+      });
+      node.append(save);
       return node;
     }
     function paintAgents() {
@@ -125,14 +155,14 @@
       const question = input.value.trim(), ids = chosen().map(item => item.id);
       if (!question || !ids.length || form.dataset.busy === 'true') return;
       form.dataset.busy = 'true'; paintComposer(); intro.remove();
-      const pending = message({role: 'user', content: question}); log.append(pending); input.value = '';
+      const previous = lastQuestion, pending = message({role: 'user', content: question}); log.append(pending); input.value = '';
       status.textContent = `Reading ${plural(ids.length, 'source')}`;
       try {
         const answer = await api(`/notebooks/${book.id}/ask`, 'POST', {question, source_ids: ids, agent_id: picker.value || null});
         if (stopped) return;
         log.append(message(answer)); status.textContent = '';
       } catch (error) {
-        pending.remove(); if (!input.value) input.value = question;
+        pending.remove(); lastQuestion = previous; if (!input.value) input.value = question;
         status.textContent = error.message;
       } finally { form.dataset.busy = 'false'; paintComposer(); }
     });
@@ -153,7 +183,7 @@
       if (history.messages.length) log.append(...history.messages.map(message)); else log.append(intro);
     } catch (error) { status.textContent = error.message; }
   }
-  const exported = {mount, stop: () => dispose(), answerParts};
+  const exported = {mount, stop: () => dispose(), answerParts, answerMarkdown};
   root.StellisNotebookChat = exported;
   if (typeof module !== 'undefined') module.exports = exported;
 })(typeof window !== 'undefined' ? window : globalThis);
