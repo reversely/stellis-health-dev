@@ -193,3 +193,9 @@
 .artifact-sources{margin-top:14px}.artifact-sources summary{cursor:pointer;min-height:32px;padding-block:6px;font-size:13px}.artifact-sources a{display:block;min-height:28px;font-size:13px}
 .artifact-editor{display:grid;gap:12px;margin:18px 0}.artifact-editor[hidden]{display:none}.artifact-editor label{display:grid;gap:6px;font-size:13px}.artifact-editor input,.artifact-editor textarea{min-width:0;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:7px;background:var(--input);color:var(--ink);padding:10px;font:inherit}.artifact-editor textarea{min-height:220px;resize:vertical;line-height:1.55}.artifact-notice:empty{display:none}.artifact-notice{font-size:13px;color:var(--muted)}
 @media(max-width:700px){.agent-artifact{padding:14px}.artifact-actions button,.artifact-actions a,.artifact-editor button{min-height:44px}.agent-artifact h4{font-size:21px}}
+
+.agent-work-steps {list-style:none;padding:0;margin:16px 0;display:grid;gap:12px}
+.agent-work-step {border-left:2px solid var(--muted);padding:0 0 0 12px;display:grid;gap:5px;overflow-wrap:anywhere}
+.agent-work-step[data-state="running"] {border-left-color:var(--text)}
+.agent-step-result summary {cursor:pointer;min-height:44px;display:flex;align-items:center}
+.agent-step-result p {margin:4px 0}

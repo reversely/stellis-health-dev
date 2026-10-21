@@ -726,7 +726,8 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
         if request.target_agent_id:
             from stellis import agent_handoffs
             return await agent_handoffs.ask(agent_id, request.target_agent_id, request.question, request.notebook_id)
-        return await agent_runtime.ask(agent_id, request.question, request.notebook_id)
+        from stellis import agent_coordination
+        return await agent_coordination.ask(agent_id, request.question, request.notebook_id)
     except asyncio.CancelledError as exc:
         raise HTTPException(status_code=409, detail="Reply stopped") from exc
     except LookupError as exc:

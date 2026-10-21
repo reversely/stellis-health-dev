@@ -27,7 +27,7 @@ def event(name: str, **details) -> None:
     trace_id = _ACTIVE.get()
     if not trace_id:
         return
-    allowed = {"attempt", "source_count", "citation_count", "error_type", "error_code", "reads"}
+    allowed = {"attempt", "source_count", "citation_count", "error_type", "error_code", "reads", "step_count", "exit_code", "output_limit", "invalid_meta", "timed_out", "abandoned", "provider_error"}
     safe = {key: value for key, value in details.items() if key in allowed
             and isinstance(value, (int, str))}
     with storage.connect() as conn:
@@ -73,7 +73,7 @@ def span(kind: str, agent_id=None, model=None, provider=None):
     trace_id = str(uuid.uuid4())
     start = time.monotonic()
     execution = ("Nebius Cloud" if runtime_profile.cloud() else "GN100") if kind in {
-        "agent_chat", "specialist", "email_draft"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
+        "agent_chat", "agent_plan", "agent_review", "specialist", "email_draft"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
     with _GUARD:
         if _SWITCHING:
             raise RuntimeError("A model change is running. Try again when it finishes.")

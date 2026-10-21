@@ -372,3 +372,7 @@ Writing agents can opt into a notebook-specific Gmail search rule. While the acc
 ### Explicit agent addressing
 
 Chat and notebook composers accept a stable, notebook-scoped agent recipient through a shared keyboard picker. Cross-agent chat requests persist an agent_handoffs link, execute through the addressed agent's configured managed route, and retain an attributed reply in the origin thread. Both threads expose one cancellable job; the origin projects the responding agent's canonical review artifact. Assignment validation and an active watcher enforce Off/removal. Origin publication and job completion commit together. This is explicit dispatch, not automatic multi-step coordination. See [ADR 0075](decisions/0075-explicit-agent-addressing.md).
+
+### Notebook collaboration
+
+For notebook requests with multiple enabled deployments, agent_coordination plans up to three supporting turns through the configured managed route, persists ordered agent_work_steps under one parent job, gathers evidence and checks through the chosen agents, then asks the originating agent to produce the final response or review artifact. Child job IDs link step state to inference traces. The chat thread renders persisted steps and one parent Stop action. Off/removal and restart interrupt work without silently replaying it. Explicit mentions remain direct dispatch. See [ADR 0076](decisions/0076-notebook-agent-coordination.md).

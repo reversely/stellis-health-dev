@@ -331,8 +331,12 @@ def finish_job(job_id: str, state: str, error: str | None = None) -> None:
 def jobs(agent_id: str) -> list[dict[str, object]]:
     with storage.connect() as conn:
         _record(conn, agent_id)
-        return [dict(row) for row in conn.execute("""SELECT j.* FROM agent_jobs j LEFT JOIN agent_handoffs h ON h.id=j.id WHERE j.agent_id = ? OR h.target_id = ?
+        rows = [dict(row) for row in conn.execute("""SELECT j.* FROM agent_jobs j LEFT JOIN agent_handoffs h ON h.id=j.id WHERE j.agent_id = ? OR h.target_id = ?
             ORDER BY j.created_at,j.id""", (agent_id,agent_id))]
+    from stellis import agent_coordination
+    for row in rows:
+        row['steps'] = agent_coordination.steps(row['id'])
+    return rows
 
 
 def interrupt_running_jobs() -> None:
@@ -340,6 +344,8 @@ def interrupt_running_jobs() -> None:
     with storage.connect() as conn:
         conn.execute("""UPDATE agent_jobs SET state = 'interrupted', error = 'Reply interrupted. Send again.',
             finished_at = ? WHERE state = 'running'""", (_now(),))
+        conn.execute("UPDATE agent_work_steps SET state='interrupted', error='Work interrupted. Send again.' WHERE state='running'")
+        conn.execute("UPDATE agent_work_steps SET state='skipped' WHERE state='queued'")
 
 
 def delete(agent_id: str) -> None:

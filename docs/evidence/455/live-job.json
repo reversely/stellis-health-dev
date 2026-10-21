@@ -1,0 +1,78 @@
+{
+  "id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+  "agent_id": "ac73e22a-0441-4362-a6f3-9c207d96e3d5",
+  "notebook_id": "ed249aad-b189-4308-b868-3863ef68b863",
+  "state": "succeeded",
+  "error": null,
+  "created_at": "2026-10-21T00:28:22.523604+00:00",
+  "finished_at": "2026-10-21T00:29:58.922894+00:00",
+  "steps": [
+    {
+      "id": "90193ffe-6322-4f1c-b80f-e3bc9acd718f",
+      "job_id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+      "position": 0,
+      "agent_id": "ac73e22a-0441-4362-a6f3-9c207d96e3d5",
+      "agent_name": "Writing",
+      "task": "Plan the work",
+      "state": "succeeded",
+      "child_job_id": null,
+      "result": "Work plan ready.",
+      "error": null,
+      "sources": []
+    },
+    {
+      "id": "43e8c940-550a-485b-bfc7-5593680ab4df",
+      "job_id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+      "position": 1,
+      "agent_id": "56aba9d6-7c8f-43f8-859a-b5f39f6519b6",
+      "agent_name": "Notebook steward",
+      "task": "Gather the notebook evidence needed for the review checklist",
+      "state": "succeeded",
+      "child_job_id": "a94b88f5-cf38-4059-a80f-f278f3cae861",
+      "result": "The review requires measured inputs and outputs and a signed approval record [Review requirements](/page/92a73576-0ae7-44bf-9b85-fe0f552df25d). The measurements were recorded on Tuesday, but no approval record has been received [Review requirements](/page/92a73576-0ae7-44bf-9b85-fe0f552df25d).",
+      "error": null,
+      "sources": [
+        {
+          "source_id": "92a73576-0ae7-44bf-9b85-fe0f552df25d",
+          "target": "/page/92a73576-0ae7-44bf-9b85-fe0f552df25d"
+        }
+      ]
+    },
+    {
+      "id": "11bc5700-18da-46af-96d8-c23f284136a5",
+      "job_id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+      "position": 2,
+      "agent_id": "01f0bca5-e532-4477-a498-36b418f19a65",
+      "agent_name": "Reviewer",
+      "task": "Check which requirements remain unconfirmed before drafting the checklist",
+      "state": "succeeded",
+      "child_job_id": "d7e9e557-d950-4c78-8b09-76855bfac74d",
+      "result": "The signed approval record requirement remains unconfirmed because no approval record has been received [Review requirements](/page/92a73576-0ae7-44bf-9b85-fe0f552df25d)",
+      "error": null,
+      "sources": [
+        {
+          "source_id": "92a73576-0ae7-44bf-9b85-fe0f552df25d",
+          "target": "/page/92a73576-0ae7-44bf-9b85-fe0f552df25d"
+        }
+      ]
+    },
+    {
+      "id": "24d35b99-b9c2-40f8-9d2d-87d5c7a6fa46",
+      "job_id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+      "position": 3,
+      "agent_id": "ac73e22a-0441-4362-a6f3-9c207d96e3d5",
+      "agent_name": "Writing",
+      "task": "Prepare the response",
+      "state": "succeeded",
+      "child_job_id": null,
+      "result": "Response ready.",
+      "error": null,
+      "sources": [
+        {
+          "source_id": "92a73576-0ae7-44bf-9b85-fe0f552df25d",
+          "target": "/page/92a73576-0ae7-44bf-9b85-fe0f552df25d"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+Persisted work steps visible while local planning runs
+[('Writing', 'running')]
+[('Writing', 'succeeded'), ('Notebook steward', 'running'), ('Reviewer', 'queued'), ('Writing', 'queued')]
+[('Writing', 'succeeded'), ('Notebook steward', 'succeeded'), ('Reviewer', 'running'), ('Writing', 'queued')]
+[('Writing', 'succeeded'), ('Notebook steward', 'succeeded'), ('Reviewer', 'succeeded'), ('Writing', 'running')]
+[('Writing', 'succeeded'), ('Notebook steward', 'succeeded'), ('Reviewer', 'succeeded'), ('Writing', 'succeeded')]
+Actual local planning, evidence gathering, specialist review, final artifact and reload passed
+Stopping coordinated work prevents a second artifact

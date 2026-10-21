@@ -1,0 +1,63 @@
+{
+  "id": "7e008617-40e5-42fe-b3f7-46a325a37351",
+  "agent_id": "3f1e0fcd-0a02-483a-bd20-21575a85798f",
+  "notebook_id": "3a09c0f4-d08a-4b4b-95f2-ee8b3ca11470",
+  "state": "interrupted",
+  "error": "Work stopped. Send again to start a new request.",
+  "created_at": "2026-10-21T00:31:33.449879+00:00",
+  "finished_at": "2026-10-21T00:31:59.772512+00:00",
+  "steps": [
+    {
+      "id": "3d259ca5-4c01-444b-ba25-ceffea3ed67c",
+      "job_id": "7e008617-40e5-42fe-b3f7-46a325a37351",
+      "position": 0,
+      "agent_id": "3f1e0fcd-0a02-483a-bd20-21575a85798f",
+      "agent_name": "Writing",
+      "task": "Plan the work",
+      "state": "succeeded",
+      "child_job_id": null,
+      "result": "Work plan ready.",
+      "error": null,
+      "sources": []
+    },
+    {
+      "id": "069b4084-ce9e-4b6a-84e2-c307056ff559",
+      "job_id": "7e008617-40e5-42fe-b3f7-46a325a37351",
+      "position": 1,
+      "agent_id": "00c1ee40-4466-42e3-920e-bf334df1042d",
+      "agent_name": "Notebook steward",
+      "task": "Gather relevant notebook evidence and identify any missing or unconfirmed requirements",
+      "state": "interrupted",
+      "child_job_id": "2f99567d-2bd1-4f5c-b9a9-8bd8472e9343",
+      "result": "",
+      "error": "Work stopped.",
+      "sources": []
+    },
+    {
+      "id": "d3b84fd1-d5f8-4c8c-9a32-bb32d8086b76",
+      "job_id": "7e008617-40e5-42fe-b3f7-46a325a37351",
+      "position": 2,
+      "agent_id": "81863807-0745-4fdd-b182-6c6b689541ed",
+      "agent_name": "Reviewer",
+      "task": "Check the gathered evidence against the notebook requirements and identify which requirements remain unconfirmed",
+      "state": "skipped",
+      "child_job_id": null,
+      "result": "",
+      "error": null,
+      "sources": []
+    },
+    {
+      "id": "b2643745-e891-4c38-a08d-7102d589617d",
+      "job_id": "7e008617-40e5-42fe-b3f7-46a325a37351",
+      "position": 3,
+      "agent_id": "3f1e0fcd-0a02-483a-bd20-21575a85798f",
+      "agent_name": "Writing",
+      "task": "Prepare the response",
+      "state": "skipped",
+      "child_job_id": null,
+      "result": "",
+      "error": null,
+      "sources": []
+    }
+  ]
+}

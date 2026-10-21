@@ -1,0 +1,25 @@
+review checklist draft
+
+draft
+
+review checklist
+
+confirm that all inputs are measured. review requirements
+
+confirm that all outputs are measured. review requirements
+
+verify that a signed approval record is required. review requirements
+
+ensure that the signed approval record has been received. review requirements
+
+note that measurements were recorded on tuesday. review requirements
+
+flag that the signed approval record requirement remains unconfirmed due to the absence of an approval record. review requirements
+
+additional note: the lack of an approval record prevents final sign‑off until it is provided. review requirements
+
+draft sources
+save to notebook
+copy draft
+edit
+discard

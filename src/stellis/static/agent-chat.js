@@ -1,5 +1,8 @@
 (() => {
   const base = '/api/v1';
+  let leavingPage = false;
+  window.addEventListener('beforeunload', () => { leavingPage = true; });
+  window.addEventListener('pageshow', () => { leavingPage = false; });
   let agents = [];
   let templates = [];
   let notebooks = [];
@@ -210,6 +213,7 @@
     if (selectedId !== agent.id) return;
     const feed = section.querySelector('.agent-thread-feed');
     const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+    const openSteps = new Set([...feed.querySelectorAll('.agent-step-result[open]')].map(item=>item.dataset.stepId));
     const byJob = new Map(jobs.map(job => [job.id, job]));
     const nodes = [];
     for (const message of messages) {
@@ -224,6 +228,20 @@
       const job = byJob.get(message.job_id);
       if (message.role === 'user' && job && job.state !== 'succeeded')
         item.append(el('small', 'agent-job-state', job.state === 'running' ? (message.addressed_agent_name?'Asking '+message.addressed_agent_name+'…':'Working on your request…') : job.error || 'Reply interrupted. Try again.'));
+      if(message.role==='user' && job?.steps?.length){
+        const work=el('ol','agent-work-steps');work.setAttribute('aria-label','Work steps');
+        for(const step of job.steps){
+          const row=el('li','agent-work-step');row.dataset.state=step.state;
+          row.append(el('strong','',step.agent_name),el('span','',step.task));
+          const states={queued:'Waiting',running:'Working…',succeeded:'Done',failed:'Failed',interrupted:'Stopped',skipped:'Not run'};
+          row.append(el('small','agent-job-state',states[step.state]||step.state));
+          if(step.sources?.length)row.append(el('small','agent-job-state',`${step.sources.length} source${step.sources.length===1?'':'s'}`));
+          if(step.result){const detail=el('details','agent-step-result');detail.dataset.stepId=step.id;detail.open=openSteps.has(step.id);detail.append(el('summary','','View result'),messageBody(step.result));row.append(detail);}
+          if(step.error)row.append(el('p','agent-status',step.error));
+          work.append(row);
+        }
+        item.append(work);
+      }
       if(message.role==='user' && job?.state==='running'){
         const stop=el('button','agent-job-stop','Stop reply');stop.type='button';
         stop.addEventListener('click',async()=>{stop.disabled=true;try{
@@ -330,7 +348,7 @@
         state.textContent = '';
       } catch (error) {
         state.textContent = error.message;
-        if (!readDraft(agent.id).question) {
+        if (!leavingPage && !readDraft(agent.id).question) {
           writeDraft(agent.id, {question:submitted.question, notebook:submitted.notebook,mention:submitted.mention});
           const current = selectedId === agent.id ? document.querySelector('.agent-composer textarea') : null;
           if (current && !current.value) current.value = submitted.question;

@@ -1,0 +1,3 @@
+Persisted work steps visible while local planning runs
+Active child job linked to running step
+Turning off active participant stops parent and later steps without a final artifact

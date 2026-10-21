@@ -1,0 +1,195 @@
+[
+  {
+    "id": "95933031-b266-45f6-84eb-a8ae9aae52e3",
+    "kind": "agent_chat",
+    "agent_id": "ac73e22a-0441-4362-a6f3-9c207d96e3d5",
+    "job_id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T00:29:21.485014+00:00",
+    "finished_at": "2026-10-21T00:29:58.917313+00:00",
+    "duration_ms": 37434,
+    "agent_name": "Writing",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T00:29:21.488919+00:00"
+      },
+      {
+        "name": "sources_selected",
+        "at": "2026-10-21T00:29:21.566533+00:00",
+        "source_count": 1
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T00:29:21.569771+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "model_replied",
+        "at": "2026-10-21T00:29:58.882662+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "sources_validated",
+        "at": "2026-10-21T00:29:58.885433+00:00",
+        "citation_count": 1
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T00:29:58.914720+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25522,
+      "output": 1808,
+      "total": 27330
+    }
+  },
+  {
+    "id": "be53ac1f-62ed-4c91-b466-1880e0c3e909",
+    "kind": "agent_review",
+    "agent_id": "01f0bca5-e532-4477-a498-36b418f19a65",
+    "job_id": "d7e9e557-d950-4c78-8b09-76855bfac74d",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T00:29:04.816285+00:00",
+    "finished_at": "2026-10-21T00:29:21.436548+00:00",
+    "duration_ms": 16622,
+    "agent_name": "Reviewer",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T00:29:04.819437+00:00"
+      },
+      {
+        "name": "sources_selected",
+        "at": "2026-10-21T00:29:04.865424+00:00",
+        "source_count": 1
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T00:29:04.872164+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "model_replied",
+        "at": "2026-10-21T00:29:21.420954+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "sources_validated",
+        "at": "2026-10-21T00:29:21.423211+00:00",
+        "citation_count": 1
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T00:29:21.431342+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25381,
+      "output": 380,
+      "total": 25761
+    }
+  },
+  {
+    "id": "2994b354-667b-4221-84d0-e221467102ce",
+    "kind": "agent_review",
+    "agent_id": "56aba9d6-7c8f-43f8-859a-b5f39f6519b6",
+    "job_id": "a94b88f5-cf38-4059-a80f-f278f3cae861",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T00:28:44.355940+00:00",
+    "finished_at": "2026-10-21T00:29:04.727554+00:00",
+    "duration_ms": 20373,
+    "agent_name": "Notebook steward",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T00:28:44.357919+00:00"
+      },
+      {
+        "name": "sources_selected",
+        "at": "2026-10-21T00:28:44.404382+00:00",
+        "source_count": 1
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T00:28:44.410797+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "model_replied",
+        "at": "2026-10-21T00:29:04.706168+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "sources_validated",
+        "at": "2026-10-21T00:29:04.710235+00:00",
+        "citation_count": 1
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T00:29:04.724323+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25243,
+      "output": 647,
+      "total": 25890
+    }
+  },
+  {
+    "id": "26c9bec8-d762-4748-9d6d-6a94fb74f5a1",
+    "kind": "agent_plan",
+    "agent_id": "ac73e22a-0441-4362-a6f3-9c207d96e3d5",
+    "job_id": "c419f440-f81a-48da-b10b-3dc47ebb7003",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T00:28:22.542377+00:00",
+    "finished_at": "2026-10-21T00:28:44.282820+00:00",
+    "duration_ms": 21742,
+    "agent_name": "Writing",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T00:28:22.546883+00:00"
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T00:28:22.556680+00:00"
+      },
+      {
+        "name": "plan_ready",
+        "at": "2026-10-21T00:28:44.278897+00:00",
+        "step_count": 2
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T00:28:44.280917+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25061,
+      "output": 748,
+      "total": 25809
+    }
+  }
+]

@@ -196,6 +196,14 @@ def connect() -> Iterator[sqlite3.Connection]:
         created_at TEXT NOT NULL, finished_at TEXT
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS agent_jobs_thread ON agent_jobs(agent_id, created_at)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_work_steps (
+        id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES agent_jobs(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL, agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL,
+        agent_name TEXT NOT NULL, task TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'queued',
+        child_job_id TEXT REFERENCES agent_jobs(id) ON DELETE SET NULL,
+        result TEXT NOT NULL DEFAULT '', sources_json TEXT NOT NULL DEFAULT '[]',
+        error TEXT, UNIQUE(job_id, position))""")
+
     conn.execute("""CREATE TABLE IF NOT EXISTS agent_delegations (
         id TEXT PRIMARY KEY, steward_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
         specialist_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
