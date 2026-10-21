@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
 from stellis.importer import ImportFailure, import_upload
 
@@ -41,7 +41,7 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
-    if (path.startswith(("/static/", "/shared/")) or path in {"/auth", "/api/health", "/api/v1/health", "/mcp"}
+    if (path.startswith(("/static/", "/shared/")) or path in {"/auth", "/api/health", "/api/v1/health"}
             or path.startswith("/api/v1/auth/")
             or (request.method == "GET" and path in {
                 "/api/v1/calendar/google/callback", "/api/v1/calendar/microsoft/callback"})):
@@ -58,11 +58,6 @@ async def session_gate(request: Request, call_next):
             and auth.needs_onboarding(account_id)):
         return RedirectResponse("/onboarding", status_code=303)
     return await call_next(request)
-
-
-@app.api_route("/mcp", methods=["GET", "POST", "DELETE"], include_in_schema=False)
-async def mcp_endpoint(request: Request) -> Response:
-    return await mcp_server.handle(request)
 
 
 @app.middleware("http")

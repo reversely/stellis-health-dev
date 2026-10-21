@@ -68,9 +68,9 @@ def _reconcile_managed_mcp() -> None:
             raise AgentRunError("Managed agent tools are unavailable. Try again.") from exc
 
     from stellis import tavily
-    expected = ["stellis"]
-    if tavily.available_key():
-        expected.append("tavily")
+    if not tavily.available_key():
+        return
+    expected = ["tavily"]
     with _MCP_RECOVERY_LOCK:
         current = bridges()
         for name in expected:

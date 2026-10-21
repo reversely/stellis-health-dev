@@ -28,7 +28,7 @@ class AccountGatewayTest(unittest.TestCase):
                    STELLIS_ACCOUNT_SOCKET_DIR=str(Path(self.temp.name) / "sockets"),
                    PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"))
         for key in ("STELLIS_DEV_ACCOUNT", "STELLIS_DEV_PASSWORD", "STELLIS_NEMOCLAW_SANDBOX",
-                    "STELLIS_TAVILY_MCP_READY", "STELLIS_MCP_TOKEN"):
+                    "STELLIS_TAVILY_MCP_READY"):
             env.pop(key, None)
         env["STELLIS_GOOGLE_CALENDAR_CLIENT_ID"] = "test-client"
         self.env = env

@@ -174,3 +174,16 @@ class TlsProxyOriginTest(unittest.TestCase):
                                 headers={**forwarded, "Origin": "https://attacker.example",
                                          "Cookie": f"stellis_session={cookie}"})
             self.assertEqual(other.status_code, 403)
+
+
+class RemovedSurfacesTest(unittest.TestCase):
+    def test_mcp_endpoint_is_gone(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required",
+                                        "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": ""}), \
+                TestClient(app, follow_redirects=False) as client:
+            client.post("/api/v1/auth/register", json={"username": "Riley", "password": "correct horse battery staple"})
+            for method in ("POST", "DELETE"):
+                with self.subTest(method=method):
+                    self.assertEqual(client.request(method, "/mcp").status_code, 404)
+            self.assertNotEqual(client.get("/mcp").status_code, 200)
