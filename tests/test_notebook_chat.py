@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from stellis import agent_gateway, notebook_chat, notebooks, pages, storage
+from stellis import agent_gateway, documents, notebook_chat, notebook_sources, notebooks, pages, sample_records, storage
 from stellis.server import app
 
 STAMP = datetime(2026, 10, 21, 12, 0, tzinfo=timezone.utc).isoformat()
@@ -114,6 +114,22 @@ class NotebookChatTest(unittest.TestCase):
         self.assertTrue(runtime.await_args.kwargs["only_supplied_sources"])
         self.assertEqual({item["source_id"] for item in supplied}, set(self.checked))
         self.assertEqual(self.client.get(f"/api/v1/notebooks/{self.book}/chat").json()["messages"][1]["agent_id"], "agent-1")
+
+    def test_issue_42_done_when_with_a_lab_pdf_unchecked(self):
+        folder = sample_records.FOLDER
+        report, _ = documents.create("kidney.pdf", (folder / "kidney-pathology-report.pdf").read_bytes(), self.book)
+        scan, _ = documents.create("scan.pdf", (folder / "thyroid-pathology-report-scan.pdf").read_bytes(), self.book)
+        listed = {item["id"]: item for item in notebook_sources.list_sources(self.book)}
+        self.assertEqual((listed["document:" + report["id"]]["type"], listed["document:" + report["id"]]["selected"]), ("pdf", True))
+        self.assertEqual((listed["document:" + scan["id"]]["status"], listed["document:" + scan["id"]]["selected"]), ("needs_text", False))
+        with_pdf = notebook_chat.retrieve(self.book, [*self.checked, "document:" + report["id"]], "nephrectomy")
+        page = next(item for item in with_pdf if item["source_id"] == "document:" + report["id"])
+        self.assertEqual((page["page"], page["target"]), (1, f"/document/{report['id']}?page=1"))
+        self.assertLessEqual(max(len(str(item["text"])) for item in with_pdf), notebook_chat.CHUNK_CHARS + 200)
+        response, prompt = self.ask("The dose stays at 10 mg. [[source:1]]")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Nephrectomy", prompt)
+        self.assertEqual({item["source_id"] for item in response.json()["citations"]} - set(self.checked), set())
 
     def test_refusals(self):
         for reply in ("See [this](/conversation/x). [[source:1]]", "Answer. [[source:9]]", "Answer. [[source 1]]"):

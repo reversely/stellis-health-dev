@@ -1,12 +1,12 @@
 """The sources a notebook's chat can read, and which of them the user has unchecked.
 
 A source id names its kind: ``conversation:<id>`` for a recording or imported audio
-file, ``page:<id>`` for a written note. The selection stores unchecked sources only,
-so a source added later starts checked.
+file, ``page:<id>`` for a written note and ``document:<id>`` for a PDF or image. The
+selection stores unchecked sources only, so a source added later starts checked.
 """
 from __future__ import annotations
 
-from stellis import storage
+from stellis import documents, storage
 
 LIMIT = 50
 
@@ -50,6 +50,10 @@ def list_sources(notebook_id: str) -> list[dict[str, object]]:
                                 (notebook_id,)).fetchall():
             sources.append({"id": "page:" + row["id"], "type": "note", "title": row["title"],
                             "created_at": row["created_at"], "status": "ready"})
+    for document in documents.list_for(notebook_id):
+        # A document without text, such as a scan or a photo, stays listed until text recognition exists.
+        sources.append({"id": "document:" + document["id"], "type": "pdf" if document["media_type"] == "application/pdf" else "image",
+                        "title": document["title"], "created_at": document["created_at"], "status": document["status"]})
     for source in sources:
         source["selected"] = source["status"] == "ready" and source["id"] not in excluded
     return sorted(sources, key=lambda source: str(source["created_at"]), reverse=True)

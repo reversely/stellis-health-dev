@@ -3,8 +3,8 @@
   const el = (tag, text, cls) => { const node = document.createElement(tag); if (text != null) node.textContent = text; if (cls) node.className = cls; return node; };
   const icon = name => { const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'icon'); svg.setAttribute('aria-hidden', 'true');
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', `#i-${name}`); svg.append(use); return svg; };
-  const ICONS = {recording: 'microphone', audio: 'file', note: 'note'};
-  const STATUS = {processing: 'Transcribing', failed: 'Failed'};
+  const ICONS = {recording: 'microphone', audio: 'file', note: 'note', pdf: 'file-text', image: 'file'};
+  const STATUS = {processing: 'Transcribing', failed: 'Failed', needs_text: 'Needs text'};
   const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
   async function api(path, method = 'GET', body) {
     const response = await fetch('/api/v1' + path, {method, headers: body ? {'Content-Type': 'application/json'} : {}, body: body ? JSON.stringify(body) : undefined});
@@ -28,7 +28,8 @@
       for (const {text, citation} of parts) {
         if (!citation) { paragraph.append(text); continue; }
         const link = el('a', String(citation.n), 'nb-cite'); link.href = citation.target;
-        link.setAttribute('aria-label', `Source ${citation.n}: ${citation.title}`); link.title = `${citation.title}: ${citation.excerpt}`;
+        const where = citation.page ? `${citation.title}, page ${citation.page}` : citation.title;
+        link.setAttribute('aria-label', `Source ${citation.n}: ${where}`); link.title = `${where}: ${citation.excerpt}`;
         paragraph.append(link);
       }
       body.append(paragraph);
@@ -56,7 +57,7 @@
     add.addEventListener('click', () => onAdd?.()); note.addEventListener('click', event => onNote?.(event.currentTarget));
     actions.append(add, note);
     const all = el('label', null, 'nb-source-all'), allBox = el('input'); allBox.type = 'checkbox'; all.append(el('span', 'Select all'), allBox);
-    const list = el('ul', null, 'nb-source-list'), empty = el('p', 'Add a recording or note to ask about it', 'nb-empty');
+    const list = el('ul', null, 'nb-source-list'), empty = el('p', 'Add a recording, note or document to ask about it', 'nb-empty');
     panelBody.append(actions, all, list, empty); panel.append(toggle, panelBody);
 
     const chat = el('section', null, 'nb-chat'); chat.setAttribute('aria-label', 'Chat');
