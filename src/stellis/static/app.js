@@ -829,12 +829,14 @@ function renderLibrarySearch() {
     const row = document.createElement('a'); row.className = 'search-result';
     row.href = item.kind === 'person' ? `/person/${encodeURIComponent(item.person_id)}` :
       item.kind === 'page' ? `/page/${encodeURIComponent(item.page_id)}` :
+      item.kind === 'document' ? `/document/${encodeURIComponent(item.document_id)}?page=${item.page}` :
       `/conversation/${encodeURIComponent(item.conversation_id)}${item.segment_id ? `?at=${encodeURIComponent(item.segment_id)}` : ''}`;
     const heading = document.createElement('strong'); heading.textContent = item.conversation_title ?? item.title;
     const detail = document.createElement('span');
     detail.textContent = item.kind === 'conversation' ? 'Conversation' :
       item.kind === 'person' ? 'Confirmed person profile' :
       item.kind === 'page' ? 'Note' :
+      item.kind === 'document' ? `Document, page ${item.page}` :
       item.kind === 'note' ? 'My Notes' :
       item.kind === 'summary' ? 'Summary' :
       `${item.kind === 'speaker' ? 'Speaker' : 'Passage'}, ${item.speaker}, ${time(item.start_ms / 1000)}${item.speaker_uncertain ? ', uncertain speaker match' : ''}`;
@@ -2705,14 +2707,30 @@ async function route() {
   else if (location.pathname === '/chat' || location.pathname.startsWith('/chat/')) await showAgentChat();
   else if (location.pathname === '/todos') await showTodos();
   else if (location.pathname.match(/^\/page\/([^/]+)$/)) await showNote(decodeURIComponent(location.pathname.split('/')[2]));
+  else if (location.pathname.match(/^\/document\/([^/]+)$/)) await showDocument(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
     await showNotebook(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
 }
+async function importDocument(file) {
+  importStatus.textContent = `Uploading ${file.name}`;
+  fileInput.disabled = true;
+  const body = new FormData(); body.append('file', file);
+  if (pendingNotebookId) body.append('notebook_id', pendingNotebookId);
+  try {
+    const result = await json(await fetch(`${API}/documents`, {method: 'POST', body}));
+    importDialog.close(); importStatus.textContent = '';
+    history.pushState({}, '', `/document/${encodeURIComponent(result.document.id)}`);
+    await showDocument(result.document.id);
+    setStatus(result.duplicate ? 'Already uploaded' : 'Document uploaded', true);
+  } catch (error) { importStatus.textContent = error.message; }
+  finally { fileInput.disabled = false; fileInput.value = ''; }
+}
 async function importFile(file) {
   if (!file) return;
+  if (/\.(pdf|png|jpe?g)$/i.test(file.name)) return importDocument(file);
   if (!file.name.toLowerCase().endsWith('.mp3')) {
-    importStatus.textContent = 'Choose an MP3 file.';
+    importStatus.textContent = 'Choose an MP3, PDF, PNG or JPEG file';
     return;
   }
   if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && !window.confirm('Discard unsaved transcript changes and import another recording?')) return;
@@ -3506,7 +3524,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href^="/chat"], a[href^="/page/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3770,12 +3788,13 @@ function hideAppPages() {
     listView.prepend(rail);
   }
   document.querySelector('#page-view').hidden = true;
+  document.querySelector('#document-view').hidden = true;
   document.querySelector('#settings-view').hidden = true;
   document.querySelector('#notebook-view').hidden = true;
   document.querySelector('#todos-view').hidden = true;
   document.querySelector('#agent-chat-view').hidden = true;
   notebookTodos?.destroy?.(); notebookTodos = null;
-  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page', 'agent-chat-page');
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page', 'document-page', 'agent-chat-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
@@ -4542,6 +4561,30 @@ function renderNoteTags() {
   if (!libraryCategories.length) { const none = document.createElement('small'); none.textContent = 'Create tags from the ⋯ menu on Home'; host.append(none); }
 }
 let noteRequest = 0;
+let documentRequest = 0;
+async function showDocument(id) {
+  const request = ++documentRequest;
+  await leaveForAppPage('document-page', 'Document');
+  let record;
+  try { record = await json(await fetch(`${API}/documents/${encodeURIComponent(id)}`)); }
+  catch { if (request === documentRequest) { history.replaceState({}, '', '/'); await showList(); setStatus('That document no longer exists'); } return; }
+  if (request !== documentRequest) return;
+  document.querySelector('#page-title').textContent = record.title;
+  const books = libraryNotebooks.length ? libraryNotebooks : (await json(await fetch(`${API}/notebooks`))).notebooks;
+  const book = books.find(item => item.id === record.notebook_id);
+  const back = document.querySelector('#document-back');
+  back.href = book ? `/notebook/${encodeURIComponent(book.id)}` : '/'; back.textContent = `← ${book ? book.name : 'All conversations'}`;
+  document.querySelector('#document-status').textContent = '';
+  window.StellisDocumentView.render(document.querySelector('#document-body'), record, new URLSearchParams(location.search).get('page'), {
+    onDelete: async (item, button) => {
+      if (!window.confirm(`Delete “${item.title}” and its file?`)) return;
+      button.disabled = true;
+      try { await json(await fetch(`${API}/documents/${encodeURIComponent(item.id)}`, {method: 'DELETE'}));
+        history.pushState({}, '', back.getAttribute('href')); await route(); }
+      catch (error) { document.querySelector('#document-status').textContent = error.message; button.disabled = false; }
+    }});
+  document.querySelector('#document-view').hidden = false;
+}
 async function showNote(id) {
   const request = ++noteRequest;
   await leaveForAppPage('note-page', 'Note');

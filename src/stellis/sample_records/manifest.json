@@ -1,0 +1,61 @@
+{
+  "source": "Text from TCGA-Reports (Kefeli et al., 2024), MIT License. De-identified TCGA pathology report.",
+  "records": [
+    {
+      "file": "breast-pathology-report.pdf",
+      "title": "Breast pathology report",
+      "case": "TCGA-BH-A0HA",
+      "cancer_type": "BRCA",
+      "source_file": "TCGA-BH-A0HA.E6C20D27-63E5-4FFF-96BF-E8BD71296925"
+    },
+    {
+      "file": "lung-pathology-report.pdf",
+      "title": "Lung pathology report",
+      "case": "TCGA-44-3398",
+      "cancer_type": "LUAD",
+      "source_file": "TCGA-44-3398.7dc9c668-3304-47d8-9c33-5b72352672db"
+    },
+    {
+      "file": "kidney-pathology-report.pdf",
+      "title": "Kidney pathology report",
+      "case": "TCGA-BP-5195",
+      "cancer_type": "KIRC",
+      "source_file": "TCGA-BP-5195.25c0b433-5557-4165-922e-2c1eac9c26f0"
+    },
+    {
+      "file": "colon-pathology-report.pdf",
+      "title": "Colon pathology report",
+      "case": "TCGA-A6-3808",
+      "cancer_type": "COAD",
+      "source_file": "TCGA-A6-3808.e1505f65-72ef-438d-a5e1-93ed8bf6635d"
+    },
+    {
+      "file": "prostate-pathology-report.pdf",
+      "title": "Prostate pathology report",
+      "case": "TCGA-CH-5769",
+      "cancer_type": "PRAD",
+      "source_file": "TCGA-CH-5769.7d49b105-6652-41b9-8e3a-e806a14de604"
+    },
+    {
+      "file": "uterus-pathology-report.pdf",
+      "title": "Uterus pathology report",
+      "case": "TCGA-AP-A1E0",
+      "cancer_type": "UCEC",
+      "source_file": "TCGA-AP-A1E0.700FD29A-69DC-4B34-B841-FFFA7E76A5AF"
+    },
+    {
+      "file": "thyroid-pathology-report-scan.pdf",
+      "title": "Thyroid pathology report",
+      "case": "TCGA-FY-A3TY",
+      "cancer_type": "THCA",
+      "source_file": "TCGA-FY-A3TY.BE77789A-ACE9-4D62-887E-BB2810470B94"
+    },
+    {
+      "file": "skin-pathology-report.png",
+      "title": "Skin pathology report",
+      "case": "TCGA-ER-A196",
+      "cancer_type": "SKCM",
+      "source_file": "TCGA-ER-A196.A80CD991-4AF1-4C22-8F05-EC4CA14D0828"
+    }
+  ]
+}
