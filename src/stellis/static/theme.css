@@ -1756,15 +1756,7 @@ body.no-ai .ai-question:not(:has(#ai-answers > *, #saved-recording-chat > *)) { 
 body.no-ai.recording-page .recording-workspace-grid { grid-template-columns: minmax(0, 1fr); }
 
 /* Sample meetings (home card and Settings). */
-.samples-panel .samples-note, .samples-panel .samples-status { margin: 0; color: var(--muted); }
-.samples-panel .samples-status:empty { display: none; }
-.samples-panel progress { width: 100%; height: 8px; accent-color: var(--accent); }
-.samples-panel .samples-add, .samples-panel .samples-remove { justify-self: start; min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink, #fff); font: 600 15px/1 Inter, sans-serif; cursor: pointer; }
-.samples-panel .samples-remove { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-.samples-panel .samples-add:focus-visible, .samples-panel .samples-remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.samples-panel .samples-add:disabled, .samples-panel .samples-remove:disabled { opacity: .5; cursor: default; }
-.settings-section.samples-panel { display: grid; gap: 12px; }
-.setup-card[hidden], .samples-panel [hidden] { display: none; }
+.setup-card[hidden] { display: none; }
 
 /* List widget: a heading row and plain rows on the page surface. No card box; a hairline sits only between rows.
    A row's date is right-aligned plain text (see formatListDate), never a pill. */

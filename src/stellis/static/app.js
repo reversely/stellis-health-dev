@@ -929,7 +929,6 @@ async function showList() {
   renderHomeAgents();
   renderCategoryGroups();
   watchSetup();
-  watchSamples();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
   document.querySelector('#auto-categories').checked = automation.enabled;
@@ -3998,52 +3997,6 @@ function tagCard(tag) {
   acceptConversationDrop(card, item => dropOnCategory(item, tag));
   return card;
 }
-let samplesTimer;
-let samplesAdded = null;
-async function watchSamples() {
-  // The sample workspace's meetings download in the background; each appears in the library as soon as it is imported.
-  clearTimeout(samplesTimer);
-  let state;
-  try { state = await json(await fetch(`${API}/samples`)); } catch { return; }
-  const busy = state.state === 'downloading';
-  const complete = state.complete;
-  const home = document.querySelector('#samples-card');
-  home.hidden = !(busy || state.state === 'failed' || (!libraryConversations.length && !complete));
-  for (const panel of document.querySelectorAll('.samples-panel')) {
-    const button = panel.querySelector('.samples-add');
-    const progress = panel.querySelector('.samples-progress');
-    progress.hidden = !busy; progress.value = state.progress || 0;
-    button.hidden = busy || complete;
-    button.textContent = state.state === 'failed' ? 'Try again' : 'Add sample workspace';
-    const remove = panel.querySelector('.samples-remove');
-    if (remove) remove.hidden = busy || !state.installed;
-    panel.querySelector('.samples-status').textContent = busy
-      ? `Downloading ${state.meeting || 'the samples'}: ${Math.round((state.progress || 0) * 100)}%`
-      : state.state === 'failed' ? `The sample workspace could not be added (${state.error}). Check your connection and try again.`
-      : complete ? 'The sample workspace is in your library.' : '';
-  }
-  if (samplesAdded !== null && state.added.length !== samplesAdded && !listView.hidden) {
-    samplesAdded = state.added.length;
-    await showList();
-    return;
-  }
-  samplesAdded = state.added.length;
-  if (busy) samplesTimer = setTimeout(watchSamples, 1500);
-}
-for (const button of document.querySelectorAll('.samples-add')) button.addEventListener('click', async () => {
-  button.disabled = true;
-  try { await json(await fetch(`${API}/samples`, {method: 'POST'})); }
-  catch (error) { button.closest('.samples-panel').querySelector('.samples-status').textContent = error.message; }
-  finally { button.disabled = false; }
-  watchSamples();
-});
-document.querySelector('.samples-remove')?.addEventListener('click', async event => {
-  const button = event.currentTarget; button.disabled = true;
-  try { await json(await fetch(`${API}/samples`, {method: 'DELETE'})); await loadLibrary(); }
-  catch (error) { button.closest('.samples-panel').querySelector('.samples-status').textContent = error.message; }
-  finally { button.disabled = false; }
-  watchSamples();
-});
 let setupTimer;
 async function watchSetup() {
   // First run downloads the speech models; recordings transcribe once they are in place.
@@ -4756,7 +4709,6 @@ async function showSettings() {
   await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
   await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });
   import("/static/runtime-settings.js").then(module => module.load());
-  watchSamples();
   captureControls();
   if (focusKeyInput()) {
     document.querySelector('#settings-ai-title').scrollIntoView({block: 'start'});
