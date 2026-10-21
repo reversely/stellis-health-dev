@@ -42,7 +42,7 @@ Proposal:
 
 ### Chat storage
 
-Proposal: a `notebook_messages` table with `id`, `notebook_id`, `role`, `content`, `citations_json` and `created_at`. The chat runs without an agent row or job, so it has no Stop button in the first version. Each answer makes one model call.
+A `notebook_messages` table has `id`, `notebook_id`, `role`, `content`, `citations_json`, `agent_id`, `author` and `created_at`. It is the notebook's one chat history. The chat runs without an agent row or job, so it has no Stop button in the first version. Each answer makes one model call.
 
 ### Safety
 
@@ -74,13 +74,13 @@ Each checkpoint is one pull request with tests and, for UI work, screenshots at 
 | --- | --- | --- |
 | R-04a | `notebook_sources.py`: typed ids, sources endpoint, processing status, stored selection | Tests list a recording, an imported audio file and a note in one notebook, show a processing source without a checkbox, and show a new source arriving checked |
 | R-04b | `notebook_chat.py`: scoped retrieval, ask and chat endpoints, citations as data, quota check | A test with two sources checked and one unchecked shows that no passage from the unchecked source reaches the prompt, and that each citation points to a checked source |
-| R-04c | Three-pane notebook view with Sources and Chat; citation chips; phone tabs | A notebook with no agent answers a question with chips that open the transcript at the cited time |
+| R-04c | Chat tab with the Sources panel and chat; citation chips; Answer with picker; collapsible Sources on phones | A notebook with no agent answers a question with chips that open the transcript at the cited time |
 | R-04d | Note panel: transcript with audio, note editor, Save answer as note | A saved answer appears in the Sources list as a note |
-| R-04e | Add source dialog: upload audio, record, paste text, drop files, source count | A recording made from the dialog lands in the notebook and appears as processing, then ready |
+| R-04e | Add source dialog: existing recordings and notes from other notebooks, upload audio, record, paste text, drop files, source count | A recording made from the dialog lands in the notebook and appears as processing, then ready |
 | R-04f | PDF and image sources, after R-01; page citations open the PDF at that page | Issue #42's four "Done when" steps pass on the hosted app |
 
-## Open questions for the owner
+## Decisions
 
-1. Proposal: the limit is 50 sources per notebook. NotebookLM's default is also 50.
-2. Proposal: agents leave the notebook chat input. A user picks an agent from the Activity tab or the agent chat. The issue keeps an agent choice in the chat, which needs a second control beside the input.
-3. Proposal: chat history stays per notebook with no separate threads. NotebookLM also keeps one chat per notebook.
+1. Each notebook has at most 50 sources.
+2. The agent picker sits outside the chat input, as an "Answer with" choice above it. The default choice answers from the sources with no agent. A chosen agent reads the same checked passages and nothing else, and its reply joins the notebook's chat history with the agent's name.
+3. Each notebook has one chat history, and every answer uses it. Existing recordings and notes stay in their own views and keep their own per-item questions. The Add source dialog lists them so that the user can bring one into the notebook as a source.

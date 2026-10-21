@@ -1075,6 +1075,7 @@ class SourceSelection(BaseModel):
 class NotebookQuestion(BaseModel):
     question: str = Field(max_length=2000)
     source_ids: list[str] = Field(max_length=500)
+    agent_id: str | None = Field(default=None, max_length=100)
 
 
 @api.get("/daily-brief")
@@ -1161,7 +1162,7 @@ def notebook_chat_messages(notebook_id: str):
 @api.post("/notebooks/{notebook_id}/ask")
 async def notebook_chat_ask(notebook_id: str, request: NotebookQuestion):
     try:
-        return await notebook_chat.ask(notebook_id, request.question, request.source_ids)
+        return await notebook_chat.ask(notebook_id, request.question, request.source_ids, request.agent_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

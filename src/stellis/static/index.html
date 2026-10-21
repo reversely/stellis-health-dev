@@ -31,6 +31,8 @@
     <script src="/static/notebook-work.js" defer></script>
     <script src="/static/daily-brief.js" defer></script>
     <link rel="stylesheet" href="/static/notebook-work.css" />
+    <script src="/static/notebook-chat.js" defer></script>
+    <link rel="stylesheet" href="/static/notebook-chat.css" />
     <script src="/static/calendar.js" defer></script>
     <script src="/static/conversation-sync.js" defer></script>
     <script src="/static/rail-shader.js" defer></script>
@@ -246,14 +248,14 @@
           </div>
         </div>
         <div class="view-tabs" role="tablist" aria-label="Notebook view">
-          <button id="notebook-tab-activity" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel">Activity</button>
-          <button id="notebook-tab-overview" type="button" role="tab" aria-selected="true" aria-controls="notebook-panel"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span>Brief</span></button>
-          <button id="notebook-tab-conversations" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel">Conversations</button>
-          <button id="notebook-tab-files" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel">Files</button>
+          <button id="notebook-tab-chat" type="button" role="tab" aria-selected="true" aria-controls="notebook-panel">Chat</button>
+          <button id="notebook-tab-overview" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span>Brief</span></button>
           <button id="notebook-tab-tasks" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel">Tasks</button>
           <button id="notebook-tab-list" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>All items</span></button>
+          <button id="notebook-tab-activity" type="button" role="tab" aria-selected="false" aria-controls="notebook-panel">Activity</button>
         </div>
-        <div id="notebook-panel" class="notebook-panel" role="tabpanel" aria-labelledby="notebook-tab-overview">
+        <div id="notebook-panel" class="notebook-panel" role="tabpanel" aria-labelledby="notebook-tab-chat">
+          <section id="notebook-chat" aria-label="Notebook chat"></section>
           <section id="notebook-activity" aria-label="Notebook activity"></section>
           <p id="notebook-brief-empty" hidden>No meeting summary yet. Add or record a conversation to build this brief.</p>
           <div id="notebook-overview" class="notebook-overview">

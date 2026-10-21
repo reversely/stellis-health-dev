@@ -97,6 +97,24 @@ class NotebookChatTest(unittest.TestCase):
         self.assertEqual(stored[1]["citations"][0]["n"], 1)
         self.assertEqual(self.client.get("/api/v1/notebooks/missing/chat").status_code, 404)
 
+    def test_an_agent_reads_only_the_checked_passages_and_joins_the_notebook_history(self):
+        from stellis import agent_runtime, agents
+        visit = notebook_chat.retrieve(self.book, self.checked, "dose")
+        target = next(item["target"] for item in visit if "lisinopril" in str(item["text"]))
+        runtime = AsyncMock(return_value={"agent_message": {"content": f"The dose stays at 10 mg. [Clinic visit]({target})"}})
+        with patch.object(agents, "require_enabled", return_value={"id": "agent-1", "name": "Heart helper"}), \
+                patch.object(agent_runtime, "ask", runtime):
+            response = self.client.post(f"/api/v1/notebooks/{self.book}/ask", json={
+                "question": "What dose?", "source_ids": self.checked, "agent_id": "agent-1"})
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertEqual((body["author"], body["content"]), ("Heart helper", "The dose stays at 10 mg. [[1]]"))
+        self.assertEqual(body["citations"][0]["target"], target)
+        supplied = runtime.await_args.args[3]
+        self.assertTrue(runtime.await_args.kwargs["only_supplied_sources"])
+        self.assertEqual({item["source_id"] for item in supplied}, set(self.checked))
+        self.assertEqual(self.client.get(f"/api/v1/notebooks/{self.book}/chat").json()["messages"][1]["agent_id"], "agent-1")
+
     def test_refusals(self):
         for reply in ("See [this](/conversation/x). [[source:1]]", "Answer. [[source:9]]", "Answer. [[source 1]]"):
             with self.subTest(reply=reply):
