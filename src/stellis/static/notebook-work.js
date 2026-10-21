@@ -14,29 +14,13 @@
     const review=el('button','Review sources');review.type='button';review.title='Review up to 12 saved sources for useful comparisons';
     review.onclick=async()=>{review.disabled=true;status.textContent='Reviewing up to 12 saved sources…';try{await api('/notebooks/'+book.id+'/review-sources','POST');await refresh();status.textContent='Source review ready. Long sources use an excerpt.';}catch(error){status.textContent=error.message;}finally{review.disabled=false;}};
     filters.append(review);
-    const form=el('form',null,'notebook-composer'),select=el('select'),input=el('textarea'),send=el('button','Send');select.setAttribute('aria-label','Notebook agent');input.setAttribute('aria-label','Message this notebook');input.placeholder='Message this notebook';input.maxLength=2000;input.required=true;send.type='submit';input.disabled=true;select.disabled=true;send.disabled=true;form.append(select,input,send);
-    input.value=sessionStorage.getItem('stellis-notebook-draft:'+book.id)||'';input.addEventListener('input',()=>sessionStorage.setItem('stellis-notebook-draft:'+book.id,input.value));
-    let savedMention=null;try{savedMention=JSON.parse(sessionStorage.getItem('stellis-notebook-mention:'+book.id)||'null');}catch{}
-    const mention=window.StellisAgentMentions.attach(input,{initial:savedMention,
-      candidates:()=>current?.agents.filter(a=>a.enabled&&a.notebooks.some(n=>n.notebook_id===book.id&&n.enabled!==false))||[],
-      onChange:value=>{if(value&&[...select.options].some(o=>o.value===value.id))select.value=value.id;if(value)sessionStorage.setItem('stellis-notebook-mention:'+book.id,JSON.stringify(value));else sessionStorage.removeItem('stellis-notebook-mention:'+book.id);}});
-    select.addEventListener('change',()=>mention.clear());
-    form.addEventListener('submit',async event=>{
-      event.preventDefault();let target;try{target=mention.resolve()||select.value;}catch(error){status.textContent=error.message;return;}
-      if(!input.value.trim()||send.disabled)return;
-      send.disabled=true;status.textContent='Working…';const question=input.value;
-      try{await api('/agents/'+target+'/ask','POST',{question,notebook_id:book.id});
-        if(input.value===question){input.value='';sessionStorage.removeItem('stellis-notebook-draft:'+book.id);}
-        await refresh();status.textContent='Reply ready';
-      }catch(error){status.textContent=error.message;}finally{send.disabled=!select.options.length;}
-    });
     const team=el('div',null,'notebook-team');aside.append(el('h3','Agents here'),team,link('Add an agent','/chat/settings'),el('h3','Agents can use'),el('p','Notes, meetings and sources in this notebook.'),el('h3','Notebook instructions'));
     const policy=el('form',null,'notebook-policy'),policyInput=el('textarea'),save=el('button','Save instructions'),policyStatus=el('p');policyInput.setAttribute('aria-label','Notebook instructions');policyInput.maxLength=4000;policyStatus.role='status';save.type='submit';policy.append(policyInput,save,policyStatus);aside.append(policy);
     policy.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{const result=await api('/notebooks/'+book.id+'/instructions','PUT',{instructions:policyInput.value,revision:policyRevision});policyRevision=result.revision;policyStatus.textContent='Instructions saved';}catch(error){policyStatus.textContent=error.message;}finally{save.disabled=false;}};
-    center.append(filters,feed,status,form);layout.append(center,aside);host.append(layout);
+    center.append(filters,feed,status);layout.append(center,aside);host.append(layout);
     function action(card,title,run){const button=el('button',title);button.type='button';button.onclick=async()=>{button.disabled=true;try{await run();await refresh();await onChange?.();}catch(error){status.textContent=error.message;}finally{button.disabled=false;}};card.append(button);}
     function renderFeed(){if(!current)return;for(const button of filters.querySelectorAll('[data-filter]'))button.setAttribute('aria-pressed',String(button.dataset.filter===filter));const items=current.items.filter(item=>filter==='all'||item.state===filter);feed.replaceChildren();
-      if(!items.length){feed.append(el('p',current.items.length?'No activity with this status.':'Ask an agent or add sources to start working in this notebook.','notebook-work-empty'));return;}
+      if(!items.length){feed.append(el('p',current.items.length?'No activity with this status.':'Agent work in this notebook shows here','notebook-work-empty'));return;}
       for(const item of items){const card=el('article',null,'notebook-activity');card.dataset.activityId=item.id;const head=el('div',null,'notebook-activity-head');head.append(window.StellisAgentAvatar.avatarElement(document,{seed:item.agent_id||item.author,size:28}),el('strong',item.author),el('span',item.detail==='Stopped or interrupted'?'Stopped':item.detail==='Request failed'?'Failed':labels[item.state]),el('time',new Date(item.created_at).toLocaleString()));card.append(head);
         if(item.artifact){card.append(window.StellisAgentChat.artifactCard(item.artifact,()=>refresh(),false));}
         else if(item.kind!=='suggestion'||item.suggestion.operation!=='add_todo'){card.append(item.kind==='job'?window.StellisAgentChat.messageBody(item.text):el('p',item.text));if(item.detail)card.append(el('p',item.detail,'notebook-work-detail'));}
@@ -71,10 +55,8 @@
     }
     async function refresh(){if(stopped)return;try{const data=await api('/notebooks/'+book.id+'/activity');if(stopped)return;current=data;const next=JSON.stringify(data.items);if(next!==signature){signature=next;renderFeed();}}catch(error){if(!stopped)status.textContent=error.message;}}
     try{const data=await api('/notebooks/'+book.id+'/activity');if(stopped)return;current=data;policyInput.value=data.instructions;policyRevision=data.revision;
-      for(const agent of data.agents){const assigned=agent.notebooks.find(n=>n.notebook_id===book.id),enabled=agent.enabled&&assigned?.enabled!==false;const row=el('div',null,'notebook-team-row');const agentLink=link(agent.name,'/chat/'+agent.id);agentLink.prepend(window.StellisAgentAvatar.avatarElement(document,{seed:agent.id,size:28}));row.append(agentLink,el('small',enabled?agent.role:'Off'));team.append(row);if(enabled){const option=el('option',agent.name);option.value=agent.id;select.append(option);}}
-      if(mention.selected&&[...select.options].some(o=>o.value===mention.selected.id))select.value=mention.selected.id;
-      input.disabled=!select.options.length;select.disabled=!select.options.length;
-      send.disabled=!select.options.length;if(!select.options.length){team.append(el('p','Add an agent to work with this notebook.'));input.disabled=true;}
+      for(const agent of data.agents){const assigned=agent.notebooks.find(n=>n.notebook_id===book.id),enabled=agent.enabled&&assigned?.enabled!==false;const row=el('div',null,'notebook-team-row');const agentLink=link(agent.name,'/chat/'+agent.id);agentLink.prepend(window.StellisAgentAvatar.avatarElement(document,{seed:agent.id,size:28}));row.append(agentLink,el('small',enabled?agent.role:'Off'));team.append(row);}
+      if(!team.childElementCount)team.append(el('p','Add an agent to work with this notebook'));
       signature=JSON.stringify(data.items);renderFeed();
     }catch(error){status.textContent=error.message;}
     async function poll(){if(stopped||location.pathname!='/notebook/'+book.id)return;await refresh();timer=setTimeout(poll,3000);}timer=setTimeout(poll,3000);

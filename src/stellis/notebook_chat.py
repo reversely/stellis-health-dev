@@ -4,6 +4,8 @@ Passages come from the checked sources alone, so an unchecked source never reach
 the prompt. Small selections go to the model whole; larger ones are ranked in an
 in-memory FTS5 index of the selection. The model cites with ``[[source:N]]``
 markers, and the server turns each valid marker into a citation it built itself.
+A chosen agent answers from the same passages, and its reply joins the notebook's
+one chat history under the agent's name.
 """
 from __future__ import annotations
 
@@ -18,6 +20,8 @@ from stellis import agent_gateway, notebook_sources, search, storage
 
 FULL_TEXT_CHARS = 24_000
 RANKED_PASSAGES = 12
+# agent_runtime keeps at most 16 supplied sources.
+AGENT_PASSAGES = 16
 CHUNK_CHARS = 800
 _STOPWORDS = {"about", "after", "before", "could", "does", "from", "have", "into", "should", "that",
               "their", "there", "these", "those", "what", "when", "where", "which", "with", "would"}
@@ -36,6 +40,10 @@ def _table(conn) -> None:
         id TEXT PRIMARY KEY, notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
         role TEXT NOT NULL CHECK (role IN ('user', 'assistant')), content TEXT NOT NULL,
         citations_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL)""")
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(notebook_messages)")}
+    for column in ("agent_id", "author"):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE notebook_messages ADD COLUMN {column} TEXT")
 
 
 def _transcript_chunks(source_id: str, conversation_id: str, title: str) -> list[dict[str, object]]:
@@ -77,19 +85,19 @@ def _passages(sources: list[dict[str, object]]) -> list[dict[str, object]]:
     return passages
 
 
-def _ranked(passages: list[dict[str, object]], question: str) -> list[dict[str, object]]:
+def _ranked(passages: list[dict[str, object]], question: str, limit: int = RANKED_PASSAGES) -> list[dict[str, object]]:
     """Rank the selection's passages for one question; with no matching words, keep the first ones."""
     terms = [term for term in re.findall(r"\w+", question) if len(term) >= 3 and term.casefold() not in _STOPWORDS]
     if not terms:
-        return passages[:RANKED_PASSAGES]
+        return passages[:limit]
     with sqlite3.connect(":memory:") as conn:
         conn.execute("CREATE VIRTUAL TABLE passages USING fts5(body)")
         conn.executemany("INSERT INTO passages (rowid, body) VALUES (?, ?)",
                          [(index, str(item["text"])) for index, item in enumerate(passages)])
         expression = " OR ".join('"' + term.replace('"', '""') + '"' for term in dict.fromkeys(terms))
         rows = conn.execute("SELECT rowid FROM passages WHERE passages MATCH ? ORDER BY bm25(passages) LIMIT ?",
-                            (expression, RANKED_PASSAGES)).fetchall()
-    return [passages[row[0]] for row in rows] or passages[:RANKED_PASSAGES]
+                            (expression, limit)).fetchall()
+    return [passages[row[0]] for row in rows] or passages[:limit]
 
 
 def retrieve(notebook_id: str, source_ids: list[str], question: str) -> list[dict[str, object]]:
@@ -135,11 +143,14 @@ def _cite(answer: str, passages: list[dict[str, object]]) -> tuple[str, list[dic
     return text, citations
 
 
-def _append(conn, notebook_id: str, role: str, content: str, citations: list[dict[str, object]]) -> dict[str, object]:
+def _append(conn, notebook_id: str, role: str, content: str, citations: list[dict[str, object]],
+            agent: dict[str, object] | None = None) -> dict[str, object]:
     record = {"id": str(uuid.uuid4()), "notebook_id": notebook_id, "role": role, "content": content,
-              "citations": citations, "created_at": datetime.now(timezone.utc).isoformat()}
-    conn.execute("""INSERT INTO notebook_messages (id, notebook_id, role, content, citations_json, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)""", (record["id"], notebook_id, role, content, json.dumps(citations), record["created_at"]))
+              "citations": citations, "agent_id": agent["id"] if agent else None,
+              "author": agent["name"] if agent else None, "created_at": datetime.now(timezone.utc).isoformat()}
+    conn.execute("""INSERT INTO notebook_messages (id, notebook_id, role, content, citations_json, agent_id, author, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", (record["id"], notebook_id, role, content, json.dumps(citations),
+                                           record["agent_id"], record["author"], record["created_at"]))
     return record
 
 
@@ -148,26 +159,47 @@ def messages(notebook_id: str) -> list[dict[str, object]]:
         _table(conn)
         if conn.execute("SELECT 1 FROM notebooks WHERE id = ?", (notebook_id,)).fetchone() is None:
             raise LookupError("Notebook not found")
-        rows = conn.execute("""SELECT id, notebook_id, role, content, citations_json, created_at FROM notebook_messages
-            WHERE notebook_id = ? ORDER BY created_at, rowid""", (notebook_id,)).fetchall()
-    return [{**{key: row[key] for key in ("id", "notebook_id", "role", "content", "created_at")},
+        rows = conn.execute("""SELECT * FROM notebook_messages WHERE notebook_id = ? ORDER BY created_at, rowid""",
+                            (notebook_id,)).fetchall()
+    return [{**{key: row[key] for key in ("id", "notebook_id", "role", "content", "agent_id", "author", "created_at")},
              "citations": json.loads(row["citations_json"])} for row in rows]
 
 
-async def ask(notebook_id: str, question: str, source_ids: list[str]) -> dict[str, object]:
-    """Answer one question from the checked sources and store both messages."""
+async def _agent_reply(agent_id: str, notebook_id: str, question: str,
+                       passages: list[dict[str, object]]) -> tuple[str, list[dict[str, object]], dict[str, object]]:
+    """Ask a notebook agent with only the checked passages; its links become citation markers again."""
+    from stellis import agent_runtime, agents
+    agent = agents.require_enabled(agent_id, notebook_id)
+    if len(passages) > AGENT_PASSAGES:
+        passages = _ranked(passages, question, AGENT_PASSAGES)
+    sources = [{"source_id": item["source_id"], "title": item["title"], "excerpt": item["text"],
+                "target": item["target"], "start_ms": item["start_ms"]} for item in passages]
+    try:
+        result = await agent_runtime.ask(agent_id, question, notebook_id, sources, only_supplied_sources=True)
+    except agent_runtime.AgentRunError as exc:
+        raise ChatError(str(exc)) from exc
+    reply = agent_runtime._normalize_known_source_links(str(result["agent_message"]["content"]), sources)
+    return reply, passages, agent
+
+
+async def ask(notebook_id: str, question: str, source_ids: list[str], agent_id: str | None = None) -> dict[str, object]:
+    """Answer one question from the checked sources, directly or through a notebook agent, and store both messages."""
     question = question.strip()
     if not 1 <= len(question) <= 2000:
         raise ValueError("Enter a question of at most 2,000 characters")
     history = messages(notebook_id)
     check(question)
     passages = retrieve(notebook_id, source_ids, question)
-    try:
-        reply, _ = await agent_gateway.turn(_prompt(question, passages, history), "notebook-" + notebook_id)
-    except agent_gateway.GatewayError as exc:
-        raise ChatError(str(exc)) from exc
+    agent = None
+    if agent_id:
+        reply, passages, agent = await _agent_reply(agent_id, notebook_id, question, passages)
+    else:
+        try:
+            reply, _ = await agent_gateway.turn(_prompt(question, passages, history), "notebook-" + notebook_id)
+        except agent_gateway.GatewayError as exc:
+            raise ChatError(str(exc)) from exc
     answer, citations = _cite(reply.strip(), passages)
     with storage.connect() as conn:
         _table(conn)
         _append(conn, notebook_id, "user", question, [])
-        return _append(conn, notebook_id, "assistant", answer, citations)
+        return _append(conn, notebook_id, "assistant", answer, citations, agent)
