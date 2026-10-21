@@ -625,15 +625,8 @@ def connect() -> Iterator[sqlite3.Connection]:
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS suggestions_target ON suggestions (target_kind, target_id, state)")
-    # What the sample workspace created (#300), so adding twice adds nothing and removing deletes only these.
-    conn.execute(
-        """CREATE TABLE IF NOT EXISTS sample_items (
-            key TEXT PRIMARY KEY,
-            kind TEXT NOT NULL,
-            item_id TEXT NOT NULL,
-            created INTEGER NOT NULL DEFAULT 1
-        )"""
-    )
+    # The sample workspace was removed; its items stay as ordinary user content.
+    conn.execute("DROP TABLE IF EXISTS sample_items")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS meeting_notes (
             id TEXT PRIMARY KEY,

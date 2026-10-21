@@ -188,7 +188,7 @@ class RemovedSurfacesTest(unittest.TestCase):
                     self.assertEqual(client.request(method, "/mcp").status_code, 404)
             self.assertNotEqual(client.get("/mcp").status_code, 200)
 
-    def test_mail_tutor_and_call_routes_are_gone(self):
+    def test_mail_tutor_call_and_sample_routes_are_gone(self):
         with tempfile.TemporaryDirectory() as directory, \
                 patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required",
                                         "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": ""}), \
@@ -197,6 +197,6 @@ class RemovedSurfacesTest(unittest.TestCase):
             agent = client.get("/api/v1/agents").json()[0]["id"]
             for method, path in (("GET", "/api/v1/mail-style"), ("POST", f"/api/v1/agents/{agent}/delegations"),
                                  ("POST", f"/api/v1/agents/{agent}/tutor"), ("GET", "/api/v1/agents/voice/availability"),
-                                 ("POST", f"/api/v1/agents/{agent}/call"), ("POST", "/api/v1/artifacts/one/gmail")):
+                                 ("POST", f"/api/v1/agents/{agent}/call"), ("POST", "/api/v1/artifacts/one/gmail"), ("POST", "/api/v1/samples")):
                 with self.subTest(path=path):
                     self.assertIn(client.request(method, path).status_code, {404, 405})
