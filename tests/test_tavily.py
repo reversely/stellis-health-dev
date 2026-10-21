@@ -61,12 +61,11 @@ class TavilyTest(unittest.TestCase):
                       if "status" in argv else "")
             return subprocess.CompletedProcess(argv, 0, output, "")
         with patch.dict(os.environ, {"STELLIS_ACCOUNT_ID": "1",
-                                          "STELLIS_NEMOCLAW_SANDBOX": "test-sandbox",
-                                          "STELLIS_MCP_TOKEN": "private-test-token"}), \
+                                          "STELLIS_NEMOCLAW_SANDBOX": "test-sandbox"}), \
              patch.object(tavily.subprocess, "run", side_effect=command):
             tavily._sync_managed("tvly-owner-test-key")
         self.assertEqual(commands[0][0][-3:], ["remove", "tavily", "--force"])
         self.assertEqual(commands[1][0][1:3], ["provider", "delete"])
         self.assertTrue(any("add" in args for args, _ in commands))
-        self.assertTrue(any("restart" in args and "stellis" in args for args, _ in commands))
+        self.assertFalse(any("stellis" in args for args, _ in commands))
         self.assertTrue(all(value == "tvly-owner-test-key" for _, value in commands))

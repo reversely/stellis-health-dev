@@ -60,7 +60,7 @@ class AccountGateway:
                        STELLIS_EMBEDDING_MODEL=str(model_files[2]))
             if account_id != 1:
                 shared = ("NEBIUS_API_KEY", "TAVILY_API_KEY") if env.get("STELLIS_SHARED_PROVIDER_KEYS") == "1" else ()
-                for key in ("NEBIUS_API_KEY", "TAVILY_API_KEY", "STELLIS_MCP_TOKEN",
+                for key in ("NEBIUS_API_KEY", "TAVILY_API_KEY",
                             "STELLIS_NEMOCLAW_SANDBOX", "STELLIS_TAVILY_MCP_READY",
                             "STELLIS_AGENT_GATEWAY_URL", "STELLIS_AGENT_GATEWAY_TOKEN",
                             "STELLIS_AGENT_GATEWAY_ACCOUNT_ID", "STELLIS_AGENT_GATEWAY_TAVILY_READY"):
@@ -161,8 +161,6 @@ class AccountGateway:
             if account_id is None:
                 await RedirectResponse("/onboarding?calendar=expired", status_code=303)(scope, receive, send)
                 return
-        elif path == "/mcp":
-            account_id = 1  # Existing bearer-protected managed MCP belongs to the owner workspace.
         else:
             account_id = auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))
             if account_id is None:

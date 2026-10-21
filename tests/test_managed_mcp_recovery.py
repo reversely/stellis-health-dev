@@ -9,18 +9,16 @@ from unittest.mock import patch
 from stellis import agent_runtime
 
 
-def state(stellis: bool, tavily: bool) -> str:
-    def bridge(name: str, registered: bool) -> dict:
-        return {"server": name, "provider": {"credentialReady": True},
-                "policy": {"state": "configured"}, "adapter": {"registered": registered}}
-    return json.dumps({"bridges": [bridge("stellis", stellis), bridge("tavily", tavily)]})
+def state(tavily: bool) -> str:
+    return json.dumps({"bridges": [{"server": "tavily", "provider": {"credentialReady": True},
+                                    "policy": {"state": "configured"}, "adapter": {"registered": tavily}}]})
 
 
 class ManagedMcpRecoveryTests(unittest.TestCase):
-    def test_recovers_only_mismatched_bridges_and_verifies_both(self) -> None:
-        responses = [subprocess.CompletedProcess([], 0, state(False, True), ""),
+    def test_recovers_an_unregistered_bridge_and_verifies_it(self) -> None:
+        responses = [subprocess.CompletedProcess([], 0, state(False), ""),
                      subprocess.CompletedProcess([], 0, "", ""),
-                     subprocess.CompletedProcess([], 0, state(True, True), "")]
+                     subprocess.CompletedProcess([], 0, state(True), "")]
         env = {"STELLIS_ACCOUNT_ID": "1", "STELLIS_NEMOCLAW_SANDBOX": "sandbox",
                "STELLIS_TAVILY_MCP_READY": "1"}
         with patch.dict(os.environ, env), \
@@ -29,12 +27,10 @@ class ManagedMcpRecoveryTests(unittest.TestCase):
              patch.object(agent_runtime.subprocess, "run", side_effect=responses) as run:
             agent_runtime._reconcile_managed_mcp()
         self.assertEqual([call.args[0][-2:] for call in run.call_args_list],
-                         [["list", "--json"], ["restart", "stellis"], ["list", "--json"]])
+                         [["list", "--json"], ["restart", "tavily"], ["list", "--json"]])
 
     def test_missing_required_bridge_stops_turn(self) -> None:
-        payload = json.dumps({"bridges": [{"server": "stellis",
-            "provider": {"credentialReady": True}, "policy": {"state": "configured"},
-            "adapter": {"registered": True}}]})
+        payload = json.dumps({"bridges": []})
         env = {"STELLIS_ACCOUNT_ID": "1", "STELLIS_NEMOCLAW_SANDBOX": "sandbox",
                "STELLIS_TAVILY_MCP_READY": "1"}
         with patch.dict(os.environ, env), \

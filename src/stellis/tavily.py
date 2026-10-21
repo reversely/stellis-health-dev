@@ -89,10 +89,6 @@ def _sync_managed(key: str | None) -> None:
         if (status.returncode or not state.get("provider", {}).get("credentialReady")
                 or not state.get("adapter", {}).get("registered")):
             raise RuntimeError("Could not verify managed Tavily access")
-    # Refresh the other managed bridge if NemoClaw's adapter revision changed.
-    if env.get("STELLIS_MCP_TOKEN"):
-        if run([*base, "restart", "stellis"], 90).returncode:
-            raise RuntimeError("Could not refresh the managed Stellis tool")
 
 
 def key_status() -> dict[str, object]:
