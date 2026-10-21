@@ -24,7 +24,7 @@ Set these as Fly secrets, never in `fly.toml`:
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google Calendar; hosted redirects need ticket H-07 first |
 
 ```sh
-fly secrets list -a stellis-health-dev
+fly secrets list -a stellis-health
 ```
 
 ## First deploy
@@ -32,12 +32,12 @@ fly secrets list -a stellis-health-dev
 The app needs exactly one machine, because the volume attaches to one machine.
 
 ```sh
-fly volumes create stellis_data --region yyz --size 5 -a stellis-health-dev
-fly deploy -a stellis-health-dev
-fly scale count 1 -a stellis-health-dev
+fly volumes create stellis_data --region yyz --size 5 -a stellis-health
+fly deploy -a stellis-health
+fly scale count 1 -a stellis-health
 ```
 
-Then open `https://stellis-health-dev.fly.dev/api/health`. It returns `{"status":"ok",...}` when the app is up. The first start downloads about 500 MB of speech models to `/data/models`; transcription waits until the download finishes.
+Then open `https://stellis-health.fly.dev/api/health`. It returns `{"status":"ok",...}` when the app is up. The first start downloads about 500 MB of speech models to `/data/models`; transcription waits until the download finishes.
 
 ## Backups
 
@@ -46,8 +46,8 @@ Fly takes a daily snapshot of each volume and keeps it for 5 days by default (`f
 ## Logs and access
 
 ```sh
-fly logs -a stellis-health-dev
-fly ssh console -a stellis-health-dev
+fly logs -a stellis-health
+fly ssh console -a stellis-health
 ```
 
 Access logs list request paths. They must never contain health content; ticket H-03 removes query strings from them.

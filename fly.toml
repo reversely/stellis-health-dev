@@ -1,5 +1,5 @@
 # Stellis Health alpha on Fly.io. Secrets (API keys) are set with `fly secrets set`, never here.
-app = 'stellis-health-dev'
+app = 'stellis-health'
 primary_region = 'yyz'
 
 [build]
