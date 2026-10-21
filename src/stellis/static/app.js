@@ -2712,19 +2712,33 @@ async function route() {
     await showNotebook(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
 }
+/**
+ * Uploads a PDF or image from the Import dialog and opens it.
+ * @param {!File} file
+ */
 async function importDocument(file) {
   importStatus.textContent = `Uploading ${file.name}`;
   fileInput.disabled = true;
-  const body = new FormData(); body.append('file', file);
-  if (pendingNotebookId) body.append('notebook_id', pendingNotebookId);
+  const body = new FormData();
+  body.append('file', file);
+  if (pendingNotebookId) {
+    body.append('notebook_id', pendingNotebookId);
+  }
   try {
-    const result = await json(await fetch(`${API}/documents`, {method: 'POST', body}));
-    importDialog.close(); importStatus.textContent = '';
-    history.pushState({}, '', `/document/${encodeURIComponent(result.document.id)}`);
+    const result =
+        await json(await fetch(`${API}/documents`, {method: 'POST', body}));
+    importDialog.close();
+    importStatus.textContent = '';
+    const id = encodeURIComponent(result.document.id);
+    history.pushState({}, '', `/document/${id}`);
     await showDocument(result.document.id);
     setStatus(result.duplicate ? 'Already uploaded' : 'Document uploaded', true);
-  } catch (error) { importStatus.textContent = error.message; }
-  finally { fileInput.disabled = false; fileInput.value = ''; }
+  } catch (error) {
+    importStatus.textContent = error.message;
+  } finally {
+    fileInput.disabled = false;
+    fileInput.value = '';
+  }
 }
 async function importFile(file) {
   if (!file) return;
@@ -4563,29 +4577,60 @@ function renderNoteTags() {
 }
 let noteRequest = 0;
 let documentRequest = 0;
+
+/**
+ * Shows the document page for one uploaded document.
+ * @param {string} id
+ */
 async function showDocument(id) {
   const request = ++documentRequest;
   await leaveForAppPage('document-page', 'Document');
   let record;
-  try { record = await json(await fetch(`${API}/documents/${encodeURIComponent(id)}`)); }
-  catch { if (request === documentRequest) { history.replaceState({}, '', '/'); await showList(); setStatus('That document no longer exists'); } return; }
-  if (request !== documentRequest) return;
+  try {
+    record = await json(await fetch(`${API}/documents/${encodeURIComponent(id)}`));
+  } catch {
+    if (request === documentRequest) {
+      history.replaceState({}, '', '/');
+      await showList();
+      setStatus('That document no longer exists');
+    }
+    return;
+  }
+  if (request !== documentRequest) {
+    return;
+  }
   document.querySelector('#page-title').textContent = record.title;
-  const books = libraryNotebooks.length ? libraryNotebooks : (await json(await fetch(`${API}/notebooks`))).notebooks;
-  const book = books.find(item => item.id === record.notebook_id);
+  const books = libraryNotebooks.length ?
+      libraryNotebooks :
+      (await json(await fetch(`${API}/notebooks`))).notebooks;
+  const book = books.find((item) => item.id === record.notebook_id);
   const back = document.querySelector('#document-back');
-  back.href = book ? `/notebook/${encodeURIComponent(book.id)}` : '/'; back.textContent = `← ${book ? book.name : 'All conversations'}`;
-  document.querySelector('#document-status').textContent = '';
-  window.StellisDocumentView.render(document.querySelector('#document-body'), record, new URLSearchParams(location.search).get('page'), {
-    onDelete: async (item, button) => {
-      if (!window.confirm(`Delete “${item.title}” and its file?`)) return;
-      button.disabled = true;
-      try { await json(await fetch(`${API}/documents/${encodeURIComponent(item.id)}`, {method: 'DELETE'}));
-        history.pushState({}, '', back.getAttribute('href')); await route(); }
-      catch (error) { document.querySelector('#document-status').textContent = error.message; button.disabled = false; }
-    }});
+  back.href = book ? `/notebook/${encodeURIComponent(book.id)}` : '/';
+  back.textContent = `← ${book ? book.name : 'All conversations'}`;
+  const status = document.querySelector('#document-status');
+  status.textContent = '';
+  const page = Number(new URLSearchParams(location.search).get('page')) || null;
+  window.StellisDocumentView.render(
+      document.querySelector('#document-body'), record, page,
+      async (item, button) => {
+        if (!window.confirm(`Delete “${item.title}” and its file?`)) {
+          return;
+        }
+        button.disabled = true;
+        try {
+          await json(await fetch(
+              `${API}/documents/${encodeURIComponent(item.id)}`,
+              {method: 'DELETE'}));
+          history.pushState({}, '', back.getAttribute('href'));
+          await route();
+        } catch (error) {
+          status.textContent = error.message;
+          button.disabled = false;
+        }
+      });
   document.querySelector('#document-view').hidden = false;
 }
+
 async function showNote(id) {
   const request = ++noteRequest;
   await leaveForAppPage('note-page', 'Note');

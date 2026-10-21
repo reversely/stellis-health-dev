@@ -1,48 +1,124 @@
-const test = require('node:test');
+/**
+ * @fileoverview Tests for the pure helpers behind notebook chat, the source
+ * viewer, the add-source dialog and the document page.
+ */
 const assert = require('node:assert/strict');
-const {answerParts} = require('../src/stellis/static/notebook-chat.js');
+const test = require('node:test');
 
-test('answerParts splits paragraphs and turns known markers into citations', () => {
-  const visit = {n: 1, title: 'Clinic visit', target: '/conversation/a?at=s&t=42000', excerpt: 'Keep the dose'};
-  const parts = answerParts('The dose stays. [[1]]\n\nAsk again. [[2]]', [visit]);
-  assert.equal(parts.length, 2);
-  assert.deepEqual(parts[0], [{text: 'The dose stays. '}, {citation: visit}]);
-  assert.deepEqual(parts[1], [{text: 'Ask again. '}, {text: '[[2]]'}]);
-});
-
-const {answerMarkdown} = require('../src/stellis/static/notebook-chat.js');
+globalThis.StellisDom = require('../src/stellis/static/notebook-dom.js');
+const {answerMarkdown, answerParts, sourceTarget} =
+    require('../src/stellis/static/notebook-chat.js');
 const {parseTarget} = require('../src/stellis/static/notebook-viewer.js');
+const {candidates, toCandidates, uploadKind} =
+    require('../src/stellis/static/notebook-add-source.js');
+const {describe, fileUrl} = require('../src/stellis/static/document-view.js');
 
-test('answerMarkdown keeps the numbers and lists each cited source as a link', () => {
-  const citations = [{n: 1, title: 'Prostate report', page: 2, target: '/document/d?page=2'}, {n: 2, title: 'Voice [note]', target: '/conversation/c?at=s&t=0'}];
-  assert.equal(answerMarkdown('Gleason 9. [[1]] PSA soon. [[2]]', citations),
-    'Gleason 9. [1] PSA soon. [2]\n\n## Sources\n\n- 1. [Prostate report, page 2](/document/d?page=2)\n- 2. [Voice note](/conversation/c?at=s&t=0)');
-  assert.equal(answerMarkdown('No sources cover this', []), 'No sources cover this');
+const VISIT = {
+  n: 1,
+  title: 'Clinic visit',
+  target: '/conversation/a?at=s&t=42000',
+  excerpt: 'Keep the dose',
+};
+const LABS = {
+  n: 2,
+  title: 'Lab [results]',
+  page: 2,
+  target: '/document/d?page=2',
+  excerpt: 'LDL 85',
+};
+
+test('answerParts splits paragraphs and keeps unknown markers as text', () => {
+  const parts =
+      answerParts('The dose stays. [[1]]\n\nAsk again. [[3]]', [VISIT]);
+
+  assert.deepEqual(parts, [
+    [{text: 'The dose stays. '}, {citation: VISIT}],
+    [{text: 'Ask again. '}, {text: '[[3]]'}],
+  ]);
 });
 
-test('parseTarget reads conversation, document and note links and rejects others', () => {
-  assert.deepEqual(parseTarget('/conversation/abc?at=seg-1&t=42000'),
-    {kind: 'conversation', id: 'abc', segment: 'seg-1', ms: 42000, page: null, href: '/conversation/abc?at=seg-1&t=42000'});
+test('answerMarkdown numbers the text and links each source', () => {
+  const markdown = answerMarkdown('Dose. [[1]] LDL. [[2]]', [VISIT, LABS]);
+
+  assert.equal(
+      markdown,
+      'Dose. [1] LDL. [2]\n\n## Sources\n\n' +
+          '- 1. [Clinic visit](/conversation/a?at=s&t=42000)\n' +
+          '- 2. [Lab results, page 2](/document/d?page=2)');
+  assert.equal(answerMarkdown('Not covered', []), 'Not covered');
+});
+
+test('sourceTarget turns a typed source ID into its app link', () => {
+  assert.equal(sourceTarget('document:a b'), '/document/a%20b');
+  assert.equal(sourceTarget('page:p1'), '/page/p1');
+});
+
+test('parseTarget reads app links and refuses everything else', () => {
+  assert.deepEqual(parseTarget('/conversation/abc?at=seg-1&t=42000'), {
+    kind: 'conversation',
+    id: 'abc',
+    segment: 'seg-1',
+    ms: 42000,
+    page: null,
+    href: '/conversation/abc?at=seg-1&t=42000',
+  });
   assert.equal(parseTarget('/document/d1?page=3').page, 3);
-  assert.equal(parseTarget('/page/p1').kind, 'page');
   assert.equal(parseTarget('/conversation/abc').ms, null);
-  assert.equal(parseTarget('/settings'), null);
-  assert.equal(parseTarget('https://example.com/page/x'), null);
-  assert.equal(parseTarget('/page/x/extra'), null);
+  for (const target
+           of ['/settings', '/page/x/extra', 'https://example.com/page/x']) {
+    assert.equal(parseTarget(target), null, target);
+  }
 });
-
-const {uploadKind, candidates} = require('../src/stellis/static/notebook-add-source.js');
 
 test('uploadKind routes audio and documents and refuses other files', () => {
   assert.equal(uploadKind('visit.MP3'), 'audio');
-  for (const name of ['lab.pdf', 'scan.PNG', 'photo.jpeg', 'photo.jpg']) assert.equal(uploadKind(name), 'document');
-  for (const name of ['notes.txt', 'clip.m4a', 'pdf']) assert.equal(uploadKind(name), null);
+  for (const name of ['lab.pdf', 'scan.PNG', 'photo.jpeg', 'photo.jpg']) {
+    assert.equal(uploadKind(name), 'document', name);
+  }
+  for (const name of ['notes.txt', 'clip.m4a', 'pdf']) {
+    assert.equal(uploadKind(name), null, name);
+  }
 });
 
-test('candidates leaves out this notebook, filters by title and sorts newest first', () => {
-  const items = [{title: 'Lung report', notebook_id: 'a', at: '2026-01-02'}, {title: 'Lung visit', notebook_id: null, at: '2026-03-01'},
-    {title: 'Skin note', notebook_id: 'b', at: '2026-02-01'}];
-  assert.deepEqual(candidates(items, 'a', '').map(item => item.title), ['Lung visit', 'Skin note']);
-  assert.deepEqual(candidates(items, 'a', ' lung ').map(item => item.title), ['Lung visit']);
-  assert.equal(candidates(Array.from({length: 40}, (_, i) => ({title: `n${i}`, notebook_id: null, at: String(i)})), 'a', '').length, 30);
+test('candidates leaves out this notebook and sorts newest first', () => {
+  const items = toCandidates(
+      [{
+        id: 'c',
+        title: 'Lung visit',
+        notebook_id: null,
+        recorded_at: '2026-03'
+      }],
+      [{id: 'p', title: 'Skin note', notebook_id: 'b', updated_at: '2026-02'}],
+      [{
+        id: 'd',
+        title: 'Lung report',
+        notebook_id: 'a',
+        record_date: '2026-01',
+        created_at: '2026-04',
+      }]);
+
+  assert.deepEqual(
+      candidates(items, 'a', '').map((item) => item.kind),
+      ['recording', 'note']);
+  assert.deepEqual(
+      candidates(items, 'x', ' lung ').map((item) => item.id), ['c', 'd']);
+  const many = Array.from(
+      {length: 40},
+      (_, i) => ({title: `n${i}`, notebook_id: null, at: `${i}`}));
+  assert.equal(candidates(many, 'a', '').length, 30);
+});
+
+test('document helpers describe the file and link to a PDF page', () => {
+  const pdf = {
+    id: 'd 1',
+    media_type: 'application/pdf',
+    page_count: 3,
+    record_date: '2026-04-02',
+  };
+  const photo = {id: 'p', media_type: 'image/png', page_count: 1};
+
+  assert.equal(describe(pdf), 'PDF · 3 pages · 2026-04-02');
+  assert.equal(describe(photo), 'Image');
+  assert.equal(fileUrl(pdf, 2), '/api/v1/documents/d%201/file#page=2');
+  assert.equal(fileUrl(photo, 2), '/api/v1/documents/p/file');
 });

@@ -1074,7 +1074,7 @@ class SourceSelection(BaseModel):
 
 
 class NotebookQuestion(BaseModel):
-    question: str = Field(max_length=2000)
+    question: str = Field(max_length=notebook_chat.MAX_QUESTION)
     source_ids: list[str] = Field(max_length=500)
     agent_id: str | None = Field(default=None, max_length=100)
 
@@ -1146,24 +1146,32 @@ def undo_notebook_filing(notebook_id: str, filing_id: str):
 
 @api.get("/notebooks/{notebook_id}/sources")
 def notebook_sources_list(notebook_id: str):
-    return _agent_result(lambda: {"sources": notebook_sources.list_sources(notebook_id), "limit": notebook_sources.LIMIT})
+    return _agent_result(lambda: {
+        "sources": notebook_sources.list_sources(notebook_id),
+        "limit": notebook_sources.LIMIT,
+    })
 
 
 @api.put("/notebooks/{notebook_id}/sources/selection")
 def notebook_sources_selection(notebook_id: str, request: SourceSelection):
-    return _agent_result(lambda: {"sources": notebook_sources.save_selection(notebook_id, request.excluded),
-                                  "limit": notebook_sources.LIMIT})
+    return _agent_result(lambda: {
+        "sources": notebook_sources.save_selection(notebook_id,
+                                                   request.excluded),
+        "limit": notebook_sources.LIMIT,
+    })
 
 
 @api.get("/notebooks/{notebook_id}/chat")
 def notebook_chat_messages(notebook_id: str):
-    return _agent_result(lambda: {"messages": notebook_chat.messages(notebook_id)})
+    return _agent_result(
+        lambda: {"messages": notebook_chat.messages(notebook_id)})
 
 
 @api.post("/notebooks/{notebook_id}/ask")
 async def notebook_chat_ask(notebook_id: str, request: NotebookQuestion):
     try:
-        return await notebook_chat.ask(notebook_id, request.question, request.source_ids, request.agent_id)
+        return await notebook_chat.ask(notebook_id, request.question,
+                                       request.source_ids, request.agent_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -1662,7 +1670,11 @@ def source_search_results(q: str = Query(min_length=1, max_length=200), notebook
 
 
 def _room(notebook_id: str | None, source_id: str | None = None) -> None:
-    """Refuse to add a source to a full notebook; unknown notebooks fall through to the caller's 404."""
+    """Refuses a new source for a full notebook with a 409.
+
+    An unknown notebook passes here, so the caller still answers with its own
+    404.
+    """
     try:
         notebook_sources.require_room(notebook_id, source_id)
     except LookupError:
@@ -1677,17 +1689,23 @@ def list_documents() -> list[dict[str, object]]:
 
 
 class DocumentUpdate(BaseModel):
-    title: str | None = Field(default=None, max_length=180)
+    title: str | None = Field(default=None, max_length=documents.MAX_TITLE)
+    record_date: str | None = Field(default=None, max_length=10)
     notebook_id: str | None = None
     move: bool = False
 
 
 @api.post("/documents")
-async def upload_document(file: UploadFile = File(...), notebook_id: str | None = Form(None)) -> dict[str, object]:
+async def upload_document(
+        file: UploadFile = File(...),
+        notebook_id: str | None = Form(None)) -> dict[str, object]:
     content = await file.read(documents.MAX_BYTES + 1)
     _room(notebook_id or None)
     try:
-        record, duplicate = await asyncio.to_thread(documents.create, file.filename or "", content, notebook_id or None)
+        record, duplicate = await asyncio.to_thread(documents.create,
+                                                    file.filename or "",
+                                                    content, notebook_id or
+                                                    None)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except documents.DocumentError as exc:
@@ -1706,15 +1724,21 @@ def document_file(document_id: str) -> FileResponse:
         path, media_type = documents.file_path(document_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, no-store"})
+    return FileResponse(path,
+                        media_type=media_type,
+                        headers={"Cache-Control": "private, no-store"})
 
 
 @api.patch("/documents/{document_id}")
 def update_document(document_id: str, request: DocumentUpdate):
     if request.move:
         _room(request.notebook_id, "document:" + document_id)
-    return _agent_result(lambda: documents.update(document_id, title=request.title, notebook_id=request.notebook_id,
-                                                  move=request.move))
+    return _agent_result(lambda: documents.update(
+        document_id,
+        title=request.title,
+        record_date=request.record_date,
+        notebook_id=request.notebook_id,
+        move=request.move))
 
 
 @api.delete("/documents/{document_id}")

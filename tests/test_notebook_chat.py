@@ -1,148 +1,328 @@
-"""Notebook chat reads only the checked sources and returns citations the server built."""
+"""Tests that notebook chat reads only checked sources and cites them."""
+
+import datetime
 import json
 import os
 import tempfile
 import unittest
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest import mock
 
-from fastapi.testclient import TestClient
+from fastapi import testclient
 
-from stellis import agent_gateway, documents, notebook_chat, notebook_sources, notebooks, pages, sample_records, storage
-from stellis.server import app
+from stellis import agent_gateway
+from stellis import documents
+from stellis import notebook_chat
+from stellis import notebook_sources
+from stellis import notebooks
+from stellis import pages
+from stellis import sample_records
+from stellis import server
+from stellis import storage
 
-STAMP = datetime(2026, 10, 21, 12, 0, tzinfo=timezone.utc).isoformat()
+STAMP = datetime.datetime(2026, 10, 21, 12, 0,
+                          tzinfo=datetime.timezone.utc).isoformat()
+QUESTION = "What did the doctor say about the lisinopril dose?"
 
 
-def _conversation(book: str, title: str, segments: list[tuple[int, str]]) -> str:
-    identifier = str(uuid.uuid4())
-    storage.add_conversation({"id": identifier, "title": title, "source_sha256": identifier, "audio_filename": "a.mp3",
-                              "audio_media_type": "audio/mpeg", "duration_ms": 60000, "created_at": STAMP,
-                              "notebook_id": book})
-    storage.save_transcript({"conversation_id": identifier, "revision": 1, "language": "en", "turns_json": "[]",
-                             "updated_at": STAMP, "segments_json": json.dumps([
-                                 {"id": f"seg-{start}", "start_ms": start, "end_ms": start + 4000, "text": text,
-                                  "speaker_cluster_id": "speaker-1", "speaker_uncertain": False, "words": []}
-                                 for start, text in segments])})
-    return identifier
+def add_conversation(notebook_id: str, title: str,
+                     segments: list[tuple[int, str]]) -> str:
+    """Stores a conversation whose transcript has the given segments."""
+    conversation_id = str(uuid.uuid4())
+    storage.add_conversation({
+        "id": conversation_id,
+        "title": title,
+        "source_sha256": conversation_id,
+        "audio_filename": "a.mp3",
+        "audio_media_type": "audio/mpeg",
+        "duration_ms": 600000,
+        "created_at": STAMP,
+        "notebook_id": notebook_id,
+    })
+    storage.save_transcript({
+        "conversation_id":
+            conversation_id,
+        "revision":
+            1,
+        "language":
+            "en",
+        "turns_json":
+            "[]",
+        "updated_at":
+            STAMP,
+        "segments_json":
+            json.dumps([{
+                "id": f"seg-{start}",
+                "start_ms": start,
+                "end_ms": start + 4000,
+                "text": text,
+                "speaker_cluster_id": "speaker-1",
+                "speaker_uncertain": False,
+                "words": [],
+            } for start, text in segments]),
+    })
+    return conversation_id
+
+
+class ChunkTest(unittest.TestCase):
+
+    def test_transcript_chunks_open_at_their_first_segment(self):
+        segments = [
+            {
+                "id": "a",
+                "start_ms": 0,
+                "text": "x" * 500
+            },
+            {
+                "id": "b",
+                "start_ms": 9000,
+                "text": "y" * 500
+            },
+            {
+                "id": "c",
+                "start_ms": 12000,
+                "text": "z"
+            },
+        ]
+
+        passages = notebook_chat.chunk_transcript("conversation:c1", "c1",
+                                                  "Visit", segments)
+
+        self.assertEqual([passage.start_ms for passage in passages], [0, 9000])
+        self.assertEqual(passages[1].target, "/conversation/c1?at=b&t=9000")
+        self.assertTrue(passages[1].text.endswith(" z"))
+
+    def test_long_page_paragraph_splits_at_sentence_ends(self):
+        paragraph = " ".join(["The value was stable."] * 60)
+
+        passages = notebook_chat.chunk_page("document:d1", "d1", "Labs", 2,
+                                            "Heading\n" + paragraph)
+
+        self.assertGreater(len(passages), 1)
+        self.assertTrue(
+            all(
+                len(passage.text) <= notebook_chat.CHUNK_CHARS
+                for passage in passages))
+        self.assertEqual({passage.target for passage in passages},
+                         {"/document/d1?page=2"})
+        self.assertEqual({passage.page for passage in passages}, {2})
+
+
+class CiteTest(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.passages = [
+            notebook_chat.Passage("conversation:a", "Visit", "Dose text",
+                                  "/conversation/a?at=s&t=0", 0),
+            notebook_chat.Passage("document:b",
+                                  "Labs",
+                                  "LDL 85",
+                                  "/document/b?page=1",
+                                  page=1),
+        ]
+
+    def test_markers_are_renumbered_in_order_of_first_use(self):
+        text, citations = notebook_chat.cite(
+            "LDL fell. [[source:2]] The dose stays. [[source:1]], "
+            "[[source:2]]", self.passages)
+
+        self.assertEqual(text, "LDL fell. [[1]] The dose stays. [[2]] [[1]]")
+        self.assertEqual([
+            (item["n"], item["source_id"], item["page"]) for item in citations
+        ], [(1, "document:b", 1), (2, "conversation:a", None)])
+
+    def test_links_and_bad_markers_are_refused(self):
+        for answer in ("See [this](/conversation/x). [[source:1]]",
+                       "See https://example.com", "Answer. [[source:9]]",
+                       "Answer. [[source 1]]"):
+            with self.subTest(answer=answer):
+                with self.assertRaises(notebook_chat.ChatError):
+                    notebook_chat.cite(answer, self.passages)
 
 
 class NotebookChatTest(unittest.TestCase):
+
     def setUp(self):
+        super().setUp()
         self.temp = tempfile.TemporaryDirectory()
-        self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
-        self.env.start()
-        self.book = notebooks.create("Cardiology")["id"]
-        self.voice = _conversation(self.book, "Voice note", [(0, "My blood pressure this morning was 130 over 85.")])
-        self.visit = _conversation(self.book, "Clinic visit", [(0, "Welcome back."),
-                                                              (42000, "Keep the lisinopril dose at 10 milligrams.")])
-        self.lab = pages.create("Lab report", self.book, "LDL cholesterol 160 milligrams per decilitre")["id"]
-        other = notebooks.create("Dermatology")["id"]
-        self.elsewhere = pages.create("Skin note", other, "Apply the cream twice daily")["id"]
-        self.checked = ["conversation:" + self.voice, "conversation:" + self.visit]
-        self.client = TestClient(app)
+        self.addCleanup(self.temp.cleanup)
+        environment = mock.patch.dict(os.environ,
+                                      {"STELLIS_DATA_DIR": self.temp.name})
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.book = notebooks.create("Heart")["id"]
+        self.voice = add_conversation(
+            self.book, "Voice note",
+            [(0, "My blood pressure this morning was 130 over 85.")])
+        self.visit = add_conversation(
+            self.book, "Clinic visit",
+            [(0, "Welcome back."),
+             (42000, "Keep the lisinopril dose at 10 milligrams.")])
+        pages.create("Lab report", self.book,
+                     "LDL cholesterol 160 milligrams per deciliter")
+        other = notebooks.create("Skin")["id"]
+        self.elsewhere = pages.create("Skin note", other,
+                                      "Apply the cream twice daily")["id"]
+        self.checked = [
+            "conversation:" + self.voice, "conversation:" + self.visit
+        ]
+        self.client = testclient.TestClient(server.app)
+        self.addCleanup(self.client.close)
 
-    def tearDown(self):
-        self.client.close()
-        self.env.stop()
-        self.temp.cleanup()
+    def ask(self, reply: str, source_ids=None, agent_id=None):
+        """Asks through the API with a stubbed model; returns the prompt too."""
+        turn = mock.AsyncMock(return_value=(reply, "session"))
+        with mock.patch.object(agent_gateway, "turn", turn):
+            response = self.client.post(
+                f"/api/v1/notebooks/{self.book}/ask",
+                json={
+                    "question": QUESTION,
+                    "source_ids": source_ids or self.checked,
+                    "agent_id": agent_id,
+                })
+        prompt = turn.await_args.args[0] if turn.await_args else None
+        return response, prompt
 
-    def ask(self, reply: str, source_ids=None, question="What did the doctor say about the lisinopril dose?"):
-        turn = AsyncMock(return_value=(reply, "session"))
-        with patch.object(agent_gateway, "turn", turn):
-            response = self.client.post(f"/api/v1/notebooks/{self.book}/ask",
-                                        json={"question": question, "source_ids": source_ids or self.checked})
-        return response, (turn.await_args.args[0] if turn.await_args else None)
+    def chat(self) -> list[dict[str, object]]:
+        response = self.client.get(f"/api/v1/notebooks/{self.book}/chat")
+        return response.json()["messages"]
 
-    def test_unchecked_and_other_notebook_sources_never_reach_the_prompt(self):
-        ids = [*self.checked, "page:" + self.elsewhere]
+    def test_unchecked_and_other_notebook_sources_stay_out(self):
+        source_ids = [*self.checked, "page:" + self.elsewhere]
         for limit in (notebook_chat.FULL_TEXT_CHARS, 10):
-            with self.subTest(full_text_limit=limit), patch.object(notebook_chat, "FULL_TEXT_CHARS", limit):
-                response, prompt = self.ask("The dose stays at 10 mg. [[source:1]]", ids)
+            with self.subTest(full_text_limit=limit):
+                with mock.patch.object(notebook_chat, "FULL_TEXT_CHARS", limit):
+                    response, prompt = self.ask(
+                        "The dose stays at 10 mg. [[source:1]]", source_ids)
+                    passages = notebook_chat.retrieve(self.book, source_ids,
+                                                      "lisinopril dose")
                 self.assertEqual(response.status_code, 200, response.text)
                 self.assertIn("lisinopril", prompt)
                 self.assertNotIn("LDL", prompt)
                 self.assertNotIn("cream", prompt)
-                self.assertEqual({item["source_id"] for item in notebook_chat.retrieve(self.book, ids, "lisinopril dose")}
-                                 - set(self.checked), set())
+                self.assertLessEqual(
+                    {passage.source_id for passage in passages},
+                    set(self.checked))
 
-    def test_citations_are_renumbered_and_open_the_transcript_at_the_cited_time(self):
+    def test_citation_opens_the_transcript_at_the_chunk_start(self):
         passages = notebook_chat.retrieve(self.book, self.checked, "dose")
-        dose = next(index for index, item in enumerate(passages, 1) if "lisinopril" in str(item["text"]))
-        voice = next(index for index, item in enumerate(passages, 1) if "130" in str(item["text"]))
-        response, _ = self.ask(f"The dose stays at 10 mg. [[source:{dose}]] Your reading was 130/85. "
-                               f"[[source:{voice}]], [[source:{dose}]]")
-        body = response.json()
-        self.assertEqual(body["content"], "The dose stays at 10 mg. [[1]] Your reading was 130/85. [[2]] [[1]]")
-        self.assertEqual([item["n"] for item in body["citations"]], [1, 2])
-        first = body["citations"][0]
-        self.assertEqual(first["source_id"], "conversation:" + self.visit)
-        self.assertEqual(first["target"], f"/conversation/{self.visit}?at=seg-0&t=0")
-        self.assertIn("lisinopril", first["excerpt"])
+        dose = next(index for index, passage in enumerate(passages, 1)
+                    if "lisinopril" in passage.text)
 
-    def test_ranking_keeps_the_matching_chunk_and_its_timestamp(self):
-        long_text = "Routine small talk about the weather. " * 30
-        visit = _conversation(self.book, "Long visit", [(0, long_text), (90000, long_text),
-                                                        (180000, "The cardiologist ordered an echocardiogram.")])
-        with patch.object(notebook_chat, "FULL_TEXT_CHARS", 500):
-            passages = notebook_chat.retrieve(self.book, ["conversation:" + visit], "When is the echocardiogram?")
-        self.assertEqual(passages[0]["start_ms"], 180000)
-        self.assertTrue(str(passages[0]["target"]).endswith("&t=180000"))
+        response, _ = self.ask(f"The dose stays at 10 mg. [[source:{dose}]]")
+
+        citation = response.json()["citations"][0]
+        self.assertEqual(citation["source_id"], "conversation:" + self.visit)
+        self.assertEqual(citation["target"],
+                         f"/conversation/{self.visit}?at=seg-0&t=0")
+        self.assertIn("lisinopril", citation["excerpt"])
+
+    def test_ranking_keeps_the_matching_chunk_and_its_time(self):
+        filler = "Routine small talk about the weather. " * 30
+        visit = add_conversation(
+            self.book, "Long visit",
+            [(0, filler), (90000, filler),
+             (180000, "The cardiologist ordered an echocardiogram.")])
+
+        with mock.patch.object(notebook_chat, "FULL_TEXT_CHARS", 500):
+            passages = notebook_chat.retrieve(self.book,
+                                              ["conversation:" + visit],
+                                              "When is the echocardiogram?")
+
+        self.assertEqual(passages[0].start_ms, 180000)
+        self.assertTrue(passages[0].target.endswith("&t=180000"))
 
     def test_messages_are_stored_per_notebook(self):
         self.ask("The dose stays at 10 mg. [[source:1]]")
-        stored = self.client.get(f"/api/v1/notebooks/{self.book}/chat").json()["messages"]
-        self.assertEqual([item["role"] for item in stored], ["user", "assistant"])
-        self.assertEqual(stored[1]["citations"][0]["n"], 1)
-        self.assertEqual(self.client.get("/api/v1/notebooks/missing/chat").status_code, 404)
 
-    def test_an_agent_reads_only_the_checked_passages_and_joins_the_notebook_history(self):
-        from stellis import agent_runtime, agents
-        visit = notebook_chat.retrieve(self.book, self.checked, "dose")
-        target = next(item["target"] for item in visit if "lisinopril" in str(item["text"]))
-        runtime = AsyncMock(return_value={"agent_message": {"content": f"The dose stays at 10 mg. [Clinic visit]({target})"}})
-        with patch.object(agents, "require_enabled", return_value={"id": "agent-1", "name": "Heart helper"}), \
-                patch.object(agent_runtime, "ask", runtime):
-            response = self.client.post(f"/api/v1/notebooks/{self.book}/ask", json={
-                "question": "What dose?", "source_ids": self.checked, "agent_id": "agent-1"})
-        self.assertEqual(response.status_code, 200, response.text)
+        stored = self.chat()
+        missing = self.client.get("/api/v1/notebooks/missing/chat")
+
+        self.assertEqual([item["role"] for item in stored],
+                         ["user", "assistant"])
+        self.assertEqual(stored[1]["citations"][0]["n"], 1)
+        self.assertEqual(missing.status_code, 404)
+
+    def test_failures_store_nothing(self):
+        bad_marker, _ = self.ask("Answer. [[source:9]]")
+        no_text, prompt = self.ask("unused", ["page:" + self.elsewhere])
+        failing_turn = mock.AsyncMock(
+            side_effect=agent_gateway.GatewayError("Allowance used"))
+        with mock.patch.object(agent_gateway, "turn", failing_turn):
+            gateway = self.client.post(f"/api/v1/notebooks/{self.book}/ask",
+                                       json={
+                                           "question": "Dose?",
+                                           "source_ids": self.checked
+                                       })
+
+        self.assertEqual(bad_marker.status_code, 503)
+        self.assertEqual((no_text.status_code, prompt), (400, None))
+        self.assertEqual((gateway.status_code, gateway.json()["detail"]),
+                         (503, "Allowance used"))
+        self.assertEqual(self.chat(), [])
+
+    def test_agent_reads_only_checked_passages_and_joins_history(self):
+        from stellis import agent_runtime
+        from stellis import agents
+        passages = notebook_chat.retrieve(self.book, self.checked, "dose")
+        target = next(passage.target
+                      for passage in passages
+                      if "lisinopril" in passage.text)
+        reply = f"The dose stays at 10 mg. [Clinic visit]({target})"
+        runtime = mock.AsyncMock(
+            return_value={"agent_message": {
+                "content": reply
+            }})
+        agent = {"id": "agent-1", "name": "Heart helper"}
+
+        with mock.patch.object(agents, "require_enabled", return_value=agent):
+            with mock.patch.object(agent_runtime, "ask", runtime):
+                response, _ = self.ask("unused", agent_id="agent-1")
+
         body = response.json()
-        self.assertEqual((body["author"], body["content"]), ("Heart helper", "The dose stays at 10 mg. [[1]]"))
+        self.assertEqual((body["author"], body["content"]),
+                         ("Heart helper", "The dose stays at 10 mg. [[1]]"))
         self.assertEqual(body["citations"][0]["target"], target)
         supplied = runtime.await_args.args[3]
         self.assertTrue(runtime.await_args.kwargs["only_supplied_sources"])
-        self.assertEqual({item["source_id"] for item in supplied}, set(self.checked))
-        self.assertEqual(self.client.get(f"/api/v1/notebooks/{self.book}/chat").json()["messages"][1]["agent_id"], "agent-1")
+        self.assertEqual({item["source_id"] for item in supplied},
+                         set(self.checked))
+        self.assertEqual(self.chat()[1]["agent_id"], "agent-1")
 
     def test_issue_42_done_when_with_a_lab_pdf_unchecked(self):
         folder = sample_records.FOLDER
-        report, _ = documents.create("kidney.pdf", (folder / "kidney-pathology-report.pdf").read_bytes(), self.book)
-        scan, _ = documents.create("scan.pdf", (folder / "thyroid-pathology-report-scan.pdf").read_bytes(), self.book)
-        listed = {item["id"]: item for item in notebook_sources.list_sources(self.book)}
-        self.assertEqual((listed["document:" + report["id"]]["type"], listed["document:" + report["id"]]["selected"]), ("pdf", True))
-        self.assertEqual((listed["document:" + scan["id"]]["status"], listed["document:" + scan["id"]]["selected"]), ("needs_text", False))
-        with_pdf = notebook_chat.retrieve(self.book, [*self.checked, "document:" + report["id"]], "nephrectomy")
-        page = next(item for item in with_pdf if item["source_id"] == "document:" + report["id"])
-        self.assertEqual((page["page"], page["target"]), (1, f"/document/{report['id']}?page=1"))
-        self.assertLessEqual(max(len(str(item["text"])) for item in with_pdf), notebook_chat.CHUNK_CHARS + 200)
-        response, prompt = self.ask("The dose stays at 10 mg. [[source:1]]")
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("Nephrectomy", prompt)
-        self.assertEqual({item["source_id"] for item in response.json()["citations"]} - set(self.checked), set())
+        lab, _ = documents.create(
+            "lab.pdf", (folder / "2026-04-02-lab-results.pdf").read_bytes(),
+            self.book)
+        photo, _ = documents.create(
+            "photo.png",
+            (folder / "2025-03-23-lab-results-photo.png").read_bytes(),
+            self.book)
+        lab_id, photo_id = "document:" + lab["id"], "document:" + photo["id"]
 
-    def test_refusals(self):
-        for reply in ("See [this](/conversation/x). [[source:1]]", "Answer. [[source:9]]", "Answer. [[source 1]]"):
-            with self.subTest(reply=reply):
-                response, _ = self.ask(reply)
-                self.assertEqual(response.status_code, 503)
-        response, prompt = self.ask("unused", ["page:" + self.elsewhere])
-        self.assertEqual((response.status_code, prompt), (400, None))
-        with patch.object(agent_gateway, "turn", AsyncMock(side_effect=agent_gateway.GatewayError("Allowance used"))):
-            response = self.client.post(f"/api/v1/notebooks/{self.book}/ask",
-                                        json={"question": "Dose?", "source_ids": self.checked})
-        self.assertEqual((response.status_code, response.json()["detail"]), (503, "Allowance used"))
-        self.assertEqual(self.client.get(f"/api/v1/notebooks/{self.book}/chat").json()["messages"], [])
+        listed = {
+            item["id"]: item
+            for item in notebook_sources.list_sources(self.book)
+        }
+        with_lab = notebook_chat.retrieve(self.book, [*self.checked, lab_id],
+                                          "creatinine")
+        response, prompt = self.ask("The dose stays at 10 mg. [[source:1]]")
+
+        self.assertEqual((listed[lab_id]["type"], listed[lab_id]["selected"]),
+                         ("pdf", True))
+        self.assertEqual(
+            (listed[photo_id]["status"], listed[photo_id]["selected"]),
+            ("needs_text", False))
+        page = next(
+            passage for passage in with_lab if passage.source_id == lab_id)
+        self.assertEqual((page.page, page.target),
+                         (1, f"/document/{lab['id']}?page=1"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("Creatinine", prompt)
+        self.assertLessEqual(
+            {item["source_id"] for item in response.json()["citations"]},
+            set(self.checked))
 
 
 if __name__ == "__main__":

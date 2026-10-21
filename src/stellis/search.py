@@ -33,20 +33,20 @@ def _pages(category_id: str | None) -> list[dict[str, object]]:
 _LINE_MARK = re.compile(r"^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)*")
 
 
-def _plain(markdown: str) -> str:
+def plain_text(markdown: str) -> str:
     """Readable text only: task IDs and layout tags, list and heading marks, emphasis, and link or image targets dropped."""
     lines = (todos.markdown_inline_text(_LINE_MARK.sub("", line)) for line in todos.plain_markdown(markdown).split("\n"))
     return "\n".join(line for line in lines if line)
 
 
-def _note_texts(ids: list[str]) -> dict[str, str]:
+def note_texts(ids: list[str]) -> dict[str, str]:
     """Plain My Notes text per conversation: no task IDs, layout tags, or image references."""
     if not ids:
         return {}
     with storage.connect() as conn:
         rows = conn.execute(f"SELECT conversation_id, markdown FROM meeting_notes WHERE conversation_id IN ({','.join('?' * len(ids))})",
                             ids).fetchall()
-    return {str(row["conversation_id"]): _plain(str(row["markdown"])) for row in rows}
+    return {str(row["conversation_id"]): plain_text(str(row["markdown"])) for row in rows}
 
 
 def _summary_texts(ids: list[str]) -> dict[str, str]:
@@ -60,7 +60,7 @@ def _summary_texts(ids: list[str]) -> dict[str, str]:
     texts: dict[str, str] = {}
     for row in rows:  # the newest run overwrites earlier ones
         if row["edited_markdown"]:
-            texts[str(row["conversation_id"])] = _plain(str(row["edited_markdown"]))
+            texts[str(row["conversation_id"])] = plain_text(str(row["edited_markdown"]))
         else:
             result = json.loads(row["result_json"] or "{}")
             texts[str(row["conversation_id"])] = "\n".join(
@@ -85,7 +85,7 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
             conversations = [item for item in conversations
                              if category_id in assigned.get(str(item["id"]), [])]
     ids = [str(item["id"]) for item in conversations]
-    note_texts, summary_texts = _note_texts(ids), _summary_texts(ids)
+    notes_by_id, summary_texts = note_texts(ids), _summary_texts(ids)
     for person in people.list_people():
         if needle not in str(person["name"]).casefold():
             continue
@@ -116,7 +116,7 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
                                 "segment_id": None, "start_ms": 0, "speaker": None,
                                 "speaker_uncertain": False, "excerpt": title})
         # One hit per conversation for each text, with an excerpt around the first match.
-        for kind, text in (("note", note_texts.get(conversation_id, "")), ("summary", summary_texts.get(conversation_id, ""))):
+        for kind, text in (("note", notes_by_id.get(conversation_id, "")), ("summary", summary_texts.get(conversation_id, ""))):
             flat = " ".join(text.split())
             if needle in flat.casefold():
                 total += 1
@@ -151,23 +151,19 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
                     results.append({"kind": "page", "page_id": page["id"], "title": title,
                                     "excerpt": value if in_title else _excerpt(" ".join(value.split()), query)})
     # Documents have no tags, so a tag filter leaves them out.
-    with storage.connect() as conn:
-        documents._table(conn)
-        rows = [] if category_id is not None else conn.execute(
-            """SELECT d.id, d.title, p.page_number, p.text FROM documents d
-               JOIN document_pages p ON p.document_id = d.id ORDER BY d.created_at DESC, p.page_number""").fetchall()
+    pages = [] if category_id is not None else documents.all_pages()
     titled: set[str] = set()
-    for row in rows:
-        document_id, title = str(row["id"]), str(row["title"])
+    for page in pages:
+        document_id, title = str(page["document_id"]), str(page["title"])
         hit = None
         if needle in title.casefold() and document_id not in titled:
             titled.add(document_id)
             hit = title
-        elif needle in str(row["text"]).casefold():
-            hit = _excerpt(str(row["text"]), query)
+        elif needle in str(page["text"]).casefold():
+            hit = _excerpt(str(page["text"]), query)
         if hit is not None:
             total += 1
             if len(results) < limit:
                 results.append({"kind": "document", "document_id": document_id, "title": title,
-                                "page": row["page_number"], "excerpt": hit})
+                                "page": page["number"], "excerpt": hit})
     return {"query": query.strip(), "total": total, "limited": total > limit, "results": results}
