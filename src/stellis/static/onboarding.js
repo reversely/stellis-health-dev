@@ -96,7 +96,7 @@
     const status = node('p', '', 'connection-status'); status.role = 'status';
     const connect = button('Connect', async () => { await save('uses'); const data = await api('/calendar/google/authorize?return_to=/onboarding'); location.assign(data.url); }, true);
     row.append(heading, connect, status); panel.append(row);
-    api('/calendar/connections').then(data => { const google = data.find(c => c.provider === 'google'); status.textContent = google?.connected ? 'Calendar connected' : ''; if (google?.connected) connect.textContent = 'Reconnect'; }).catch(e => status.textContent = e.message);
+    api('/calendar/connections').then(data => { const google = data.find(c => c.provider === 'google'); status.textContent = google?.connected ? 'Calendar connected' : google?.connectable ? '' : 'Calendar connection is not available on the web app yet'; connect.hidden = !google?.connectable; if (google?.connected) connect.textContent = 'Reconnect'; }).catch(e => status.textContent = e.message);
     if (state.managed) return panel;
     panel.append(keyRow('Tavily', 'tavily', 'For deep research'));
     if (!state.runtime.local_inference) panel.append(keyRow('Nebius Token Factory', 'nebius', 'For cloud inference'));
