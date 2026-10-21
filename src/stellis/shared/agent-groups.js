@@ -1,10 +1,11 @@
-// Groups agents the way Home groups notebooks (#389, #390): each collection, then notebooks outside one, then agents
+// The workspace coordinator leads Everywhere, followed by collections, notebooks outside one, then agents
 // with no notebook. An agent with notebooks in several collections appears under each, with the notebooks of that
 // group. Coordinators (the default agent and stewards of a notebook in the group) lead, then names in order.
 (function (root) {
   function groupAgents(agents, collections) {
     const inCollection = new Map((collections || []).flatMap(collection => collection.notebook_ids.map(id => [id, collection.id])));
     const groups = new Map([
+      ['everywhere', {key: 'everywhere', name: 'Everywhere', kind: 'users', items: new Map()}],
       ...(collections || []).map(collection => [collection.id, {key: collection.id, name: collection.name, color: collection.color, kind: 'folder', items: new Map()}]),
       ['loose', {key: 'loose', name: 'Notebooks', kind: 'notebook', items: new Map()}],
       ['none', {key: 'none', name: 'No notebook', kind: 'inbox', items: new Map()}]]);
@@ -14,6 +15,7 @@
       if (book) group.items.get(agent.id).books.push(book);
     };
     for (const agent of agents || []) {
+      if (agent.is_default) { place('everywhere', agent); continue; }
       if (!(agent.notebooks || []).length) place('none', agent);
       for (const book of agent.notebooks || []) place(inCollection.get(book.notebook_id) || 'loose', agent, book);
     }

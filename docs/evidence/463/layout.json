@@ -1,0 +1,272 @@
+[
+  {
+    "width": 360,
+    "theme": "dark",
+    "viewport": {
+      "width": 360,
+      "height": 844,
+      "scrollWidth": 360,
+      "scrollHeight": 4029
+    },
+    "findings": [
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Obtain the missing measurement \"",
+        "rect": {
+          "left": 21,
+          "top": 1962,
+          "right": 39,
+          "bottom": 1980,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      },
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Review the revised schedule\"",
+        "rect": {
+          "left": 21,
+          "top": 2018,
+          "right": 39,
+          "bottom": 2036,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      }
+    ]
+  },
+  {
+    "width": 360,
+    "theme": "light",
+    "viewport": {
+      "width": 360,
+      "height": 844,
+      "scrollWidth": 360,
+      "scrollHeight": 4029
+    },
+    "findings": [
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Obtain the missing measurement \"",
+        "rect": {
+          "left": 21,
+          "top": 1962,
+          "right": 39,
+          "bottom": 1980,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      },
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Review the revised schedule\"",
+        "rect": {
+          "left": 21,
+          "top": 2018,
+          "right": 39,
+          "bottom": 2036,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 3906
+    },
+    "findings": [
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Obtain the missing measurement \"",
+        "rect": {
+          "left": 21,
+          "top": 1850,
+          "right": 39,
+          "bottom": 1868,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      },
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Review the revised schedule\"",
+        "rect": {
+          "left": 21,
+          "top": 1901,
+          "right": 39,
+          "bottom": 1919,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 3906
+    },
+    "findings": [
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Obtain the missing measurement \"",
+        "rect": {
+          "left": 21,
+          "top": 1850,
+          "right": 39,
+          "bottom": 1868,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      },
+      {
+        "check": "tap-target",
+        "level": "warn",
+        "element": "input \"Complete Review the revised schedule\"",
+        "rect": {
+          "left": 21,
+          "top": 1901,
+          "right": 39,
+          "bottom": 1919,
+          "width": 18,
+          "height": 18
+        },
+        "detail": "18x18px, minimum 24x24"
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "theme": "dark",
+    "viewport": {
+      "width": 768,
+      "height": 1100,
+      "scrollWidth": 768,
+      "scrollHeight": 3167
+    },
+    "findings": []
+  },
+  {
+    "width": 768,
+    "theme": "light",
+    "viewport": {
+      "width": 768,
+      "height": 1100,
+      "scrollWidth": 768,
+      "scrollHeight": 3167
+    },
+    "findings": []
+  },
+  {
+    "width": 1024,
+    "theme": "dark",
+    "viewport": {
+      "width": 1024,
+      "height": 1100,
+      "scrollWidth": 1024,
+      "scrollHeight": 2599
+    },
+    "findings": []
+  },
+  {
+    "width": 1024,
+    "theme": "light",
+    "viewport": {
+      "width": 1024,
+      "height": 1100,
+      "scrollWidth": 1024,
+      "scrollHeight": 2599
+    },
+    "findings": []
+  },
+  {
+    "width": 1280,
+    "theme": "dark",
+    "viewport": {
+      "width": 1280,
+      "height": 1100,
+      "scrollWidth": 1280,
+      "scrollHeight": 2651
+    },
+    "findings": []
+  },
+  {
+    "width": 1280,
+    "theme": "light",
+    "viewport": {
+      "width": 1280,
+      "height": 1100,
+      "scrollWidth": 1280,
+      "scrollHeight": 2651
+    },
+    "findings": []
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "viewport": {
+      "width": 1440,
+      "height": 1100,
+      "scrollWidth": 1440,
+      "scrollHeight": 2241
+    },
+    "findings": []
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "viewport": {
+      "width": 1440,
+      "height": 1100,
+      "scrollWidth": 1440,
+      "scrollHeight": 2241
+    },
+    "findings": []
+  },
+  {
+    "width": 1920,
+    "theme": "dark",
+    "viewport": {
+      "width": 1920,
+      "height": 1100,
+      "scrollWidth": 1920,
+      "scrollHeight": 2067
+    },
+    "findings": []
+  },
+  {
+    "width": 1920,
+    "theme": "light",
+    "viewport": {
+      "width": 1920,
+      "height": 1100,
+      "scrollWidth": 1920,
+      "scrollHeight": 2067
+    },
+    "findings": []
+  }
+]

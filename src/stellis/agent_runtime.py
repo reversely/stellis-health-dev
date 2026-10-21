@@ -276,7 +276,7 @@ def _openclaw_reply(result: object) -> tuple[str, str | None]:
 
 
 async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None) -> dict[str, object]:
     """Save a Chat request and its managed headless reply."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
     if not configured():
@@ -357,11 +357,14 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
             cited_indices = {int(index) - 1 for index in re.findall(r"\[\[source:(\d+)\]\]", answer)}
             unmarked = re.sub(r"\[\[source:\d+\]\]", "", answer)
             raw_reference = re.search(r"\b(?:sources?\s*:\s*\d+|source\s*\d+)\b", unmarked, re.IGNORECASE)
+            validation_error = answer_check(answer) if answer_check else None
             valid_indices = all(0 <= index < len(sources) for index in cited_indices)
-            if answer and (not artifact_kind or artifact_payload) and (not sources or cited_indices) and valid_indices and not raw_reference and len(answer.split()) <= word_limit:
+            if answer and not validation_error and (not artifact_kind or artifact_payload) and (not sources or cited_indices) and valid_indices and not raw_reference and len(answer.split()) <= word_limit:
                 break
             if attempt == 0:
                 runtime_trace.event("answer_retry", attempt=attempt + 1)
+                if validation_error:
+                    prompt += "\nCorrect this unsupported claim: " + validation_error
                 if artifact_kind:
                     prompt += "\nReturn a valid JSON object with title, recipients and body, at most 1800 words. Put valid [[source:N]] citations in the body for supplied evidence. If no evidence is supplied, use no citations."
                     if artifact_error:
@@ -374,6 +377,8 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                 else:
                     prompt += ("\n\nNo retrieved sources are available for this turn. Answer again "
                                "without source markers, links, or source numbers.")
+        if validation_error:
+            raise AgentRunError("The reply contained an unsupported claim. Try again.")
         if not answer or (artifact_kind and not artifact_payload) or (sources and not cited_indices) or not valid_indices or raw_reference or len(answer.split()) > word_limit:
             if artifact_kind and artifact_error:
                 raise AgentRunError("Agent could not produce a supported draft. Try again.")
@@ -437,7 +442,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 
 
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None) -> dict[str, object]:
     agents.require_enabled(agent_id, notebook_id)
     with runtime_trace.span("agent_review" if review_only else "mail_review" if automatic else "agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
-        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic, started_job_id=started_job_id, review_only=review_only, collaboration=collaboration, record_request=record_request)
+        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic, started_job_id=started_job_id, review_only=review_only, collaboration=collaboration, record_request=record_request, answer_check=answer_check)

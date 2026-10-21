@@ -1,0 +1,24 @@
+{
+  "state": "succeeded",
+  "job_id": "9897b12d-944d-4f04-a47f-f41968ec6ede",
+  "agent_id": "fe05b326-b289-4f98-b533-f468bd9e4862",
+  "error": null,
+  "brief": {
+    "id": "703788ae-7e93-47a2-b0bd-3c7be49c1803",
+    "agent_id": "fe05b326-b289-4f98-b533-f468bd9e4862",
+    "notebook_id": null,
+    "role": "agent",
+    "content": "You have two open tasks: obtain the missing measurement log and review the revised schedule. [Open tasks](/todos) An imported notebook shows one completed source note filed, with no pending items. [Notebook activity](/#notebook-groups) Upcoming events for the next 24 hours are not listed, and the schedule status is UNKNOWN. [Upcoming events](/settings)",
+    "job_id": "9897b12d-944d-4f04-a47f-f41968ec6ede",
+    "created_at": "2026-10-21T01:25:08.220800+00:00"
+  },
+  "coverage": {
+    "tasks": 2,
+    "notebooks": 1,
+    "events": 0,
+    "limit_per_group": 20,
+    "calendar_connected": false,
+    "warnings": [],
+    "as_of": "2026-10-21T01:24:38.289213+00:00"
+  }
+}

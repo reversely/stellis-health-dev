@@ -387,3 +387,6 @@ Setup persists explicit task_choices separately from displayed notebook/collecti
 
 ### Source filing history and Undo
 Onboarding source imports create pages, import identities and `notebook_filings` in one transaction via the shared page-creation helper. Notebook Activity exposes source links and Undo. Undo detaches active notes still in the destination, preserving edits and later moves/deletions, and persists its idempotent outcome. Import identities remain to prevent retries from reversing the user's undo. Existing unrecorded imports are not invented as historical events. See ADR 0079.
+
+### Home daily brief
+The explicit Home brief action snapshots open tasks, notebook work and the next 24 hours of connected calendar events, then uses the default agent's configured runtime and existing jobs/chat/traces. `daily_brief` retains the current job plus last successful message and coverage; Stop, failure and restart preserve the latter. Shutdown awaits task cancellation. Bounded inputs disclose totals, and unavailable calendar data is treated as unknown with a narrow validation/repair guard. See ADR 0080.

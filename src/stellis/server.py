@@ -475,7 +475,8 @@ async def start_mail_monitoring() -> None:
 
 @app.on_event("shutdown")
 async def stop_retention_worker() -> None:
-    from stellis import mail_runs
+    from stellis import mail_runs, daily_brief
+    await daily_brief.shutdown()
     await mail_runs.stop()
     _retention_stop.set()
     # Wait for an in-flight sweep so it cannot touch the data directory after shutdown returns.
@@ -1291,6 +1292,24 @@ def export_folder(scope: Literal["collection", "notebook", "all"] = "all", id: s
 class NotebookInstructions(BaseModel):
     instructions: str = Field(max_length=4000)
     revision: int = Field(ge=0)
+
+
+@api.get("/daily-brief")
+def daily_brief_status():
+    from stellis import daily_brief
+    return daily_brief.status()
+
+
+@api.post("/daily-brief")
+async def prepare_daily_brief():
+    from stellis import daily_brief
+    return _agent_result(daily_brief.start)
+
+
+@api.post("/daily-brief/stop")
+async def stop_daily_brief():
+    from stellis import daily_brief
+    return daily_brief.stop()
 
 
 @api.get("/notebooks/work")

@@ -11,13 +11,13 @@ const agents = [
   {id: 'r', name: 'Research', notebooks: []},
 ];
 
-test('groups follow collections, then loose notebooks, then no notebook', () => {
+test('Everywhere leads collections, loose notebooks and unassigned agents', () => {
   const groups = groupAgents(agents, collections);
-  assert.deepEqual(groups.map(group => group.name), ['Work', 'Notebooks', 'No notebook']);
+  assert.deepEqual(groups.map(group => group.name), ['Everywhere', 'Work', 'Notebooks', 'No notebook']);
 });
 
 test('an agent appears once per group with that group\'s notebooks', () => {
-  const [work, loose] = groupAgents(agents, collections);
+  const [, work, loose] = groupAgents(agents, collections);
   const writing = work.items.find(item => item.agent.id === 'w');
   assert.deepEqual(writing.books.map(item => item.notebook_id), ['water', 'rfi']);
   assert.equal(work.items.filter(item => item.agent.id === 'w').length, 1);
@@ -26,8 +26,8 @@ test('an agent appears once per group with that group\'s notebooks', () => {
 
 test('coordinators lead each group, then names in order', () => {
   const groups = groupAgents(agents, collections);
-  assert.deepEqual(groups[0].items.map(item => item.agent.id), ['s', 'w']);
-  assert.deepEqual(groups[2].items.map(item => item.agent.id), ['g', 'r']);
+  assert.deepEqual(groups[1].items.map(item => item.agent.id), ['s', 'w']);
+  assert.deepEqual(groups[0].items.map(item => item.agent.id), ['g']);
 });
 
 test('no agents gives no groups', () => {
