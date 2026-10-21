@@ -57,9 +57,10 @@
     copy.append(node('p', 'Research, write, coordinate and learn with agents that work from your notebooks. Review their work before it changes your plans or leaves your workspace.'));
     copy.append(node('p', state.runtime.local_inference ? 'AI responses run on your connected computer.' : 'Agents run on Nebius Cloud with Token Factory inference.', 'setup-hint'));
     copy.append(button('Get started', async () => { await save('uses'); render(); }, true)); scene.append(copy);
-    const orbit = [['Meetings','microphone'],['Chief of Staff',null],['Screen','layout-dashboard'],['Deep research',null],['Mail','inbox'],['Writing',null],['Home','folder'],['Collections','folder-plus'],['Calendar','calendar'],['Slide Deck Designer',null],['Work','folder'],['Tutor',null],['Learning','notebook'],['Schedule',null],['Family','users'],['Private','key']];
+    const orbit = [['Meetings','microphone'],['Chief of Staff',null],['Deep research',null],['Writing',null],['Home','folder'],['Collections','folder-plus'],['Calendar','calendar'],['Slide Deck Designer',null],['Work','folder'],['Tutor',null],['Learning','notebook'],['Schedule',null],['Family','users'],['Private','key']];
+    const perSide = Math.ceil(orbit.length / 2);
     orbit.forEach(([name, glyph], index) => {
-      const item = node('div', null, 'setup-orbit'); item.style.setProperty('--orbit-index', index % 8); item.dataset.side = index < 8 ? 'left' : 'right';
+      const item = node('div', null, 'setup-orbit'); item.style.setProperty('--orbit-index', index % perSide); item.dataset.side = index < perSide ? 'left' : 'right';
       item.append(glyph ? icon(glyph) : avatar(name, name === 'Chief of Staff', 36), node('span', name)); scene.append(item);
     });
   }
@@ -67,19 +68,6 @@
     const panel = node('section', null, 'setup-runtime');
     panel.append(node('h2', state.runtime.local_inference ? 'Local AI' : 'Cloud AI'));
     panel.append(node('p', state.runtime.local_inference ? 'AI responses run on your connected computer, without a cloud AI service.' : 'Connect your cloud agent deployment and Token Factory key.'));
-    if(state.local_setup){
-      const progress=node('p',state.local_setup.message,'setup-hint');progress.role='status';panel.append(progress);
-      const recovery=node('p','Resume setup on the connected computer, then check again.','setup-hint');
-      recovery.hidden=state.local_setup.state!=='failed';panel.append(recovery);
-      const poll=setInterval(async()=>{
-        if(!panel.isConnected){clearInterval(poll);return;}
-        if(document.hidden)return;
-        try{
-          const latest=(await api('/onboarding')).local_setup;
-          if(latest){progress.textContent=latest.message;recovery.hidden=latest.state!=='failed';if(latest.state==='ready')clearInterval(poll);}
-        }catch(_){progress.textContent='Could not refresh setup status. Check again.';}
-      },5000);
-    }
     const result = node('p', state.ready ? 'AI is ready.' : 'Test that your AI team can respond.', 'setup-hint'); result.role = 'status';
     panel.append(result, button('Check setup', async () => {
       result.textContent = 'Checking AI responses…';
@@ -88,7 +76,6 @@
     }));
     const details = node('details', null, 'setup-runtime-details'); details.append(node('summary', 'Models and speech'));
     details.append(node('p', `AI model: ${state.runtime.agent_model}`, 'setup-hint'));
-    if (state.runtime.tutor_vision_model) details.append(node('p', `Screen reading: ${state.runtime.tutor_vision_model}`, 'setup-hint'));
     const speech = state.runtime.speech || {};
     details.append(node('p', `Live speech: ${speech.live_installed ? 'Installed' : 'Not configured'}. Saved speech: ${speech.transcribe && speech.diarize ? 'Installed' : 'Not configured'}.`, 'setup-hint'));
     panel.append(details); return panel;
@@ -110,6 +97,7 @@
     const connect = button('Connect', async () => { await save('uses'); const data = await api('/calendar/google/authorize?return_to=/onboarding'); location.assign(data.url); }, true);
     row.append(heading, connect, status); panel.append(row);
     api('/calendar/connections').then(data => { const google = data.find(c => c.provider === 'google'); status.textContent = google?.connected ? 'Calendar connected' : ''; if (google?.connected) connect.textContent = 'Reconnect'; }).catch(e => status.textContent = e.message);
+    if (state.managed) return panel;
     panel.append(keyRow('Tavily', 'tavily', 'For deep research'));
     if (!state.runtime.local_inference) panel.append(keyRow('Nebius Token Factory', 'nebius', 'For cloud inference'));
     return panel;
@@ -127,7 +115,7 @@
       const tile = node('button'); tile.type = 'button'; tile.setAttribute('aria-label', item.name); tile.setAttribute('aria-pressed', String(selected.has(item.id))); tile.append(icon(item.icon), node('span', item.name));
       tile.addEventListener('click', () => { if (selected.has(item.id)) selected.delete(item.id); else selected.add(item.id); tile.setAttribute('aria-pressed', String(selected.has(item.id))); explain(item); save('uses').catch(e => error.textContent = e.message); }); tiles.append(tile);
     }
-    left.append(tiles, connections(), runtimePanel()); right.append(guide); columns.append(left, right); scene.append(columns);
+    left.append(tiles, connections()); if (!state.managed) left.append(runtimePanel()); right.append(guide); columns.append(left, right); scene.append(columns);
     const actions = node('div', null, 'setup-actions'); actions.append(button('Continue', async () => { await save('review'); render(); }, true), button('Skip any of this', async () => { selected.clear(); await save('review'); render(); })); scene.append(actions);
   }
   function teamChoice(key, defaults) {

@@ -49,6 +49,22 @@ class InviteSignUpTest(unittest.TestCase):
             self.assertIn("secure", response.headers["set-cookie"].lower())
 
 
+class ManagedOnboardingTest(unittest.TestCase):
+    def test_onboarding_reports_deployment_managed_ai(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for shared, managed in (("1", True), ("", False)):
+                with self.subTest(shared=shared), \
+                        patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required",
+                                                "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": "",
+                                                "STELLIS_SHARED_PROVIDER_KEYS": shared}), \
+                        TestClient(app, follow_redirects=False) as client:
+                    client.post("/api/v1/auth/register", json={"username": f"Riley{shared}", "password": "correct horse battery staple"})
+                    client.post("/api/v1/auth/login", json={"username": f"Riley{shared}", "password": "correct horse battery staple"})
+                    status = client.get("/api/v1/onboarding").json()
+                    self.assertIs(status["managed"], managed)
+                    self.assertNotIn("local_setup", status)
+
+
 class SharedProviderKeyTest(unittest.TestCase):
     def test_other_accounts_use_the_deployment_keys_only_when_shared(self):
         base = {"STELLIS_ACCOUNT_ID": "2", "NEBIUS_API_KEY": "nebius-shared", "TAVILY_API_KEY": "tavily-shared"}

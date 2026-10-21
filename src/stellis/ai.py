@@ -92,7 +92,7 @@ def key_status() -> dict[str, object]:
 
 
 def _host_key() -> str | None:
-    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1" and os.environ.get("STELLIS_SHARED_PROVIDER_KEYS") != "1":
+    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1" and not runtime_profile.shared_provider_keys():
         return None
     value = os.environ.get("NEBIUS_API_KEY")
     if value:

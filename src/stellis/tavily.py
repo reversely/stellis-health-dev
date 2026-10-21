@@ -26,7 +26,7 @@ def saved_key() -> str | None:
 
 def _host_key() -> str | None:
     """Read the owner's host fallback, or the deployment key every account shares."""
-    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1" and os.environ.get("STELLIS_SHARED_PROVIDER_KEYS") != "1":
+    if os.environ.get("STELLIS_ACCOUNT_ID", "1") != "1" and not runtime_profile.shared_provider_keys():
         return None
     value = os.environ.get("TAVILY_API_KEY")
     if value:

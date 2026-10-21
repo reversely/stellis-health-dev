@@ -23,6 +23,11 @@ def remote_agents() -> bool:
     return selected() in {"cloud", "direct"}
 
 
+def shared_provider_keys() -> bool:
+    """The deployment supplies provider keys and models to every account, which configure none."""
+    return os.environ.get("STELLIS_SHARED_PROVIDER_KEYS") == "1"
+
+
 def local_inference() -> bool:
     # Unset preserves existing installations until an explicit profile is selected.
     selected()

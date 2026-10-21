@@ -27,11 +27,10 @@ Libraries
 - Inter and Piazzolla fonts (SIL Open Font License 1.1), bundled with their
   licence files in src/stellis/static/fonts.
 
-Sample meetings, downloaded by scripts/load_samples.py
+Meeting audio shown in the README recordings in assets/readme
 - AMI Meeting Corpus, University of Edinburgh. Licensed under Creative Commons
   Attribution 4.0 International (CC BY 4.0).
   https://groups.inf.ed.ac.uk/ami/corpus/license.shtml
-  The samples are not part of this repository.
 
 Test fixture
 - tests/fixtures/jfk.wav is the speech sample distributed with whisper.cpp (MIT).
