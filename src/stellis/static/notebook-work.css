@@ -3,3 +3,4 @@
 .notebook-work-actions a,.notebook-team-row>a,.notebook-work-context>a{display:inline-flex;align-items:center;min-height:44px}.notebook-activity p a{display:inline-flex;align-items:center;min-height:26px}
 .notebook-team-row>a{gap:8px}.notebook-activity-head>svg,.notebook-activity-head>img{flex:none}
 .notebook-activity details summary{min-height:44px;display:list-item;align-content:center;cursor:pointer}.notebook-activity details a{display:inline-flex;align-items:center;min-height:44px}.notebook-activity details ul{padding-left:22px}
+.comparison-evidence{margin:12px 0;padding:10px 14px;border-left:2px solid var(--line);line-height:1.5}.comparison-evidence a{display:flex;align-items:center;min-height:44px}

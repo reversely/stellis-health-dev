@@ -41,6 +41,8 @@ def parse(content, question, sources):
     if explicit and not result['recipients']:
         result['recipients'] = [explicit.group(1)]
     from stellis import agent_followups
+    from stellis import source_comparisons
+    result['comparison'] = source_comparisons.validate(result.get('comparison'), sources) if not question.startswith('Prepare a detailed comparison') else None
     result['follow_up'] = agent_followups.validate(result.get('follow_up'), sources)
     return result
 
@@ -63,12 +65,15 @@ def list_for(agent_id):
     with storage.connect() as conn:return [_record(row, conn) for row in conn.execute('SELECT * FROM agent_artifacts WHERE agent_id = ? ORDER BY created_at',(agent_id,))]
 
 
-def create(agent_id, message_id, notebook_id, kind, title, body, recipients, sources, follow_up=None):
+def create(agent_id, message_id, notebook_id, kind, title, body, recipients, sources, follow_up=None, comparison=None):
     validate(title,body,recipients);identifier=str(uuid.uuid4());stamp=_now()
     with storage.connect() as conn:
         conn.execute('''INSERT INTO agent_artifacts
             (id,agent_id,message_id,notebook_id,kind,title,body,recipients_json,sources_json,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)''',(identifier,agent_id,message_id,notebook_id,kind,title.strip(),body.strip(),json.dumps(recipients),json.dumps(sources),stamp,stamp))
+        if comparison:
+            from stellis import source_comparisons
+            source_comparisons.create(conn, identifier, notebook_id, comparison)
         if follow_up:
             conn.execute('INSERT INTO agent_followups(artifact_id,candidate_json) VALUES(?,?)', (identifier,json.dumps(follow_up)))
     return get(identifier)

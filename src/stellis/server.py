@@ -1312,6 +1312,37 @@ async def stop_daily_brief():
     return daily_brief.stop()
 
 
+async def _comparison_call(action):
+    try:
+        return await action()
+    except asyncio.CancelledError as exc:
+        raise HTTPException(status_code=409, detail="Comparison stopped") from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except agent_runtime.AgentRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.post("/notebooks/{notebook_id}/review-sources")
+async def review_notebook_sources(notebook_id: str):
+    from stellis import source_comparisons
+    return await _comparison_call(lambda: source_comparisons.review(notebook_id))
+
+
+@api.post("/notebooks/{notebook_id}/comparisons/{identifier}/run")
+async def compare_notebook_sources(notebook_id: str, identifier: str):
+    from stellis import source_comparisons
+    return await _comparison_call(lambda: source_comparisons.compare(notebook_id, identifier))
+
+
+@api.post("/notebooks/{notebook_id}/comparisons/{identifier}/dismiss")
+def dismiss_notebook_comparison(notebook_id: str, identifier: str):
+    from stellis import source_comparisons
+    return _agent_result(lambda: source_comparisons.dismiss(notebook_id, identifier))
+
+
 @api.get("/notebooks/work")
 def notebook_work_overview():
     return notebook_work.overview()

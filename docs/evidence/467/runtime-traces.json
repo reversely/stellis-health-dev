@@ -1,0 +1,104 @@
+[
+  {
+    "id": "6d7f930a-1d14-49b5-b53b-cee0786e8bd4",
+    "kind": "agent_chat",
+    "agent_id": "59d474f2-9c5d-488e-a4b2-be01604e388e",
+    "job_id": "a1106868-ea42-472a-a220-04014b2b4bf7",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T02:01:47.647835+00:00",
+    "finished_at": "2026-10-21T02:03:32.655587+00:00",
+    "duration_ms": 105010,
+    "agent_name": "Imported notebook Steward",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T02:01:47.651323+00:00"
+      },
+      {
+        "name": "sources_selected",
+        "at": "2026-10-21T02:01:47.671269+00:00",
+        "source_count": 2
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T02:01:47.680875+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "model_replied",
+        "at": "2026-10-21T02:03:32.636093+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "sources_validated",
+        "at": "2026-10-21T02:03:32.640583+00:00",
+        "citation_count": 2
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T02:03:32.652974+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25635,
+      "output": 6603,
+      "total": 32238
+    }
+  },
+  {
+    "id": "3b602723-a1d0-4d22-a4ac-32f3e9ce352b",
+    "kind": "agent_chat",
+    "agent_id": "59d474f2-9c5d-488e-a4b2-be01604e388e",
+    "job_id": "0dce6dfb-364f-4012-98cb-e9b6d6db509d",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T02:00:57.544354+00:00",
+    "finished_at": "2026-10-21T02:01:45.991292+00:00",
+    "duration_ms": 48448,
+    "agent_name": "Imported notebook Steward",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T02:00:57.549217+00:00"
+      },
+      {
+        "name": "sources_selected",
+        "at": "2026-10-21T02:00:57.576639+00:00",
+        "source_count": 3
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T02:00:57.582896+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "model_replied",
+        "at": "2026-10-21T02:01:45.969737+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "sources_validated",
+        "at": "2026-10-21T02:01:45.975407+00:00",
+        "citation_count": 3
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T02:01:45.988718+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25777,
+      "output": 2685,
+      "total": 28462
+    }
+  }
+]

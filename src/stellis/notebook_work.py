@@ -1,7 +1,7 @@
 """Notebook instructions and activity derived from persisted work, never sample events."""
 from __future__ import annotations
 import json
-from stellis import agents, storage, suggestions, agent_artifacts, notebook_filing
+from stellis import agents, storage, suggestions, agent_artifacts, notebook_filing, source_comparisons
 from stellis.todos import markdown_inline_text
 
 
@@ -28,6 +28,14 @@ def activity(notebook_id):
     policy=instructions(notebook_id)
     team=[agent for agent in agents.list_agents() if any(book['notebook_id']==notebook_id for book in agent['notebooks'])]
     items=[]
+    comparisons=source_comparisons.list_for(notebook_id)
+    comparison_jobs={c['job_id'] for c in comparisons if c['job_id']}
+    for comparison in comparisons:
+        state='working' if comparison['state']=='running' else 'needs_you' if comparison['state'] in {'pending','retry'} else 'done'
+        detail={'pending':'', 'running':'Comparing sources', 'done':'Comparison prepared', 'dismissed':'Comparison dismissed', 'retry':comparison['error'] or 'Comparison interrupted. Try again.'}[comparison['state']]
+        items.append({'kind':'comparison','id':comparison['id'],'agent_id':comparison['agent_id'],'author':comparison['author'],
+                      'state':state,'text':comparison['candidate']['question'],'detail':detail,'created_at':comparison['created_at'],
+                      'target':'/chat/'+comparison['agent_id'],'comparison':comparison})
     for filing in notebook_filing.history(notebook_id):
         count = len(filing['items'])
         result = filing['result']
@@ -66,7 +74,7 @@ def activity(notebook_id):
             items.append({'kind':'delegation','id':row['id'],'agent_id':row['steward_id'],'author':row['author'],'state':'working' if working else 'done','text':row['error'] or row['research'] or row['question'],'detail':{'queued':'Queued','researching':'Researching','drafting':'Preparing draft','complete':'Draft prepared','stopped':'Stopped or interrupted'}.get(row['stage'],row['stage']),'created_at':row['updated_at'],'target':'/chat/'+row['steward_id']})
         jobs=conn.execute('SELECT j.*,COALESCE(h.target_name,a.name) AS author FROM agent_jobs j JOIN agents a ON a.id=j.agent_id LEFT JOIN agent_handoffs h ON h.id=j.id WHERE j.notebook_id=? ORDER BY j.created_at DESC LIMIT 100',(notebook_id,)).fetchall()
         for row in jobs:
-            if row['id'] in artifact_jobs:continue
+            if row['id'] in artifact_jobs or row['id'] in comparison_jobs:continue
             message=conn.execute("SELECT id,content FROM agent_messages WHERE job_id=? AND role='agent' ORDER BY created_at DESC LIMIT 1",(row['id'],)).fetchone()
             question=conn.execute("SELECT content FROM agent_messages WHERE job_id=? AND role='user' LIMIT 1",(row['id'],)).fetchone()
             state='working' if row['state']=='running' else 'done'

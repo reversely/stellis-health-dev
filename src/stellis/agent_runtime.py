@@ -180,6 +180,11 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
                        "Propose a useful unresolved action supported by that quote; never claim the task is already added. "
                        "Describe the concrete next action, not another request to the same agents. "
                        "When evidence or approval is missing, propose obtaining it from its owner; never propose fabricating or creating approval records to fill the gap. ")
+    if artifact_kind and notebook_id and not question.startswith('Prepare a detailed comparison'):
+        output += ('Optionally include comparison: null unless two distinct saved notebook sources describe related alternatives or versions worth comparing. '
+                   'When useful, comparison is {"question":"a concise question for the user", "sources":[{"source_index":1,"quote":"12-500 characters copied from this source"},{"source_index":2,"quote":"12-500 characters copied from the other source"}]}. '
+                   'Use actual source indices, and only saved sources whose target begins /page/ or /conversation/. '
+                   'Do not invent differences or comparisons between unrelated documents. Preserve source labels and units; do not guess whether an unspecified number is a cost, quantity or volume. The comparison runs only when the user chooses Compare. ')
     if collaboration:
         output += ("The collaboration findings below are completed work, not future tasks. "
                    "Use the completed findings now. Do not promise to ask those agents again or say you are waiting for their checks. "
@@ -276,7 +281,7 @@ def _openclaw_reply(result: object) -> tuple[str, str | None]:
 
 
 async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None, only_supplied_sources: bool = False) -> dict[str, object]:
     """Save a Chat request and its managed headless reply."""
     sandbox = os.environ.get("STELLIS_NEMOCLAW_SANDBOX", "").strip()
     if not configured():
@@ -296,12 +301,12 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                 if item["notebook_id"] is None or (item["notebook_id"] in active_books
                     and (notebook_id is None or item["notebook_id"] == notebook_id))]
     try:
-        mail_sources = [] if automatic else await agent_mail.sources(agent, question, notebook_id, memories)
+        mail_sources = [] if automatic or only_supplied_sources else await agent_mail.sources(agent, question, notebook_id, memories)
     except gmail_api.GmailError:
         mail_sources = []
     sources = []
     seen_sources = set()
-    for source in [*(extra_sources or []), *mail_sources, *_sources(agent, question, notebook_id)]:
+    for source in [*(extra_sources or []), *mail_sources, *([] if only_supplied_sources else _sources(agent, question, notebook_id))]:
         key = source.get("source_id") or source.get("target")
         if key in seen_sources:
             continue
@@ -405,7 +410,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                                  "target": sources[index]["target"]} for index in sorted(cited_indices)]
             agent_artifacts.create(agent_id, agent_message["id"], notebook_id, artifact_kind, artifact_payload["title"],
                 re.sub(r"\[\[source:\d+\]\]", "", raw_body).strip() if artifact_kind == "email" else answer,
-                artifact_payload["recipients"], artifact_sources, follow_up=artifact_payload.get("follow_up"))
+                artifact_payload["recipients"], artifact_sources, follow_up=artifact_payload.get("follow_up"), comparison=artifact_payload.get("comparison"))
         if not started_job_id:
             agents.finish_job(job_id, "succeeded")
         return {"job_id": job_id, "user_message": user_message, "agent_message": agent_message,
@@ -442,7 +447,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
 
 
 async def ask(agent_id: str, question: str, notebook_id: str | None = None,
-              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None) -> dict[str, object]:
+              extra_sources: list[dict[str, object]] | None = None, *, automatic: bool = False, started_job_id: str | None = None, review_only: bool = False, collaboration: list | None = None, record_request: bool = True, answer_check=None, only_supplied_sources: bool = False) -> dict[str, object]:
     agents.require_enabled(agent_id, notebook_id)
     with runtime_trace.span("agent_review" if review_only else "mail_review" if automatic else "agent_chat", agent_id=agent_id, model=runtime_profile.model_id("agent")):
-        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic, started_job_id=started_job_id, review_only=review_only, collaboration=collaboration, record_request=record_request, answer_check=answer_check)
+        return await _ask(agent_id, question, notebook_id, extra_sources, automatic=automatic, started_job_id=started_job_id, review_only=review_only, collaboration=collaboration, record_request=record_request, answer_check=answer_check, only_supplied_sources=only_supplied_sources)

@@ -11,6 +11,9 @@
     const feed=el('div',null,'notebook-activity-feed'),status=el('p',null,'notebook-work-status');status.role='status';
     const filters=el('div',null,'notebook-work-filters');filters.setAttribute('role','group');filters.setAttribute('aria-label','Activity status');let filter='all',current;
     for(const [id,name] of [['all','All'],...Object.entries(labels)]){const button=el('button',name);button.type='button';button.dataset.filter=id;button.setAttribute('aria-pressed',String(id===filter));button.onclick=()=>{filter=id;renderFeed();};filters.append(button);}
+    const review=el('button','Review sources');review.type='button';review.title='Review up to 12 saved sources for useful comparisons';
+    review.onclick=async()=>{review.disabled=true;status.textContent='Reviewing up to 12 saved sources…';try{await api('/notebooks/'+book.id+'/review-sources','POST');await refresh();status.textContent='Source review ready. Long sources use an excerpt.';}catch(error){status.textContent=error.message;}finally{review.disabled=false;}};
+    filters.append(review);
     const form=el('form',null,'notebook-composer'),select=el('select'),input=el('textarea'),send=el('button','Send');select.setAttribute('aria-label','Notebook agent');input.setAttribute('aria-label','Message this notebook');input.placeholder='Message this notebook';input.maxLength=2000;input.required=true;send.type='submit';input.disabled=true;select.disabled=true;send.disabled=true;form.append(select,input,send);
     input.value=sessionStorage.getItem('stellis-notebook-draft:'+book.id)||'';input.addEventListener('input',()=>sessionStorage.setItem('stellis-notebook-draft:'+book.id,input.value));
     let savedMention=null;try{savedMention=JSON.parse(sessionStorage.getItem('stellis-notebook-mention:'+book.id)||'null');}catch{}
@@ -32,7 +35,7 @@
     policy.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{const result=await api('/notebooks/'+book.id+'/instructions','PUT',{instructions:policyInput.value,revision:policyRevision});policyRevision=result.revision;policyStatus.textContent='Instructions saved';}catch(error){policyStatus.textContent=error.message;}finally{save.disabled=false;}};
     center.append(filters,feed,status,form);layout.append(center,aside);host.append(layout);
     function action(card,title,run){const button=el('button',title);button.type='button';button.onclick=async()=>{button.disabled=true;try{await run();await refresh();await onChange?.();}catch(error){status.textContent=error.message;}finally{button.disabled=false;}};card.append(button);}
-    function renderFeed(){if(!current)return;for(const button of filters.children)button.setAttribute('aria-pressed',String(button.dataset.filter===filter));const items=current.items.filter(item=>filter==='all'||item.state===filter);feed.replaceChildren();
+    function renderFeed(){if(!current)return;for(const button of filters.querySelectorAll('[data-filter]'))button.setAttribute('aria-pressed',String(button.dataset.filter===filter));const items=current.items.filter(item=>filter==='all'||item.state===filter);feed.replaceChildren();
       if(!items.length){feed.append(el('p',current.items.length?'No activity with this status.':'Ask an agent or add sources to start working in this notebook.','notebook-work-empty'));return;}
       for(const item of items){const card=el('article',null,'notebook-activity');card.dataset.activityId=item.id;const head=el('div',null,'notebook-activity-head');head.append(window.StellisAgentAvatar.avatarElement(document,{seed:item.agent_id||item.author,size:28}),el('strong',item.author),el('span',item.detail==='Stopped or interrupted'?'Stopped':item.detail==='Request failed'?'Failed':labels[item.state]),el('time',new Date(item.created_at).toLocaleString()));card.append(head);
         if(item.artifact){card.append(window.StellisAgentChat.artifactCard(item.artifact,()=>refresh(),false));}
@@ -45,6 +48,15 @@
             action(actions,'Update task',()=>api('/suggestions/accept','POST',{ids:[item.id]}));
             action(actions,'Dismiss',()=>api('/suggestions/reject','POST',{ids:[item.id]}));
           }
+        }
+        if(item.kind==='comparison'){
+          const comparison=item.comparison;
+          for(const source of comparison.candidate.sources){const quote=el('blockquote',source.quote,'comparison-evidence');quote.append(link(source.title,source.target));card.append(quote);}
+          if(['pending','retry'].includes(comparison.state)){
+            action(actions,comparison.state==='retry'?'Try comparison again':'Compare',()=>api('/notebooks/'+book.id+'/comparisons/'+item.id+'/run','POST'));
+            action(actions,'Dismiss',()=>api('/notebooks/'+book.id+'/comparisons/'+item.id+'/dismiss','POST'));
+          }
+          if(comparison.state==='running')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/jobs/'+comparison.job_id+'/stop','POST'));
         }
         if(item.kind==='filing'){
           const details=el('details'),summary=el('summary','Filed sources'),list=el('ul');details.append(summary,list);

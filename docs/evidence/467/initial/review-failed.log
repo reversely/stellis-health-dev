@@ -1,0 +1,6 @@
+Review requested through the notebook UI
+Traceback (most recent call last):
+  File "/tmp/comparison-browser.py", line 47, in <module>
+    if failed:raise AssertionError(failed)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: [{'kind': 'job', 'id': '4695697f-1a2e-4060-944b-315eff2e1b37', 'agent_id': 'de1a9cdc-21de-469c-b55a-819622d9c65b', 'author': 'Imported notebook Steward', 'state': 'done', 'text': 'Agent reply failed. Try again.', 'detail': 'Request failed', 'created_at': '2026-10-21T01:58:22.321818+00:00', 'target': '/chat/de1a9cdc-21de-469c-b55a-819622d9c65b'}]

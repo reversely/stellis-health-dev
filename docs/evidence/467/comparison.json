@@ -1,0 +1,18 @@
+{
+  "id": "b78a199b-12ff-4949-9c55-8ba37b164d2e",
+  "agent_id": "59d474f2-9c5d-488e-a4b2-be01604e388e",
+  "message_id": "ddaf008d-0119-4510-a0a4-c58e303d790e",
+  "notebook_id": "e4887365-a46e-48b1-80fd-d07c022d114f",
+  "kind": "document",
+  "title": "Comparison of First and Second Proposals",
+  "recipients_json": "[]",
+  "body": "The first proposal includes equipment for 2500 units [First proposal](/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f). The second proposal includes equipment for 3100 units [Second proposal](/page/a383b32e-743f-43cb-8be2-db8bf69db828).\n\nInstallation units are specified as 500 units in the first proposal [First proposal](/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f). Installation units are also specified as 500 units in the second proposal [Second proposal](/page/a383b32e-743f-43cb-8be2-db8bf69db828).\n\nDelivery time is two weeks in the first proposal [First proposal](/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f). Delivery time is four weeks in the second proposal [Second proposal](/page/a383b32e-743f-43cb-8be2-db8bf69db828).\n\nTotal units are 3000 in the first proposal [First proposal](/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f). Total units are 3600 in the second proposal [Second proposal](/page/a383b32e-743f-43cb-8be2-db8bf69db828).\n\nWarranty period is one year in the first proposal [First proposal](/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f). Warranty period is two years in the second proposal [Second proposal](/page/a383b32e-743f-43cb-8be2-db8bf69db828).",
+  "sources_json": "[{\"source_id\": \"a383b32e-743f-43cb-8be2-db8bf69db828\", \"title\": \"Second proposal\", \"target\": \"/page/a383b32e-743f-43cb-8be2-db8bf69db828\"}, {\"source_id\": \"86089bcf-f2ae-4984-ad26-2969f6d69c1f\", \"title\": \"First proposal\", \"target\": \"/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f\"}]",
+  "state": "draft",
+  "revision": 1,
+  "gmail_draft_id": null,
+  "account_email": null,
+  "error": null,
+  "created_at": "2026-10-21T02:03:32.648125+00:00",
+  "updated_at": "2026-10-21T02:03:32.648125+00:00"
+}

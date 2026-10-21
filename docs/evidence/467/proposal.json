@@ -1,0 +1,45 @@
+{
+  "kind": "comparison",
+  "id": "7d822464-e1b2-486b-81dc-29abf1975e53",
+  "agent_id": "59d474f2-9c5d-488e-a4b2-be01604e388e",
+  "author": "Imported notebook Steward",
+  "state": "needs_you",
+  "text": "How do the unit counts and warranty periods of the first and second proposals differ?",
+  "detail": "",
+  "created_at": "2026-10-21T02:01:45.981004+00:00",
+  "target": "/chat/59d474f2-9c5d-488e-a4b2-be01604e388e",
+  "comparison": {
+    "id": "7d822464-e1b2-486b-81dc-29abf1975e53",
+    "artifact_id": "9c4d5056-e1ff-413d-b3d5-2358213ee55d",
+    "signature": "2691315eb5419dc82fc727ee165604478741c34ba21f233af75e918d9dca0791",
+    "state": "pending",
+    "job_id": null,
+    "agent_id": "59d474f2-9c5d-488e-a4b2-be01604e388e",
+    "notebook_id": "e4887365-a46e-48b1-80fd-d07c022d114f",
+    "created_at": "2026-10-21T02:01:45.981004+00:00",
+    "author": "Imported notebook Steward",
+    "job_state": null,
+    "error": null,
+    "candidate": {
+      "question": "How do the unit counts and warranty periods of the first and second proposals differ?",
+      "sources": [
+        {
+          "source_id": "a383b32e-743f-43cb-8be2-db8bf69db828",
+          "target": "/page/a383b32e-743f-43cb-8be2-db8bf69db828",
+          "title": "Second proposal",
+          "notebook_id": "e4887365-a46e-48b1-80fd-d07c022d114f",
+          "quote": "Second proposal\nThe second proposal includes equipment for 3100 units, installation for 500 units, and delivery in four weeks. The total is 3600 units. Warranty lasts two years.",
+          "digest": "ef06a6449484a0753d707fddd90387cacdac27059036aef471537885751c271c"
+        },
+        {
+          "source_id": "86089bcf-f2ae-4984-ad26-2969f6d69c1f",
+          "target": "/page/86089bcf-f2ae-4984-ad26-2969f6d69c1f",
+          "title": "First proposal",
+          "notebook_id": "e4887365-a46e-48b1-80fd-d07c022d114f",
+          "quote": "First proposal\nThe first proposal includes equipment for 2500 units, installation for 500 units, and delivery in two weeks. The total is 3000 units. Warranty lasts one year.",
+          "digest": "5ef09b6de92fdccbcf36a4289d5add044e20ce49ff95e4d56a58fde69dd20212"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "kind": "comparison",
+  "id": "e54fd282-044c-4e12-9996-89e7fe20ec27",
+  "agent_id": "a7feaf86-9098-4ce1-a0d4-3adc97e45e73",
+  "author": "Imported notebook Steward",
+  "state": "needs_you",
+  "text": "How do the unit volumes and warranty periods of the two proposals compare?",
+  "detail": "Compare these saved sources?",
+  "created_at": "2026-10-21T01:53:13.759743+00:00",
+  "target": "/chat/a7feaf86-9098-4ce1-a0d4-3adc97e45e73",
+  "comparison": {
+    "id": "e54fd282-044c-4e12-9996-89e7fe20ec27",
+    "artifact_id": "60ca5232-a9c4-4b10-8f02-e488cb3695ad",
+    "signature": "a0894e4ba194326bf96ff7e0d2109d7620ea3d21006d30d897603238d3e7cba6",
+    "state": "pending",
+    "job_id": null,
+    "agent_id": "a7feaf86-9098-4ce1-a0d4-3adc97e45e73",
+    "notebook_id": "c1184101-0b56-4725-8849-849ef83d31ec",
+    "created_at": "2026-10-21T01:53:13.759743+00:00",
+    "author": "Imported notebook Steward",
+    "job_state": null,
+    "error": null,
+    "candidate": {
+      "question": "How do the unit volumes and warranty periods of the two proposals compare?",
+      "sources": [
+        {
+          "source_id": "51f1fcc0-a67b-45c5-b8af-0c356e65ef31",
+          "target": "/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31",
+          "title": "First proposal",
+          "notebook_id": "c1184101-0b56-4725-8849-849ef83d31ec",
+          "quote": "The first proposal includes equipment for 2500 units, installation for 500 units, and delivery in two weeks.",
+          "digest": "5ef09b6de92fdccbcf36a4289d5add044e20ce49ff95e4d56a58fde69dd20212"
+        },
+        {
+          "source_id": "89bb2932-f31b-400d-b312-f971e524a6f0",
+          "target": "/page/89bb2932-f31b-400d-b312-f971e524a6f0",
+          "title": "Second proposal",
+          "notebook_id": "c1184101-0b56-4725-8849-849ef83d31ec",
+          "quote": "The second proposal includes equipment for 3100 units, installation for 500 units, and delivery in four weeks.",
+          "digest": "ef06a6449484a0753d707fddd90387cacdac27059036aef471537885751c271c"
+        }
+      ]
+    }
+  }
+}

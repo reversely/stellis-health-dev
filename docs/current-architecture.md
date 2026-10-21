@@ -393,3 +393,6 @@ The explicit Home brief action snapshots open tasks, notebook work and the next 
 
 ### Recording filing history
 New browser recording imports with a destination append a conversation-kind filing record atomically with conversation insertion. The shared filing projection/Undo supports both page and conversation identities and canonical links. Hash duplicates, ordinary imports and No notebook do not create false recording events. Repeated finalize respects an undone destination. See ADR 0081.
+
+### Notebook source comparisons
+Optional comparison proposals bind two canonical notebook sources to exact quotes and content hashes under a completed review artifact. Compare atomically claims a persisted job, executes only against those selected sources, and revalidates source versions, agent availability and both citations before completion. Activity supports Compare, Stop, Retry and Dismiss without duplicating job counts. Explicit source review considers twelve recent documents with bounded excerpts; execution rejects oversized full sources. See ADR 0082.

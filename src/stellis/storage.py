@@ -126,6 +126,10 @@ def connect() -> Iterator[sqlite3.Connection]:
                     row["name"] for row in conn.execute("PRAGMA table_info(agents)")}:
                 raise
     conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agents_one_default ON agents(is_default) WHERE is_default = 1""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS agent_comparisons (
+        id TEXT PRIMARY KEY, artifact_id TEXT NOT NULL UNIQUE, signature TEXT NOT NULL UNIQUE,
+        candidate_json TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'pending', job_id TEXT
+    )""")
     conn.execute("""CREATE TABLE IF NOT EXISTS daily_brief (
         id INTEGER PRIMARY KEY CHECK(id=1), job_id TEXT NOT NULL,
         message_id TEXT, coverage_json TEXT

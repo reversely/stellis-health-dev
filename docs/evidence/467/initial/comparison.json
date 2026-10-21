@@ -1,0 +1,18 @@
+{
+  "id": "a1d1a05e-e2d5-4923-8e4b-5255cb39edb2",
+  "agent_id": "a7feaf86-9098-4ce1-a0d4-3adc97e45e73",
+  "message_id": "ab211bb1-2d53-41a5-b1d2-87482dd788be",
+  "notebook_id": "c1184101-0b56-4725-8849-849ef83d31ec",
+  "kind": "document",
+  "title": "Comparison of Proposal Unit Volumes and Warranty Periods",
+  "recipients_json": "[]",
+  "body": "Both proposals outline equipment, installation, delivery, and warranty terms. [First proposal](/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31)\n\nProposal one specifies equipment for 2500 units. [First proposal](/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31)\n\nProposal two specifies equipment for 3100 units. [Second proposal](/page/89bb2932-f31b-400d-b312-f971e524a6f0)\n\nThe installation volume is 500 units in each proposal. [First proposal](/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31) [Second proposal](/page/89bb2932-f31b-400d-b312-f971e524a6f0)\n\nThe total ordered units amount to 3000 in the first proposal. [First proposal](/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31)\n\nThe total ordered units amount to 3600 in the second proposal. [Second proposal](/page/89bb2932-f31b-400d-b312-f971e524a6f0)\n\nDelivery timelines differ, with the first proposal targeting two weeks and the second targeting four weeks. [First proposal](/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31) [Second proposal](/page/89bb2932-f31b-400d-b312-f971e524a6f0)\n\nWarranty periods also differ, with the first offering one year of warranty and the second offering two years. [First proposal](/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31) [Second proposal](/page/89bb2932-f31b-400d-b312-f971e524a6f0)",
+  "sources_json": "[{\"source_id\": \"51f1fcc0-a67b-45c5-b8af-0c356e65ef31\", \"title\": \"First proposal\", \"target\": \"/page/51f1fcc0-a67b-45c5-b8af-0c356e65ef31\"}, {\"source_id\": \"89bb2932-f31b-400d-b312-f971e524a6f0\", \"title\": \"Second proposal\", \"target\": \"/page/89bb2932-f31b-400d-b312-f971e524a6f0\"}]",
+  "state": "draft",
+  "revision": 1,
+  "gmail_draft_id": null,
+  "account_email": null,
+  "error": null,
+  "created_at": "2026-10-21T01:54:02.739898+00:00",
+  "updated_at": "2026-10-21T01:54:02.739898+00:00"
+}
