@@ -879,7 +879,7 @@ def find_by_hash(source_sha256: str) -> dict[str, object] | None:
     return dict(row) if row else None
 
 
-def add_conversation(record: dict[str, object]) -> None:
+def add_conversation(record: dict[str, object], *, record_notebook_filing: bool = False) -> None:
     """Insert a validated import record."""
     with connect() as conn:
         conn.execute(
@@ -892,6 +892,10 @@ def add_conversation(record: dict[str, object]) -> None:
             """,
             {"recorded_at": None, "notebook_id": None} | record,
         )
+        if record_notebook_filing and record.get('notebook_id'):
+            from stellis import notebook_filing
+            notebook_filing.record_conversation(conn, record)
+
 
 
 def get_job(job_id: str) -> dict[str, object] | None:

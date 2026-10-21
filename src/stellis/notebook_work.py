@@ -31,13 +31,16 @@ def activity(notebook_id):
     for filing in notebook_filing.history(notebook_id):
         count = len(filing['items'])
         result = filing['result']
+        meeting = all(item.get('kind') == 'conversation' for item in filing['items'])
         detail = 'Undo moves these notes to No notebook and keeps your edits.'
+        if meeting:
+            detail = 'Undo moves this meeting to No notebook. Audio and notes are kept.'
         if result is not None:
             detail = f"{len(result['unfiled'])} moved to No notebook."
             if result['unchanged']:
                 detail += f" {len(result['unchanged'])} already moved or deleted; left unchanged."
-        items.append({'kind':'filing', 'id':filing['id'], 'author':'Workspace setup', 'state':'done',
-                      'text':f"Filed {count} source note{'s' if count != 1 else ''} here.",
+        items.append({'kind':'filing', 'id':filing['id'], 'author':'Recording' if meeting else 'Workspace setup', 'state':'done',
+                      'text':'Filed this meeting here.' if meeting else f"Filed {count} source note{'s' if count != 1 else ''} here.",
                       'detail':detail, 'created_at':filing['undone_at'] or filing['created_at'],
                       'target':'/notebook/'+notebook_id, 'filing':filing})
 

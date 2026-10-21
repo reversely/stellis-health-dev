@@ -95,6 +95,37 @@ class RecordingWorkflowTest(unittest.TestCase):
         self.assertEqual(result.json()['conversation']['notebook_id'], book['id'])
         self.assertEqual(self.client.put(destination, json={"notebook_id":None}).status_code, 409)
 
+    def test_filing_undo_preserves_recording_and_duplicate_import_does_not_refile(self):
+        import asyncio
+        import io
+        from fastapi import UploadFile
+        from stellis import importer, notebook_filing, notebooks, storage
+        book=notebooks.create('Meeting destination')
+        session=self.client.post('/api/v1/recordings',json={'title':'Recorded review','media_type':'audio/webm','notebook_id':book['id']}).json()
+        endpoint='/api/v1/recordings/'+session['id']
+        self.assertEqual(self.client.put(endpoint+'/chunks/0',content=self._webm()).status_code,200)
+        result=self.client.post(endpoint+'/finalize')
+        self.assertEqual(result.status_code,200)
+        meeting=result.json()['conversation'];identifier=meeting['id']
+        history=notebook_filing.history(book['id'])
+        self.assertEqual(len(history),1)
+        self.assertEqual(history[0]['items'][0]['target'],'/conversation/'+identifier)
+        media=self.client.get('/api/v1/conversations/'+identifier+'/audio').content
+        storage.rename_conversation(identifier,'Edited title')
+        undo='/api/v1/notebooks/'+book['id']+'/filings/'+history[0]['id']+'/undo'
+        self.assertEqual(self.client.post(undo).json()['unfiled'],[identifier])
+        self.assertIsNone(storage.get_conversation(identifier)['notebook_id'])
+        self.assertEqual(storage.get_conversation(identifier)['title'],'Edited title')
+        self.assertEqual(self.client.get('/api/v1/conversations/'+identifier+'/audio').content,media)
+        self.assertEqual(self.client.post(undo).json()['unfiled'],[identifier])
+        self.assertIsNone(self.client.post(endpoint+'/finalize').json()['conversation']['notebook_id'])
+        other=notebooks.create('Other')
+        duplicate,is_duplicate=asyncio.run(importer.import_upload(UploadFile(io.BytesIO(media),filename='same.webm'),browser_recording=True,notebook_id=other['id']))
+        self.assertTrue(is_duplicate)
+        self.assertEqual(duplicate['id'],identifier)
+        self.assertEqual(notebook_filing.history(other['id']),[])
+        self.assertEqual(len(notebook_filing.history(book['id'])),1)
+
     def test_empty_or_gapped_recording_remains_recoverable(self) -> None:
         session = self.client.post("/api/v1/recordings", json={"title":"Gap", "media_type":"audio/webm"}).json()
         endpoint = f"/api/v1/recordings/{session['id']}"

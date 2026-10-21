@@ -62,3 +62,21 @@ class FilingTest(unittest.TestCase):
         self.assertEqual(len(record['items']), 1)
         notebook_filing.undo(self.book, record['id'])
         self.assertEqual(pages.get(old['id'])['notebook_id'], self.book)
+
+    def test_meeting_undo_keeps_later_moves_and_deletions(self):
+        other=notebooks.create('Other')['id']
+        for identifier in ['moved','deleted','unassigned']:
+            storage.add_conversation({'id':identifier,'title':identifier,'source_sha256':identifier,
+                'audio_filename':identifier+'.webm','audio_media_type':'audio/webm','duration_ms':1000,
+                'created_at':'2026-10-21T00:00:00Z','notebook_id':None if identifier=='unassigned' else self.book},record_notebook_filing=True)
+        with storage.connect() as conn:
+            conn.execute('UPDATE conversations SET notebook_id=? WHERE id=?',(other,'moved'))
+            conn.execute('UPDATE conversations SET trashed_at=? WHERE id=?',('2026-10-21T01:00:00Z','deleted'))
+        history=notebook_filing.history(self.book)
+        self.assertEqual(len(history),2)
+        for record in history:
+            result=notebook_filing.undo(self.book,record['id'])
+            self.assertEqual(result['unfiled'],[])
+            self.assertEqual(len(result['unchanged']),1)
+        self.assertEqual(storage.get_conversation('moved')['notebook_id'],other)
+        self.assertIsNone(storage.get_conversation('deleted'))

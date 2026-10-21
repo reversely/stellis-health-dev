@@ -48,7 +48,7 @@
         }
         if(item.kind==='filing'){
           const details=el('details'),summary=el('summary','Filed sources'),list=el('ul');details.append(summary,list);
-          for(const source of item.filing.items){const row=el('li');row.append(source.available?link(source.title,'/page/'+source.page_id):el('span',source.title+' (deleted)'));list.append(row);}
+          for(const source of item.filing.items){const row=el('li');row.append(source.available?link(source.title,source.target||'/page/'+source.page_id):el('span',source.title+' (deleted)'));list.append(row);}
           card.append(details);
           if(!item.filing.undone_at)action(actions,'Undo',()=>api('/notebooks/'+book.id+'/filings/'+item.id+'/undo','POST'));
           else actions.append(el('span','Filing undone'));

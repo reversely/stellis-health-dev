@@ -390,3 +390,6 @@ Onboarding source imports create pages, import identities and `notebook_filings`
 
 ### Home daily brief
 The explicit Home brief action snapshots open tasks, notebook work and the next 24 hours of connected calendar events, then uses the default agent's configured runtime and existing jobs/chat/traces. `daily_brief` retains the current job plus last successful message and coverage; Stop, failure and restart preserve the latter. Shutdown awaits task cancellation. Bounded inputs disclose totals, and unavailable calendar data is treated as unknown with a narrow validation/repair guard. See ADR 0080.
+
+### Recording filing history
+New browser recording imports with a destination append a conversation-kind filing record atomically with conversation insertion. The shared filing projection/Undo supports both page and conversation identities and canonical links. Hash duplicates, ordinary imports and No notebook do not create false recording events. Repeated finalize respects an undone destination. See ADR 0081.

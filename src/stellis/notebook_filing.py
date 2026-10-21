@@ -32,6 +32,19 @@ def file_sources(notebook_id, sources):
         return identifier
 
 
+def record_conversation(conn, conversation):
+    """Record a newly inserted meeting in the same transaction as its import."""
+    item = {'kind':'conversation', 'conversation_id':conversation['id'], 'title':conversation['title']}
+    conn.execute('INSERT INTO notebook_filings(id,notebook_id,items_json,created_at) VALUES (?,?,?,?)',
+                 (str(uuid.uuid4()), conversation['notebook_id'], json.dumps([item]), pages._stamp()))
+
+
+def _item_location(item):
+    if item.get('kind') == 'conversation':
+        return 'conversations', item['conversation_id'], '/conversation/' + item['conversation_id']
+    return 'pages', item['page_id'], '/page/' + item['page_id']
+
+
 def history(notebook_id):
     with storage.connect() as conn:
         rows = conn.execute('SELECT * FROM notebook_filings WHERE notebook_id=? ORDER BY created_at DESC', (notebook_id,)).fetchall()
@@ -39,7 +52,9 @@ def history(notebook_id):
         for row in rows:
             items = json.loads(row['items_json'])
             for item in items:
-                page = conn.execute('SELECT title,notebook_id,trashed_at FROM pages WHERE id=?', (item['page_id'],)).fetchone()
+                table, identifier, target = _item_location(item)
+                item['target'] = target
+                page = conn.execute(f'SELECT title,notebook_id,trashed_at FROM {table} WHERE id=?', (identifier,)).fetchone()
                 item['available'] = bool(page and not page['trashed_at'])
                 item['location'] = 'deleted' if not item['available'] else 'here' if page['notebook_id']==notebook_id else 'elsewhere'
                 if page:
@@ -59,8 +74,9 @@ def undo(notebook_id, filing_id):
             return json.loads(row['result_json'])
         result = {'unfiled':[], 'unchanged':[]}
         for item in json.loads(row['items_json']):
-            changed = conn.execute('UPDATE pages SET notebook_id=NULL WHERE id=? AND notebook_id=? AND trashed_at IS NULL',
-                                   (item['page_id'], notebook_id)).rowcount
-            result['unfiled' if changed else 'unchanged'].append(item['page_id'])
+            table, identifier, _ = _item_location(item)
+            changed = conn.execute(f'UPDATE {table} SET notebook_id=NULL WHERE id=? AND notebook_id=? AND trashed_at IS NULL',
+                                   (identifier, notebook_id)).rowcount
+            result['unfiled' if changed else 'unchanged'].append(identifier)
         conn.execute('UPDATE notebook_filings SET undone_at=?,result_json=? WHERE id=?', (pages._stamp(), json.dumps(result), filing_id))
         return result

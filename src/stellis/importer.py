@@ -111,7 +111,7 @@ async def import_upload(upload: UploadFile, *, browser_recording: bool = False, 
             "notebook_id": notebook_id,
         }
         try:
-            storage.add_conversation(record)
+            storage.add_conversation(record, record_notebook_filing=browser_recording)
         except sqlite3.IntegrityError:
             destination.unlink(missing_ok=True)
             existing = storage.find_by_hash(digest)
