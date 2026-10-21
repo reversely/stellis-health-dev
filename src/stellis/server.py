@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -1068,6 +1068,10 @@ class NotebookInstructions(BaseModel):
     revision: int = Field(ge=0)
 
 
+class SourceSelection(BaseModel):
+    excluded: list[str] = Field(max_length=500)
+
+
 @api.get("/daily-brief")
 def daily_brief_status():
     from stellis import daily_brief
@@ -1131,6 +1135,17 @@ def notebook_activity(notebook_id: str):
 def undo_notebook_filing(notebook_id: str, filing_id: str):
     from stellis import notebook_filing
     return _agent_result(lambda: notebook_filing.undo(notebook_id, filing_id))
+
+
+@api.get("/notebooks/{notebook_id}/sources")
+def notebook_sources_list(notebook_id: str):
+    return _agent_result(lambda: {"sources": notebook_sources.list_sources(notebook_id), "limit": notebook_sources.LIMIT})
+
+
+@api.put("/notebooks/{notebook_id}/sources/selection")
+def notebook_sources_selection(notebook_id: str, request: SourceSelection):
+    return _agent_result(lambda: {"sources": notebook_sources.save_selection(notebook_id, request.excluded),
+                                  "limit": notebook_sources.LIMIT})
 
 
 @api.put("/notebooks/{notebook_id}/instructions")
