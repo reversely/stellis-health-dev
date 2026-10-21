@@ -4706,11 +4706,16 @@ async function showSettings() {
     `${names} ${names === 1 ? 'name' : 'names'} and ${terms.length - names} other ${terms.length - names === 1 ? 'term' : 'terms'}`;
   await loadSettingsCalendars().catch(error => { document.querySelector('#settings-calendar-status').textContent = error.message; });
   loadDateFormat();
-  await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
-  await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });
-  import("/static/runtime-settings.js").then(module => module.load());
+  const operator = (await fetch(`${API}/settings/runtime-profile`).then(json).catch(() => ({operator: false}))).operator;
+  // Accounts on the deployment's shared keys see no provider or model settings.
+  for (const section of document.querySelectorAll('[data-operator-only]')) section.hidden = !operator;
+  if (operator) {
+    await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
+    await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });
+    import("/static/runtime-settings.js").then(module => module.load());
+  }
   captureControls();
-  if (focusKeyInput()) {
+  if (focusKeyInput() && operator) {
     document.querySelector('#settings-ai-title').scrollIntoView({block: 'start'});
     document.querySelector('#nebius-key-input').focus({preventScroll: true});
   }

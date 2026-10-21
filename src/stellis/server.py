@@ -15,7 +15,7 @@ import threading
 from typing import Literal
 from urllib.parse import urlsplit, urlencode
 
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
@@ -1226,13 +1226,20 @@ class NebiusKey(BaseModel):
     key: str = Field(min_length=1, max_length=512)
 
 
+def _operator_only() -> None:
+    """Refuse provider and model changes from accounts that use the deployment's shared keys."""
+    from stellis import runtime_profile
+    if not runtime_profile.operator():
+        raise HTTPException(status_code=403, detail="The deployment owner manages AI settings")
+
+
 @api.get("/settings/inference")
 def inference_settings() -> dict[str, object]:
     from stellis import runtime_settings
     return runtime_settings.status()
 
 
-@api.post("/settings/inference/check")
+@api.post("/settings/inference/check", dependencies=[Depends(_operator_only)])
 def check_inference_settings() -> dict[str, object]:
     from stellis import runtime_settings
     return runtime_settings.check()
@@ -1242,7 +1249,7 @@ class LocalModelSelection(BaseModel):
     model: str = Field(min_length=1, max_length=200)
 
 
-@api.put("/settings/inference/model")
+@api.put("/settings/inference/model", dependencies=[Depends(_operator_only)])
 def select_local_model(request: LocalModelSelection) -> dict[str, object]:
     from stellis import runtime_settings
     try:
@@ -1257,7 +1264,7 @@ class ModelRouteSelection(BaseModel):
     routes: dict[str, str]
 
 
-@api.put("/settings/inference/routes")
+@api.put("/settings/inference/routes", dependencies=[Depends(_operator_only)])
 def select_model_routes(request: ModelRouteSelection) -> dict[str, object]:
     from stellis import runtime_settings
     try:
@@ -1283,7 +1290,8 @@ def runtime_profile_status() -> dict[str, object]:
     return {"profile": runtime_profile.selected(), "local_inference": local,
             "label": "Token Factory" if runtime_profile.direct() else "Nebius Cloud + Token Factory" if cloud else
                      "GN100 + local inference" if local else "GN100 + Token Factory (existing configuration)",
-            "model": runtime_profile.model_id(), "agent_configured": agent_runtime.configured()}
+            "model": runtime_profile.model_id(), "agent_configured": agent_runtime.configured(),
+            "operator": runtime_profile.operator()}
 
 
 @api.get("/settings/nebius-key")
@@ -1291,7 +1299,7 @@ def nebius_key_status() -> dict[str, object]:
     return ai.key_status()
 
 
-@api.put("/settings/nebius-key")
+@api.put("/settings/nebius-key", dependencies=[Depends(_operator_only)])
 def save_nebius_key(request: NebiusKey) -> dict[str, object]:
     try:
         return ai.save_key(request.key)
@@ -1301,7 +1309,7 @@ def save_nebius_key(request: NebiusKey) -> dict[str, object]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@api.delete("/settings/nebius-key")
+@api.delete("/settings/nebius-key", dependencies=[Depends(_operator_only)])
 def remove_nebius_key() -> dict[str, object]:
     try:
         return ai.remove_key()
@@ -1318,7 +1326,7 @@ def tavily_key_status() -> dict[str, object]:
     return tavily.key_status()
 
 
-@api.put("/settings/tavily-key")
+@api.put("/settings/tavily-key", dependencies=[Depends(_operator_only)])
 def save_tavily_key(request: TavilyKey) -> dict[str, object]:
     try:
         return tavily.save_key(request.key)
@@ -1330,7 +1338,7 @@ def save_tavily_key(request: TavilyKey) -> dict[str, object]:
         raise HTTPException(status_code=503, detail="Could not save the Tavily key") from exc
 
 
-@api.delete("/settings/tavily-key")
+@api.delete("/settings/tavily-key", dependencies=[Depends(_operator_only)])
 def remove_tavily_key() -> dict[str, object]:
     try:
         return tavily.remove_key()
