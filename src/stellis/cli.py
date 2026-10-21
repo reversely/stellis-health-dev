@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import copy
+import logging
 import os
 
 import uvicorn
@@ -54,7 +56,25 @@ def main() -> None:
     target = ("stellis.sync_server:app" if args.command == "sync-serve" else
               "stellis.account_gateway:app" if os.environ.get("STELLIS_AUTH_MODE") == "required" else
               "stellis.server:app")
-    uvicorn.run(target, host=host, port=args.port, **proxy_options())
+    uvicorn.run(target, host=host, port=args.port, log_config=log_config(), **proxy_options())
+
+
+class QuerylessAccessFilter(logging.Filter):
+    """Drop query strings from access log lines; they can hold search text and other health content."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple) and len(record.args) == 5:
+            client, method, path, version, status = record.args
+            record.args = (client, method, str(path).split("?", 1)[0], version, status)
+        return True
+
+
+def log_config() -> dict[str, object]:
+    """Return uvicorn's logging setup with query strings removed from access lines."""
+    config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    config["filters"] = {"queryless": {"()": QuerylessAccessFilter}}
+    config["handlers"]["access"]["filters"] = ["queryless"]
+    return config
 
 
 def proxy_options() -> dict[str, object]:

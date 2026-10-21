@@ -172,6 +172,21 @@ class ProxyOptionsTest(unittest.TestCase):
             self.assertEqual(cli.proxy_options(), {"proxy_headers": True, "forwarded_allow_ips": "*"})
 
 
+class AccessLogTest(unittest.TestCase):
+    def test_access_lines_omit_query_strings(self):
+        import io
+        import logging.config
+        from stellis import cli
+        output = io.StringIO()
+        config = cli.log_config()
+        config["handlers"]["access"]["stream"] = output
+        logging.config.dictConfig(config)
+        logging.getLogger("uvicorn.access").info('%s - "%s %s HTTP/%s" %d', "203.0.113.5:4000", "GET",
+                                                 "/api/v1/search?q=insulin+dose", "1.1", 200)
+        self.assertIn('"GET /api/v1/search HTTP/1.1" 200', output.getvalue())
+        self.assertNotIn("insulin", output.getvalue())
+
+
 @unittest.skipIf(os.name == "nt", "Account child Unix sockets need a Windows transport")
 class TlsProxyOriginTest(unittest.TestCase):
     """Behind a TLS proxy the browser's https Origin must match, in the gateway and in account workspaces."""
