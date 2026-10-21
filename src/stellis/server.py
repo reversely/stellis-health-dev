@@ -40,6 +40,12 @@ async def session_gate(request: Request, call_next):
         origin = request.headers.get("origin")
         if origin and origin != f"{request.url.scheme}://{request.headers.get('host')}":
             return JSONResponse({"detail": "Origin rejected"}, status_code=403)
+        # Refuse an oversized body before multipart parsing spools it to the volume.
+        from stellis import importer
+        length = request.headers.get("content-length", "")
+        if length.isdigit() and int(length) > importer.MAX_UPLOAD_BYTES + 1_000_000:
+            return JSONResponse({"detail": f"The upload is larger than the {importer.MAX_UPLOAD_LABEL} limit."},
+                                status_code=413)
         # Browsers label every request's initiator; a write started by another site is refused
         # even when the browser omits Origin. Clients without the header (scripts, tests) pass.
         if request.headers.get("sec-fetch-site", "same-origin") not in {"same-origin", "none"}:

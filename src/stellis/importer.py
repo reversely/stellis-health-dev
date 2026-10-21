@@ -17,8 +17,10 @@ from fastapi import UploadFile
 
 from stellis import storage, tools
 
-MAX_UPLOAD_BYTES = 1_000_000_000
-MAX_AUDIO_BYTES = 1_000_000_000
+# 250 MB holds about four hours of 128 kbps MP3, longer than an appointment recording.
+MAX_UPLOAD_BYTES = 250_000_000
+MAX_AUDIO_BYTES = 250_000_000
+MAX_UPLOAD_LABEL = "250 MB"
 MEDIA_TYPES = {".mp3": "audio/mpeg", ".webm": "audio/webm",
                ".ogg": "audio/ogg", ".m4a": "audio/mp4"}
 
@@ -66,7 +68,7 @@ async def import_upload(upload: UploadFile, *, browser_recording: bool = False, 
             while chunk := await upload.read(1024 * 1024):
                 total += len(chunk)
                 if total > MAX_UPLOAD_BYTES:
-                    raise ImportFailure("The upload is larger than the 1 GB limit.")
+                    raise ImportFailure(f"The upload is larger than the {MAX_UPLOAD_LABEL} limit.")
                 output.write(chunk)
         if total == 0:
             raise ImportFailure("The file is empty.")

@@ -89,6 +89,19 @@ class OperatorSettingsTest(unittest.TestCase):
                     self.assertNotEqual(client.put("/api/v1/settings/tavily-key", json={"key": "tvly-new"}).status_code, 403)
 
 
+class UploadLimitTest(unittest.TestCase):
+    def test_oversized_upload_is_refused_before_the_body_is_read(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict(os.environ, {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "required",
+                                        "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": ""}), \
+                TestClient(app, follow_redirects=False) as client:
+            client.post("/api/v1/auth/register", json={"username": "Riley", "password": "correct horse battery staple"})
+            response = client.post("/api/v1/conversations/import", content=b"x",
+                                   headers={"Content-Length": "300000000", "Content-Type": "multipart/form-data; boundary=b"})
+            self.assertEqual(response.status_code, 413)
+            self.assertEqual(response.json()["detail"], "The upload is larger than the 250 MB limit.")
+
+
 class SharedProviderKeyTest(unittest.TestCase):
     def test_other_accounts_use_the_deployment_keys_only_when_shared(self):
         base = {"STELLIS_ACCOUNT_ID": "2", "NEBIUS_API_KEY": "nebius-shared", "TAVILY_API_KEY": "tavily-shared"}

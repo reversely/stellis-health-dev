@@ -16,7 +16,7 @@ from pathlib import Path
 from fastapi import UploadFile
 
 from stellis import notes, storage, tools
-from stellis.importer import ImportFailure, MAX_AUDIO_BYTES, import_upload
+from stellis.importer import ImportFailure, MAX_AUDIO_BYTES, MAX_UPLOAD_LABEL, import_upload
 
 MAX_CHUNK_BYTES = 8_000_000
 RECORDING_TYPES = {"audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a"}
@@ -225,7 +225,7 @@ def save_chunk(recording_id: str, sequence: int, data: bytes) -> dict[str, objec
             total = conn.execute("SELECT COALESCE(SUM(size_bytes), 0) FROM recording_chunks WHERE recording_id = ?",
                                  (recording_id,)).fetchone()[0]
             if int(total) + len(data) > MAX_AUDIO_BYTES:
-                raise ValueError("Recording exceeds the 1 GB limit")
+                raise ValueError(f"Recording exceeds the {MAX_UPLOAD_LABEL} limit")
             destination = directory / f"{sequence:08d}.chunk"
             os.replace(temp, destination)
             conn.execute(
