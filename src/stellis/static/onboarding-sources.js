@@ -13,7 +13,7 @@
     function dateLabel(value){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});}
     function sourceList(sources){const list=node('ul',null,'setup-source-list');for(const s of sources){const item=node('li');item.append(node('strong',s.title),node('p',`${s.kind}, ${dateLabel(s.date)}`,'setup-hint'),node('p',s.kind==='Google Calendar'?s.excerpt.replace(/(Starts: |Ends: )([^\n]+)/g,(_,label,value)=>label+dateLabel(value)):s.excerpt));list.append(item);}return list;}
     function draw(){
-      if(stopped)return;heading.textContent=busy()?'Reading mail & calendar events':'Mail & calendar events';read.disabled=busy();period.disabled=busy();cancel.hidden=!busy();progress.hidden=!busy();message.textContent=scan?`${scan.message}${scan.count?` ${scan.count} sources read.`:''}`:'Connect Google to propose notebooks from your mail and calendar.';
+      if(stopped)return;heading.textContent=busy()?'Reading calendar events':'Calendar events';read.disabled=busy();period.disabled=busy();cancel.hidden=!busy();progress.hidden=!busy();message.textContent=scan?`${scan.message}${scan.count?` ${scan.count} sources read.`:''}`:'Connect Google to propose notebooks from your calendar';
       if(scan?.limited)message.textContent+=' More items are available outside this first pass.';
       groups.replaceChildren();if(scan?.state==='ready'){
         if(lastId!==scan.id){selected=new Set(scan.selected_group_ids??scan.groups.map(g=>g.id));lastId=scan.id;}

@@ -25,23 +25,6 @@ class AgentTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def test_first_project_email_sets_correctable_convention_once(self):
-        book = notebooks.create("Water Treatment")
-        mira = agents.create("Mira", "Coordinator", notebook_id=book["id"])
-        first = {"id": "one", "subject": "WT-04 RFI 91 isolation valve",
-                 "sender": "manager@buildco.example", "toRecipients": ["consultant@epcm.example"],
-                 "labelIds": ["INBOX", "Label_WaterTreatment"]}
-        memory = agents.remember_email_convention(mira["id"], book["id"], first)
-        self.assertIn("WT-04 RFI", memory["fact"])
-        self.assertIn("Label_WaterTreatment", memory["fact"])
-        self.assertIn("buildco.example", memory["fact"])
-        self.assertEqual(memory["source_id"], "mail:one")
-        corrected = agents.save_memory(mira["id"], "Use WT-04 RFI subjects only",
-                                       "email_convention", book["id"], memory["id"], "mail:one")
-        second = {**first, "id": "two", "subject": "Completely different subject"}
-        self.assertEqual(agents.remember_email_convention(mira["id"], book["id"], second)["id"], memory["id"])
-        self.assertEqual(agents.memories(mira["id"]), [corrected])
-
     def test_prompt_creates_steward_and_persists(self):
         book = notebooks.create("Water Treatment")
         response = self.client.post("/api/v1/agents", json={
@@ -86,11 +69,11 @@ class AgentTest(unittest.TestCase):
     def test_memory_is_correctable_and_not_a_source_citation(self):
         agent = agents.create("Mira", "Coordinator")
         saved = self.client.post(f"/api/v1/agents/{agent['id']}/memories", json={
-            "kind": "email_convention", "fact": "RFI subjects begin WT-04", "source_id": "mail:one"})
+            "fact": "RFI subjects begin WT-04", "source_id": "note:one"})
         self.assertEqual(saved.status_code, 200)
         memory = saved.json()
         updated = self.client.put(f"/api/v1/agents/{agent['id']}/memories/{memory['id']}", json={
-            "kind": "email_convention", "fact": "RFI subjects begin WT-04 RFI", "source_id": "mail:one"})
+            "fact": "RFI subjects begin WT-04 RFI", "source_id": "note:one"})
         self.assertEqual(updated.json()["fact"], "RFI subjects begin WT-04 RFI")
         self.assertEqual(self.client.get(f"/api/v1/agents/{agent['id']}/memories").json()[0]["id"], memory["id"])
         self.assertEqual(self.client.delete(f"/api/v1/agents/{agent['id']}/memories/{memory['id']}").status_code, 200)
@@ -245,8 +228,6 @@ class AgentTest(unittest.TestCase):
                                            b'{"status":"ok","result":{"payloads":[{"text":"Claim [[source:1]]"}],"meta":{}}}',
                                            b""))})()
         with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
-             patch.object(agent_runtime.agent_mail, "sources", new_callable=AsyncMock,
-                          return_value=[]), \
              patch.object(agent_runtime, "_sources", return_value=[]), \
              patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
                           return_value=process):
@@ -265,8 +246,6 @@ class AgentTest(unittest.TestCase):
                                              + __import__("json").dumps(answer)
                                              + '}],"meta":{}}}').encode(), b""))})()
         with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-claw"}), \
-             patch.object(agent_runtime.agent_mail, "sources", new_callable=AsyncMock,
-                          return_value=[]), \
              patch.object(agent_runtime, "_sources", return_value=[]), \
              patch.object(agent_runtime.asyncio, "create_subprocess_exec", new_callable=AsyncMock,
                           side_effect=[process("Hello [[source:1]]"), process("Hello")]) as launch:

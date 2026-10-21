@@ -12,11 +12,11 @@ TEMPLATES = {
         "was applied unless a tool confirms it.",
     },
     "writing": {
-        "name": "Writing", "does": "Drafts replies in your voice",
-        "returns": "Draft", "asks_first": "Saving a draft or sending",
-        "instructions": "Draft the requested text using the user's supplied style and examples. "
-        "Keep project facts grounded in sources. Do not invent commitments, recipients or deadlines. "
-        "Present drafts for review. Never send mail.",
+        "name": "Writing", "does": "Drafts documents from notebook sources",
+        "returns": "Draft", "asks_first": "Saving a draft",
+        "instructions": "Draft the requested text from the notebook's sources. "
+        "Keep facts grounded in sources. Do not invent commitments, people or deadlines. "
+        "Present drafts for review.",
     },
     "research": {
         "name": "Deep research", "does": "Finds and compares sources",
@@ -56,9 +56,9 @@ TEMPLATES = {
     },
 }
 RUNS = {
-    "steward": "When you ask about this notebook or delegate work",
-    "writing": "When you request a draft; new threads when a notebook mail rule is enabled",
-    "research": "When you ask or a notebook steward delegates research",
+    "steward": "When you ask about this notebook",
+    "writing": "When you request a draft",
+    "research": "When you ask",
     "regulations": "When you ask to check a supplied specification",
     "schedule": "When you request a schedule; no automatic calendar changes",
     "slides": "When you request a slide deck",

@@ -22,7 +22,7 @@ class HandoffTest(unittest.TestCase):
     def test_shared_job_author_and_live_artifact_projection(self):
         job=agents.start_job(self.origin['id'],self.book['id'])
         message=agents.append_message(self.target['id'],'agent','Draft ready',self.book['id'],job)
-        artifact=agent_artifacts.create(self.target['id'],message['id'],self.book['id'],'document','Review','Check the notes.',[],[])
+        artifact=agent_artifacts.create(self.target['id'],message['id'],self.book['id'],'Review','Check the notes.',[])
         relay=agents.append_message(self.origin['id'],'agent','Draft ready',self.book['id'],job)
         with storage.connect() as conn:
             conn.execute('INSERT INTO agent_handoffs VALUES(?,?,?,?,?,?,?)',(job,self.origin['id'],self.target['id'],self.target['name'],self.book['id'],relay['id'],message['id']))

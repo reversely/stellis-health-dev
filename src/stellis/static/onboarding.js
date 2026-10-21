@@ -105,11 +105,11 @@
   }
   function connections() {
     const panel = node('section', null, 'setup-connections'); panel.setAttribute('aria-label', 'Connections');
-    const row = node('div', null, 'setup-connection'), heading = node('div'); heading.append(node('h3', 'Google'), node('p', 'Gmail & Calendar'));
+    const row = node('div', null, 'setup-connection'), heading = node('div'); heading.append(node('h3', 'Google'), node('p', 'Calendar'));
     const status = node('p', '', 'connection-status'); status.role = 'status';
     const connect = button('Connect', async () => { await save('uses'); const data = await api('/calendar/google/authorize?return_to=/onboarding'); location.assign(data.url); }, true);
     row.append(heading, connect, status); panel.append(row);
-    api('/calendar/connections').then(data => { const google = data.find(c => c.provider === 'google'); status.textContent = google?.mail_connected ? 'Mail and calendar connected' : google?.connected ? 'Calendar connected; reconnect to add mail' : ''; if (google?.connected) connect.textContent = 'Reconnect'; }).catch(e => status.textContent = e.message);
+    api('/calendar/connections').then(data => { const google = data.find(c => c.provider === 'google'); status.textContent = google?.connected ? 'Calendar connected' : ''; if (google?.connected) connect.textContent = 'Reconnect'; }).catch(e => status.textContent = e.message);
     panel.append(keyRow('Tavily', 'tavily', 'For deep research'));
     if (!state.runtime.local_inference) panel.append(keyRow('Nebius Token Factory', 'nebius', 'For cloud inference'));
     return panel;
@@ -120,7 +120,7 @@
     tiles.setAttribute('role', 'group'); tiles.setAttribute('aria-label', 'Uses');
     const guide = node('div', null, 'setup-guide'), explanation = node('div', null, 'setup-guide-bubble');
     const identity = node('div', null, 'setup-guide-identity'); identity.append(avatar('Chief of Staff', true, 64), node('span', 'Chief of Staff'));
-    const tips = {meetings:'I record your meetings and turn them into notes and to-dos.', emails:'I sort your mail into notebooks and help draft replies in your voice.', learning:'A Tutor helps you learn a topic or skill you choose.', projects:'Keep a project’s notes and sources together, with agents to help.', home:'Keep your home projects and their information together.', family:'Keep shared information and plans together.', research:'Research a question on the web and bring back sources.', slides:'Turn a notebook into a first slide deck.'};
+    const tips = {meetings:'I record your meetings and turn them into notes and to-dos.', learning:'A Tutor helps you learn a topic or skill you choose.', projects:'Keep a project’s notes and sources together, with agents to help.', home:'Keep your home projects and their information together.', family:'Keep shared information and plans together.', research:'Research a question on the web and bring back sources.', slides:'Turn a notebook into a first slide deck.'};
     function explain(item) { explanation.replaceChildren(node('h3', item.name), node('p', tips[item.id] || item.description)); }
     explain(state.catalog.find(item => selected.has(item.id)) || state.catalog[0]); guide.append(identity, explanation);
     for (const item of state.catalog) {
@@ -190,7 +190,7 @@
       const count = new Set([...state.proposals.map(p => p.notebook.toLowerCase()), ...value.groups.map(g => g.name.toLowerCase())]).size;
       title.textContent = count ? `${count} notebook${count===1?'':'s'}, ready to set up` : 'Start with your Chief of Staff';
       finish.textContent = count ? `Set up ${count} notebook${count===1?'':'s'}` : 'Open workspace';
-      subtitle.textContent = value.groups.length ? 'From your mail & calendar events. Review the sources and choose each notebook’s agents.' : 'Based on your choices. Choose the agents you want in each notebook.';
+      subtitle.textContent = value.groups.length ? 'From your calendar events. Review the sources and choose each notebook’s agents.' : 'Based on your choices. Choose the agents you want in each notebook.';
       importedTree.replaceChildren();
       for (const group of value.groups) { const branch = node('div', null, 'setup-tree-group'); branch.append(node('strong', group.collection), node('div', `${group.name} (${group.source_ids.length})`)); importedTree.append(branch); }
     }, {groupTarget:importedGrid, teamChoice, taskChoice});

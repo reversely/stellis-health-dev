@@ -21,8 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
-from stellis.gmail_api import GmailError
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -450,10 +449,8 @@ def start_speech_worker() -> None:
     images.recover_orphans()
     storage.fail_interrupted_ai_runs()
     agents.interrupt_running_jobs()
-    agent_artifacts.interrupt_saves()
     from stellis import runtime_trace
     runtime_trace.interrupt_running()
-    delegation.interrupt_running()
     storage.fail_interrupted_clean_runs()
     categorization.fail_interrupted()
     enhanced_notes.fail_interrupted()
@@ -468,17 +465,10 @@ def start_speech_worker() -> None:
         _retention_thread.start()
 
 
-@app.on_event("startup")
-async def start_mail_monitoring() -> None:
-    from stellis import mail_runs
-    await mail_runs.start()
-
-
 @app.on_event("shutdown")
 async def stop_retention_worker() -> None:
-    from stellis import mail_runs, daily_brief
+    from stellis import daily_brief
     await daily_brief.shutdown()
-    await mail_runs.stop()
     _retention_stop.set()
     # Wait for an in-flight sweep so it cannot touch the data directory after shutdown returns.
     if _retention_thread is not None:
@@ -539,7 +529,6 @@ class AgentAssignment(BaseModel):
 
 class AgentMemory(BaseModel):
     fact: str = Field(min_length=1, max_length=2000)
-    kind: Literal["general", "email_convention"] = "general"
     notebook_id: str | None = None
     source_id: str | None = Field(default=None, max_length=500)
 
@@ -632,13 +621,13 @@ def agent_memories(agent_id: str) -> list[dict[str, object]]:
 
 @api.post("/agents/{agent_id}/memories")
 def add_agent_memory(agent_id: str, request: AgentMemory) -> dict[str, object]:
-    return _agent_result(lambda: agents.save_memory(agent_id, request.fact, request.kind,
+    return _agent_result(lambda: agents.save_memory(agent_id, request.fact,
                                                      request.notebook_id, source_id=request.source_id))
 
 
 @api.put("/agents/{agent_id}/memories/{memory_id}")
 def update_agent_memory(agent_id: str, memory_id: str, request: AgentMemory) -> dict[str, object]:
-    return _agent_result(lambda: agents.save_memory(agent_id, request.fact, request.kind,
+    return _agent_result(lambda: agents.save_memory(agent_id, request.fact,
                                                      request.notebook_id, memory_id, request.source_id))
 
 
@@ -660,7 +649,6 @@ class ArtifactRevision(BaseModel):
 class ArtifactEdit(ArtifactRevision):
     title: str
     body: str
-    recipients: list[str] = []
 
 
 @api.get("/agents/{agent_id}/artifacts")
@@ -675,7 +663,7 @@ def get_agent_draft(artifact_id: str):
 
 @api.patch("/artifacts/{artifact_id}")
 def edit_agent_draft(artifact_id: str, request: ArtifactEdit):
-    return _agent_result(lambda: agent_artifacts.edit(artifact_id, request.revision, request.title, request.body, request.recipients))
+    return _agent_result(lambda: agent_artifacts.edit(artifact_id, request.revision, request.title, request.body))
 
 
 @api.post("/artifacts/{artifact_id}/discard")
@@ -686,30 +674,6 @@ def discard_agent_draft(artifact_id: str, request: ArtifactRevision):
 @api.post("/artifacts/{artifact_id}/note")
 def file_agent_draft(artifact_id: str, request: ArtifactRevision):
     return _agent_result(lambda: agent_artifacts.save_note(artifact_id, request.revision))
-
-
-@api.post("/artifacts/{artifact_id}/gmail")
-async def save_agent_draft(artifact_id: str, request: ArtifactRevision):
-    try:
-        return await agent_artifacts.save_to_gmail(artifact_id, request.revision)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except agent_artifacts.gmail_api.GmailError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-@api.post("/artifacts/{artifact_id}/gmail-status")
-async def check_agent_draft(artifact_id: str):
-    try:
-        return await agent_artifacts.reconcile(artifact_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except agent_artifacts.gmail_api.GmailError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.get("/agents/{agent_id}/jobs")
@@ -838,143 +802,6 @@ def link_agent_call_recording(agent_id: str, request: VoiceRecordingLink) -> dic
                for item in agents.messages(agent_id)):
         agents.append_message(agent_id, "system", content)
     return {"conversation_id": request.conversation_id}
-
-
-class DelegatedTask(BaseModel):
-    specialist_id: str
-    notebook_id: str
-    question: str = Field(min_length=1, max_length=1000)
-    recipient: str = Field(min_length=3, max_length=254)
-    subject: str = Field(min_length=1, max_length=200)
-    fixture: bool = False
-
-
-@api.get("/agents/delegations/runtime")
-def delegated_runtime() -> dict[str, bool]:
-    status = tavily.key_status()
-    key = bool(status["configured"])
-    managed = agent_runtime.configured()
-    return {"live_ready": key and managed and bool(status["managed_ready"]),
-            "key_configured": key, "agent_configured": managed}
-
-
-@api.get("/agents/{agent_id}/delegations")
-def delegated_jobs(agent_id: str) -> list[dict[str, object]]:
-    return _agent_result(lambda: delegation.jobs(agent_id))
-
-
-@api.post("/agents/{agent_id}/delegations")
-async def delegate_task(agent_id: str, request: DelegatedTask) -> dict[str, object]:
-    job = _agent_result(lambda: delegation.create(agent_id, request.specialist_id, request.notebook_id,
-        request.question, request.recipient, request.subject, request.fixture))
-    delegation.start(str(job["id"]))
-    return job
-
-
-@api.delete("/agents/{agent_id}/delegations/{job_id}")
-def cancel_delegated_task(agent_id: str, job_id: str) -> dict[str, object]:
-    return _agent_result(lambda: delegation.cancel(job_id, agent_id))
-
-
-class MailStyleAccountUpdate(BaseModel):
-    excluded: bool
-
-
-class MailStyleGroupUpdate(BaseModel):
-    name: str | None = Field(default=None, max_length=80)
-    excluded: bool | None = None
-
-
-class MailStyleMove(BaseModel):
-    group_id: str
-
-
-class MailStyleDraft(BaseModel):
-    recipients: list[str] = Field(min_length=1, max_length=20)
-    subject: str = Field(min_length=1, max_length=200)
-    brief: str = Field(min_length=1, max_length=2000)
-
-
-@api.get("/mail-style")
-def mail_style_status() -> dict[str, object]:
-    return mail_style.status()
-
-
-@api.post("/mail-style/sync")
-async def sync_mail_style() -> dict[str, object]:
-    try:
-        return await mail_style.sync()
-    except GmailError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-@api.put("/mail-style/accounts/{email}")
-def update_mail_style_account(email: str, request: MailStyleAccountUpdate) -> dict[str, object]:
-    return _agent_result(lambda: mail_style.update_account(email, request.excluded))
-
-
-@api.put("/mail-style/groups/{group_id}")
-def update_mail_style_group(group_id: str, request: MailStyleGroupUpdate) -> dict[str, object]:
-    return _agent_result(lambda: mail_style.update_group(group_id, name=request.name,
-                                                          excluded=request.excluded))
-
-
-@api.get("/mail-style/groups/{group_id}/examples")
-def mail_style_group_examples(group_id: str) -> list[dict[str, object]]:
-    return _agent_result(lambda: mail_style.group_examples(group_id))
-
-
-@api.put("/mail-style/examples/{example_id}/group")
-def move_mail_style_example(example_id: str, request: MailStyleMove) -> dict[str, object]:
-    return _agent_result(lambda: mail_style.move_example(example_id, request.group_id))
-
-
-@api.post("/agents/{agent_id}/style-draft")
-async def create_style_draft(agent_id: str, request: MailStyleDraft) -> dict[str, object]:
-    try:
-        return await mail_style.create_draft(agent_id, request.recipients, request.subject, request.brief)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except (GmailError, agent_runtime.AgentRunError, RuntimeError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-class MailRuleRequest(BaseModel):
-    query: str = Field(max_length=400)
-    enabled: bool
-
-
-@api.get("/agents/{agent_id}/notebooks/{notebook_id}/mail-rule")
-def mail_rule_status(agent_id: str, notebook_id: str) -> dict:
-    from stellis import mail_runs
-    try:
-        return mail_runs.status(agent_id, notebook_id)
-    except (ValueError, LookupError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@api.put("/agents/{agent_id}/notebooks/{notebook_id}/mail-rule")
-async def mail_rule_configure(agent_id: str, notebook_id: str, request: MailRuleRequest) -> dict:
-    from stellis import mail_runs
-    try:
-        return mail_runs.configure(agent_id, notebook_id, request.query, request.enabled)
-    except (ValueError, LookupError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@api.post("/agents/{agent_id}/notebooks/{notebook_id}/mail-rule/check")
-async def mail_rule_check(agent_id: str, notebook_id: str) -> dict:
-    from stellis import mail_runs
-    try:
-        return await mail_runs.check(agent_id, notebook_id)
-    except asyncio.CancelledError:
-        raise HTTPException(status_code=409, detail="Mail check stopped")
-    except (ValueError, LookupError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail=mail_runs.error_message(exc)) from exc
 
 
 @api.get("/calendar/connections")
@@ -1603,36 +1430,6 @@ def remove_tavily_key() -> dict[str, object]:
 def sample_status() -> dict[str, object]:
     from stellis import samples
     return samples.status()
-
-
-@api.get("/samples/rfi91")
-def rfi91_sample_status() -> dict[str, object]:
-    from stellis import samples
-    return samples.status()["rfi91"]
-
-
-@api.post("/samples/rfi91")
-def add_rfi91_sample() -> dict[str, object]:
-    from stellis import samples
-    return samples.add_rfi91()
-
-
-@api.put("/samples/rfi91/reset")
-def reset_rfi91_sample() -> dict[str, object]:
-    from stellis import samples
-    return samples.reset_rfi91()
-
-
-@api.get("/samples/rfi91/mail/{message_id}")
-def rfi91_sample_mail(message_id: str) -> dict[str, object]:
-    from stellis import fixture_mailbox, sample_rfi91
-    if not sample_rfi91.status()["installed"]:
-        raise HTTPException(status_code=404, detail="Sample mail not found")
-    for thread in fixture_mailbox.FixtureMailbox().threads:
-        for message in thread["messages"]:
-            if message["id"] == message_id:
-                return {"sample": True, "thread_id": thread["id"], **message}
-    raise HTTPException(status_code=404, detail="Sample mail not found")
 
 
 @api.post("/samples")

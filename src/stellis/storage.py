@@ -221,43 +221,10 @@ def connect() -> Iterator[sqlite3.Connection]:
         result TEXT NOT NULL DEFAULT '', sources_json TEXT NOT NULL DEFAULT '[]',
         error TEXT, UNIQUE(job_id, position))""")
 
-    conn.execute("""CREATE TABLE IF NOT EXISTS agent_delegations (
-        id TEXT PRIMARY KEY, steward_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-        specialist_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-        notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
-        question TEXT NOT NULL, recipient TEXT NOT NULL, subject TEXT NOT NULL,
-        fixture INTEGER NOT NULL DEFAULT 0, state TEXT NOT NULL, stage TEXT NOT NULL,
-        research TEXT, draft_body TEXT, gmail_draft_id TEXT,
-        sources_json TEXT NOT NULL DEFAULT '[]', tools_json TEXT NOT NULL DEFAULT '[]',
-        error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-    )""")
-    conn.execute("CREATE INDEX IF NOT EXISTS agent_delegations_thread ON agent_delegations(steward_id, created_at DESC)")
-    conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS agent_delegations_one_active
-        ON agent_delegations(steward_id) WHERE state IN ('queued', 'running')""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_accounts (
-        email TEXT PRIMARY KEY, excluded INTEGER NOT NULL DEFAULT 0,
-        synced_at TEXT
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_groups (
-        id TEXT PRIMARY KEY, account_email TEXT NOT NULL REFERENCES mail_style_accounts(email) ON DELETE CASCADE,
-        recipient_domain TEXT NOT NULL, name TEXT NOT NULL, excluded INTEGER NOT NULL DEFAULT 0,
-        UNIQUE(account_email, recipient_domain)
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_examples (
-        id TEXT PRIMARY KEY, account_email TEXT NOT NULL REFERENCES mail_style_accounts(email) ON DELETE CASCADE,
-        group_id TEXT NOT NULL REFERENCES mail_style_groups(id) ON DELETE CASCADE,
-        message_id TEXT NOT NULL UNIQUE, thread_id TEXT NOT NULL,
-        recipients_json TEXT NOT NULL, subject TEXT NOT NULL, cleaned_body TEXT NOT NULL,
-        sent_at TEXT NOT NULL
-    )""")
-    conn.execute("CREATE INDEX IF NOT EXISTS mail_style_group_examples ON mail_style_examples(group_id, sent_at DESC)")
-    conn.execute("""CREATE TABLE IF NOT EXISTS mail_style_drafts (
-        id TEXT PRIMARY KEY, account_email TEXT NOT NULL REFERENCES mail_style_accounts(email),
-        agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-        group_id TEXT REFERENCES mail_style_groups(id) ON DELETE SET NULL,
-        gmail_draft_id TEXT NOT NULL, recipients_json TEXT NOT NULL, subject TEXT NOT NULL,
-        body TEXT NOT NULL, example_ids_json TEXT NOT NULL, created_at TEXT NOT NULL
-    )""")
+    # Mail features were removed; drop their tables so copied mail text does not stay on disk.
+    for table in ("mail_style_drafts", "mail_style_examples", "mail_style_groups", "mail_style_accounts",
+                  "mail_run_events", "mail_rules", "agent_delegations"):
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
     # When the audio was captured; imports without a known capture time fall back to created_at.
     if "recorded_at" not in conversation_columns:
         conn.execute("ALTER TABLE conversations ADD COLUMN recorded_at TEXT")

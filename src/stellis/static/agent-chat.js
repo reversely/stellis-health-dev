@@ -18,7 +18,6 @@
   let managementSelection = null;
   let selectedId = null;
   let runtimeConfigured = false;
-  let delegationTimer = null;
   let activeCall = null;
   let tutorModule = null;
   let detailRevision = 0;
@@ -130,7 +129,7 @@
     if (!memories.length) list.append(el('p', 'agent-empty', 'No saved memory'));
     for (const memory of memories) {
       const form = el('form', 'agent-memory-row');
-      const label = el('label', '', memory.kind === 'email_convention' ? 'Email convention' : 'Memory');
+      const label = el('label', '', 'Memory');
       const input = el('textarea'); input.value = memory.fact; input.maxLength = 2000; input.required = true;
       label.append(input);
       const buttons = el('div', 'agent-inline-actions');
@@ -204,8 +203,8 @@
   }
   function artifactCard(draft,onChange,showFollowup=true) {
     const card=el('section','agent-artifact');card.dataset.artifactId=draft.id;
-    const state={draft:draft.kind==='email'?'Not sent':'Draft',filed:draft.notebook_id?'Saved to notebook':'Saved as note',saving:'Saving to Gmail…',saved:'Saved to Gmail drafts · Not sent',discarded:'Discarded',save_unknown:'Save status unknown · Not sent'}[draft.state]||draft.state;
-    card.append(el('h4','',draft.title),el('p','artifact-meta',(draft.kind==='email'?(draft.recipients.length?'To '+draft.recipients.join(', '):'Recipient not set')+' · ':'')+state));
+    const state={draft:'Draft',filed:draft.notebook_id?'Saved to notebook':'Saved as note',discarded:'Discarded'}[draft.state]||draft.state;
+    card.append(el('h4','',draft.title),el('p','artifact-meta',state));
     if(draft.state==='discarded')return card;
     card.append(messageBody(draft.body));
     if(draft.sources.length){const evidence=el('details','artifact-sources');evidence.append(el('summary','','Draft sources'));for(const source of draft.sources){const link=el('a','',source.title||'Source');link.href=source.target;if(source.target.startsWith('https://')){link.target='_blank';link.rel='noopener noreferrer';}evidence.append(link);}card.append(evidence);}
@@ -213,20 +212,17 @@
     const button=(label,action)=>{const control=el('button','agent-quiet',label);control.type='button';control.addEventListener('click',async()=>{actions.querySelectorAll('button').forEach(b=>b.disabled=true);try{const updated=await action();if(updated){artifactEdits.delete(draft.id);await onChange(updated);}}catch(error){notice.textContent=error.message;}finally{actions.querySelectorAll('button').forEach(b=>b.disabled=false);}});actions.append(control);return control;};
     const send=(suffix,data)=>request(`/artifacts/${draft.id}${suffix}`,{method:suffix?'POST':'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     if(draft.state==='draft'){
-      if(draft.kind==='email')button('Save to Gmail drafts',async()=>{if(artifactEdits.has(draft.id))throw Error('Save your edits first.');try{return await send('/gmail',{revision:draft.revision});}catch(error){await onChange(await request(`/artifacts/${draft.id}`));status(error.message);throw error;}});
-      else {button(draft.notebook_id?'Save to notebook':'Save as note',()=>{if(artifactEdits.has(draft.id))throw Error('Save your edits first.');return send('/note',{revision:draft.revision});});button('Copy draft',async()=>{await navigator.clipboard.writeText(draft.body);notice.textContent='Copied';});}
+      button(draft.notebook_id?'Save to notebook':'Save as note',()=>{if(artifactEdits.has(draft.id))throw Error('Save your edits first.');return send('/note',{revision:draft.revision});});button('Copy draft',async()=>{await navigator.clipboard.writeText(draft.body);notice.textContent='Copied';});
       const editor=el('form','artifact-editor');editor.hidden=!artifactEdits.has(draft.id);
-      const values=artifactEdits.get(draft.id)||{title:draft.title,body:draft.body,recipients:draft.recipients.join(', ')};
-      function input(label,name,multiline=false){const wrap=el('label','',label),control=el(multiline?'textarea':'input');control.name=name;control.value=values[name];control.required=name!=='recipients';control.maxLength=name==='body'?20000:name==='title'?200:2000;wrap.append(control);editor.append(wrap);control.addEventListener('input',()=>artifactEdits.set(draft.id,Object.fromEntries(new FormData(editor))));return control;}
-      input(draft.kind==='email'?'Subject':'Title','title');if(draft.kind==='email')input('To (comma separated)','recipients');input('Draft','body',true);
-      const save=el('button','','Save changes');save.type='submit';const cancel=el('button','agent-quiet','Cancel');cancel.type='button';cancel.addEventListener('click',()=>{artifactEdits.delete(draft.id);for(const control of editor.querySelectorAll('input,textarea'))control.value=control.name==='recipients'?draft.recipients.join(', '):draft[control.name];editor.hidden=true;});editor.append(save,cancel);
-      editor.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{const values=Object.fromEntries(new FormData(editor));const updated=await send('',{revision:draft.revision,title:values.title,body:values.body,recipients:(values.recipients||'').split(',').map(v=>v.trim()).filter(Boolean)});artifactEdits.delete(draft.id);await onChange(updated);}catch(error){notice.textContent=error.message;}finally{save.disabled=false;}});
+      const values=artifactEdits.get(draft.id)||{title:draft.title,body:draft.body};
+      function input(label,name,multiline=false){const wrap=el('label','',label),control=el(multiline?'textarea':'input');control.name=name;control.value=values[name];control.required=true;control.maxLength=name==='body'?20000:200;wrap.append(control);editor.append(wrap);control.addEventListener('input',()=>artifactEdits.set(draft.id,Object.fromEntries(new FormData(editor))));return control;}
+      input('Title','title');input('Draft','body',true);
+      const save=el('button','','Save changes');save.type='submit';const cancel=el('button','agent-quiet','Cancel');cancel.type='button';cancel.addEventListener('click',()=>{artifactEdits.delete(draft.id);for(const control of editor.querySelectorAll('input,textarea'))control.value=draft[control.name];editor.hidden=true;});editor.append(save,cancel);
+      editor.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{const values=Object.fromEntries(new FormData(editor));const updated=await send('',{revision:draft.revision,title:values.title,body:values.body});artifactEdits.delete(draft.id);await onChange(updated);}catch(error){notice.textContent=error.message;}finally{save.disabled=false;}});
       button('Edit',async()=>{editor.hidden=false;artifactEdits.set(draft.id,Object.fromEntries(new FormData(editor)));editor.querySelector('input').focus();});
       button('Discard',()=>send('/discard',{revision:draft.revision}));card.append(editor);
     }
-    if(draft.state==='save_unknown')button('Check Gmail status',()=>request(`/artifacts/${draft.id}/gmail-status`,{method:'POST'}));
     if(draft.state==='filed'){const link=el('a','agent-link-button','Open note');link.href='/page/'+encodeURIComponent(draft.id);actions.append(link);}
-    if(draft.state==='saved'){const link=el('a','agent-link-button','Open Gmail drafts');link.href=`https://mail.google.com/mail/?authuser=${encodeURIComponent(draft.account_email||'')}#drafts`;link.target='_blank';link.rel='noopener noreferrer';actions.append(link);card.append(el('p','artifact-meta','Saved in '+draft.account_email));}
     card.append(actions,notice);if(showFollowup && draft.follow_up)card.append(suggestionCard(draft.follow_up,onChange));return card;
   }
   async function refreshThread(section, agent) {
@@ -538,163 +534,6 @@
     }
     return finishCallCapture(call.capture, call.agentId);
   }
-  async function draftSection(agent) {
-    const section = el('section', 'agent-detail-section agent-drafts');
-    section.append(el('h3', '', 'Email drafts'));
-    const style = await request('/mail-style');
-    if (!runtimeConfigured) {
-      section.append(el('p', 'agent-empty', 'Email drafting is unavailable on this device.'));
-      return section;
-    }
-    if (!style.groups.some(group => !group.excluded && group.example_count)) {
-      const note = el('p', 'agent-empty', 'Import sent examples in Settings to create drafts in your style.');
-      section.append(note); return section;
-    }
-    const form = el('form', 'agent-ask-form');
-    const recipients = el('input'); recipients.type = 'email'; recipients.required = true;
-    const to = el('label', '', 'To'); to.append(recipients);
-    const subjectInput = el('input'); subjectInput.required = true; subjectInput.maxLength = 200;
-    const subject = el('label', '', 'Subject'); subject.append(subjectInput);
-    const briefInput = el('textarea'); briefInput.required = true; briefInput.maxLength = 2000;
-    const brief = el('label', '', 'What should the draft say?'); brief.append(briefInput);
-    const create = el('button', '', 'Create draft'); create.type = 'submit';
-    const result = el('div', 'mail-style-draft-result');
-    form.append(to, subject, brief, create);
-    form.addEventListener('submit', async event => {
-      event.preventDefault(); create.disabled = true; status('Creating draft…');
-      try {
-        const draft = await request(`/agents/${encodeURIComponent(agent.id)}/style-draft`,
-          {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-            recipients:[recipients.value], subject:subjectInput.value, brief:briefInput.value})});
-        const renderDraft=updated=>result.replaceChildren(artifactCard(updated,renderDraft));renderDraft(draft);
-        status('Draft ready for review.');
-      } catch (error) { status(error.message); }
-      finally { create.disabled = false; }
-    });
-    section.append(form, result);
-    const previous = style.drafts.filter(draft => draft.agent_id === agent.id);
-    if (previous.length) section.append(el('h4', '', 'Recent drafts'));
-    for (const draft of previous) {
-      const item = el('div', 'mail-style-previous-draft');
-      const link = el('a', '', draft.subject);
-      link.href = `https://mail.google.com/mail/u/0/#drafts`;
-      link.target = '_blank'; link.rel = 'noopener noreferrer';
-      item.append(link, el('small', '', draft.recipients.join(', ')), el('span', '', 'Examples used'));
-      for (const example of draft.examples) {
-        const source = el('a', '', example.subject || 'Untitled email');
-        source.href = example.url; source.target = '_blank'; source.rel = 'noopener noreferrer';
-        item.append(source);
-      }
-      section.append(item);
-    }
-    return section;
-  }
-  async function delegationSection(agent) {
-    const books = agent.notebooks.filter(item => item.is_steward);
-    if (!books.length) return el('div');
-    const section = el('section', 'agent-detail-section agent-delegation');
-    section.append(el('h3', '', 'Delegate research'));
-    const specialists = agents.filter(item => item.id !== agent.id && !item.is_default);
-    if (!runtimeConfigured || !specialists.length) {
-      section.append(el('p', 'agent-empty', 'Add another agent and connect the managed agent runtime to delegate.'));
-    }
-    const [sampleCase, researchRuntime] = await Promise.all([
-      request('/samples/rfi91'), request('/agents/delegations/runtime')]);
-    const sampleAvailable = sampleCase.installed &&
-      books.some(book => book.notebook_id === sampleCase.projects[0].notebook_id);
-    if (!researchRuntime.live_ready) {
-      section.append(el('p', 'agent-empty', researchRuntime.key_configured ?
-        'The managed agent is unavailable on this device.' : 'Add a Tavily API key in Account settings for live research.'));
-    }
-    const form = el('form', 'agent-ask-form');
-    form.hidden = !runtimeConfigured || !specialists.length ||
-      (!researchRuntime.live_ready && !sampleAvailable);
-    const choice = (title, values) => {
-      const label = el('label', '', title); const select = el('select');
-      for (const [value, text] of values) { const option = el('option', '', text); option.value = value; select.append(option); }
-      label.append(select); form.append(label); return select;
-    };
-    const specialist = choice('Specialist', specialists.map(item => [item.id, `${item.name} · ${item.role}`]));
-    const notebook = choice('Notebook', books.map(item => [item.notebook_id, item.notebook_name]));
-    const input = (title, type, maxLength) => {
-      const label = el('label', '', title); const control = el(type); control.required = true;
-      control.maxLength = maxLength; label.append(control); form.append(label); return control;
-    };
-    const question = input('Research question', 'textarea', 1000);
-    form.append(el('p', 'settings-note', 'Live research sends your question to Tavily.'));
-    const recipient = input('Draft to', 'input', 254); recipient.type = 'email';
-    const subject = input('Draft subject', 'input', 200);
-    const sampleLabel = el('label', 'agent-inline-check');
-    const sample = el('input'); sample.type = 'checkbox';
-    if (sampleAvailable) {
-      sample.checked = !researchRuntime.live_ready;
-      sample.disabled = !researchRuntime.live_ready;
-      sampleLabel.append(sample, document.createTextNode('Use RFI 91 sample mailbox')); form.append(sampleLabel);
-    }
-    const submit = el('button', '', 'Start delegated job'); submit.type = 'submit'; form.append(submit);
-    const list = el('div', 'agent-delegation-jobs');
-    const refresh = async () => {
-      const jobs = await request(`/agents/${encodeURIComponent(agent.id)}/delegations`);
-      list.replaceChildren();
-      for (const job of jobs) {
-        const item = el('article', 'agent-delegation-job');
-        const name = agents.find(candidate => candidate.id === job.specialist_id)?.name || 'Specialist';
-        item.append(el('strong', '', `${name}: ${job.subject}`), el('small', '', `${job.state} · ${job.stage}`));
-        if (job.error) item.append(el('p', '', job.error));
-        if (job.tools_used.length) item.append(el('small', '', `Tools: ${job.tools_used.join(', ')}`));
-        if (job.research) item.append(el('h4', '', 'Research notes'), messageBody(job.research));
-        if (job.artifact) item.append(artifactCard(job.artifact,refresh));
-        else if (job.draft_body) {
-          item.append(el('h4', '', 'Draft'), messageBody(job.draft_body));
-          if (job.gmail_draft_id && !job.fixture) {
-            const link = el('a', '', 'Open Gmail drafts');
-            link.href = 'https://mail.google.com/mail/#drafts';
-            link.target = '_blank'; link.rel = 'noopener noreferrer'; item.append(link);
-          }
-        }
-        if (job.sources.length) {
-          const sources = el('div', 'agent-delegation-sources');
-          sources.append(el('span', '', 'Sources'));
-          for (const source of job.sources) {
-            if ((!source.target.startsWith('/') || source.target.startsWith('//')) &&
-                !source.target.startsWith('https://')) continue;
-            const link = el('a', '', source.title); link.href = source.target;
-            if (source.target.startsWith('https://')) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
-            sources.append(link);
-          }
-          item.append(sources);
-        }
-        if (['queued', 'running'].includes(job.state)) {
-          const stop = el('button', 'agent-quiet', 'Stop job'); stop.type = 'button';
-          stop.addEventListener('click', async () => {
-            try { await request(`/agents/${encodeURIComponent(agent.id)}/delegations/${encodeURIComponent(job.id)}`, {method:'DELETE'}); await refresh(); }
-            catch (error) { status(error.message); }
-          });
-          item.append(stop);
-        }
-        list.append(item);
-      }
-      clearTimeout(delegationTimer);
-      if (selectedId === agent.id && !document.querySelector('#agent-chat-view').hidden &&
-          jobs.some(job => ['queued', 'running'].includes(job.state))) {
-        delegationTimer = setTimeout(() => refresh().catch(error => status(error.message)), 2000);
-      }
-    };
-    form.addEventListener('submit', async event => {
-      event.preventDefault(); submit.disabled = true;
-      try {
-        await request(`/agents/${encodeURIComponent(agent.id)}/delegations`, {method:'POST',
-          headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-            specialist_id:specialist.value, notebook_id:notebook.value, question:question.value,
-            recipient:recipient.value, subject:subject.value, fixture:sample.checked})});
-        form.reset(); status('Delegated job started'); await refresh();
-      } catch (error) { status(error.message); }
-      finally { submit.disabled = false; }
-    });
-    section.append(form, list);
-    await refresh();
-    return section;
-  }
   function identityForm(agent) {
     const identity = el('form', 'agent-identity-form');
     identity.append(field('Name', agent.name, 'name'), field('Role', agent.role, 'role'),
@@ -737,7 +576,7 @@
   async function renderDetail(agent) {
     const revision = ++detailRevision;
     const target = document.querySelector('#agent-detail');
-    clearTimeout(delegationTimer); clearTimeout(threadTimer); tutorModule?.stop();
+    clearTimeout(threadTimer); tutorModule?.stop();
     const head = el('div', 'agent-detail-head'); const identity=el('div','agent-workspace-identity'),text=el('div');
     text.append(el('h3', '', agent.name), el('p', '', agent.behavior?.does || agent.role));identity.append(agentAvatar(agent,44),text);head.append(identity);
     const tabs=el('div','agent-workspace-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Agent workspace');
@@ -745,8 +584,8 @@
     if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
     head.append(thread.callControls);
     const shell=el('div','agent-workspace'),center=el('div','agent-workspace-center');
-    const threadPanel=el('div','agent-workspace-panel'),setupPanel=el('div','agent-workspace-panel'),workPanel=el('div','agent-workspace-panel');
-    const panels={thread:threadPanel,setup:setupPanel,work:workPanel}; let setupLoaded=false,workLoaded=false;
+    const threadPanel=el('div','agent-workspace-panel'),setupPanel=el('div','agent-workspace-panel');
+    const panels={thread:threadPanel,setup:setupPanel}; let setupLoaded=false;
     threadPanel.append(thread);
     if (agent.template_id === 'tutor') {
       tutorModule=await import('/static/screen-tutor.js');
@@ -759,15 +598,14 @@
       for (const [key,panel] of Object.entries(panels)) {panel.hidden=key!==name;tabs.querySelector(`[data-tab="${key}"]`).setAttribute('aria-selected',String(key===name));}
       try {
         if(name==='setup'&&!setupLoaded){setupLoaded=true;setupPanel.append(behaviorCard(agent),agentControls(agent),identityForm(agent),notebookSection(agent),await memorySection(agent));}
-        if(name==='work'&&!workLoaded){workLoaded=true;workPanel.append(el('p','agent-empty','Loading work…'));const [drafts,delegation]=await Promise.all([draftSection(agent),delegationSection(agent)]);workPanel.replaceChildren(drafts,delegation);}
-      } catch(error) {if(name==='setup')setupLoaded=false;else workLoaded=false;status(error.message);}
+      } catch(error) {setupLoaded=false;status(error.message);}
     }
-    for(const [name,label] of [['thread','Thread'],['setup','Setup'],['work','Work']]) {
+    for(const [name,label] of [['thread','Thread'],['setup','Setup']]) {
       const button=el('button','',label);button.type='button';button.dataset.tab=name;button.id=`agent-tab-${name}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`agent-panel-${name}`);
       const panel=panels[name];panel.id=`agent-panel-${name}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);
       button.addEventListener('click',()=>activate(name));button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const buttons=[...tabs.children],index=buttons.indexOf(button),next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;buttons[next].focus();buttons[next].click();});tabs.append(button);
     }
-    center.append(tabs,threadPanel,setupPanel,workPanel);shell.append(center,await contextPanel(agent));
+    center.append(tabs,threadPanel,setupPanel);shell.append(center,await contextPanel(agent));
     if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
     target.replaceChildren(head,shell);await activate(workspaceTab);
     if (location.hash.startsWith('#message-')) document.getElementById(location.hash.slice(1))?.scrollIntoView();
@@ -793,45 +631,6 @@
     const form=document.querySelector('#agent-new-form');form.elements.notebook_id.value=bookId;
     if(templateId){form.elements.template_id.value=templateId;form.elements.template_id.dispatchEvent(new Event('change'));}
     form.scrollIntoView({block:'nearest'});
-  }
-  async function mailRulePanel(agent, book) {
-    const section=el('section','deployment-mail-rule'),heading=el('h4','','New mail');section.append(heading);
-    const path=`/agents/${agent.id}/notebooks/${book.id}/mail-rule`;
-    const rule=await request(path),form=el('form'),label=el('label','','Mail search'),input=el('input');
-    input.value=rule.query;input.maxLength=400;input.placeholder='from: or subject: or label:';input.setAttribute('aria-label','Mail search');label.append(input);
-    const enabledLabel=el('label','deployment-toggle'),enabled=el('input');enabled.type='checkbox';enabled.checked=rule.enabled;enabledLabel.append(enabled,el('span','','Prepare replies to new threads'));
-    const hint=el('p','agent-empty','Only new threads matching this search are checked. Drafts stay here until you review them. Checks run every minute while your workspace is running.');
-    const state=el('p','agent-empty',rule.active?rule.status:rule.enabled?'Paused while this agent is off':rule.status);state.setAttribute('role','status');
-    const save=el('button','agent-quiet','Save mail rule');save.type='submit';const check=el('button','agent-quiet','Check now');check.type='button';check.disabled=!rule.active;
-    const events=el('div','mail-run-events');
-    function showEvents(rows){
-      events.replaceChildren();
-      for(const event of rows){
-        const row=el('p','agent-empty'),link=el('a','','Open email');
-        link.href=`https://mail.google.com/mail/u/0/#all/${encodeURIComponent(event.thread_id)}`;
-        link.target='_blank';link.rel='noopener noreferrer';
-        const labels={draft:'Draft ready for review',skipped:'No reply prepared',working:'Reviewing thread',failed:'Could not finish',interrupted:'Stopped'};
-        row.append(el('span','',labels[event.state]||event.state),document.createTextNode(' · '),link);
-        if(event.state==='draft'){
-          const review=el('a','','Review draft');review.href=`/chat/${agent.id}`;
-          row.append(document.createTextNode(' · '),review);
-        }
-        if(['failed','interrupted'].includes(event.state))row.append(el('span','', ' · '+event.detail));
-        events.append(row);
-      }
-    }
-    showEvents(rule.events);form.append(label,enabledLabel,hint,save,check,state,events);section.append(form);
-    async function refreshMailState(){
-      if(!section.isConnected)return;
-      try{const next=await request(path);state.textContent=next.active?next.status:next.enabled?'Paused while this agent is off':next.status;showEvents(next.events);}
-      catch(error){state.textContent=error.message;}
-      if(section.isConnected)setTimeout(refreshMailState,5000);
-    }
-    setTimeout(refreshMailState,5000);
-
-    form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{const next=await request(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:input.value,enabled:enabled.checked})});state.textContent=next.status;check.disabled=!next.active;showEvents(next.events);}catch(error){state.textContent=error.message;}finally{save.disabled=false;}});
-    check.addEventListener('click',async()=>{check.disabled=true;state.textContent='Checking new threads…';try{const next=await request(path+'/check',{method:'POST'});state.textContent=next.status;showEvents(next.events);}catch(error){state.textContent=error.message;}finally{check.disabled=!enabled.checked;}});
-    return section;
   }
   async function managementPanel(selection) {
     const panel=el('aside','deployment-detail');panel.setAttribute('aria-label','Selected agent');panel.tabIndex=-1;
@@ -862,7 +661,6 @@
       remove.disabled=true;try{await request(`/agents/${agent.id}/notebooks/${book.id}`,{method:'DELETE'});managementSelection={bookId:book.id};await reloadAgent(agent.id);status('Removed from '+book.name+'. Chat and memory kept.');}catch(error){remove.disabled=false;status(error.message);}
     });}
     panel.append(actions,editor);
-    if(book && agent.template_id==='writing')panel.append(await mailRulePanel(agent,book));
     const customize=el('details','deployment-customize');customize.append(el('summary','','Instructions and memory'),el('p','agent-template-text',templates.find(item=>item.id===agent.template_id)?.instructions||agent.role),await memorySection(agent));
     const instructions=identityForm(agent);instructions.querySelector('input[name=name]').closest('label').hidden=true;instructions.querySelector('input[name=role]').closest('label').hidden=true;customize.append(instructions);panel.append(customize);
     if(book){const suggestions=el('section','deployment-suggestions');suggestions.append(el('h4','','Add to '+book.name));
@@ -870,7 +668,7 @@
     return panel;
   }
   async function renderSettings(focus=false) {
-    const revision=++detailRevision;clearTimeout(threadTimer);clearTimeout(delegationTimer);tutorModule?.stop();
+    const revision=++detailRevision;clearTimeout(threadTimer);tutorModule?.stop();
     const head=el('div','agent-detail-head');head.append(el('h3','','Agents'));
     const layout=el('div','deployment-layout'),list=el('div','deployment-list');
     function group(name,books){if(!books.length)return;const section=el('section','deployment-group');section.append(el('h4','notebook-group-head',name));

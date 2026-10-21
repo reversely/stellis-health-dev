@@ -65,13 +65,8 @@ def activity(notebook_id):
         drafts=conn.execute('SELECT d.*,a.name AS author,m.job_id FROM agent_artifacts d JOIN agents a ON a.id=d.agent_id LEFT JOIN agent_messages m ON m.id=d.message_id WHERE d.notebook_id=? ORDER BY d.created_at DESC',(notebook_id,)).fetchall()
         artifact_jobs={row['job_id'] for row in drafts if row['job_id']}
         for row in drafts:
-            state='needs_you' if row['state'] in {'draft','save_unknown'} else 'working' if row['state']=='saving' else 'done'
-            items.append({'kind':'artifact','artifact':agent_artifacts._record(row, conn),'id':row['id'],'agent_id':row['agent_id'],'author':row['author'],'state':state,'text':row['title'],'detail':{'draft':'Draft ready for review','save_unknown':'Check Gmail save status','saving':'Saving draft','saved':'Saved to Gmail drafts · Not sent','filed':'Saved as a notebook note','discarded':'Draft discarded'}.get(row['state'],row['state']),'created_at':row['updated_at'],'target':'/chat/'+row['agent_id']+'#message-'+str(row['message_id'] or '')})
-        delegated=conn.execute('SELECT d.*,a.name AS author FROM agent_delegations d JOIN agents a ON a.id=d.specialist_id WHERE d.notebook_id=? ORDER BY d.created_at DESC LIMIT 100',(notebook_id,)).fetchall()
-        for row in delegated:
-            if row['id'] in artifact_jobs:continue
-            working=row['state'] in {'queued','running'}
-            items.append({'kind':'delegation','id':row['id'],'agent_id':row['steward_id'],'author':row['author'],'state':'working' if working else 'done','text':row['error'] or row['research'] or row['question'],'detail':{'queued':'Queued','researching':'Researching','drafting':'Preparing draft','complete':'Draft prepared','stopped':'Stopped or interrupted'}.get(row['stage'],row['stage']),'created_at':row['updated_at'],'target':'/chat/'+row['steward_id']})
+            state='needs_you' if row['state']=='draft' else 'done'
+            items.append({'kind':'artifact','artifact':agent_artifacts._record(row, conn),'id':row['id'],'agent_id':row['agent_id'],'author':row['author'],'state':state,'text':row['title'],'detail':{'draft':'Draft ready for review','filed':'Saved as a notebook note','discarded':'Draft discarded'}.get(row['state'],row['state']),'created_at':row['updated_at'],'target':'/chat/'+row['agent_id']+'#message-'+str(row['message_id'] or '')})
         jobs=conn.execute('SELECT j.*,COALESCE(h.target_name,a.name) AS author FROM agent_jobs j JOIN agents a ON a.id=j.agent_id LEFT JOIN agent_handoffs h ON h.id=j.id WHERE j.notebook_id=? ORDER BY j.created_at DESC LIMIT 100',(notebook_id,)).fetchall()
         for row in jobs:
             if row['id'] in artifact_jobs or row['id'] in comparison_jobs:continue

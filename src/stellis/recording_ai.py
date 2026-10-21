@@ -8,7 +8,7 @@ import re
 import threading
 import uuid
 
-from stellis import agent_runtime, agents, ai, fixture_mailbox, recording_preview, storage
+from stellis import agent_runtime, agents, ai, recording_preview, storage
 
 MAX_PREVIEW_SEGMENTS = 500
 
@@ -127,9 +127,8 @@ def _run(run_id: str) -> None:
                          "excerpt": segments[index]["text"],
                          "target": f"/recording?t={int(segments[index]['start_ms'])}",
                          "start_ms": segments[index]["start_ms"]} for index in selected]
-        mail_sources = fixture_mailbox.rfi91_sources(owner["notebook_id"], question)
         reply = asyncio.run(agent_runtime.ask(str(row["agent_id"]), question,
-                                              owner["notebook_id"], [*live_sources, *mail_sources]))
+                                              owner["notebook_id"], live_sources))
         source_ids = [source["source_id"] for source in reply["cited_sources"]
                       if source["source_id"] in {item["id"] for item in segments}]
         result = {"answer": reply["agent_message"]["content"],

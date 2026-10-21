@@ -85,7 +85,6 @@ class AccountGatewayTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertNotIn(private_key, response.text)
             self.assertEqual(second.get("/api/v1/settings/tavily-key").json()["source"], "saved")
-            self.assertTrue(second.get("/api/v1/agents/delegations/runtime").json()["key_configured"])
             self.assertNotEqual(owner.get("/api/v1/settings/tavily-key").json()["source"], "saved")
             self.assertEqual(owner.get("/api/v1/pages").json()[0]["id"], note_id)
             owner_cookie = owner.cookies.get("stellis_session")
