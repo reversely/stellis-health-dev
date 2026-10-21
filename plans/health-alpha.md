@@ -10,7 +10,7 @@ Ticket IDs use a prefix per track: H for hosting, C for cleanup, U for interface
 | --- | --- | --- | --- |
 | 0. Running | The app runs on Fly and the owner can sign in | H-01 | Owner signs in at the fly.dev address |
 | 1. Safe to host | Remove unused surfaces and harden the server | C-01 to C-05, H-02, H-03, H-05, U-05 | Restore drill passes; no route exposes another account's data or a provider key |
-| 2. Health product | Records, assistant, research, tracking, health copy | U-01 to U-04, R-01 to R-03, A-01 to A-04, T-01 | Owner completes each pillar's main flow on the hosted app |
+| 2. Health product | Records, assistant, research, tracking, health copy | U-01 to U-04, R-01 to R-04, A-01 to A-04, T-01 | Owner completes each pillar's main flow on the hosted app |
 | 3. Invite others | Legal, safety and account recovery | H-04, H-06, H-07, S-01 to S-03, U-06 | Counsel reviews S-03; password reset works on the real domain |
 
 ## Hosting
@@ -73,6 +73,7 @@ Proposed term list for U-01:
 | R-01 | Document upload | PDF and image upload into a notebook; text extraction for digital PDFs; scanned pages stored with a "needs text" status | A lab report PDF shows as a searchable source |
 | R-02 | Structured extraction | Token Factory extracts medications, lab results, conditions and allergies with source page, date and verification status; results arrive as reviewable suggestions | Each accepted fact links to its source page; rejected facts are not stored |
 | R-03 | Health timeline | A dated view of visits, documents and accepted facts per account | Facts and visits sort by their clinical date, not upload date |
+| R-04 | Notebook sources and chat | A sources list with checkboxes, chat that answers from the checked sources with numbered citations, and a note panel; steps in `plans/r-04-notebook-sources.md` | An answer cites only checked sources, and a transcript citation opens at its timestamp |
 
 ## Assistant and research
 
