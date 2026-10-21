@@ -59,6 +59,15 @@ def list_sources(notebook_id: str) -> list[dict[str, object]]:
     return sorted(sources, key=lambda source: str(source["created_at"]), reverse=True)
 
 
+def require_room(notebook_id: str | None, source_id: str | None = None) -> None:
+    """Refuse a new source for a notebook that already has LIMIT; a source already there always fits."""
+    if notebook_id is None:
+        return
+    current = [str(source["id"]) for source in list_sources(notebook_id)]
+    if source_id not in current and len(current) >= LIMIT:
+        raise ValueError(f"This notebook is full at {LIMIT} sources")
+
+
 def save_selection(notebook_id: str, excluded: list[str]) -> list[dict[str, object]]:
     """Replace the notebook's unchecked sources; ids that are not in the notebook are ignored."""
     if not isinstance(excluded, list) or not all(isinstance(item, str) for item in excluded):

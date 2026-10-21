@@ -4361,7 +4361,8 @@ async function showNotebook(id) {
   await loadNotebookItems(notebook);
   await Promise.all([
     window.StellisNotebookChat.mount(document.querySelector('#notebook-chat'), notebook,
-      {onAdd: () => openNotebookAdd(notebook), onNote: trigger => newNoteIn(notebook, trigger)}),
+      {onNote: trigger => newNoteIn(notebook, trigger),
+       onRecord: () => { if (!capture) pendingNotebookId = notebook.id; document.querySelector('#record-button').click(); }}),
     window.StellisNotebookWork.mount(document.querySelector('#notebook-activity'),notebook,async()=>{await refreshNotebookItems();notebookTodos?.refresh?.();})]);
   captureControls();
 }

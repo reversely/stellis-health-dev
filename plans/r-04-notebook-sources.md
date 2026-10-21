@@ -70,6 +70,8 @@ Proposal: Upload files (audio now, PDF and images after R-01), Record and Paste 
 
 Each checkpoint is one pull request with tests and, for UI work, screenshots at 390 px and 1280 px.
 
+Status: R-04a ([#46](https://github.com/reversely/stellis-health-dev/pull/46)), R-04b ([#47](https://github.com/reversely/stellis-health-dev/pull/47)), R-04c ([#48](https://github.com/reversely/stellis-health-dev/pull/48)), R-01 ([#49](https://github.com/reversely/stellis-health-dev/pull/49)), R-04f ([#50](https://github.com/reversely/stellis-health-dev/pull/50)), R-04d ([#51](https://github.com/reversely/stellis-health-dev/pull/51)) and R-04e are merged. Step 1 of #42's "Done when" still needs a check on the hosted app: a voice note recorded there, an imported MP3 and a lab PDF in one notebook.
+
 | Step | Scope | Done when |
 | --- | --- | --- |
 | R-04a | `notebook_sources.py`: typed ids, sources endpoint, processing status, stored selection | Tests list a recording, an imported audio file and a note in one notebook, show a processing source without a checkbox, and show a new source arriving checked |

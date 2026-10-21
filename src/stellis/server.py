@@ -1209,6 +1209,7 @@ def delete_notebook(notebook_id: str) -> dict[str, bool]:
 
 @api.put("/conversations/{conversation_id}/notebook")
 def assign_notebook(conversation_id: str, request: NotebookAssignment) -> dict[str, object]:
+    _room(request.notebook_id, "conversation:" + conversation_id)
     try:
         return notebooks.assign(conversation_id, request.notebook_id)
     except LookupError as exc:
@@ -1660,6 +1661,21 @@ def source_search_results(q: str = Query(min_length=1, max_length=200), notebook
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+def _room(notebook_id: str | None, source_id: str | None = None) -> None:
+    """Refuse to add a source to a full notebook; unknown notebooks fall through to the caller's 404."""
+    try:
+        notebook_sources.require_room(notebook_id, source_id)
+    except LookupError:
+        return
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.get("/documents")
+def list_documents() -> list[dict[str, object]]:
+    return documents.list_all()
+
+
 class DocumentUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=180)
     notebook_id: str | None = None
@@ -1669,6 +1685,7 @@ class DocumentUpdate(BaseModel):
 @api.post("/documents")
 async def upload_document(file: UploadFile = File(...), notebook_id: str | None = Form(None)) -> dict[str, object]:
     content = await file.read(documents.MAX_BYTES + 1)
+    _room(notebook_id or None)
     try:
         record, duplicate = await asyncio.to_thread(documents.create, file.filename or "", content, notebook_id or None)
     except LookupError as exc:
@@ -1694,6 +1711,8 @@ def document_file(document_id: str) -> FileResponse:
 
 @api.patch("/documents/{document_id}")
 def update_document(document_id: str, request: DocumentUpdate):
+    if request.move:
+        _room(request.notebook_id, "document:" + document_id)
     return _agent_result(lambda: documents.update(document_id, title=request.title, notebook_id=request.notebook_id,
                                                   move=request.move))
 
@@ -1709,6 +1728,7 @@ async def import_conversation(file: UploadFile = File(...), recorded_at: str | N
                               notebook_id: str | None = Form(None)) -> dict[str, object]:
     if notebook_id and not notebooks.exists(notebook_id):
         raise HTTPException(status_code=404, detail="Notebook not found")
+    _room(notebook_id or None)
     try:
         record, duplicate = await import_upload(file, recorded_at=_recorded_at(recorded_at), notebook_id=notebook_id or None)
     except ImportFailure as exc:
@@ -1910,6 +1930,7 @@ def list_pages(notebook_id: str | None = None) -> list[dict[str, object]]:
 
 @api.post("/pages", status_code=201)
 def create_page(request: PageCreate) -> dict[str, object]:
+    _room(request.notebook_id)
     return _page_call(pages.create, request.title, request.notebook_id, request.markdown)
 
 
@@ -1930,6 +1951,7 @@ def save_page(page_id: str, request: PageWrite) -> dict[str, object]:
 
 @api.put("/pages/{page_id}/notebook")
 def assign_page_notebook(page_id: str, request: NotebookAssignment) -> dict[str, object]:
+    _room(request.notebook_id, "page:" + page_id)
     return _page_call(pages.assign_notebook, page_id, request.notebook_id)
 
 
