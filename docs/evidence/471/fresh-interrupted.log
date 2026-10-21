@@ -1,0 +1,26 @@
+{"stage": "prerequisites", "state": "running"}
+{"stage": "sandbox", "state": "running"}
+{"stage": "interrupted", "state": "failed"}
+Traceback (most recent call last):
+  File "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/fresh-local-setup/scripts/setup_local_agents.py", line 142, in <module>
+    try:run(parser.parse_args())
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/fresh-local-setup/scripts/setup_local_agents.py", line 97, in run
+    listed=subprocess.run([command,'list','--json'],env=environment,capture_output=True,text=True,timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 2115, in _communicate
+    ready = selector.select(timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/springbuilt/Repos/stellis-dev/.agents/worktrees/fresh-local-setup/scripts/setup_local_agents.py", line 141, in <lambda>
+    signal.signal(signal.SIGTERM,lambda *_:signal.default_int_handler(signal.SIGINT,None))
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

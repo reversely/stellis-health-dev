@@ -50,11 +50,12 @@ def _require(account_id):
 
 
 def status(account_id):
+    from stellis import local_setup
     state = _read()
     defaults = {book['name'].lower():book['todo_enabled'] for book in notebooks.list_notebooks()}
     inherited = {group['name'].lower():group['todo_list']=='on' for group in collections.list_collections()}
     return {**state, "task_defaults":defaults, "collection_task_defaults":inherited, "required":available(account_id), "catalog":USES,
-            "proposals":[item for item in USES if item["id"] in state["uses"]], "runtime":runtime_settings.status()}
+            "proposals":[item for item in USES if item["id"] in state["uses"]], "runtime":runtime_settings.status(), "local_setup":local_setup.status()}
 
 
 def choose(account_id, uses, step, agent_choices=None, task_choices=None):

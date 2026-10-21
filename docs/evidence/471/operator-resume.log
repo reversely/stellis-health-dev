@@ -1,0 +1,5 @@
+{"stage": "prerequisites", "state": "running"}
+{"stage": "sandbox", "state": "running"}
+{"stage": "inference", "state": "running"}
+{"stage": "response", "state": "running"}
+{"stage": "ready", "state": "ready"}

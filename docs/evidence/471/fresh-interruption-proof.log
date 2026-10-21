@@ -1,0 +1,2 @@
+PASS: SIGTERM ends operator setup and persists interrupted state
+PASS: same deployment resumes and passes a new live response check

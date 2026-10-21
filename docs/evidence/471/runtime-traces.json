@@ -1,0 +1,53 @@
+[
+  {
+    "id": "e9e62198-4bc3-49ca-a075-39c978fedaf7",
+    "kind": "agent_chat",
+    "agent_id": "232e1e0a-d060-4854-9603-ec7f5a17f3b8",
+    "job_id": "288bdd7c-28f3-49d7-907e-c8b06a2a8914",
+    "profile": "local",
+    "execution": "GN100",
+    "model": "nemotron-3-nano:latest",
+    "provider": "inference",
+    "model_source": "reported",
+    "state": "succeeded",
+    "created_at": "2026-10-21T03:33:58.845855+00:00",
+    "finished_at": "2026-10-21T03:34:12.137295+00:00",
+    "duration_ms": 13292,
+    "agent_name": "Chief of Staff",
+    "events": [
+      {
+        "name": "request_started",
+        "at": "2026-10-21T03:33:58.848057+00:00"
+      },
+      {
+        "name": "sources_selected",
+        "at": "2026-10-21T03:33:58.859739+00:00",
+        "source_count": 0
+      },
+      {
+        "name": "model_requested",
+        "at": "2026-10-21T03:33:58.864732+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "model_replied",
+        "at": "2026-10-21T03:34:12.123546+00:00",
+        "attempt": 1
+      },
+      {
+        "name": "sources_validated",
+        "at": "2026-10-21T03:34:12.125902+00:00",
+        "citation_count": 0
+      },
+      {
+        "name": "request_completed",
+        "at": "2026-10-21T03:34:12.135127+00:00"
+      }
+    ],
+    "usage": {
+      "input": 25006,
+      "output": 178,
+      "total": 25184
+    }
+  }
+]

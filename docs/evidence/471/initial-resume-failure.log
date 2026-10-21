@@ -1,0 +1,4 @@
+{"stage": "prerequisites", "state": "running"}
+{"stage": "sandbox", "state": "running"}
+{"stage": "sandbox", "state": "failed"}
+Command '['/home/springbuilt/.local/bin/nemoclaw', 'onboard', '--agent', 'openclaw', '--name', 'stellis-fresh-proof', '--non-interactive', '--yes', '--yes-i-accept-third-party-software', '--no-gpu', '--from-image', 'ghcr.io/nvidia/nemoclaw/openclaw-sandbox@sha256:d9756531bc346aa956ed127d7dab577f29cc66273408e617081b7bc1a616049e', '--control-ui-port', '18891', '--events=jsonl', '--resume']' returned non-zero exit status 1.

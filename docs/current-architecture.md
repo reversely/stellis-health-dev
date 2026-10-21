@@ -396,3 +396,6 @@ New browser recording imports with a destination append a conversation-kind fili
 
 ### Notebook source comparisons
 Optional comparison proposals bind two canonical notebook sources to exact quotes and content hashes under a completed review artifact. Compare atomically claims a persisted job, executes only against those selected sources, and revalidates source versions, agent availability and both citations before completion. Activity supports Compare, Stop, Retry and Dismiss without duplicating job counts. Explicit source review considers twelve recent documents with bounded excerpts; execution rejects oversized full sources. See ADR 0082.
+
+### Local deployment setup
+An operator CLI provisions a named local OpenClaw sandbox through NemoClaw on an isolated gateway port. Its private receipt records stages and immutable configuration; the browser reads only sanitized status through onboarding. Resume checks sandbox inventory, avoids repeating completed provisioning and performs both route and live-response verification. Onboarding polls setup progress separately from its current account readiness check. See ADR 0083 and local-agent-setup.md.

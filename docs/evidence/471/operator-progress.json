@@ -1,0 +1,1 @@
+{"configuration": {"root": "/tmp/stellis-fresh-proof", "name": "stellis-fresh-proof", "model": "nemotron-3-nano:latest", "gateway_port": 8991, "control_port": 18891, "image": "ghcr.io/nvidia/nemoclaw/openclaw-sandbox@sha256:d9756531bc346aa956ed127d7dab577f29cc66273408e617081b7bc1a616049e"}, "stage": "ready", "state": "ready", "pid": 112782, "updated_at": 1792553599.6144912}

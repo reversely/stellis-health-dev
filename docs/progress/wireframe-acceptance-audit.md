@@ -49,3 +49,14 @@ Current verification: fresh account created through browser UI; real GN100 manag
 2026-10-21, #465 recording filing: new recorded meetings with a selected destination now create a filing activity atomically with import. Activity links the real conversation; Undo preserves audio/notes/title and moves only still-filed meetings to No notebook. Duplicate imports and repeated finalization do not invent events or reverse Undo. Browser MediaRecorder with synthetic microphone passed notebook Record -> Stop -> activity link -> Undo/reload with audio/notes retention. Fourteen populated layout states passed, with desktop/phone and recording destination inspection. This is not physical/native capture or proof of the entire live-speech-to-task-review chain. Source Compare, confirmed sending, native capture, cloud proof and integration retry remain gaps. Evidence docs/evidence/465.
 
 2026-10-21, #467 source comparisons: Activity now carries exact-quoted two-source proposals with Compare/Dismiss, actual local execution, Stop/retry, canonical citations and persisted completion. Changed/moved sources and disabled agents reject execution; repeated Compare does not duplicate a job. GN100 model-generated proposal and completed comparison passed, with separate fixture coverage for Stop/Dismiss and fourteen geometry states. Initial semantic drift and a failed runtime attempt are retained in evidence; final output is still a draft, not general semantic proof. Source review is explicit and bounded, not continuous monitoring. Longer-source comparison, confirmed sending, native capture, connected-calendar synthesis, cloud proof and integration retry remain gaps. See docs/evidence/467.
+
+2026-10-21 user revision: drafting plus a Gmail link is sufficient. Confirmed sending is no longer required. PR470 closed unmerged; issue469 closed as not planned. No email was sent. Preserve Save to Gmail drafts and Open Gmail. This supersedes the earlier confirmed-sending gap.
+
+## Fresh local deployment (#471)
+
+Implemented an operator setup command and read-only onboarding progress, with
+explicit local model selection, isolated configuration and interruption/resume.
+Verified a newly created GN100 gateway/sandbox and fresh account through live
+inference and onboarding continuation; see [evidence](../evidence/471/verification.md).
+Host NemoClaw/Ollama/model cache were reused. Wiped-host installation, speech
+setup and cloud deployment acceptance are not claimed by this evidence.

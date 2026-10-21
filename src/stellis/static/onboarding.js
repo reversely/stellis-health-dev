@@ -67,6 +67,19 @@
     const panel = node('section', null, 'setup-runtime');
     panel.append(node('h2', state.runtime.local_inference ? 'Local AI' : 'Cloud AI'));
     panel.append(node('p', state.runtime.local_inference ? 'AI responses run on your connected computer, without a cloud AI service.' : 'Connect your cloud agent deployment and Token Factory key.'));
+    if(state.local_setup){
+      const progress=node('p',state.local_setup.message,'setup-hint');progress.role='status';panel.append(progress);
+      const recovery=node('p','Resume setup on the connected computer, then check again.','setup-hint');
+      recovery.hidden=state.local_setup.state!=='failed';panel.append(recovery);
+      const poll=setInterval(async()=>{
+        if(!panel.isConnected){clearInterval(poll);return;}
+        if(document.hidden)return;
+        try{
+          const latest=(await api('/onboarding')).local_setup;
+          if(latest){progress.textContent=latest.message;recovery.hidden=latest.state!=='failed';if(latest.state==='ready')clearInterval(poll);}
+        }catch(_){progress.textContent='Could not refresh setup status. Check again.';}
+      },5000);
+    }
     const result = node('p', state.ready ? 'AI is ready.' : 'Test that your AI team can respond.', 'setup-hint'); result.role = 'status';
     panel.append(result, button('Check setup', async () => {
       result.textContent = 'Checking AI responses…';

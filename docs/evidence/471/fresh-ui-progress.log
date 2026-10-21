@@ -1,0 +1,1 @@
+PASS: receipt fixture running -> failure -> resumed response -> finished updates without losing choices
