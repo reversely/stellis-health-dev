@@ -79,16 +79,20 @@ def set_categories(page_id: str, category_ids: list[str]) -> dict[str, object]:
 
 
 def create(title: str | None = None, notebook_id: str | None = None, markdown: str = "") -> dict[str, object]:
+    with storage.connect() as conn:
+        return create_in_transaction(conn, title, notebook_id, markdown)
+
+
+def create_in_transaction(conn, title=None, notebook_id=None, markdown=""):
+    """Create a page as part of a caller-owned atomic operation."""
     name = _title(title)
     _check_markdown(markdown)
-    stamp = _stamp()
-    page_id = str(uuid.uuid4())
-    with storage.connect() as conn:
-        _check_notebook(conn, notebook_id)
-        markdown = todos.reindex(conn, "page", page_id, markdown)
-        conn.execute("INSERT INTO pages (id, title, markdown, notebook_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                     (page_id, name, markdown, notebook_id, stamp, stamp))
-        return _full(conn, page_id)
+    stamp, page_id = _stamp(), str(uuid.uuid4())
+    _check_notebook(conn, notebook_id)
+    markdown = todos.reindex(conn, "page", page_id, markdown)
+    conn.execute("INSERT INTO pages (id, title, markdown, notebook_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                 (page_id, name, markdown, notebook_id, stamp, stamp))
+    return _full(conn, page_id)
 
 
 def get(page_id: str) -> dict[str, object]:

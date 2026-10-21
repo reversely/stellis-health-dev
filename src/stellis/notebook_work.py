@@ -1,7 +1,7 @@
 """Notebook instructions and activity derived from persisted work, never sample events."""
 from __future__ import annotations
 import json
-from stellis import agents, storage, suggestions, agent_artifacts
+from stellis import agents, storage, suggestions, agent_artifacts, notebook_filing
 from stellis.todos import markdown_inline_text
 
 
@@ -28,6 +28,19 @@ def activity(notebook_id):
     policy=instructions(notebook_id)
     team=[agent for agent in agents.list_agents() if any(book['notebook_id']==notebook_id for book in agent['notebooks'])]
     items=[]
+    for filing in notebook_filing.history(notebook_id):
+        count = len(filing['items'])
+        result = filing['result']
+        detail = 'Undo moves these notes to No notebook and keeps your edits.'
+        if result is not None:
+            detail = f"{len(result['unfiled'])} moved to No notebook."
+            if result['unchanged']:
+                detail += f" {len(result['unchanged'])} already moved or deleted; left unchanged."
+        items.append({'kind':'filing', 'id':filing['id'], 'author':'Workspace setup', 'state':'done',
+                      'text':f"Filed {count} source note{'s' if count != 1 else ''} here.",
+                      'detail':detail, 'created_at':filing['undone_at'] or filing['created_at'],
+                      'target':'/notebook/'+notebook_id, 'filing':filing})
+
     with storage.connect() as conn:
         followup_sources = {row['suggestion_id']:json.loads(row['candidate_json']) for row in conn.execute(
             'SELECT f.suggestion_id,f.candidate_json FROM agent_followups f JOIN agent_artifacts d ON d.id=f.artifact_id WHERE d.notebook_id=? AND f.suggestion_id IS NOT NULL', (notebook_id,))}

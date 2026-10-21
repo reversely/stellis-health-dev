@@ -46,9 +46,16 @@
             action(actions,'Dismiss',()=>api('/suggestions/reject','POST',{ids:[item.id]}));
           }
         }
+        if(item.kind==='filing'){
+          const details=el('details'),summary=el('summary','Filed sources'),list=el('ul');details.append(summary,list);
+          for(const source of item.filing.items){const row=el('li');row.append(source.available?link(source.title,'/page/'+source.page_id):el('span',source.title+' (deleted)'));list.append(row);}
+          card.append(details);
+          if(!item.filing.undone_at)action(actions,'Undo',()=>api('/notebooks/'+book.id+'/filings/'+item.id+'/undo','POST'));
+          else actions.append(el('span','Filing undone'));
+        }
         if(item.kind==='job'&&item.state==='working')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/jobs/'+item.id+'/stop','POST'));
         if(item.kind==='delegation'&&item.state==='working')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/delegations/'+item.id,'DELETE'));
-        actions.append(link(item.kind==='suggestion'?(item.suggestion.source_target?'Open task note':'Open source'):'Open thread',item.target));card.append(actions);feed.append(card);
+        if(item.kind!=='filing')actions.append(link(item.kind==='suggestion'?(item.suggestion.source_target?'Open task note':'Open source'):'Open thread',item.target));card.append(actions);feed.append(card);
       }
     }
     async function refresh(){if(stopped)return;try{const data=await api('/notebooks/'+book.id+'/activity');if(stopped)return;current=data;const next=JSON.stringify(data.items);if(next!==signature){signature=next;renderFeed();}}catch(error){if(!stopped)status.textContent=error.message;}}

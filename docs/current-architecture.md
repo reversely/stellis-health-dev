@@ -384,3 +384,6 @@ Final draft responses may carry one source-indexed, exact-quoted follow-up candi
 ### Task policy in onboarding review
 
 Setup persists explicit task_choices separately from displayed notebook/collection defaults. Starter and source-proposed notebook cards share the Suggest tasks control. Completion applies only explicit choices; untouched notebooks retain their existing/inherited setting, and reopening clears stale choices. Strict API booleans and preflight conflict checks protect additive setup. This enables proposals, not automatic task acceptance. See [ADR 0078](decisions/0078-onboarding-task-policy.md).
+
+### Source filing history and Undo
+Onboarding source imports create pages, import identities and `notebook_filings` in one transaction via the shared page-creation helper. Notebook Activity exposes source links and Undo. Undo detaches active notes still in the destination, preserving edits and later moves/deletions, and persists its idempotent outcome. Import identities remain to prevent retries from reversing the user's undo. Existing unrecorded imports are not invented as historical events. See ADR 0079.

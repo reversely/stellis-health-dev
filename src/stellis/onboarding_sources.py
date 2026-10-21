@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from stellis import ai, calendar, gmail_api, onboarding, pages, runtime_profile, runtime_trace, storage
+from stellis import ai, calendar, gmail_api, onboarding, runtime_profile, runtime_trace
 
 _TASKS: dict[str, asyncio.Task] = {}
 SCHEMA = {"type":"object", "properties":{"groups":{"type":"array","maxItems":8,"items":{
@@ -175,20 +175,7 @@ def select(account_id, scan_id, group_ids):
     return state["scan"]
 
 
-def file_sources(book_id,sources):
-    """Local copies only; source identity makes interrupted retries safe."""
-    with storage.connect() as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS onboarding_imports (source_id TEXT PRIMARY KEY, page_id TEXT NOT NULL)")
-    for source in sources:
-        with storage.connect() as conn:
-            if conn.execute("SELECT 1 FROM onboarding_imports WHERE source_id=?",(source["id"],)).fetchone():continue
-        marker="Source reference: "+source["id"]
-        existing=next((p for p in pages.list_pages(book_id) if marker in pages.get(p["id"])["markdown"]),None)
-        if existing:page_id=existing["id"]
-        else:
-            attribution=f"{source['kind']} · {source['date']}"
-            link=f"\n\n[Open original]({source['url']})" if source["url"] else ""
-            page=pages.create(source["title"],book_id,f"{attribution}\n\n{source['excerpt']}{link}\n\n{marker}")
-            page_id=page["id"]
-        with storage.connect() as conn:
-            conn.execute("INSERT OR IGNORE INTO onboarding_imports VALUES (?,?)",(source["id"],page_id))
+def file_sources(book_id, sources):
+    """File local copies and their undo record atomically, retaining retry identity."""
+    from stellis import notebook_filing
+    return notebook_filing.file_sources(book_id, sources)

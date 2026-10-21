@@ -1303,6 +1303,12 @@ def notebook_activity(notebook_id: str):
     return _agent_result(lambda: notebook_work.activity(notebook_id))
 
 
+@api.post("/notebooks/{notebook_id}/filings/{filing_id}/undo")
+def undo_notebook_filing(notebook_id: str, filing_id: str):
+    from stellis import notebook_filing
+    return _agent_result(lambda: notebook_filing.undo(notebook_id, filing_id))
+
+
 @api.put("/notebooks/{notebook_id}/instructions")
 def notebook_instructions(notebook_id: str, request: NotebookInstructions):
     return _agent_result(lambda: notebook_work.save_instructions(notebook_id, request.instructions, request.revision))
