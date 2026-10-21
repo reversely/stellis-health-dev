@@ -1,4 +1,4 @@
-"""Hosted alpha settings: invite-only sign-up, secure cookies, shared keys and direct agent turns."""
+"""Hosted alpha settings: open or invite-code sign-up, secure cookies, shared keys and direct agent turns."""
 
 import asyncio
 import os
@@ -18,7 +18,7 @@ class InviteSignUpTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name, "STELLIS_AUTH_MODE": "required",
                                            "STELLIS_DEV_ACCOUNT": "0", "STELLIS_DEV_PASSWORD": "",
-                                           "STELLIS_HOSTED": "1", "STELLIS_SECURE_COOKIES": "1"})
+                                           "STELLIS_SECURE_COOKIES": "1"})
         self.env.start()
         self.client = TestClient(app, follow_redirects=False)
         self.credentials = {"username": "Riley", "password": "correct horse battery staple"}
@@ -28,12 +28,14 @@ class InviteSignUpTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def test_sign_up_is_closed_without_an_invite_code(self):
+    def test_sign_up_is_open_without_an_invite_code(self):
         with patch.dict(os.environ, {"STELLIS_INVITE_CODE": ""}):
             status = self.client.get("/api/v1/auth/status").json()
-            self.assertFalse(status["registration_open"])
-            self.assertTrue(status["invite_required"])
-            self.assertEqual(self.client.post("/api/v1/auth/register", json=self.credentials).status_code, 403)
+            self.assertTrue(status["registration_open"])
+            self.assertFalse(status["invite_required"])
+            response = self.client.post("/api/v1/auth/register", json=self.credentials)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("secure", response.headers["set-cookie"].lower())
 
     def test_sign_up_needs_the_matching_invite_code(self):
         with patch.dict(os.environ, {"STELLIS_INVITE_CODE": "orbit-42"}):

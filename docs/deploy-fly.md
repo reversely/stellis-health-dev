@@ -10,7 +10,6 @@ Stellis Health runs on Fly.io as one machine with one volume. The image starts t
 | --- | --- | --- |
 | `STELLIS_HOST` | `0.0.0.0` | Accepts connections from Fly's proxy |
 | `STELLIS_DATA_DIR` | `/data` | Stores all data on the volume |
-| `STELLIS_HOSTED` | `1` | Requires an invite code to sign up |
 | `STELLIS_SECURE_COOKIES` | `1` | Marks the session cookie `Secure` |
 | `STELLIS_SHARED_PROVIDER_KEYS` | `1` | Gives every account the deployment's Nebius and Tavily keys |
 | `STELLIS_RUNTIME_PROFILE` | `direct` | Runs agent turns as Token Factory chat completions, with no NemoClaw sandbox |
@@ -20,12 +19,11 @@ Set these as Fly secrets, never in `fly.toml`:
 | Secret | Needed for |
 | --- | --- |
 | `NEBIUS_API_KEY` | Summaries, chat and agents |
-| `STELLIS_INVITE_CODE` | Sign-up; with no code set, sign-up is closed |
+| `STELLIS_INVITE_CODE` | Optional. When set, sign-up requires this code; unset, anyone can sign up |
 | `TAVILY_API_KEY` | Web research |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google Calendar; hosted redirects need ticket H-07 first |
 
 ```sh
-fly secrets set STELLIS_INVITE_CODE='choose-a-code' -a stellis-health-dev
 fly secrets list -a stellis-health-dev
 ```
 

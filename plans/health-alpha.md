@@ -1,6 +1,6 @@
 # Stellis Health alpha: tickets
 
-The alpha is an invite-only hosted version of Stellis Health on Fly.io. It covers the three pillars in the brief: research and education, a records-and-appointments agent, and tracking of the user's own goals. The server can read stored data in the alpha; client-side encryption follows in a later milestone. Each ticket below is sized for one pull request.
+The alpha is a hosted version of Stellis Health on Fly.io. It covers the three pillars in the brief: research and education, a records-and-appointments agent, and tracking of the user's own goals. The server can read stored data in the alpha; client-side encryption follows in a later milestone. Each ticket below is sized for one pull request.
 
 Ticket IDs use a prefix per track: H for hosting, C for cleanup, U for interface and copy, R for records, A for assistant and research, T for tracking, S for safety and legal.
 
@@ -17,7 +17,7 @@ Ticket IDs use a prefix per track: H for hosting, C for cleanup, U for interface
 
 | ID | Ticket | Scope | Done when |
 | --- | --- | --- | --- |
-| H-01 | First deploy | Create the volume, set secrets, deploy, scale to one machine (see `docs/deploy-fly.md`) | `/api/health` returns ok on fly.dev; owner signs up with the invite code |
+| H-01 | First deploy | Create the volume, set secrets, deploy, scale to one machine (see `docs/deploy-fly.md`) | `/api/health` returns ok on fly.dev; owner signs up |
 | H-02 | Continuous backups | Litestream in the image, replicating every `*.sqlite3` under `/data` to a Tigris bucket, with directory watching so new accounts replicate. Recordings go to the same bucket. | A deleted test account's data restores from the bucket on a fresh volume |
 | H-03 | Hosting hardening | Origin check on every state-changing request; login rate limit; upload limit lowered from 1 GB; access logs without query strings; HSTS and a content security policy | Tests cover each check; a cross-site POST is refused |
 | H-04 | Password reset | Domain, transactional email (Postmark or SES), reset link with expiry; add an email field to sign-up | Reset works end to end on the real domain |
