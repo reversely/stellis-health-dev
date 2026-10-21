@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-from stellis import library, pages, people, storage, todos
+from stellis import documents, library, pages, people, storage, todos
 
 
 def _excerpt(value: str, query: str, width: int = 120) -> str:
@@ -150,4 +150,24 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
                 if len(results) < limit:
                     results.append({"kind": "page", "page_id": page["id"], "title": title,
                                     "excerpt": value if in_title else _excerpt(" ".join(value.split()), query)})
+    # Documents have no tags, so a tag filter leaves them out.
+    with storage.connect() as conn:
+        documents._table(conn)
+        rows = [] if category_id is not None else conn.execute(
+            """SELECT d.id, d.title, p.page_number, p.text FROM documents d
+               JOIN document_pages p ON p.document_id = d.id ORDER BY d.created_at DESC, p.page_number""").fetchall()
+    titled: set[str] = set()
+    for row in rows:
+        document_id, title = str(row["id"]), str(row["title"])
+        hit = None
+        if needle in title.casefold() and document_id not in titled:
+            titled.add(document_id)
+            hit = title
+        elif needle in str(row["text"]).casefold():
+            hit = _excerpt(str(row["text"]), query)
+        if hit is not None:
+            total += 1
+            if len(results) < limit:
+                results.append({"kind": "document", "document_id": document_id, "title": title,
+                                "page": row["page_number"], "excerpt": hit})
     return {"query": query.strip(), "total": total, "limited": total > limit, "results": results}

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from urllib.parse import quote
 
-from stellis import search, storage
+from stellis import documents as documents_module, search, storage
 
 
 def _documents() -> list[tuple[str, str, str, str, str, str, int]]:
@@ -35,6 +35,16 @@ def _documents() -> list[tuple[str, str, str, str, str, str, int]]:
         body = search._plain(str(page["markdown"]))
         documents.append(("page", page_id, str(page["notebook_id"] or ""), str(page["title"]),
                           f"{page['title']}\n{body}", f"/page/{quote(page_id)}", 0))
+    with storage.connect() as conn:
+        documents_module._table(conn)
+        rows = conn.execute("SELECT id, title, notebook_id FROM documents").fetchall()
+    pages_by_document = documents_module.pages_for([str(row["id"]) for row in rows])
+    for row in rows:
+        document_id = str(row["id"])
+        for number, text in pages_by_document.get(document_id, []):
+            if text:
+                documents.append(("document", document_id, str(row["notebook_id"] or ""), str(row["title"]), text,
+                                  f"/document/{quote(document_id)}?page={number}", 0))
     return documents
 
 

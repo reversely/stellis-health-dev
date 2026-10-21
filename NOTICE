@@ -29,3 +29,11 @@ Libraries
 
 Test fixture
 - tests/fixtures/jfk.wav is the speech sample distributed with whisper.cpp (MIT).
+
+Sample records
+- src/stellis/sample_records holds eight renderings of de-identified pathology
+  report text from TCGA-Reports (Kefeli et al., "TCGA-Reports: A machine-readable
+  pathology report resource for benchmarking text-based AI models", Patterns, 2024),
+  MIT License, Copyright (c) 2023 Tatonetti Lab.
+  https://github.com/tatonetti-lab/tcga-path-reports
+  The reports come from The Cancer Genome Atlas (TCGA) open-access data.

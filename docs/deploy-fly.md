@@ -69,3 +69,13 @@ fly ssh console -a stellis-health
 ```
 
 Access logs list request paths. They must never contain health content; ticket H-03 removes query strings from them.
+
+## Sample records
+
+The image includes eight de-identified pathology reports from TCGA-Reports, rendered as six digital PDFs, one scanned PDF and one PNG. They load only on request, into a notebook named "Sample records". Account 1 keeps its data in `/data`, and account N keeps its data in `/data/accounts/N`. Run the loader as the app user so that the new files keep the right owner:
+
+```sh
+fly ssh console -a stellis-health -C "setpriv --reuid=stellis --regid=stellis --init-groups python -m stellis.sample_records --data-dir /data"
+```
+
+A second run adds nothing, because the loader skips files the account already has. `scripts/make_sample_records.py` rebuilds the files from the TCGA-Reports CSV.

@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -979,7 +979,8 @@ def recording_page() -> FileResponse:
 
 @app.get("/person/{person_id}", include_in_schema=False)
 @app.get("/page/{page_id}", include_in_schema=False)
-def person_page(person_id: str | None = None, page_id: str | None = None) -> FileResponse:
+@app.get("/document/{document_id}", include_in_schema=False)
+def person_page(person_id: str | None = None, page_id: str | None = None, document_id: str | None = None) -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
@@ -1657,6 +1658,50 @@ def source_search_results(q: str = Query(min_length=1, max_length=200), notebook
         return {"results": source_search.search_sources(q, notebook_id)}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class DocumentUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=180)
+    notebook_id: str | None = None
+    move: bool = False
+
+
+@api.post("/documents")
+async def upload_document(file: UploadFile = File(...), notebook_id: str | None = Form(None)) -> dict[str, object]:
+    content = await file.read(documents.MAX_BYTES + 1)
+    try:
+        record, duplicate = await asyncio.to_thread(documents.create, file.filename or "", content, notebook_id or None)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except documents.DocumentError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"document": record, "duplicate": duplicate}
+
+
+@api.get("/documents/{document_id}")
+def get_document(document_id: str):
+    return _agent_result(lambda: documents.get(document_id))
+
+
+@api.get("/documents/{document_id}/file")
+def document_file(document_id: str) -> FileResponse:
+    try:
+        path, media_type = documents.file_path(document_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, no-store"})
+
+
+@api.patch("/documents/{document_id}")
+def update_document(document_id: str, request: DocumentUpdate):
+    return _agent_result(lambda: documents.update(document_id, title=request.title, notebook_id=request.notebook_id,
+                                                  move=request.move))
+
+
+@api.delete("/documents/{document_id}")
+def delete_document(document_id: str) -> dict[str, bool]:
+    _agent_result(lambda: documents.delete(document_id))
+    return {"deleted": True}
 
 
 @api.post("/conversations/import")
