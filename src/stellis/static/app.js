@@ -4009,7 +4009,7 @@ async function watchSetup() {
   const percent = Math.round((state.progress || 0) * 100);
   document.querySelector('#setup-progress').value = state.progress || 0;
   document.querySelector('#setup-status').textContent = state.state === 'failed'
-    ? `The speech models could not be downloaded (${state.error}). Check your connection and restart Stellis.`
+    ? `The speech models could not be downloaded (${state.error}). Check your connection and restart Stellis Health.`
     : `Downloading the speech models, about 500 MB: ${percent}%. Recordings and imports transcribe as soon as this finishes.`;
   if (state.state !== 'failed') setupTimer = setTimeout(watchSetup, 2000);
 }
@@ -4369,7 +4369,7 @@ document.querySelector('#notebook-delete').addEventListener('click', async () =>
   } catch (error) { setStatus(error.message); }
 });
 // Export downloads a ZIP of the notebook: plain Markdown files, or the same files with Stellis IDs kept for re-import.
-const EXPORT_LABELS = {markdown: 'Markdown', stellis: 'Stellis'};
+const EXPORT_LABELS = {markdown: 'Markdown', stellis: 'Stellis Health'};
 async function exportNotebook(notebook, format) {
   setStatus(`Preparing the ${EXPORT_LABELS[format]} export of ${notebook.name}…`);
   try {
