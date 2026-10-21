@@ -23,6 +23,26 @@ def enabled() -> bool:
     return os.environ.get("STELLIS_AUTH_MODE") == "required"
 
 
+def secure_cookies() -> bool:
+    return os.environ.get("STELLIS_SECURE_COOKIES") == "1"
+
+
+def invite_required() -> bool:
+    """A hosted deployment accepts sign-ups only with its invite code; no code set means closed."""
+    return os.environ.get("STELLIS_HOSTED") == "1"
+
+
+def registration_open() -> bool:
+    return enabled() and (not invite_required() or bool(os.environ.get("STELLIS_INVITE_CODE", "").strip()))
+
+
+def invite_accepted(code: str | None) -> bool:
+    if not invite_required():
+        return True
+    expected = os.environ.get("STELLIS_INVITE_CODE", "").strip()
+    return bool(expected) and secrets.compare_digest((code or "").strip().encode(), expected.encode())
+
+
 def dev_enabled() -> bool:
     return os.environ.get("STELLIS_DEV_ACCOUNT") == "1" and bool(os.environ.get("STELLIS_DEV_PASSWORD"))
 

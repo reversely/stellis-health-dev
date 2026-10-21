@@ -59,11 +59,13 @@ class AccountGateway:
                        STELLIS_SEGMENTATION_MODEL=str(model_files[1]),
                        STELLIS_EMBEDDING_MODEL=str(model_files[2]))
             if account_id != 1:
+                shared = ("NEBIUS_API_KEY", "TAVILY_API_KEY") if env.get("STELLIS_SHARED_PROVIDER_KEYS") == "1" else ()
                 for key in ("NEBIUS_API_KEY", "TAVILY_API_KEY", "STELLIS_MCP_TOKEN",
                             "STELLIS_NEMOCLAW_SANDBOX", "STELLIS_TAVILY_MCP_READY",
                             "STELLIS_AGENT_GATEWAY_URL", "STELLIS_AGENT_GATEWAY_TOKEN",
                             "STELLIS_AGENT_GATEWAY_ACCOUNT_ID", "STELLIS_AGENT_GATEWAY_TAVILY_READY"):
-                    env.pop(key, None)
+                    if key not in shared:
+                        env.pop(key, None)
             command = [sys.executable, "-m", "uvicorn", "stellis.server:app", "--uds", str(socket),
                        "--no-access-log"]
             process = subprocess.Popen(command, env=env, cwd=Path.cwd(),

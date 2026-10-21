@@ -83,6 +83,7 @@ async def development_cache_policy(request: Request, call_next):
 class Credentials(BaseModel):
     username: str = Field(min_length=3, max_length=80)
     password: str = Field(min_length=12, max_length=1024)
+    invite_code: str | None = Field(default=None, max_length=200)
 
 
 class LoginCredentials(BaseModel):
@@ -93,7 +94,7 @@ class LoginCredentials(BaseModel):
 def _session_response(token: str, username: str) -> JSONResponse:
     response = JSONResponse({"username": username, "onboarding_required": auth.needs_onboarding(auth.current_account_id(token))})
     response.set_cookie(auth.COOKIE_NAME, token, max_age=auth.SESSION_DAYS * 86400,
-                        httponly=True, samesite="lax", secure=False, path="/")
+                        httponly=True, samesite="lax", secure=auth.secure_cookies(), path="/")
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -105,7 +106,8 @@ def auth_page() -> FileResponse:
 
 @app.get("/api/v1/auth/status")
 def auth_status(request: Request) -> dict[str, object]:
-    return {"required": auth.enabled(), "registration_open": auth.enabled(), "has_accounts": auth.has_account(),
+    return {"required": auth.enabled(), "registration_open": auth.registration_open(),
+            "invite_required": auth.invite_required(), "has_accounts": auth.has_account(),
             "onboarding_required": auth.needs_onboarding(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME))) if auth.enabled() else False,
             "username": auth.current_account(request.cookies.get(auth.COOKIE_NAME)) if auth.enabled() else None}
 
@@ -114,6 +116,10 @@ def auth_status(request: Request) -> dict[str, object]:
 def auth_register(credentials: Credentials) -> JSONResponse:
     if not auth.enabled():
         raise HTTPException(status_code=404, detail="Login is disabled")
+    if not auth.registration_open():
+        raise HTTPException(status_code=403, detail="Sign-up is closed")
+    if not auth.invite_accepted(credentials.invite_code):
+        raise HTTPException(status_code=403, detail="That invite code is not valid")
     try:
         username = auth.register(credentials.username, credentials.password)
     except ValueError as exc:

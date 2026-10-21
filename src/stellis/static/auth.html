@@ -13,6 +13,7 @@
 <form id="auth-form">
 <label for="username">Username</label><input id="username" name="username" autocomplete="username" required minlength="1" maxlength="80" />
 <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required minlength="1" maxlength="1024" />
+<label for="invite-code" hidden>Invite code</label><input id="invite-code" name="invite_code" autocomplete="off" maxlength="200" hidden />
 <button id="auth-submit" type="submit">Sign in</button>
 </form>
 <p id="auth-error" role="alert"></p>

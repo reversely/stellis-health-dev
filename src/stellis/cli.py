@@ -45,11 +45,13 @@ def main() -> None:
 
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
+    # Loopback unless a hosted deployment sets STELLIS_HOST behind its own TLS proxy.
+    host = os.environ.get("STELLIS_HOST", "127.0.0.1")
     if args.command == "serve":
         os.environ.setdefault("STELLIS_AUTH_MODE", "required")
         models.ensure_in_background()
-        print(f"Stellis is running at http://127.0.0.1:{args.port}/")
+        print(f"Stellis is running at http://{host}:{args.port}/")
     target = ("stellis.sync_server:app" if args.command == "sync-serve" else
               "stellis.account_gateway:app" if os.environ.get("STELLIS_AUTH_MODE") == "required" else
               "stellis.server:app")
-    uvicorn.run(target, host="127.0.0.1", port=args.port)
+    uvicorn.run(target, host=host, port=args.port)

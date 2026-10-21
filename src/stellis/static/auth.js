@@ -4,6 +4,7 @@ const signIn = document.querySelector('#sign-in-tab');
 const signUp = document.querySelector('#sign-up-tab');
 let registration = false;
 let registrationOpen = false;
+let inviteRequired = false;
 
 function showMode(createAccount) {
   registration = createAccount && registrationOpen;
@@ -15,6 +16,9 @@ function showMode(createAccount) {
   document.querySelector('#username').minLength = createAccount ? 3 : 1;
   document.querySelector('#password').minLength = createAccount ? 12 : 1;
   document.querySelector('#password').autocomplete = createAccount ? 'new-password' : 'current-password';
+  const invite = document.querySelector('#invite-code');
+  invite.hidden = invite.labels[0].hidden = !(createAccount && inviteRequired);
+  invite.required = createAccount && inviteRequired;
   error.textContent = '';
 }
 
@@ -29,6 +33,8 @@ signUp.addEventListener('click', () => showMode(true));
     const creating = new URLSearchParams(location.search).get('create') === '1';
     if (!status.required || (status.username && !creating)) { location.replace(status.onboarding_required ? '/onboarding' : '/'); return; }
     registrationOpen = status.registration_open;
+    inviteRequired = status.invite_required;
+    signUp.hidden = !registrationOpen;
     document.querySelector('.auth-modes').hidden = false;
     showMode(creating || !status.has_accounts);
   } catch { error.textContent = 'Could not load account status.'; }
@@ -44,7 +50,8 @@ form.addEventListener('submit', async event => {
     const response = await fetch(`/api/v1/auth/${registration ? 'register' : 'login'}`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({username: document.querySelector('#username').value,
-        password: document.querySelector('#password').value}),
+        password: document.querySelector('#password').value,
+        ...(registration && inviteRequired ? {invite_code: document.querySelector('#invite-code').value} : {})}),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Sign in failed');
