@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from stellis import runtime_trace, runtime_profile, model_routes
+from stellis import runtime_trace, runtime_profile, model_routes, token_quota
 
 
 class GatewayError(Exception):
@@ -68,6 +68,7 @@ def _reply(payload: object) -> str:
         usage = {"input": usage.get("input_tokens"), "output": usage.get("output_tokens"),
                  "total": usage.get("total_tokens")}
     runtime_trace.report(model=model, usage=usage)
+    token_quota.record(usage)
     return answer
 
 
@@ -77,6 +78,8 @@ async def turn(prompt: str, session_id: str) -> tuple[str, str]:
     Closing this request cancels the gateway run, including on task cancellation.
     No retries occur here: callers own durable jobs and answer-format retries.
     """
+    if message := token_quota.exceeded():
+        raise GatewayError(message)
     if runtime_profile.direct():
         return await _direct_turn(prompt, session_id)
     endpoint, token = _settings()
@@ -130,7 +133,8 @@ async def _direct_turn(prompt: str, session_id: str) -> tuple[str, str]:
         if response.status_code != 200:
             raise GatewayError("Token Factory is unavailable. Try again.")
         data = response.json()
-        runtime_trace.report(model=data.get("model"))
+        runtime_trace.report(model=data.get("model"), usage=data.get("usage"))
+        token_quota.record(data.get("usage"))
         choice = data["choices"][0]
         if choice.get("finish_reason") == "length":
             raise GatewayError("Agent reply was too long. Try again.")

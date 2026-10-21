@@ -85,6 +85,9 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
               f"{options}\n\n{source}\nAnswer:")
     body = {"model": _model_id(), "prompt": f"[gMASK]<sop><|user|>\n{prompt}\n<|assistant|>\n</think>",
             "max_tokens": 1, "temperature": 0, "logprobs": 20}
+    from stellis import token_quota
+    if message := token_quota.exceeded():
+        raise RuntimeError(message)
     try:
         with httpx.Client(timeout=30, trust_env=False, follow_redirects=False) as client:
             if runtime_profile.local_inference():
@@ -105,6 +108,7 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
                 response.raise_for_status()
                 data = response.json()
                 runtime_trace.report(model=data.get("model"))
+                token_quota.record(data.get("usage"))
                 choice = data["choices"][0]
                 top = choice["logprobs"]["top_logprobs"][0]
             else:
@@ -116,6 +120,7 @@ def _score_once(source: str, labels: tuple[str, ...], key: str) -> dict[str, flo
                 response.raise_for_status()
                 data = response.json()
                 runtime_trace.report(model=data.get("model"))
+                token_quota.record(data.get("usage"))
                 alternatives = data["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
                 top = {item["token"]: item["logprob"] for item in alternatives}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
