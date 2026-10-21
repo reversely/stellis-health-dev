@@ -105,6 +105,8 @@ let railTags = new Set();
 let libraryCollections = [];
 let libraryAgents = [];
 let libraryPages = [];
+/** Documents filed in a notebook; unsorted ones live on the Records page. */
+let libraryDocuments = [];
 let activePersonId = null;
 let transcriptSearchMatches = [];
 let transcriptSearchIndex = -1;
@@ -950,10 +952,11 @@ const railChoices = new Map((() => { try { return Object.entries(JSON.parse(loca
 const railOpen = key => railChoices.has(key) ? railChoices.get(key) : !key.startsWith('notebook:');
 async function loadLibrary() {
   // One load feeds the sidebar and the Home cards; pages come with their notebook, loose ones separately.
-  const [conversations, books, collections, loose, agents] = await Promise.all([
+  const [conversations, books, collections, loose, agents, documents] = await Promise.all([
     fetch(`${API}/conversations`).then(json), fetch(`${API}/notebooks`).then(json),
     fetch(`${API}/collections`).then(json), fetch(`${API}/pages?notebook_id=none`).then(json),
-    fetch(`${API}/agents`).then(json).catch(() => [])]);
+    fetch(`${API}/agents`).then(json).catch(() => []), fetch(`${API}/documents`).then(json)]);
+  libraryDocuments = documents.filter((item) => item.notebook_id);
   libraryAgents = agents;
   libraryConversations = conversations;
   libraryNotebooks = books.notebooks; notebookPalette = books.palette; notebookPresets = books.presets;
@@ -977,7 +980,10 @@ function renderConversationList() {
     ...conversations.filter(item => notebookId ? item.notebook_id === notebookId : !known.has(item.notebook_id))
       .map(item => ({at: capturedAt(item), row: () => railConversation(item)})),
     ...pages.filter(page => page.notebook_id === notebookId)
-      .map(page => ({at: page.updated_at, row: () => railPage(page)}))]
+      .map(page => ({at: page.updated_at, row: () => railPage(page)})),
+    ...(filtering || !notebookId ? [] : libraryDocuments)
+      .filter((item) => item.notebook_id === notebookId)
+      .map((item) => ({at: item.record_date || item.created_at, row: () => railDocument(item)}))]
     .sort((a, b) => new Date(b.at) - new Date(a.at));
   const notebookBranch = book => {
     const items = entries(book.id);
@@ -1072,6 +1078,28 @@ function railConversation(item) {
   const wrap = document.createElement('div'); wrap.className = 'recent-item';
   const row = recentRow(item); row.prepend(railIcon('microphone'));
   wrap.append(row, moveButton(item.title, () => openMoveConversation(item)));
+  return wrap;
+}
+/**
+ * Renders a document in a notebook's rail branch; it opens the document page.
+ * @param {!Object} item A document without its pages.
+ * @return {!Element}
+ */
+function railDocument(item) {
+  const wrap = document.createElement('div');
+  wrap.className = 'recent-item';
+  const row = document.createElement('a');
+  row.className = 'recent-row recent-page';
+  row.href = `/document/${encodeURIComponent(item.id)}`;
+  const title = document.createElement('strong');
+  title.textContent = item.title;
+  const date = document.createElement('time');
+  date.dateTime = item.record_date || item.created_at;
+  date.textContent = shortDate(date.dateTime);
+  const line = document.createElement('small');
+  line.append(date);
+  row.append(railIcon('file'), title, line);
+  wrap.append(row);
   return wrap;
 }
 function railPage(page) {
@@ -2707,6 +2735,7 @@ async function route() {
   else if (location.pathname === '/chat' || location.pathname.startsWith('/chat/')) await showAgentChat();
   else if (location.pathname === '/todos') await showTodos();
   else if (location.pathname === '/timeline') await showTimeline();
+  else if (location.pathname === '/records') await showRecords();
   else if (location.pathname.match(/^\/page\/([^/]+)$/)) await showNote(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/document\/([^/]+)$/)) await showDocument(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
@@ -3539,7 +3568,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href="/timeline"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href="/timeline"], a[href="/records"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3808,9 +3837,10 @@ function hideAppPages() {
   document.querySelector('#notebook-view').hidden = true;
   document.querySelector('#todos-view').hidden = true;
   document.querySelector('#timeline-view').hidden = true;
+  document.querySelector('#records-view').hidden = true;
   document.querySelector('#agent-chat-view').hidden = true;
   notebookTodos?.destroy?.(); notebookTodos = null;
-  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'timeline-page', 'note-page', 'document-page', 'agent-chat-page');
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'timeline-page', 'records-page', 'note-page', 'document-page', 'agent-chat-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
@@ -4697,24 +4727,45 @@ async function showTodos() {
   captureControls();
 }
 
-/** Shows the health timeline with its notebook filter. */
-async function showTimeline() {
-  await leaveForAppPage('timeline-page', 'Timeline');
+/**
+ * Shows an app page beside the rail and marks its rail link as current.
+ * @param {string} bodyClass
+ * @param {string} title
+ * @param {string} viewSelector
+ * @param {string} railId
+ * @return {!Promise<!Element>} The page's view.
+ */
+async function showRailPage(bodyClass, title, viewSelector, railId) {
+  await leaveForAppPage(bodyClass, title);
   const books = await json(await fetch(`${API}/notebooks`));
   libraryNotebooks = books.notebooks;
-  const view = document.querySelector('#timeline-view');
+  const view = document.querySelector(viewSelector);
   view.hidden = false;
   const rail = document.querySelector('#home-rail');
   document.querySelector('main').prepend(rail);
   for (const link of rail.querySelectorAll('.rail-pin')) {
-    if (link.id === 'rail-timeline') {
+    if (link.id === railId) {
       link.setAttribute('aria-current', 'page');
     } else {
       link.removeAttribute('aria-current');
     }
   }
   await reloadLibrary();
+  return view;
+}
+
+/** Shows the health timeline with its notebook filter. */
+async function showTimeline() {
+  const view = await showRailPage(
+      'timeline-page', 'Timeline', '#timeline-view', 'rail-timeline');
   await window.StellisTimeline.mount(view, libraryNotebooks);
+}
+
+/** Shows every record, with upload and sorting into notebooks. */
+async function showRecords() {
+  const view = await showRailPage(
+      'records-page', 'Records', '#records-view', 'rail-records');
+  await window.StellisRecords.mount(view, reloadLibrary);
 }
 
 async function showAgentChat() {

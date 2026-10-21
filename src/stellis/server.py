@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -987,6 +987,7 @@ def person_page(person_id: str | None = None, page_id: str | None = None, docume
 @app.get("/settings", include_in_schema=False)
 @app.get("/todos", include_in_schema=False)
 @app.get("/timeline", include_in_schema=False)
+@app.get("/records", include_in_schema=False)
 @app.get("/chat", include_in_schema=False)
 @app.get("/chat/{agent_id}", include_in_schema=False)
 @app.get("/notebook/{notebook_id}", include_in_schema=False)
@@ -1764,6 +1765,47 @@ async def extract_document_facts(document_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except health_facts.ExtractionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class SortItem(BaseModel):
+    kind: str = Field(max_length=20)
+    id: str = Field(max_length=100)
+
+
+class SortGroup(BaseModel):
+    notebook_name: str = Field(default="", max_length=sorting.MAX_NAME)
+    notebook_id: str | None = Field(default=None, max_length=100)
+    items: list[SortItem] = Field(max_length=sorting.MAX_ITEMS)
+
+
+class RecordMove(BaseModel):
+    notebook_id: str | None = Field(default=None, max_length=100)
+
+
+@api.get("/records/unsorted")
+def unsorted_records():
+    return {"items": [item.public() for item in sorting.unsorted()]}
+
+
+@api.post("/records/sort/suggest")
+async def suggest_sorting():
+    try:
+        return await sorting.suggest()
+    except sorting.SortingError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.post("/records/sort/apply")
+def apply_sorting(request: SortGroup):
+    return _agent_result(lambda: sorting.apply(
+        request.notebook_name, [item.model_dump() for item in request.items],
+        request.notebook_id))
+
+
+@api.put("/records/{kind}/{item_id}/notebook")
+def move_record(kind: str, item_id: str, request: RecordMove):
+    _agent_result(lambda: sorting.move(kind, item_id, request.notebook_id))
+    return {"kind": kind, "id": item_id, "notebook_id": request.notebook_id}
 
 
 @api.get("/timeline")

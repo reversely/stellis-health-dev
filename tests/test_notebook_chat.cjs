@@ -9,8 +9,9 @@ globalThis.StellisDom = require('../src/stellis/static/notebook-dom.js');
 const {answerMarkdown, answerParts, sourceTarget} =
     require('../src/stellis/static/notebook-chat.js');
 const {parseTarget} = require('../src/stellis/static/notebook-viewer.js');
-const {candidates, toCandidates, uploadKind} =
+const {candidates, toCandidates} =
     require('../src/stellis/static/notebook-add-source.js');
+const {uploadKind} = require('../src/stellis/static/record-upload.js');
 const {describe, fileUrl} = require('../src/stellis/static/document-view.js');
 
 const VISIT = {
@@ -145,4 +146,19 @@ test('timeline helpers group by year and format short dates', () => {
       groups.map((group) => [group.year, group.entries.length]),
       [['2026', 2], ['1997', 1]]);
   assert.equal(shortDate('2026-04-02'), 'Apr 2');
+});
+
+const {keptItems, recordLink} = require('../src/stellis/static/records.js');
+
+test('records helpers link records and keep checked group items', () => {
+  assert.equal(
+      recordLink({kind: 'recording', id: 'c 1'}), '/conversation/c%201');
+  assert.equal(recordLink({kind: 'document', id: 'd'}), '/document/d');
+  const items = [
+    {kind: 'document', id: 'a', title: 'A'},
+    {kind: 'recording', id: 'b', title: 'B'}
+  ];
+  assert.deepEqual(
+      keptItems(items, new Set(['document:a'])),
+      [{kind: 'recording', id: 'b'}]);
 });
