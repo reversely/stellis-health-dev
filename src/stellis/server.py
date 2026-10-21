@@ -110,12 +110,22 @@ def auth_status(request: Request) -> dict[str, object]:
             "username": auth.current_account(request.cookies.get(auth.COOKIE_NAME)) if auth.enabled() else None}
 
 
+def _paused(wait: int, activity: str) -> HTTPException:
+    minutes = max(1, (wait + 59) // 60)
+    return HTTPException(status_code=429, headers={"Retry-After": str(wait)},
+                         detail=f"{activity} is paused for {minutes} minute{'s' if minutes != 1 else ''} after too many attempts")
+
+
 @app.post("/api/v1/auth/register")
-def auth_register(credentials: Credentials) -> JSONResponse:
+def auth_register(credentials: Credentials, request: Request) -> JSONResponse:
+    from stellis import rate_limit
     if not auth.enabled():
         raise HTTPException(status_code=404, detail="Login is disabled")
     if not auth.registration_open():
         raise HTTPException(status_code=403, detail="Sign-up is closed")
+    client = request.client.host if request.client else "unknown"
+    if wait := rate_limit.SIGNUPS_BY_CLIENT.retry_after(client):
+        raise _paused(wait, "Sign-up")
     if not auth.invite_accepted(credentials.invite_code):
         raise HTTPException(status_code=403, detail="That invite code is not valid")
     try:
@@ -124,16 +134,26 @@ def auth_register(credentials: Credentials) -> JSONResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    rate_limit.SIGNUPS_BY_CLIENT.record(client)
     return _session_response(auth.create_session(auth.account_id_for_username(username)), username)
 
 
 @app.post("/api/v1/auth/login")
-def auth_login(credentials: LoginCredentials) -> JSONResponse:
+def auth_login(credentials: LoginCredentials, request: Request) -> JSONResponse:
+    from stellis import rate_limit
     if not auth.enabled():
         raise HTTPException(status_code=404, detail="Login is disabled")
+    client = request.client.host if request.client else "unknown"
+    username = credentials.username.strip().casefold()
+    if wait := max(rate_limit.LOGIN_FAILURES_BY_USERNAME.retry_after(username),
+                   rate_limit.LOGIN_FAILURES_BY_CLIENT.retry_after(client)):
+        raise _paused(wait, "Sign-in")
     token = auth.login(credentials.username, credentials.password)
     if token is None:
+        rate_limit.LOGIN_FAILURES_BY_USERNAME.record(username)
+        rate_limit.LOGIN_FAILURES_BY_CLIENT.record(client)
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    rate_limit.LOGIN_FAILURES_BY_USERNAME.clear(username)
     return _session_response(token, credentials.username)
 
 
