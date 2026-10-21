@@ -78,6 +78,7 @@ function renderPages(host, record) {
  * @param {!Object} record A document with its pages.
  * @param {?number} page
  * @param {function(!Object, !HTMLButtonElement)} onDelete
+ * @return {!Element} An empty slot between the header and the pages.
  */
 function render(host, record, page, onDelete) {
   const dom = root.StellisDom;
@@ -98,14 +99,16 @@ function render(host, record, page, onDelete) {
   actions.append(open, remove);
   head.append(dom.el('h2', record.title, 'document-title'), meta, actions);
 
+  const slot = dom.el('div', null, 'document-slot');
   const body = dom.el('div');
   const sections = renderPages(body, record);
-  host.replaceChildren(head, body);
+  host.replaceChildren(head, slot, body);
   const target = page ? sections.get(page) : null;
   if (target && record.page_count > 1) {
     target.classList.add('is-target');
     requestAnimationFrame(() => target.scrollIntoView({block: 'start'}));
   }
+  return slot;
 }
 
 const exported = {

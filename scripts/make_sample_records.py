@@ -177,7 +177,8 @@ def _write_pdf(path: pathlib.Path, title: str, blocks: list) -> None:
     document = platypus.SimpleDocTemplate(str(path),
                                           pagesize=pagesizes.LETTER,
                                           title=title,
-                                          author="Synthea sample record")
+                                          author="Synthea sample record",
+                                          invariant=True)
     document.build(story)
 
 
@@ -226,7 +227,7 @@ def _write_photo(path: pathlib.Path, title: str,
     lines = [title, "Patient: Denver Lang", ""]
     for line in _lab_lines(results):
         lines += textwrap.wrap(line, 70)
-    lines += ["", SOURCE[:70], SOURCE[70:]]
+    lines += ["", *textwrap.wrap(SOURCE, 70)]
     image = Image.new("L", (1100, 80 + 34 * len(lines)), 246)
     draw = ImageDraw.Draw(image)
     for index, line in enumerate(lines):

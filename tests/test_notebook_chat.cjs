@@ -122,3 +122,16 @@ test('document helpers describe the file and link to a PDF page', () => {
   assert.equal(fileUrl(pdf, 2), '/api/v1/documents/d%201/file#page=2');
   assert.equal(fileUrl(photo, 2), '/api/v1/documents/p/file');
 });
+
+const {measurement, partition} =
+    require('../src/stellis/static/health-facts.js');
+
+test('health fact helpers format values and split by status', () => {
+  assert.equal(measurement({value: '3.4', unit: 'mg/dL'}), '3.4 mg/dL');
+  assert.equal(measurement({value: '', unit: ''}), '');
+  const {suggested, accepted} = partition(
+      [{id: 'a', status: 'accepted'}, {id: 'b', status: 'suggested'}]);
+  assert.deepEqual(
+      [suggested.map((fact) => fact.id), accepted.map((fact) => fact.id)],
+      [['b'], ['a']]);
+});
