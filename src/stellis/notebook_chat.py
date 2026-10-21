@@ -189,8 +189,16 @@ def _read_note_markdown(page_ids: list[str]) -> dict[str, str]:
         return {row["id"]: row["markdown"] for row in rows}
 
 
-def _passages(sources: list[dict[str, object]]) -> list[Passage]:
-    """Reads every passage of the given sources, in source order."""
+def read_passages(sources: list[dict[str, object]]) -> list[Passage]:
+    """Reads every passage of the given sources, in source order.
+
+    Args:
+        sources: Source dicts with a typed ``id`` and a ``title``.
+
+    Returns:
+        Passages of each source: My Notes and transcript chunks for a
+        conversation, page chunks for a document, and the text of a note.
+    """
     my_notes = search.note_texts(_ids_of_kind(sources, "conversation"))
     notes = _read_note_markdown(_ids_of_kind(sources, "page"))
     pages: dict[str, list[dict[str, object]]] = {}
@@ -275,7 +283,7 @@ def retrieve(notebook_id: str, source_ids: list[str],
     ]
     if not chosen:
         raise ValueError("Check at least one source that has text")
-    passages = _passages(chosen)
+    passages = read_passages(chosen)
     if sum(len(passage.text) for passage in passages) > FULL_TEXT_CHARS:
         passages = rank(passages, question)
     return passages

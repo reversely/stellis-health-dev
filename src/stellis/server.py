@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -988,6 +988,7 @@ def person_page(person_id: str | None = None, page_id: str | None = None, docume
 @app.get("/todos", include_in_schema=False)
 @app.get("/timeline", include_in_schema=False)
 @app.get("/records", include_in_schema=False)
+@app.get("/summary", include_in_schema=False)
 @app.get("/chat", include_in_schema=False)
 @app.get("/chat/{agent_id}", include_in_schema=False)
 @app.get("/notebook/{notebook_id}", include_in_schema=False)
@@ -1806,6 +1807,21 @@ def apply_sorting(request: SortGroup):
 def move_record(kind: str, item_id: str, request: RecordMove):
     _agent_result(lambda: sorting.move(kind, item_id, request.notebook_id))
     return {"kind": kind, "id": item_id, "notebook_id": request.notebook_id}
+
+
+@api.get("/summary")
+def health_summary_latest():
+    return {"summary": health_summary.latest()}
+
+
+@api.post("/summary/refresh")
+async def health_summary_refresh():
+    try:
+        return {"summary": await health_summary.refresh()}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except notebook_chat.ChatError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.get("/timeline")

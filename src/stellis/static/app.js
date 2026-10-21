@@ -2736,6 +2736,7 @@ async function route() {
   else if (location.pathname === '/todos') await showTodos();
   else if (location.pathname === '/timeline') await showTimeline();
   else if (location.pathname === '/records') await showRecords();
+  else if (location.pathname === '/summary') await showSummary();
   else if (location.pathname.match(/^\/page\/([^/]+)$/)) await showNote(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/document\/([^/]+)$/)) await showDocument(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
@@ -3568,7 +3569,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href="/timeline"], a[href="/records"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href="/timeline"], a[href="/records"], a[href="/summary"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3838,9 +3839,10 @@ function hideAppPages() {
   document.querySelector('#todos-view').hidden = true;
   document.querySelector('#timeline-view').hidden = true;
   document.querySelector('#records-view').hidden = true;
+  document.querySelector('#summary-view').hidden = true;
   document.querySelector('#agent-chat-view').hidden = true;
   notebookTodos?.destroy?.(); notebookTodos = null;
-  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'timeline-page', 'records-page', 'note-page', 'document-page', 'agent-chat-page');
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'timeline-page', 'records-page', 'summary-page', 'note-page', 'document-page', 'agent-chat-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
@@ -4759,6 +4761,13 @@ async function showTimeline() {
   const view = await showRailPage(
       'timeline-page', 'Timeline', '#timeline-view', 'rail-timeline');
   await window.StellisTimeline.mount(view, libraryNotebooks);
+}
+
+/** Shows the cited summary of the person's health. */
+async function showSummary() {
+  const view = await showRailPage(
+      'summary-page', 'Health summary', '#summary-view', 'rail-summary');
+  await window.StellisSummary.mount(view);
 }
 
 /** Shows every record, with upload and sorting into notebooks. */

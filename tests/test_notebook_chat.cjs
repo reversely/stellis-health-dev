@@ -162,3 +162,20 @@ test('records helpers link records and keep checked group items', () => {
       keptItems(items, new Set(['document:a'])),
       [{kind: 'recording', id: 'b'}]);
 });
+
+globalThis.StellisNotebookChat =
+    require('../src/stellis/static/notebook-chat.js');
+const {sections} = require('../src/stellis/static/summary.js');
+
+test('summary sections split headings and cited paragraphs', () => {
+  const citation = {n: 1, title: 'Labs', target: '/document/d?page=1'};
+  const result = sections(
+      '## Overview\nWeight fell. [[1]]\n\nWalks daily.\n## Medications\n',
+      [citation]);
+  assert.deepEqual(
+      result.map((section) => section.heading), ['Overview', 'Medications']);
+  assert.deepEqual(
+      result[0].paragraphs,
+      [[{text: 'Weight fell. '}, {citation}], [{text: 'Walks daily.'}]]);
+  assert.deepEqual(result[1].paragraphs, []);
+});
