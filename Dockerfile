@@ -23,5 +23,10 @@ RUN uv sync --locked
 ENV PATH=/app/.venv/bin:$PATH
 EXPOSE 8080
 
+# The app runs as this unprivileged user; the entrypoint gives it the data volume.
+RUN useradd --system --create-home --uid 10001 stellis
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
+
 # Speech models download to $STELLIS_DATA_DIR/models on first start (about 500 MB).
 CMD ["stellis", "serve", "--port", "8080"]
