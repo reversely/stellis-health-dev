@@ -44,27 +44,27 @@ The interface keeps its layout and components. Copy changes follow one shared te
 
 | ID | Ticket | Scope | Done when |
 | --- | --- | --- | --- |
-| U-01 | Term list and copy deck | `docs/copy-deck.md`: every user-visible string grouped by screen, with old and new wording. Build it from `index.html`, `app.js`, `onboarding.*`, `agent-chat.js` and `auth.html`. | Owner approves the term list below and the deck |
+| U-01 | Term list and copy deck | `docs/copy-deck.md`: every user-visible string grouped by screen, with old and new wording. Build it from `index.html`, `app.js`, `onboarding.*`, `agent-chat.js` and `auth.html`. | Term list approved (below); owner approves the deck |
 | U-02 | Rename the brand | Header, page titles, sign-in page, theme color, README | No user-visible "stellis" without "Health" |
 | U-03 | Port copy by screen | Apply the deck in batches: Home, Library, visit view, notes, chat, settings, onboarding. One pull request per batch, each with desktop and narrow screenshots. | Each batch passes the browser check in `docs/ui-style-guide.md` |
 | U-04 | Health onboarding | Replace the Gmail and agent setup steps with: consent (S-03), a short health profile (name, birth year, conditions, medications), and a first upload | A new account completes onboarding in under 5 screens |
 | U-05 | Hide operator settings | In hosted mode, hide API key fields, model routes and runtime profile panels from users | A hosted account sees no provider or model settings |
 | U-06 | Information notices | "Health information, not medical advice" in chat, research and summaries, worded per the brief's product-language rules | Notice shows on each AI surface |
 
-Proposed term list for U-01:
+Term list for U-01, approved by the owner on 2026-10-21. The owner may still adjust it. The wording uses everyday terms rather than hospital terms.
 
-| Current term | Proposed term | Notes |
+| Current term | Decision | Notes |
 | --- | --- | --- |
-| Conversation | Visit | A recording of an appointment |
-| Meeting notes | Visit notes | |
-| Library | Records | Visits, documents and notes together |
-| Collection | Area | Groups of notebooks, for example "Heart" or "Pregnancy" |
-| Notebook | Notebook | Unchanged; one per condition, clinician or topic |
-| People | Care team | Named speakers are usually clinicians |
-| Custom vocabulary | Medical terms | Drug and condition names improve transcription |
-| Daily brief | Today | |
+| Conversation | Conversation | Unchanged |
+| Meeting notes | Meeting notes | Unchanged |
+| Library | Records | Recordings, documents and notes together |
+| Collection | Collection | Unchanged |
+| Notebook | Notebook | Unchanged |
+| People | People | Unchanged |
+| Custom vocabulary | Terms | Covers any word the transcriber should know |
+| Daily brief | No default | Home shows no daily brief unless the person turns it on |
 | To-dos | Check-ins | Reminders, goals and follow-ups |
-| Agents | Assistants | |
+| Agents | Agents | Unchanged |
 
 ## Records
 
