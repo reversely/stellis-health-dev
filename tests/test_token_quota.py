@@ -1,16 +1,20 @@
-"""Daily Token Factory allowance: who has a limit, how usage adds up, and refusal before any provider call."""
+"""Tests for the daily Token Factory allowance and its refusals."""
+
 import asyncio
 import os
 import tempfile
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest import mock
 
 import httpx
 
-from stellis import agent_gateway, ai, token_quota
+from stellis import agent_gateway
+from stellis import ai
+from stellis import token_quota
 
 
 class TokenQuotaTest(unittest.TestCase):
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
 
@@ -18,17 +22,30 @@ class TokenQuotaTest(unittest.TestCase):
         self.temp.cleanup()
 
     def env(self, **values):
-        base = {"STELLIS_DATA_DIR": self.temp.name, "STELLIS_RUNTIME_PROFILE": "direct",
-                "STELLIS_SHARED_PROVIDER_KEYS": "1", "STELLIS_ACCOUNT_ID": "2",
-                "STELLIS_DAILY_TOKEN_LIMIT": "100", "NEBIUS_API_KEY": "nebius-shared"}
-        return patch.dict(os.environ, {**base, **values}, clear=True)
+        base = {
+            "STELLIS_DATA_DIR": self.temp.name,
+            "STELLIS_RUNTIME_PROFILE": "direct",
+            "STELLIS_SHARED_PROVIDER_KEYS": "1",
+            "STELLIS_ACCOUNT_ID": "2",
+            "STELLIS_DAILY_TOKEN_LIMIT": "100",
+            "NEBIUS_API_KEY": "nebius-shared"
+        }
+        return mock.patch.dict(os.environ, {**base, **values}, clear=True)
 
     def test_only_shared_key_accounts_have_a_limit(self):
         with self.env():
             self.assertEqual(token_quota.limit(), 100)
-        for values in ({"STELLIS_ACCOUNT_ID": "1"}, {"STELLIS_SHARED_PROVIDER_KEYS": ""},
-                       {"STELLIS_DAILY_TOKEN_LIMIT": ""}, {"STELLIS_DAILY_TOKEN_LIMIT": "none"},
-                       {"STELLIS_RUNTIME_PROFILE": "local"}):
+        for values in ({
+                "STELLIS_ACCOUNT_ID": "1"
+        }, {
+                "STELLIS_SHARED_PROVIDER_KEYS": ""
+        }, {
+                "STELLIS_DAILY_TOKEN_LIMIT": ""
+        }, {
+                "STELLIS_DAILY_TOKEN_LIMIT": "none"
+        }, {
+                "STELLIS_RUNTIME_PROFILE": "local"
+        }):
             with self.subTest(values=values), self.env(**values):
                 self.assertIsNone(token_quota.limit())
 
@@ -42,11 +59,24 @@ class TokenQuotaTest(unittest.TestCase):
             self.assertEqual(token_quota.exceeded(), token_quota.MESSAGE)
 
     def test_direct_turn_records_usage_and_stops_calling_at_the_limit(self):
-        reply = httpx.Response(200, json={"model": "m", "usage": {"total_tokens": 120},
-                                          "choices": [{"finish_reason": "stop", "message": {"content": "Answer"}}]})
-        post = AsyncMock(return_value=reply)
-        with self.env(), patch.object(httpx.AsyncClient, "post", post):
-            self.assertEqual(asyncio.run(agent_gateway.turn("prompt", "job-1"))[0], "Answer")
+        reply = httpx.Response(200,
+                               json={
+                                   "model":
+                                       "m",
+                                   "usage": {
+                                       "total_tokens": 120
+                                   },
+                                   "choices": [{
+                                       "finish_reason": "stop",
+                                       "message": {
+                                           "content": "Answer"
+                                       }
+                                   }]
+                               })
+        post = mock.AsyncMock(return_value=reply)
+        with self.env(), mock.patch.object(httpx.AsyncClient, "post", post):
+            self.assertEqual(
+                asyncio.run(agent_gateway.turn("prompt", "job-1"))[0], "Answer")
             self.assertEqual(token_quota.used_today(), 120)
             with self.assertRaises(agent_gateway.GatewayError) as caught:
                 asyncio.run(agent_gateway.turn("prompt", "job-2"))
@@ -54,11 +84,19 @@ class TokenQuotaTest(unittest.TestCase):
         self.assertEqual(post.await_count, 1)
 
     def test_transcript_ai_makes_no_request_over_the_limit(self):
-        with self.env(), patch.object(httpx.Client, "post", side_effect=AssertionError("Provider called")):
+        with self.env(), mock.patch.object(
+                httpx.Client, "post",
+                side_effect=AssertionError("Provider called")):
             token_quota.record({"total_tokens": 100})
             with self.assertRaises(ai.AIError) as caught:
-                ai._request_impl([{"role": "user", "content": "x"}], 10,
-                                 {"attempts": 0, "usage": {}, "request_ids": []}, "summary")
+                ai._request_impl([{
+                    "role": "user",
+                    "content": "x"
+                }], 10, {
+                    "attempts": 0,
+                    "usage": {},
+                    "request_ids": []
+                }, "summary")
         self.assertEqual(str(caught.exception), token_quota.MESSAGE)
 
 

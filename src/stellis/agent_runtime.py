@@ -233,7 +233,7 @@ def _normalize_citations(answer: str) -> str:
     return re.sub(r"\]\]\s*(?=\[\[source:\d+\]\])", "]] ", answer)
 
 
-def _normalize_known_source_links(answer: str, sources: list[dict[str, object]]) -> str:
+def normalize_known_source_links(answer: str, sources: list[dict[str, object]]) -> str:
     """Convert only exact retrieved source links to trusted citation markers."""
     targets = {str(source["target"]): index for index, source in enumerate(sources, 1)}
     def replace(match: re.Match[str]) -> str:

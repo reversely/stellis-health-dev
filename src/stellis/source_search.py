@@ -13,7 +13,7 @@ def _documents() -> list[tuple[str, str, str, str, str, str, int]]:
     documents: list[tuple[str, str, str, str, str, str, int]] = []
     conversations = storage.list_conversations()
     ids = [str(item["id"]) for item in conversations]
-    notes = search._note_texts(ids)
+    notes = search.note_texts(ids)
     for item in conversations:
         conversation_id = str(item["id"])
         notebook_id = str(item["notebook_id"] or "")
@@ -32,19 +32,14 @@ def _documents() -> list[tuple[str, str, str, str, str, str, int]]:
         pages = conn.execute("SELECT id, title, markdown, notebook_id FROM pages WHERE trashed_at IS NULL").fetchall()
     for page in pages:
         page_id = str(page["id"])
-        body = search._plain(str(page["markdown"]))
+        body = search.plain_text(str(page["markdown"]))
         documents.append(("page", page_id, str(page["notebook_id"] or ""), str(page["title"]),
                           f"{page['title']}\n{body}", f"/page/{quote(page_id)}", 0))
-    with storage.connect() as conn:
-        documents_module._table(conn)
-        rows = conn.execute("SELECT id, title, notebook_id FROM documents").fetchall()
-    pages_by_document = documents_module.pages_for([str(row["id"]) for row in rows])
-    for row in rows:
-        document_id = str(row["id"])
-        for number, text in pages_by_document.get(document_id, []):
-            if text:
-                documents.append(("document", document_id, str(row["notebook_id"] or ""), str(row["title"]), text,
-                                  f"/document/{quote(document_id)}?page={number}", 0))
+    for page in documents_module.all_pages():
+        if page["text"]:
+            documents.append(("document", str(page["document_id"]), str(page["notebook_id"] or ""),
+                              str(page["title"]), str(page["text"]),
+                              f"/document/{quote(str(page['document_id']))}?page={page['number']}", 0))
     return documents
 
 

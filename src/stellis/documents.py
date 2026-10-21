@@ -1,106 +1,138 @@
-"""Uploaded documents: PDFs and images filed into a notebook, with text per page.
+"""Uploaded documents: PDFs and images filed into a notebook, with page text.
 
-A digital PDF's text is read when it is uploaded. Pages without a text layer, such as
-scans, and every image keep the status ``needs_text`` until text recognition exists.
-The original file stays in the account's data directory and is served back unchanged.
+A digital PDF's text is read on upload. A PDF without a text layer, such as a
+scan, and every image keep the status ``needs_text`` until text recognition
+exists. The original file stays in the account's data directory and is served
+back unchanged.
 """
+
 from __future__ import annotations
 
+import datetime
 import hashlib
 import io
+import pathlib
 import re
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 
 from stellis import storage
 
 MAX_BYTES = 20_000_000
 MAX_LABEL = "20 MB"
 MAX_PAGES = 300
-MEDIA_TYPES = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
-_SIGNATURES = {"application/pdf": (b"%PDF-",), "image/png": (b"\x89PNG\r\n\x1a\n",), "image/jpeg": (b"\xff\xd8\xff",)}
+MAX_TITLE = 180
+MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+}
+
+_PDF = "application/pdf"
+_SIGNATURES = {
+    "application/pdf": b"%PDF-",
+    "image/png": b"\x89PNG\r\n\x1a\n",
+    "image/jpeg": b"\xff\xd8\xff",
+}
+# A line shorter than this share of the page's longest line ends a paragraph.
+_PARAGRAPH_END = 0.7
+_SUMMARY_COLUMNS = ("id, title, media_type, page_count, status, notebook_id, "
+                    "record_date, created_at")
 
 
 class DocumentError(ValueError):
-    """The upload cannot become a document; the message is safe to show."""
+    """An upload cannot become a document. The message is safe to show."""
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-def _table(conn) -> None:
-    conn.execute("""CREATE TABLE IF NOT EXISTS documents (
-        id TEXT PRIMARY KEY, title TEXT NOT NULL, filename TEXT NOT NULL, media_type TEXT NOT NULL,
-        sha256 TEXT NOT NULL UNIQUE, size INTEGER NOT NULL, page_count INTEGER NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('ready', 'needs_text')),
-        notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
-        created_at TEXT NOT NULL)""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS document_pages (
-        document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-        page_number INTEGER NOT NULL, text TEXT NOT NULL, PRIMARY KEY (document_id, page_number))""")
+def _create_tables(conn) -> None:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS documents (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            sha256 TEXT NOT NULL UNIQUE,
+            size INTEGER NOT NULL,
+            page_count INTEGER NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('ready', 'needs_text')),
+            notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+            record_date TEXT,
+            created_at TEXT NOT NULL)""")
+    columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(documents)")
+    }
+    if "record_date" not in columns:
+        conn.execute("ALTER TABLE documents ADD COLUMN record_date TEXT")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS document_pages (
+            document_id TEXT NOT NULL
+                REFERENCES documents(id) ON DELETE CASCADE,
+            page_number INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            PRIMARY KEY (document_id, page_number))""")
 
 
-def _directory() -> Path:
+def _directory() -> pathlib.Path:
     path = storage.data_dir() / "documents"
     path.mkdir(exist_ok=True, mode=0o700)
     return path
 
 
-def _title(filename: str) -> str:
-    stem = " ".join(re.sub(r"[_]+", " ", Path(filename).stem).split())
-    return (stem or "Document")[:180]
+def _require_notebook(conn, notebook_id: str | None) -> None:
+    if notebook_id is None:
+        return
+    row = conn.execute("SELECT 1 FROM notebooks WHERE id = ?",
+                       (notebook_id,)).fetchone()
+    if row is None:
+        raise LookupError("Notebook not found")
 
 
-def _clean(text: str) -> str:
-    """Rejoin lines the PDF wrapped; a line well short of the page's longest one ends a paragraph."""
-    lines = [line for line in (" ".join(raw.split()) for raw in text.splitlines()) if line]
+def title_from_filename(filename: str) -> str:
+    """Returns a display title: the file name's stem with spacing tidied."""
+    stem = pathlib.Path(filename).stem.replace("_", " ")
+    return (" ".join(stem.split()) or "Document")[:MAX_TITLE]
+
+
+def clean_page_text(text: str) -> str:
+    """Rejoins lines a PDF wrapped and keeps paragraph breaks.
+
+    Args:
+        text: Text extracted from one PDF page.
+
+    Returns:
+        The page text with spacing collapsed within lines. A line much
+        shorter than the page's longest line ends a paragraph.
+    """
+    lines = [" ".join(raw.split()) for raw in text.splitlines()]
+    lines = [line for line in lines if line]
     if not lines:
         return ""
-    full = max(len(line) for line in lines)
+    paragraph_end = _PARAGRAPH_END * max(len(line) for line in lines)
     joined = lines[0]
     for previous, line in zip(lines, lines[1:]):
-        joined += ("\n" if len(previous) < 0.7 * full else " ") + line
+        joined += ("\n" if len(previous) < paragraph_end else " ") + line
     return joined
 
 
-def _pdf_pages(content: bytes) -> list[str]:
-    from pypdf import PdfReader
-    from pypdf.errors import PdfReadError
-    try:
-        reader = PdfReader(io.BytesIO(content))
-        if reader.is_encrypted:
-            raise DocumentError("Remove the PDF password and upload it again")
-        if len(reader.pages) > MAX_PAGES:
-            raise DocumentError(f"Upload a PDF of at most {MAX_PAGES} pages")
-        return [_clean(page.extract_text() or "") for page in reader.pages]
-    except (PdfReadError, ValueError, KeyError, TypeError) as exc:
-        if isinstance(exc, DocumentError):
-            raise
-        raise DocumentError("This PDF could not be read") from exc
+def check_upload(filename: str, content: bytes) -> str:
+    """Validates an upload's type and size.
 
+    Args:
+        filename: The uploaded file's name.
+        content: The file's bytes.
 
-def _check_image(content: bytes) -> None:
-    from PIL import Image, UnidentifiedImageError
-    try:
-        with Image.open(io.BytesIO(content)) as image:
-            image.verify()
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
-        raise DocumentError("This image could not be read") from exc
+    Returns:
+        The file's media type.
 
-
-def _public(row, conn) -> dict[str, object]:
-    record = {key: row[key] for key in ("id", "title", "filename", "media_type", "size", "page_count", "status",
-                                        "notebook_id", "created_at")}
-    record["pages"] = [{"number": page["page_number"], "text": page["text"]} for page in conn.execute(
-        "SELECT page_number, text FROM document_pages WHERE document_id = ? ORDER BY page_number", (row["id"],))]
-    return record
-
-
-def create(filename: str, content: bytes, notebook_id: str | None = None) -> tuple[dict[str, object], bool]:
-    """Store an uploaded PDF or image and its page text; return (document, already_uploaded)."""
-    suffix = Path(filename or "").suffix.lower()
+    Raises:
+        DocumentError: The file is empty, too large, of another type, or its
+            first bytes do not match its extension.
+    """
+    suffix = pathlib.PurePath(filename or "").suffix.lower()
     media_type = MEDIA_TYPES.get(suffix)
     if media_type is None:
         raise DocumentError("Choose a PDF, PNG or JPEG file")
@@ -110,106 +142,244 @@ def create(filename: str, content: bytes, notebook_id: str | None = None) -> tup
         raise DocumentError(f"Upload a document of at most {MAX_LABEL}")
     if not content.startswith(_SIGNATURES[media_type]):
         raise DocumentError(f"This file is not a {suffix[1:].upper()} file")
+    return media_type
+
+
+def _read_pdf_pages(content: bytes) -> list[str]:
+    import pypdf  # Deferred: only PDF uploads need it.
+    try:
+        reader = pypdf.PdfReader(io.BytesIO(content))
+        encrypted = reader.is_encrypted
+        pages = [] if encrypted else list(reader.pages)
+    except (pypdf.errors.PdfReadError, ValueError, KeyError, TypeError) as exc:
+        raise DocumentError("This PDF could not be read") from exc
+    if encrypted:
+        raise DocumentError("Remove the PDF password and upload it again")
+    if len(pages) > MAX_PAGES:
+        raise DocumentError(f"Upload a PDF of at most {MAX_PAGES} pages")
+    try:
+        return [clean_page_text(page.extract_text() or "") for page in pages]
+    except (pypdf.errors.PdfReadError, ValueError, KeyError, TypeError) as exc:
+        raise DocumentError("This PDF could not be read") from exc
+
+
+def _check_image(content: bytes) -> None:
+    from PIL import Image  # Deferred: only image uploads need it.
+    try:
+        with Image.open(io.BytesIO(content)) as image:
+            image.verify()
+    except (Image.UnidentifiedImageError, OSError, ValueError) as exc:
+        raise DocumentError("This image could not be read") from exc
+
+
+def _record(conn, row) -> dict[str, object]:
+    record = {
+        key: row[key] for key in ("id", "title", "filename", "media_type",
+                                 "size", "page_count", "status", "notebook_id",
+                                 "record_date", "created_at")
+    }
+    pages = conn.execute(
+        "SELECT page_number, text FROM document_pages "
+        "WHERE document_id = ? ORDER BY page_number", (row["id"],))
+    record["pages"] = [{
+        "number": page["page_number"],
+        "text": page["text"]
+    } for page in pages]
+    return record
+
+
+def create(filename: str,
+           content: bytes,
+           notebook_id: str | None = None,
+           record_date: str | None = None) -> tuple[dict[str, object], bool]:
+    """Stores an uploaded PDF or image with its page text.
+
+    Args:
+        filename: The uploaded file's name.
+        content: The file's bytes.
+        notebook_id: The notebook to file the document in, or None.
+        record_date: The date the document describes, as YYYY-MM-DD, or None.
+
+    Returns:
+        The document, with its pages, and whether the account already had the
+        same file. A repeated upload returns the stored document unchanged.
+
+    Raises:
+        DocumentError: The file cannot become a document.
+        LookupError: The notebook does not exist.
+    """
+    media_type = check_upload(filename, content)
     digest = hashlib.sha256(content).hexdigest()
     with storage.connect() as conn:
-        _table(conn)
-        existing = conn.execute("SELECT * FROM documents WHERE sha256 = ?", (digest,)).fetchone()
+        _create_tables(conn)
+        existing = conn.execute("SELECT * FROM documents WHERE sha256 = ?",
+                                (digest,)).fetchone()
         if existing:
-            return _public(existing, conn), True
-        if notebook_id is not None and not conn.execute("SELECT 1 FROM notebooks WHERE id = ?", (notebook_id,)).fetchone():
-            raise LookupError("Notebook not found")
-    if media_type == "application/pdf":
-        pages = _pdf_pages(content)
+            return _record(conn, existing), True
+        _require_notebook(conn, notebook_id)
+    if media_type == _PDF:
+        pages = _read_pdf_pages(content)
     else:
         _check_image(content)
         pages = [""]
-    identifier = str(uuid.uuid4())
-    path = _directory() / f"{identifier}{suffix}"
+    document_id = str(uuid.uuid4())
+    path = _directory() / (document_id +
+                           pathlib.PurePath(filename).suffix.lower())
     path.write_bytes(content)
     path.chmod(0o600)
-    status = "ready" if any(pages) else "needs_text"
     with storage.connect() as conn:
-        _table(conn)
-        conn.execute("""INSERT INTO documents (id, title, filename, media_type, sha256, size, page_count, status,
-            notebook_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                     (identifier, _title(filename), Path(filename).name[:255], media_type, digest, len(content),
-                      len(pages), status, notebook_id, _now()))
-        conn.executemany("INSERT INTO document_pages (document_id, page_number, text) VALUES (?, ?, ?)",
-                         [(identifier, number, text) for number, text in enumerate(pages, 1)])
-        return _public(conn.execute("SELECT * FROM documents WHERE id = ?", (identifier,)).fetchone(), conn), False
+        _create_tables(conn)
+        conn.execute(
+            """
+            INSERT INTO documents (id, title, filename, media_type, sha256,
+                size, page_count, status, notebook_id, record_date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (document_id, title_from_filename(filename),
+             pathlib.PurePath(filename).name[:255], media_type, digest,
+             len(content), len(pages), "ready" if any(pages) else "needs_text",
+             notebook_id, record_date, _now()))
+        conn.executemany(
+            "INSERT INTO document_pages (document_id, page_number, text) "
+            "VALUES (?, ?, ?)", [(document_id, number, text)
+                                 for number, text in enumerate(pages, 1)])
+        row = conn.execute("SELECT * FROM documents WHERE id = ?",
+                           (document_id,)).fetchone()
+        return _record(conn, row), False
 
 
 def get(document_id: str) -> dict[str, object]:
+    """Returns one document with its pages.
+
+    Raises:
+        LookupError: The document does not exist.
+    """
     with storage.connect() as conn:
-        _table(conn)
-        row = conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        _create_tables(conn)
+        row = conn.execute("SELECT * FROM documents WHERE id = ?",
+                           (document_id,)).fetchone()
         if row is None:
             raise LookupError("Document not found")
-        return _public(row, conn)
+        return _record(conn, row)
 
 
-def file_path(document_id: str) -> tuple[Path, str]:
-    record = get(document_id)
-    suffix = next(key for key, value in MEDIA_TYPES.items() if value == record["media_type"])
-    return _directory() / f"{document_id}{suffix}", str(record["media_type"])
+def file_path(document_id: str) -> tuple[pathlib.Path, str]:
+    """Returns the stored file's path and media type.
+
+    Raises:
+        LookupError: The document does not exist.
+    """
+    media_type = str(get(document_id)["media_type"])
+    suffix = next(
+        key for key, value in MEDIA_TYPES.items() if value == media_type)
+    return _directory() / (document_id + suffix), media_type
 
 
-def list_for(notebook_id: str) -> list[dict[str, object]]:
-    """Documents in a notebook without their page text."""
+def list_all(notebook_id: str | None = None) -> list[dict[str, object]]:
+    """Lists documents without page text, newest record date first.
+
+    Args:
+        notebook_id: Limits the list to one notebook when given.
+
+    Returns:
+        One dict per document. Documents without a record date sort by upload
+        time.
+    """
+    where, arguments = ("WHERE notebook_id = ?",
+                        (notebook_id,)) if notebook_id else ("", ())
     with storage.connect() as conn:
-        _table(conn)
-        rows = conn.execute("""SELECT id, title, media_type, page_count, status, created_at FROM documents
-            WHERE notebook_id = ? ORDER BY created_at DESC""", (notebook_id,)).fetchall()
-    return [dict(row) for row in rows]
+        _create_tables(conn)
+        rows = conn.execute(
+            f"SELECT {_SUMMARY_COLUMNS} FROM documents {where} "
+            "ORDER BY COALESCE(record_date, created_at) DESC", arguments)
+        return [dict(row) for row in rows]
 
 
-def list_all() -> list[dict[str, object]]:
-    """Every document without page text, newest first."""
+def all_pages(document_ids: list[str] | None = None) -> list[dict[str, object]]:
+    """Lists page text for search and chat, in document and page order.
+
+    Args:
+        document_ids: Limits the pages to these documents when given.
+
+    Returns:
+        One dict per page with ``document_id``, ``title``, ``notebook_id``,
+        ``number`` and ``text``.
+    """
+    if document_ids is not None and not document_ids:
+        return []
+    where, arguments = "", ()
+    if document_ids is not None:
+        where = f"WHERE d.id IN ({','.join('?' * len(document_ids))})"
+        arguments = tuple(document_ids)
     with storage.connect() as conn:
-        _table(conn)
-        rows = conn.execute("""SELECT id, title, media_type, page_count, status, notebook_id, created_at FROM documents
-            ORDER BY created_at DESC""").fetchall()
-    return [dict(row) for row in rows]
+        _create_tables(conn)
+        rows = conn.execute(
+            f"""
+            SELECT d.id AS document_id, d.title, d.notebook_id,
+                   p.page_number AS number, p.text
+            FROM documents d JOIN document_pages p ON p.document_id = d.id
+            {where}
+            ORDER BY d.created_at DESC, d.id, p.page_number""", arguments)
+        return [dict(row) for row in rows]
 
 
-def pages_for(document_ids: list[str]) -> dict[str, list[tuple[int, str]]]:
-    """Page text per document, in page order, for search and chat."""
-    if not document_ids:
-        return {}
-    with storage.connect() as conn:
-        _table(conn)
-        rows = conn.execute(f"""SELECT document_id, page_number, text FROM document_pages
-            WHERE document_id IN ({','.join('?' * len(document_ids))}) ORDER BY document_id, page_number""",
-                            document_ids).fetchall()
-    pages: dict[str, list[tuple[int, str]]] = {}
-    for row in rows:
-        pages.setdefault(str(row["document_id"]), []).append((int(row["page_number"]), str(row["text"])))
-    return pages
-
-
-def update(document_id: str, *, title: str | None = None, notebook_id: str | None = None,
+def update(document_id: str,
+           *,
+           title: str | None = None,
+           record_date: str | None = None,
+           notebook_id: str | None = None,
            move: bool = False) -> dict[str, object]:
-    """Rename a document or move it to another notebook; move with no notebook files it nowhere."""
+    """Renames, dates or moves a document.
+
+    Args:
+        document_id: The document to change.
+        title: A new title, or None to keep it.
+        record_date: A new record date as YYYY-MM-DD, or None to keep it.
+        notebook_id: The notebook to move to when ``move`` is set; None files
+            the document in no notebook.
+        move: Whether to change the notebook.
+
+    Returns:
+        The document after the change.
+
+    Raises:
+        LookupError: The document or the notebook does not exist.
+        ValueError: The title or the date is not valid.
+    """
+    changes: dict[str, object] = {}
+    if title is not None:
+        value = " ".join(title.split())
+        if not 1 <= len(value) <= MAX_TITLE:
+            raise ValueError(f"Enter a title of at most {MAX_TITLE} characters")
+        changes["title"] = value
+    if record_date is not None:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", record_date):
+            raise ValueError("Enter the record date as YYYY-MM-DD")
+        changes["record_date"] = record_date
+    if move:
+        changes["notebook_id"] = notebook_id
     with storage.connect() as conn:
-        _table(conn)
-        if conn.execute("SELECT 1 FROM documents WHERE id = ?", (document_id,)).fetchone() is None:
+        _create_tables(conn)
+        if conn.execute("SELECT 1 FROM documents WHERE id = ?",
+                        (document_id,)).fetchone() is None:
             raise LookupError("Document not found")
-        if title is not None:
-            value = " ".join(title.split())
-            if not 1 <= len(value) <= 180:
-                raise ValueError("Enter a title of at most 180 characters")
-            conn.execute("UPDATE documents SET title = ? WHERE id = ?", (value, document_id))
         if move:
-            if notebook_id is not None and not conn.execute("SELECT 1 FROM notebooks WHERE id = ?", (notebook_id,)).fetchone():
-                raise LookupError("Notebook not found")
-            conn.execute("UPDATE documents SET notebook_id = ? WHERE id = ?", (notebook_id, document_id))
+            _require_notebook(conn, notebook_id)
+        for column, value in changes.items():
+            # Column names come from the fixed keys above, never from input.
+            conn.execute(f"UPDATE documents SET {column} = ? WHERE id = ?",
+                         (value, document_id))
     return get(document_id)
 
 
 def delete(document_id: str) -> None:
-    """Remove a document, its page text and its file."""
+    """Removes a document, its page text and its file.
+
+    Raises:
+        LookupError: The document does not exist.
+    """
     path, _ = file_path(document_id)
     with storage.connect() as conn:
-        conn.execute("DELETE FROM document_pages WHERE document_id = ?", (document_id,))
+        conn.execute("DELETE FROM document_pages WHERE document_id = ?",
+                     (document_id,))
         conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
     path.unlink(missing_ok=True)
