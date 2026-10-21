@@ -1,0 +1,155 @@
+/* Health timeline page. It shares the notebook page's rail layout. */
+body.timeline-page .heading {
+  display: none;
+}
+.timeline-view[hidden] {
+  display: none;
+}
+.timeline-view {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  max-width: 820px;
+}
+.timeline-page .home-rail .rail-pin {
+  min-height: 44px;
+}
+@media (min-width: 1001px) {
+  body.timeline-page {
+    --rail-width: 270px;
+  }
+  .timeline-page #timeline-view {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    padding: 28px 32px 48px;
+  }
+}
+@media (max-width: 1000px) {
+  .timeline-page main {
+    display: flex;
+    flex-direction: column;
+    padding: 16px !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .timeline-page #timeline-view {
+    order: 1;
+    width: 100%;
+  }
+  .timeline-page .home-rail {
+    order: 2;
+    background: #27222b;
+    padding: 24px;
+    margin-top: 24px;
+  }
+}
+.timeline-head h2 {
+  margin: 0;
+  font:
+    300 30px/1.15 Piazzolla,
+    Georgia,
+    serif;
+  letter-spacing: -0.02em;
+}
+.timeline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.timeline-view button,
+.timeline-view select {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background-color 120ms;
+}
+.timeline-view button[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+@media (hover: hover) and (pointer: fine) {
+  .timeline-view button:hover,
+  .timeline-view select:hover {
+    border-color: var(--accent);
+  }
+}
+.timeline-view :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.timeline-status {
+  margin: 0;
+  color: var(--muted);
+}
+.timeline-years {
+  display: grid;
+  gap: 20px;
+}
+.timeline-year h3 {
+  position: sticky;
+  top: 0;
+  margin: 0 0 6px;
+  padding: 6px 0;
+  background: var(--field);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.timeline-entry {
+  display: grid;
+  grid-template-columns: 56px 20px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.timeline-entry[data-kind='fact'] {
+  background: var(--raised);
+}
+.timeline-entry .icon {
+  align-self: center;
+  color: var(--muted);
+}
+.timeline-date {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-text {
+  display: grid;
+  min-width: 0;
+}
+.timeline-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.timeline-detail {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

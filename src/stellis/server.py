@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -986,6 +986,7 @@ def person_page(person_id: str | None = None, page_id: str | None = None, docume
 
 @app.get("/settings", include_in_schema=False)
 @app.get("/todos", include_in_schema=False)
+@app.get("/timeline", include_in_schema=False)
 @app.get("/chat", include_in_schema=False)
 @app.get("/chat/{agent_id}", include_in_schema=False)
 @app.get("/notebook/{notebook_id}", include_in_schema=False)
@@ -1763,6 +1764,14 @@ async def extract_document_facts(document_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except health_facts.ExtractionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.get("/timeline")
+def health_timeline(notebook_id: str | None = None, kinds: str | None = None):
+    selected = tuple(kinds.split(",")) if kinds else timeline.KINDS
+    return _agent_result(lambda: {
+        "entries": timeline.entries(notebook_id or None, selected)
+    })
 
 
 @api.get("/facts")
