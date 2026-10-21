@@ -1,5 +1,6 @@
-/* Health timeline page. It shares the notebook page's rail layout. */
-body.timeline-page .heading {
+/* Health timeline page, and the rail layout it shares with the Records page. */
+body.timeline-page .heading,
+body.records-page .heading {
   display: none;
 }
 .timeline-view[hidden] {
@@ -11,14 +12,17 @@ body.timeline-page .heading {
   min-width: 0;
   max-width: 820px;
 }
-.timeline-page .home-rail .rail-pin {
+.timeline-page .home-rail .rail-pin,
+.records-page .home-rail .rail-pin {
   min-height: 44px;
 }
 @media (min-width: 1001px) {
-  body.timeline-page {
+  body.timeline-page,
+  body.records-page {
     --rail-width: 270px;
   }
-  .timeline-page #timeline-view {
+  .timeline-page #timeline-view,
+  .records-page #records-view {
     grid-column: 2;
     grid-row: 1;
     margin: 0;
@@ -26,18 +30,21 @@ body.timeline-page .heading {
   }
 }
 @media (max-width: 1000px) {
-  .timeline-page main {
+  .timeline-page main,
+  .records-page main {
     display: flex;
     flex-direction: column;
     padding: 16px !important;
     width: 100%;
     box-sizing: border-box;
   }
-  .timeline-page #timeline-view {
+  .timeline-page #timeline-view,
+  .records-page #records-view {
     order: 1;
     width: 100%;
   }
-  .timeline-page .home-rail {
+  .timeline-page .home-rail,
+  .records-page .home-rail {
     order: 2;
     background: #27222b;
     padding: 24px;

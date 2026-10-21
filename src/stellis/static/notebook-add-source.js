@@ -5,31 +5,12 @@
 (function(root) {
 'use strict';
 
-const ACCEPT = [
-  '.mp3', 'audio/mpeg', '.pdf', 'application/pdf', '.png', 'image/png', '.jpg',
-  '.jpeg', 'image/jpeg'
-].join(',');
 const MAX_CANDIDATES = 30;
 const RECORD_ICONS = {
   recording: 'microphone',
   note: 'note',
   document: 'file-text',
 };
-
-/**
- * Picks the endpoint for an uploaded file from its name.
- * @param {string} name
- * @return {?string} "audio", "document", or null for other files.
- */
-function uploadKind(name) {
-  if (/\.mp3$/i.test(name)) {
-    return 'audio';
-  }
-  if (/\.(pdf|png|jpe?g)$/i.test(name)) {
-    return 'document';
-  }
-  return null;
-}
 
 /**
  * @typedef {{kind: string, id: string, title: string,
@@ -136,7 +117,7 @@ class AddSourceDialog {
     this.picker = /** @type {!HTMLInputElement} */ (dom.el('input'));
     this.picker.type = 'file';
     this.picker.multiple = true;
-    this.picker.accept = ACCEPT;
+    this.picker.accept = root.StellisRecordUpload.ACCEPT;
     this.picker.hidden = true;
     this.progress = dom.el('ul', null, 'nb-add-progress');
 
@@ -343,42 +324,36 @@ class AddSourceDialog {
    * @return {!Promise<string>} The outcome to show beside the file name.
    */
   async uploadOne(file) {
-    const kind = uploadKind(file.name);
-    if (!kind) {
-      return 'choose an MP3, PDF or image';
-    }
     if (this.isFull()) {
       return 'this notebook is full';
     }
-    const body = new FormData();
-    body.append('file', file);
-    body.append('notebook_id', this.book.id);
-    if (kind === 'audio' && file.lastModified) {
-      body.append('recorded_at', new Date(file.lastModified).toISOString());
+    const upload = root.StellisRecordUpload;
+    const result = await upload.uploadFile(file, this.book.id);
+    if (result.outcome === 'added') {
+      await this.added();
     }
+    if (result.outcome !== 'duplicate') {
+      return result.message;
+    }
+    const notebookId = result.record.notebook_id;
+    if (notebookId === this.book.id) {
+      return 'already in this notebook';
+    }
+    if (notebookId) {
+      const name = this.notebookNames.get(notebookId);
+      return `already in ${name || 'another notebook'}`;
+    }
+    // A file without a notebook moves here, since nothing else holds it.
     try {
-      const path = kind === 'audio' ? '/conversations/import' : '/documents';
-      const result = await this.dom.api(path, {method: 'POST', body});
-      const record = result.document || result.conversation;
-      if (!result.duplicate) {
-        await this.added();
-        return kind === 'audio' ? 'added and transcribing' : 'added';
-      }
-      if (record.notebook_id === this.book.id) {
-        return 'already in this notebook';
-      }
-      if (record.notebook_id) {
-        const name = this.notebookNames.get(record.notebook_id);
-        return `already in ${name || 'another notebook'}`;
-      }
-      // A file without a notebook moves here, since nothing else holds it.
-      await this.move(kind === 'audio' ? 'recording' : 'document', record.id);
+      await this.move(
+          result.kind === 'audio' ? 'recording' : 'document', result.record.id);
       await this.added();
       return 'added';
     } catch (error) {
       return error.message;
     }
   }
+
 
   paintRecords() {
     const dom = this.dom;
@@ -466,7 +441,6 @@ function open(options) {
 
 const exported = {
   open,
-  uploadKind,
   candidates,
   toCandidates
 };
