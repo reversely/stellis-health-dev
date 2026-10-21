@@ -60,8 +60,6 @@ def model_id(role: str = "transcript") -> str:
     saved = model_routes.choices().get(role)
     if saved:
         return saved
-    if role == "vision":
-        return os.environ.get("STELLIS_TUTOR_VISION_MODEL", "qwen3.5:9b" if local_inference() else "").strip()
     if role == "categories" and not local_inference():
         return "zai-org/GLM-5.3-Flash"
     return _default_text_model()

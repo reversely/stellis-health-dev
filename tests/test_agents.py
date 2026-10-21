@@ -255,16 +255,6 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(response.json()["agent_message"]["content"], "Hello")
         self.assertEqual(launch.await_count, 2)
 
-    def test_voice_recording_link_is_saved_once_in_agent_thread(self):
-        mira = agents.create("Mira", "Coordinator")
-        path = f"/api/v1/agents/{mira['id']}/call-recordings"
-        with patch.object(storage, "get_conversation", return_value={"id": "conversation-one"}):
-            first = self.client.post(path, json={"conversation_id": "conversation-one"})
-            second = self.client.post(path, json={"conversation_id": "conversation-one"})
-        self.assertEqual((first.status_code, second.status_code), (200, 200))
-        self.assertEqual([message["content"] for message in agents.messages(mira["id"])],
-                         ["Call recording saved: [Open conversation](/conversation/conversation-one)."])
-
     def test_cancellation_terminates_managed_wrapper_and_marks_job_interrupted(self):
         mira = agents.create("Mira", "Coordinator")
 

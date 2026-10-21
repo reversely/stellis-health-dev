@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 from unittest.mock import patch
-from stellis import categorization, model_routes, runtime_profile, runtime_settings, runtime_trace, screen_tutor, storage
+from stellis import categorization, model_routes, runtime_profile, runtime_settings, runtime_trace, storage
 
 class ModelRoutesTest(unittest.TestCase):
     def setUp(self):
@@ -15,11 +15,10 @@ class ModelRoutesTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
     def test_independent_roles_profiles_and_accounts(self):
-        model_routes.save({'transcript':'text:one','categories':'classify:two','planning':'plan:three','vision':'eyes:four'})
+        model_routes.save({'transcript':'text:one','categories':'classify:two','planning':'plan:three'})
         self.assertEqual(runtime_profile.model_id(), 'text:one')
         self.assertEqual(categorization._model_id(), 'classify:two')
         self.assertEqual(runtime_profile.model_id('planning'), 'plan:three')
-        self.assertEqual(screen_tutor.model_id(), 'eyes:four')
         self.assertEqual(runtime_profile.model_id('agent'), 'nemotron-3-nano:latest')
         self.assertEqual(model_routes.path().stat().st_mode & 0o777, 0o600)
         with patch.dict(os.environ, {'STELLIS_RUNTIME_PROFILE':'cloud'}):
@@ -32,7 +31,7 @@ class ModelRoutesTest(unittest.TestCase):
             self.assertEqual(model_routes.choices(), {})
     def test_invalid_routes_do_not_replace_saved_settings(self):
         model_routes.save({'transcript':'installed:model'})
-        for invalid in [{'unknown':'model'}, {'vision':'../bad model'}, {'agent':None}, []]:
+        for invalid in [{'unknown':'model'}, {'planning':'../bad model'}, {'agent':None}, []]:
             with self.assertRaises(ValueError): model_routes.save(invalid)
             self.assertEqual(model_routes.choices(), {'transcript':'installed:model'})
     def test_active_request_prevents_save_before_provider_access(self):
@@ -40,6 +39,9 @@ class ModelRoutesTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'active requests'):
                 runtime_settings.save_routes({'transcript':'text:new'})
         self.assertEqual(model_routes.choices(), {})
+    def test_saved_route_for_removed_role_is_ignored(self):
+        model_routes.path().write_text('{"transcript": "text:one", "vision": "eyes:four"}')
+        self.assertEqual(model_routes.choices(), {'transcript': 'text:one'})
     def test_legacy_default_is_preserved_only_until_role_override(self):
         (storage.data_dir()/'local-inference-model').write_text('previous:model')
         model_routes.save({'transcript':'selected:model'})

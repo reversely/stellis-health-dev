@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis", docs_url=None, redoc_url=None)
@@ -474,7 +474,6 @@ async def stop_retention_worker() -> None:
     if _retention_thread is not None:
         _retention_thread.join(timeout=30)
     processing.stop_worker()
-    await voice_call.close()
 
 
 def _public(record: dict[str, object]) -> dict[str, object]:
@@ -702,106 +701,6 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except agent_runtime.AgentRunError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-@api.get("/agents/{agent_id}/tutor")
-def tutor_status(agent_id: str) -> dict:
-    from stellis import screen_tutor
-    return _agent_result(lambda: screen_tutor.status(agent_id))
-
-
-@api.post("/agents/{agent_id}/tutor")
-async def ask_screen_tutor(agent_id: str, request: Request, question: str = Form(...),
-                           notebook_id: str | None = Form(None), image: UploadFile = File(...)) -> dict:
-    from stellis import screen_tutor
-    task = disconnected = None
-    async def wait_for_disconnect():
-        while True:
-            if (await request.receive())["type"] == "http.disconnect":
-                return
-    try:
-        content = await image.read(screen_tutor.MAX_IMAGE_BYTES + 1)
-        task = asyncio.create_task(screen_tutor.ask(agent_id, question, notebook_id, content))
-        # Await the receive channel directly: nonblocking is_disconnected probes can miss
-        # disconnects behind Starlette's HTTP middleware cancellation checkpoints.
-        disconnected = asyncio.create_task(wait_for_disconnect())
-        done, _ = await asyncio.wait({task, disconnected}, return_when=asyncio.FIRST_COMPLETED)
-        if disconnected in done:
-            task.cancel()
-            return Response(status_code=499)
-        return await task
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except agent_runtime.AgentRunError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    finally:
-        await image.close()
-        pending = [item for item in (task, disconnected) if item is not None]
-        for item in pending:
-            if not item.done():
-                item.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
-
-
-class VoiceOffer(BaseModel):
-    sdp: str = Field(min_length=1, max_length=100_000)
-    type: Literal["offer"]
-
-
-class VoiceRecordingLink(BaseModel):
-    conversation_id: str
-
-
-@api.get("/agents/voice/availability")
-def voice_availability() -> dict[str, object]:
-    return voice_call.availability()
-
-
-@api.post("/agents/{agent_id}/call")
-async def start_agent_call(agent_id: str, request: VoiceOffer) -> dict[str, str]:
-    try:
-        return await voice_call.offer(agent_id, request.sdp, request.type)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-@api.post("/agents/{agent_id}/call/{pc_id}/stop-reply")
-async def stop_agent_call_reply(agent_id: str, pc_id: str) -> dict[str, bool]:
-    try:
-        await voice_call.stop_reply(agent_id, pc_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {"stopped": True}
-
-
-@api.delete("/agents/{agent_id}/call/{pc_id}")
-async def end_agent_call(agent_id: str, pc_id: str) -> dict[str, bool]:
-    try:
-        await voice_call.end(agent_id, pc_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {"ended": True}
-
-
-@api.post("/agents/{agent_id}/call-recordings")
-def link_agent_call_recording(agent_id: str, request: VoiceRecordingLink) -> dict[str, str]:
-    try:
-        agents.get(agent_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    if storage.get_conversation(request.conversation_id) is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    content = f"Call recording saved: [Open conversation](/conversation/{request.conversation_id})."
-    if not any(item["role"] == "system" and item["content"] == content
-               for item in agents.messages(agent_id)):
-        agents.append_message(agent_id, "system", content)
-    return {"conversation_id": request.conversation_id}
 
 
 @api.get("/calendar/connections")

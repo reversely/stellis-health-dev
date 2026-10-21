@@ -40,7 +40,6 @@ def status():
             "inference_provider": "Ollama" if runtime_profile.local_inference() else "Token Factory",
             "inference_model": runtime_profile.model_id(), "agent_model": runtime_profile.model_id("agent"), "inference_configured": bool(ai._key()),
             "category_model": categorization._model_id(), "can_switch": can_switch(),
-            "tutor_vision_model": runtime_profile.model_id("vision") or None,
             "routes": [{"role":role,"label":label,"model":runtime_profile.model_id(role),
                         "capability":capability,"editable": role != "agent" or can_switch() or runtime_profile.remote_agents(),
                         "observed": (observed or {}).get("routes",{}).get(role)}
