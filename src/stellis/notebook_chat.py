@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from urllib.parse import quote
 
-from stellis import agent_gateway, notebook_sources, search, storage
+from stellis import agent_gateway, documents, notebook_sources, search, storage
 
 FULL_TEXT_CHARS = 24_000
 RANKED_PASSAGES = 12
@@ -63,6 +63,22 @@ def _transcript_chunks(source_id: str, conversation_id: str, title: str) -> list
     return chunks
 
 
+def _page_chunks(source_id: str, document_id: str, title: str, number: int, text: str) -> list[dict[str, object]]:
+    """Split one document page into paragraph-aligned chunks that all open that page."""
+    chunks: list[str] = []
+    for paragraph in text.split("\n"):
+        # A paragraph longer than a chunk splits at sentence ends.
+        pieces = re.split(r"(?<=[.;])\s+", paragraph) if len(paragraph) > CHUNK_CHARS else [paragraph]
+        for index, piece in enumerate(pieces):
+            if chunks and len(chunks[-1]) + len(piece) < CHUNK_CHARS:
+                chunks[-1] += (" " if index else "\n") + piece
+            else:
+                chunks.append(piece)
+    target = f"/document/{quote(document_id)}?page={number}"
+    return [{"source_id": source_id, "title": title, "text": chunk, "start_ms": None, "page": number, "target": target}
+            for chunk in chunks if chunk.strip()]
+
+
 def _passages(sources: list[dict[str, object]]) -> list[dict[str, object]]:
     conversation_ids = [str(s["id"]).split(":", 1)[1] for s in sources if str(s["id"]).startswith("conversation:")]
     notes = search._note_texts(conversation_ids)
@@ -70,6 +86,8 @@ def _passages(sources: list[dict[str, object]]) -> list[dict[str, object]]:
         page_ids = [str(s["id"]).split(":", 1)[1] for s in sources if str(s["id"]).startswith("page:")]
         markdown = {row["id"]: row["markdown"] for row in conn.execute(
             f"SELECT id, markdown FROM pages WHERE id IN ({','.join('?' * len(page_ids))})", page_ids)} if page_ids else {}
+    document_pages = documents.pages_for([str(s["id"]).split(":", 1)[1] for s in sources
+                                          if str(s["id"]).startswith("document:")])
     passages: list[dict[str, object]] = []
     for source in sources:
         kind, identifier = str(source["id"]).split(":", 1)
@@ -79,6 +97,9 @@ def _passages(sources: list[dict[str, object]]) -> list[dict[str, object]]:
                 passages.append({"source_id": source["id"], "title": title, "text": notes[identifier], "start_ms": None,
                                  "target": f"/conversation/{quote(identifier)}"})
             passages.extend(_transcript_chunks(str(source["id"]), identifier, title))
+        elif kind == "document":
+            for number, text in document_pages.get(identifier, []):
+                passages.extend(_page_chunks(str(source["id"]), identifier, title, number, text))
         elif body := search._plain(str(markdown.get(identifier, ""))):
             passages.append({"source_id": source["id"], "title": title, "text": body, "start_ms": None,
                              "target": f"/page/{quote(identifier)}"})
@@ -138,7 +159,7 @@ def _cite(answer: str, passages: list[dict[str, object]]) -> tuple[str, list[dic
             raise ChatError("The answer's citations could not be checked. Try again.")
         return f"[[{order.setdefault(index, len(order) + 1)}]]"
     text = re.sub(r"\[\[source:(\d+)\]\]", replace, answer)
-    citations = [{"n": number, **{key: passages[index - 1][key] for key in ("source_id", "title", "target", "start_ms")},
+    citations = [{"n": number, **{key: passages[index - 1].get(key) for key in ("source_id", "title", "target", "start_ms", "page")},
                   "excerpt": str(passages[index - 1]["text"])[:300]} for index, number in order.items()]
     return text, citations
 
