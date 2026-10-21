@@ -108,3 +108,69 @@ class DirectProfileTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProxyOptionsTest(unittest.TestCase):
+    def test_forwarded_headers_are_trusted_only_when_configured(self):
+        from stellis import cli
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(cli.proxy_options(), {"proxy_headers": False})
+        with patch.dict(os.environ, {"STELLIS_FORWARDED_ALLOW_IPS": "*"}, clear=True):
+            self.assertEqual(cli.proxy_options(), {"proxy_headers": True, "forwarded_allow_ips": "*"})
+
+
+@unittest.skipIf(os.name == "nt", "Account child Unix sockets need a Windows transport")
+class TlsProxyOriginTest(unittest.TestCase):
+    """Behind a TLS proxy the browser's https Origin must match, in the gateway and in account workspaces."""
+
+    def setUp(self):
+        import socket
+        import subprocess
+        import sys
+        import time
+        from pathlib import Path
+        self.temp = tempfile.TemporaryDirectory()
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+        self.url = f"http://127.0.0.1:{port}"
+        env = {key: value for key, value in os.environ.items() if not key.startswith("STELLIS_")}
+        env.update(STELLIS_DATA_DIR=self.temp.name, STELLIS_AUTH_MODE="required",
+                   STELLIS_FORWARDED_ALLOW_IPS="*", STELLIS_SECURE_COOKIES="1",
+                   STELLIS_ACCOUNT_SOCKET_DIR=str(Path(self.temp.name) / "sockets"),
+                   PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"))
+        self.process = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "stellis.account_gateway:app", "--host", "127.0.0.1",
+             "--port", str(port), "--no-access-log", "--proxy-headers", "--forwarded-allow-ips", "*"],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            try:
+                if httpx.get(self.url + "/api/health", timeout=1).status_code == 200:
+                    break
+            except httpx.HTTPError:
+                time.sleep(0.1)
+        else:
+            self.fail("Gateway did not start")
+
+    def tearDown(self):
+        self.process.terminate()
+        self.process.wait(10)
+        self.temp.cleanup()
+
+    def test_https_origin_is_accepted_through_the_proxy(self):
+        site = {"Host": "health.example", "Origin": "https://health.example"}
+        credentials = {"username": "Riley", "password": "correct horse battery staple"}
+        with httpx.Client(base_url=self.url, timeout=30) as client:
+            refused = client.post("/api/v1/auth/register", json=credentials, headers=site)
+            self.assertEqual(refused.status_code, 403)
+            forwarded = {**site, "X-Forwarded-Proto": "https"}
+            created = client.post("/api/v1/auth/register", json=credentials, headers=forwarded)
+            self.assertEqual(created.status_code, 200)
+            cookie = created.cookies.get("stellis_session") or created.headers["set-cookie"].split(";")[0].split("=", 1)[1]
+            notebook = client.post("/api/v1/notebooks", json={"name": "Heart"},
+                                   headers={**forwarded, "Cookie": f"stellis_session={cookie}"})
+            self.assertEqual(notebook.status_code, 200, notebook.text)
+            other = client.post("/api/v1/notebooks", json={"name": "Elsewhere"},
+                                headers={**forwarded, "Origin": "https://attacker.example",
+                                         "Cookie": f"stellis_session={cookie}"})
+            self.assertEqual(other.status_code, 403)

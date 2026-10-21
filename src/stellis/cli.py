@@ -54,4 +54,10 @@ def main() -> None:
     target = ("stellis.sync_server:app" if args.command == "sync-serve" else
               "stellis.account_gateway:app" if os.environ.get("STELLIS_AUTH_MODE") == "required" else
               "stellis.server:app")
-    uvicorn.run(target, host=host, port=args.port)
+    uvicorn.run(target, host=host, port=args.port, **proxy_options())
+
+
+def proxy_options() -> dict[str, object]:
+    """Trust X-Forwarded-Proto only from the hosts a TLS proxy deployment names, so origin checks see https."""
+    trusted = os.environ.get("STELLIS_FORWARDED_ALLOW_IPS", "").strip()
+    return {"proxy_headers": True, "forwarded_allow_ips": trusted} if trusted else {"proxy_headers": False}

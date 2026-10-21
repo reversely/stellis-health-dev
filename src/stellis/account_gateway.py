@@ -68,6 +68,11 @@ class AccountGateway:
                         env.pop(key, None)
             command = [sys.executable, "-m", "uvicorn", "stellis.server:app", "--uds", str(socket),
                        "--no-access-log"]
+            if os.environ.get("STELLIS_FORWARDED_ALLOW_IPS", "").strip():
+                # Only this gateway reaches the socket, and it passes on the TLS proxy's headers.
+                command += ["--proxy-headers", "--forwarded-allow-ips", "*"]
+            else:
+                command += ["--no-proxy-headers"]
             process = subprocess.Popen(command, env=env, cwd=Path.cwd(),
                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.children[account_id] = process

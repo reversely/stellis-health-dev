@@ -9,6 +9,7 @@ Stellis Health runs on Fly.io as one machine with one volume. The image starts t
 | Variable | Value | Effect |
 | --- | --- | --- |
 | `STELLIS_HOST` | `0.0.0.0` | Accepts connections from Fly's proxy |
+| `STELLIS_FORWARDED_ALLOW_IPS` | `*` | Trusts Fly's `X-Forwarded-Proto`, so the app knows requests arrived over HTTPS and accepts same-site sign-up and form requests |
 | `STELLIS_DATA_DIR` | `/data` | Stores all data on the volume |
 | `STELLIS_SECURE_COOKIES` | `1` | Marks the session cookie `Secure` |
 | `STELLIS_SHARED_PROVIDER_KEYS` | `1` | Gives every account the deployment's Nebius and Tavily keys |
