@@ -1,7 +1,7 @@
 (() => {
   const main = document.querySelector('#setup-main');
   const error = document.querySelector('#setup-error');
-  let state, templates = [], selected = new Set(), choices = {};
+  let state, templates = [], selected = new Set(), choices = {}, taskChoices = {};
   let saves = Promise.resolve();
   const outcome = new URLSearchParams(location.search);
   const connectionMessage = outcome.get('calendar') === 'connected' ? 'Mail and calendar connected' : outcome.has('calendar') ? (outcome.get('connection_error') || 'Connection expired. Connect again to continue setup.') : '';
@@ -34,7 +34,7 @@
     }); return result;
   }
   function save(step) {
-    const payload = {uses:[...selected], step, agent_choices:structuredClone(choices)};
+    const payload = {uses:[...selected], step, agent_choices:structuredClone(choices), task_choices:structuredClone(taskChoices)};
     const result = saves.catch(() => {}).then(async () => { state = await api('/onboarding', 'PUT', payload); });
     saves = result;
     return saves;
@@ -135,6 +135,19 @@
     if (more.childElementCount > 1) team.append(more);
     return team;
   }
+  function taskChoice(key,name,collection) {
+    const label=node('label',null,'setup-task-choice'),input=node('input');input.type='checkbox';
+    input.checked=taskChoices[key] ?? state.task_defaults?.[name.toLowerCase()] ?? state.collection_task_defaults?.[collection.toLowerCase()] ?? false;
+    input.setAttribute('aria-label','Suggest tasks for '+name);
+    const text=node('span','Suggest tasks');text.append(node('small','Review each suggestion before adding it.'));
+    label.append(input,text);
+    input.addEventListener('change',async()=>{
+      const before=taskChoices[key];taskChoices[key]=input.checked;input.disabled=true;
+      try{await save('review');}catch(e){if(before===undefined)delete taskChoices[key];else taskChoices[key]=before;input.checked=!input.checked;error.textContent=e.message;}
+      finally{input.disabled=false;}
+    });
+    return label;
+  }
   function reviewScreen(scene) {
     const title = node('h1', 'Review your notebooks'), subtitle = node('p', 'Choose the agents you want in each notebook. Nothing is filed until you finish.', 'setup-hint');
     const head = node('div', null, 'setup-review-head'); head.append(title, subtitle); scene.append(head);
@@ -146,7 +159,7 @@
       for (const item of items) {
         branch.append(node('div', item.notebook)); const book = node('div', null, 'setup-book');
         const name = node('div', null, 'setup-book-name'); name.append(node('h3', item.notebook), node('p', 'Starter notebook', 'setup-hint'));
-        book.append(name, teamChoice(item.id, item.agents)); card.append(book);
+        book.append(name, teamChoice(item.id, item.agents),taskChoice(item.id,item.notebook,item.collection)); card.append(book);
       }
       grid.append(card); tree.append(branch);
     }
@@ -162,12 +175,12 @@
     const sourceReview = window.StellisOnboardingSources.create(api, state.scan, value => {
       importChoice = value; finish.disabled = value.busy;
       const count = new Set([...state.proposals.map(p => p.notebook.toLowerCase()), ...value.groups.map(g => g.name.toLowerCase())]).size;
-      title.textContent = count ? `${count} notebooks, ready to set up` : 'Start with your Chief of Staff';
-      finish.textContent = count ? `Set up ${count} notebooks` : 'Open workspace';
+      title.textContent = count ? `${count} notebook${count===1?'':'s'}, ready to set up` : 'Start with your Chief of Staff';
+      finish.textContent = count ? `Set up ${count} notebook${count===1?'':'s'}` : 'Open workspace';
       subtitle.textContent = value.groups.length ? 'From your mail & calendar events. Review the sources and choose each notebook’s agents.' : 'Based on your choices. Choose the agents you want in each notebook.';
       importedTree.replaceChildren();
       for (const group of value.groups) { const branch = node('div', null, 'setup-tree-group'); branch.append(node('strong', group.collection), node('div', `${group.name} (${group.source_ids.length})`)); importedTree.append(branch); }
-    }, {groupTarget:importedGrid, teamChoice});
+    }, {groupTarget:importedGrid, teamChoice, taskChoice});
     scene.append(sourceReview, importedGrid, grid);
     if (!state.proposals.length) scene.append(node('p', 'Connect sources to propose notebooks, or open an empty workspace.', 'setup-hint'));
     actions.append(finish, node('span', 'Drafts only', 'setup-hint'), button('Back', async () => { await save('uses'); render(); })); scene.append(actions);
@@ -176,7 +189,7 @@
   (async () => {
     try {
       const [setup, account, catalog] = await Promise.all([api('/onboarding'), api('/auth/status'), api('/agents/templates')]);
-      state = setup; templates = catalog; selected = new Set(state.uses); choices = state.agent_choices || {};
+      state = setup; templates = catalog; selected = new Set(state.uses); choices = state.agent_choices || {}; taskChoices = state.task_choices || {};
       if (!state.required) { location.replace('/'); return; } render(false);
     } catch (e) { error.textContent = e.message; main.replaceChildren(node('h1', 'Setup could not load'), button('Try again', () => location.reload())); }
   })();

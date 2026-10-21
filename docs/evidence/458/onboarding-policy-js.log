@@ -1,0 +1,935 @@
+TAP version 13
+# Subtest: a seed always draws the same sprite and colour
+ok 1 - a seed always draws the same sprite and colour
+  ---
+  duration_ms: 0.657433
+  type: 'test'
+  ...
+# Subtest: sprites are mirrored about the middle column and keep both eyes open
+ok 2 - sprites are mirrored about the middle column and keep both eyes open
+  ---
+  duration_ms: 0.98931
+  type: 'test'
+  ...
+# Subtest: different seeds draw different sprites
+ok 3 - different seeds draw different sprites
+  ---
+  duration_ms: 0.927277
+  type: 'test'
+  ...
+# Subtest: the default agent and stewards coordinate; other agents act
+ok 4 - the default agent and stewards coordinate; other agents act
+  ---
+  duration_ms: 0.119522
+  type: 'test'
+  ...
+# Subtest: groups follow collections, then loose notebooks, then no notebook
+ok 5 - groups follow collections, then loose notebooks, then no notebook
+  ---
+  duration_ms: 0.86734
+  type: 'test'
+  ...
+# Subtest: an agent appears once per group with that group's notebooks
+ok 6 - an agent appears once per group with that group's notebooks
+  ---
+  duration_ms: 0.124642
+  type: 'test'
+  ...
+# Subtest: coordinators lead each group, then names in order
+ok 7 - coordinators lead each group, then names in order
+  ---
+  duration_ms: 0.178819
+  type: 'test'
+  ...
+# Subtest: no agents gives no groups
+ok 8 - no agents gives no groups
+  ---
+  duration_ms: 0.052721
+  type: 'test'
+  ...
+# Subtest: relative format
+ok 9 - relative format
+  ---
+  duration_ms: 0.607529
+  type: 'test'
+  ...
+# Subtest: timestamps use the local day
+ok 10 - timestamps use the local day
+  ---
+  duration_ms: 0.138498
+  type: 'test'
+  ...
+# Subtest: short and iso formats ignore relativity
+ok 11 - short and iso formats ignore relativity
+  ---
+  duration_ms: 0.106226
+  type: 'test'
+  ...
+# Subtest: an invalid date is empty
+ok 12 - an invalid date is empty
+  ---
+  duration_ms: 0.113778
+  type: 'test'
+  ...
+# Subtest: the setting defaults to relative and survives bad storage
+ok 13 - the setting defaults to relative and survives bad storage
+  ---
+  duration_ms: 0.11317
+  type: 'test'
+  ...
+# Subtest: isHexColour accepts only \#RRGGBB
+ok 14 - isHexColour accepts only \#RRGGBB
+  ---
+  duration_ms: 1.035214
+  type: 'test'
+  ...
+# Subtest: inkFor picks the higher-contrast house ink
+ok 15 - inkFor picks the higher-contrast house ink
+  ---
+  duration_ms: 0.436999
+  type: 'test'
+  ...
+# Subtest: countTodos sums open and done per source
+ok 16 - countTodos sums open and done per source
+  ---
+  duration_ms: 0.748651
+  type: 'test'
+  ...
+# Subtest: buildItems merges meetings and notes newest first with tags and counts
+ok 17 - buildItems merges meetings and notes newest first with tags and counts
+  ---
+  duration_ms: 9.402996
+  type: 'test'
+  ...
+# Subtest: latestSummary takes the newest meeting with an overview, unmodified
+ok 18 - latestSummary takes the newest meeting with an overview, unmodified
+  ---
+  duration_ms: 0.378821
+  type: 'test'
+  ...
+# (node:4123813) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: a titled callout
+ok 19 - a titled callout
+  ---
+  duration_ms: 164.510198
+  type: 'test'
+  ...
+# Subtest: GitHub types without a title
+ok 20 - GitHub types without a title
+  ---
+  duration_ms: 1.279122
+  type: 'test'
+  ...
+# Subtest: an uppercase type word is written back in lowercase
+ok 21 - an uppercase type word is written back in lowercase
+  ---
+  duration_ms: 0.843484
+  type: 'test'
+  ...
+# Subtest: any type word
+ok 22 - any type word
+  ---
+  duration_ms: 0.619448
+  type: 'test'
+  ...
+# Subtest: a multi-block body
+ok 23 - a multi-block body
+  ---
+  duration_ms: 2.092061
+  type: 'test'
+  ...
+# Subtest: a to-do inside a callout keeps its ID
+ok 24 - a to-do inside a callout keeps its ID
+  ---
+  duration_ms: 0.753227
+  type: 'test'
+  ...
+# Subtest: inline formatting in the title and body
+ok 25 - inline formatting in the title and body
+  ---
+  duration_ms: 1.282898
+  type: 'test'
+  ...
+# Subtest: callouts sit between other blocks
+ok 26 - callouts sit between other blocks
+  ---
+  duration_ms: 0.85134
+  type: 'test'
+  ...
+# Subtest: a plain quote stays a quote
+ok 27 - a plain quote stays a quote
+  ---
+  duration_ms: 1.483381
+  type: 'test'
+  ...
+# Subtest: a callout with no body still exports
+ok 28 - a callout with no body still exports
+  ---
+  duration_ms: 0.710826
+  type: 'test'
+  ...
+# Subtest: the structure is a title paragraph then the body
+ok 29 - the structure is a title paragraph then the body
+  ---
+  duration_ms: 0.805963
+  type: 'test'
+  ...
+# Subtest: the shape is repaired when the title paragraph is removed
+ok 30 - the shape is repaired when the title paragraph is removed
+  ---
+  duration_ms: 0.459959
+  type: 'test'
+  ...
+# Subtest: insertion wraps the current block and a second pick changes the type
+ok 31 - insertion wraps the current block and a second pick changes the type
+  ---
+  duration_ms: 0.686345
+  type: 'test'
+  ...
+# Subtest: callout JSON round-trips for copy and paste
+ok 32 - callout JSON round-trips for copy and paste
+  ---
+  duration_ms: 1.06563
+  type: 'test'
+  ...
+# (node:4123819) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: copied Markdown has no task IDs
+ok 33 - copied Markdown has no task IDs
+  ---
+  duration_ms: 173.917706
+  type: 'test'
+  ...
+# Subtest: canceled to-dos keep their marker
+ok 34 - canceled to-dos keep their marker
+  ---
+  duration_ms: 1.728841
+  type: 'test'
+  ...
+# Subtest: a partial selection copies only the selected text
+ok 35 - a partial selection copies only the selected text
+  ---
+  duration_ms: 1.338531
+  type: 'test'
+  ...
+# Subtest: a selection that spans a table copies the table as Markdown
+ok 36 - a selection that spans a table copies the table as Markdown
+  ---
+  duration_ms: 2.888393
+  type: 'test'
+  ...
+# (node:4123821) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: a toggle with a paragraph
+ok 37 - a toggle with a paragraph
+  ---
+  duration_ms: 171.211572
+  type: 'test'
+  ...
+# Subtest: a toggle with an empty body
+ok 38 - a toggle with an empty body
+  ---
+  duration_ms: 1.587654
+  type: 'test'
+  ...
+# Subtest: a toggle with several kinds of blocks
+ok 39 - a toggle with several kinds of blocks
+  ---
+  duration_ms: 3.754612
+  type: 'test'
+  ...
+# Subtest: to-do lines keep their IDs inside a toggle
+ok 40 - to-do lines keep their IDs inside a toggle
+  ---
+  duration_ms: 1.342675
+  type: 'test'
+  ...
+# Subtest: toggles nest
+ok 41 - toggles nest
+  ---
+  duration_ms: 1.223297
+  type: 'test'
+  ...
+# Subtest: a toggle sits between other blocks
+ok 42 - a toggle sits between other blocks
+  ---
+  duration_ms: 0.85526
+  type: 'test'
+  ...
+# Subtest: the single-line summary form and the open attribute are read
+ok 43 - the single-line summary form and the open attribute are read
+  ---
+  duration_ms: 1.060287
+  type: 'test'
+  ...
+# Subtest: a closing tag inside a code fence does not end the toggle
+ok 44 - a closing tag inside a code fence does not end the toggle
+  ---
+  duration_ms: 0.7971
+  type: 'test'
+  ...
+# Subtest: an unclosed toggle stays as text
+ok 45 - an unclosed toggle stays as text
+  ---
+  duration_ms: 1.470756
+  type: 'test'
+  ...
+# Subtest: markup in a title is escaped and read back
+ok 46 - markup in a title is escaped and read back
+  ---
+  duration_ms: 0.88662
+  type: 'test'
+  ...
+# Subtest: a plain angle bracket in a title stays safe
+ok 47 - a plain angle bracket in a title stays safe
+  ---
+  duration_ms: 1.088623
+  type: 'test'
+  ...
+# Subtest: two columns
+ok 48 - two columns
+  ---
+  duration_ms: 0.828364
+  type: 'test'
+  ...
+# Subtest: columns hold any blocks, to-do lines included
+ok 49 - columns hold any blocks, to-do lines included
+  ---
+  duration_ms: 0.992718
+  type: 'test'
+  ...
+# Subtest: an empty column
+ok 50 - an empty column
+  ---
+  duration_ms: 4.222971
+  type: 'test'
+  ...
+# Subtest: three columns
+ok 51 - three columns
+  ---
+  duration_ms: 0.589753
+  type: 'test'
+  ...
+# Subtest: a toggle inside a column and columns inside a toggle
+ok 52 - a toggle inside a column and columns inside a toggle
+  ---
+  duration_ms: 0.837228
+  type: 'test'
+  ...
+# Subtest: columns inside a callout
+ok 53 - columns inside a callout
+  ---
+  duration_ms: 0.698234
+  type: 'test'
+  ...
+# Subtest: text outside a column stays as text
+ok 54 - text outside a column stays as text
+  ---
+  duration_ms: 0.471942
+  type: 'test'
+  ...
+# Subtest: the structure of a toggle and of columns
+ok 55 - the structure of a toggle and of columns
+  ---
+  duration_ms: 0.859916
+  type: 'test'
+  ...
+# Subtest: the shape of a toggle is repaired
+ok 56 - the shape of a toggle is repaired
+  ---
+  duration_ms: 0.472615
+  type: 'test'
+  ...
+# Subtest: the toolbar inserts a toggle after a block and columns in place of an empty paragraph
+ok 57 - the toolbar inserts a toggle after a block and columns in place of an empty paragraph
+  ---
+  duration_ms: 1.173728
+  type: 'test'
+  ...
+# Subtest: Enter in the title moves into the body; Enter on an empty last line leaves the toggle
+ok 58 - Enter in the title moves into the body; Enter on an empty last line leaves the toggle
+  ---
+  duration_ms: 0.975037
+  type: 'test'
+  ...
+# Subtest: ArrowDown at the end of the last line leaves a toggle or a column group
+ok 59 - ArrowDown at the end of the last line leaves a toggle or a column group
+  ---
+  duration_ms: 0.789084
+  type: 'test'
+  ...
+# Subtest: ArrowDown in the middle of a line is left to the browser
+ok 60 - ArrowDown in the middle of a line is left to the browser
+  ---
+  duration_ms: 0.372533
+  type: 'test'
+  ...
+# Subtest: Backspace in an empty toggle or column removes it
+ok 61 - Backspace in an empty toggle or column removes it
+  ---
+  duration_ms: 0.916445
+  type: 'test'
+  ...
+# (node:4123826) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: a link card with and without a caption
+ok 62 - a link card with and without a caption
+  ---
+  duration_ms: 183.166732
+  type: 'test'
+  ...
+# Subtest: link card captions are escaped on export and read back
+ok 63 - link card captions are escaped on export and read back
+  ---
+  duration_ms: 2.078685
+  type: 'test'
+  ...
+# Subtest: a link card needs an http or https address
+ok 64 - a link card needs an http or https address
+  ---
+  duration_ms: 2.219695
+  type: 'test'
+  ...
+# Subtest: an address with quotes or angle brackets is exported percent-encoded
+ok 65 - an address with quotes or angle brackets is exported percent-encoded
+  ---
+  duration_ms: 0.888733
+  type: 'test'
+  ...
+# Subtest: YouTube, Vimeo and Loom lines become embeds and round-trip
+ok 66 - YouTube, Vimeo and Loom lines become embeds and round-trip
+  ---
+  duration_ms: 2.097806
+  type: 'test'
+  ...
+# Subtest: embed URLs use each host's embed address
+ok 67 - embed URLs use each host's embed address
+  ---
+  duration_ms: 0.612745
+  type: 'test'
+  ...
+# Subtest: other hosts and malformed video links are not embedded
+ok 68 - other hosts and malformed video links are not embedded
+  ---
+  duration_ms: 0.395573
+  type: 'test'
+  ...
+# Subtest: a video host without a usable video stays a plain line
+ok 69 - a video host without a usable video stays a plain line
+  ---
+  duration_ms: 0.803163
+  type: 'test'
+  ...
+# Subtest: external images render as image blocks and round-trip
+ok 70 - external images render as image blocks and round-trip
+  ---
+  duration_ms: 0.858668
+  type: 'test'
+  ...
+# Subtest: stellis images, other schemes and mid-line images are untouched
+ok 71 - stellis images, other schemes and mid-line images are untouched
+  ---
+  duration_ms: 1.182817
+  type: 'test'
+  ...
+# Subtest: blocks sit between other content and survive JSON for copy and paste
+ok 72 - blocks sit between other content and survive JSON for copy and paste
+  ---
+  duration_ms: 6.24092
+  type: 'test'
+  ...
+# Subtest: a link card inside a callout keeps its place
+ok 73 - a link card inside a callout keeps its place
+  ---
+  duration_ms: 0.791867
+  type: 'test'
+  ...
+# Subtest: image and paste helpers
+ok 74 - image and paste helpers
+  ---
+  duration_ms: 0.342917
+  type: 'test'
+  ...
+# (node:4123833) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: plain text that looks like a block keeps its backslash on export
+ok 75 - plain text that looks like a block keeps its backslash on export
+  ---
+  duration_ms: 195.588714
+  type: 'test'
+  ...
+# Subtest: the same text inside a list item or a quote is kept too
+ok 76 - the same text inside a list item or a quote is kept too
+  ---
+  duration_ms: 4.347629
+  type: 'test'
+  ...
+# Subtest: real blocks and ordinary text are written without extra backslashes
+ok 77 - real blocks and ordinary text are written without extra backslashes
+  ---
+  duration_ms: 4.103033
+  type: 'test'
+  ...
+# Subtest: text after a line break in a paragraph is escaped at its line start
+ok 78 - text after a line break in a paragraph is escaped at its line start
+  ---
+  duration_ms: 0.352517
+  type: 'test'
+  ...
+# Subtest: bold text that starts with a marker needs no escape
+ok 79 - bold text that starts with a marker needs no escape
+  ---
+  duration_ms: 0.425718
+  type: 'test'
+  ...
+# Subtest: Summary text survives an edit and a save as the same bullets
+ok 80 - Summary text survives an edit and a save as the same bullets
+  ---
+  duration_ms: 8.501896
+  type: 'test'
+  ...
+# Subtest: tests/test_notes_merge.cjs
+ok 10 - tests/test_notes_merge.cjs
+  ---
+  duration_ms: 27.464401
+  type: 'test'
+  ...
+# (node:4123847) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: the full fixture exports unchanged
+ok 82 - the full fixture exports unchanged
+  ---
+  duration_ms: 234.586878
+  type: 'test'
+  ...
+# Subtest: headings round-trip
+ok 83 - headings round-trip
+  ---
+  duration_ms: 0.812459
+  type: 'test'
+  ...
+# Subtest: task lists round-trip
+ok 84 - task lists round-trip
+  ---
+  duration_ms: 0.664841
+  type: 'test'
+  ...
+# Subtest: quote round-trip
+ok 85 - quote round-trip
+  ---
+  duration_ms: 0.439974
+  type: 'test'
+  ...
+# Subtest: code fence round-trip
+ok 86 - code fence round-trip
+  ---
+  duration_ms: 0.493847
+  type: 'test'
+  ...
+# Subtest: divider round-trip
+ok 87 - divider round-trip
+  ---
+  duration_ms: 0.417382
+  type: 'test'
+  ...
+# Subtest: strikethrough round-trip
+ok 88 - strikethrough round-trip
+  ---
+  duration_ms: 0.410438
+  type: 'test'
+  ...
+# Subtest: inline code round-trip
+ok 89 - inline code round-trip
+  ---
+  duration_ms: 0.511127
+  type: 'test'
+  ...
+# Subtest: links round-trip
+ok 90 - links round-trip
+  ---
+  duration_ms: 1.099887
+  type: 'test'
+  ...
+# Subtest: images round-trip
+ok 91 - images round-trip
+  ---
+  duration_ms: 0.605592
+  type: 'test'
+  ...
+# Subtest: pipe table round-trip
+ok 92 - pipe table round-trip
+  ---
+  duration_ms: 0.895804
+  type: 'test'
+  ...
+# Subtest: task IDs and the canceled marker round-trip
+ok 93 - task IDs and the canceled marker round-trip
+  ---
+  duration_ms: 0.69873
+  type: 'test'
+  ...
+# Subtest: task IDs and the canceled marker are not visible text
+ok 94 - task IDs and the canceled marker are not visible text
+  ---
+  duration_ms: 0.587305
+  type: 'test'
+  ...
+# Subtest: a canceled item is unchecked and keeps its status after an edit to a sibling
+ok 95 - a canceled item is unchecked and keeps its status after an edit to a sibling
+  ---
+  duration_ms: 0.673945
+  type: 'test'
+  ...
+# Subtest: Enter does not copy the ID or the canceled status to the new item
+ok 96 - Enter does not copy the ID or the canceled status to the new item
+  ---
+  duration_ms: 0.650154
+  type: 'test'
+  ...
+# Subtest: tasks nested in a bullet list keep their IDs
+ok 97 - tasks nested in a bullet list keep their IDs
+  ---
+  duration_ms: 3.430848
+  type: 'test'
+  ...
+# (node:4123852) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: slashMatch opens at the start of a line or after a space only
+ok 98 - slashMatch opens at the start of a line or after a space only
+  ---
+  duration_ms: 211.220518
+  type: 'test'
+  ...
+# Subtest: the menu lists every block in the order of the ticket
+ok 99 - the menu lists every block in the order of the ticket
+  ---
+  duration_ms: 1.665511
+  type: 'test'
+  ...
+# Subtest: typing filters the menu
+ok 100 - typing filters the menu
+  ---
+  duration_ms: 1.085967
+  type: 'test'
+  ...
+# Subtest: arrow keys step through the rows and wrap
+ok 101 - arrow keys step through the rows and wrap
+  ---
+  duration_ms: 1.208033
+  type: 'test'
+  ...
+# Subtest: the menu sits below the caret and flips above near the bottom edge
+ok 102 - the menu sits below the caret and flips above near the bottom edge
+  ---
+  duration_ms: 0.964414
+  type: 'test'
+  ...
+# Subtest: h1 turns the line into its block
+ok 103 - h1 turns the line into its block
+  ---
+  duration_ms: 2.028461
+  type: 'test'
+  ...
+# Subtest: h2 turns the line into its block
+ok 104 - h2 turns the line into its block
+  ---
+  duration_ms: 1.041855
+  type: 'test'
+  ...
+# Subtest: h3 turns the line into its block
+ok 105 - h3 turns the line into its block
+  ---
+  duration_ms: 0.762123
+  type: 'test'
+  ...
+# Subtest: bullets turns the line into its block
+ok 106 - bullets turns the line into its block
+  ---
+  duration_ms: 2.110286
+  type: 'test'
+  ...
+# Subtest: numbers turns the line into its block
+ok 107 - numbers turns the line into its block
+  ---
+  duration_ms: 1.166737
+  type: 'test'
+  ...
+# Subtest: quote turns the line into its block
+ok 108 - quote turns the line into its block
+  ---
+  duration_ms: 3.952216
+  type: 'test'
+  ...
+# Subtest: text turns a heading back into a paragraph
+ok 109 - text turns a heading back into a paragraph
+  ---
+  duration_ms: 0.543944
+  type: 'test'
+  ...
+# Subtest: to-do makes a check item and drops the slash
+ok 110 - to-do makes a check item and drops the slash
+  ---
+  duration_ms: 0.570136
+  type: 'test'
+  ...
+# Subtest: code makes a code block
+ok 111 - code makes a code block
+  ---
+  duration_ms: 0.769403
+  type: 'test'
+  ...
+# Subtest: divider replaces an empty line and leaves a line to type on
+ok 112 - divider replaces an empty line and leaves a line to type on
+  ---
+  duration_ms: 1.256385
+  type: 'test'
+  ...
+# Subtest: callout wraps the line as a note
+ok 113 - callout wraps the line as a note
+  ---
+  duration_ms: 0.674393
+  type: 'test'
+  ...
+# Subtest: toggle inserts a details block
+ok 114 - toggle inserts a details block
+  ---
+  duration_ms: 0.523272
+  type: 'test'
+  ...
+# Subtest: table inserts a two by two table
+ok 115 - table inserts a two by two table
+  ---
+  duration_ms: 0.752506
+  type: 'test'
+  ...
+# Subtest: 2 columns inserts two columns
+ok 116 - 2 columns inserts two columns
+  ---
+  duration_ms: 0.576745
+  type: 'test'
+  ...
+# Subtest: link card and video use the address they were given
+ok 117 - link card and video use the address they were given
+  ---
+  duration_ms: 0.877868
+  type: 'test'
+  ...
+# Subtest: image removes the slash text and leaves the caret for the picker
+ok 118 - image removes the slash text and leaves the caret for the picker
+  ---
+  duration_ms: 0.309044
+  type: 'test'
+  ...
+# Subtest: text before the slash stays, and a slash after a space is removed alone
+ok 119 - text before the slash stays, and a slash after a space is removed alone
+  ---
+  duration_ms: 0.546551
+  type: 'test'
+  ...
+# Subtest: plain markdown: task id and bookmark and columns
+ok 120 - plain markdown: task id and bookmark and columns
+  ---
+  duration_ms: 1.711064
+  type: 'test'
+  ...
+# Subtest: plain markdown: fenced code is untouched
+ok 121 - plain markdown: fenced code is untouched
+  ---
+  duration_ms: 0.2957
+  type: 'test'
+  ...
+# Subtest: plain markdown: id needs exactly six characters
+ok 122 - plain markdown: id needs exactly six characters
+  ---
+  duration_ms: 0.138962
+  type: 'test'
+  ...
+# Snapshot format checks passed
+# Subtest: tests/test_snapshot_format.cjs
+ok 14 - tests/test_snapshot_format.cjs
+  ---
+  duration_ms: 18.275985
+  type: 'test'
+  ...
+# Subtest: agentName names the Transcript Agent and titles other authors
+ok 124 - agentName names the Transcript Agent and titles other authors
+  ---
+  duration_ms: 0.503527
+  type: 'test'
+  ...
+# Subtest: todoTextFor reads the line that carries the ID
+ok 125 - todoTextFor reads the line that carries the ID
+  ---
+  duration_ms: 0.153155
+  type: 'test'
+  ...
+# Subtest: describe puts the change in words
+ok 126 - describe puts the change in words
+  ---
+  duration_ms: 0.347301
+  type: 'test'
+  ...
+# Subtest: matchLine prefers an exact line and refuses an ambiguous partial
+ok 127 - matchLine prefers an exact line and refuses an ambiguous partial
+  ---
+  duration_ms: 0.123249
+  type: 'test'
+  ...
+# Subtest: evidenceLabel falls back when the segment does not resolve
+ok 128 - evidenceLabel falls back when the segment does not resolve
+  ---
+  duration_ms: 0.072801
+  type: 'test'
+  ...
+# (node:4123885) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-editor.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: every character that Markdown reads as syntax gets a backslash
+ok 129 - every character that Markdown reads as syntax gets a backslash
+  ---
+  duration_ms: 0.474215
+  type: 'test'
+  ...
+# Subtest: line breaks fold into one line and plain text is untouched
+ok 130 - line breaks fold into one line and plain text is untouched
+  ---
+  duration_ms: 0.093377
+  type: 'test'
+  ...
+# Subtest: a leading list marker is neutralized
+ok 131 - a leading list marker is neutralized
+  ---
+  duration_ms: 0.052432
+  type: 'test'
+  ...
+# Subtest: the summary has a section per field, one bullet per item
+ok 132 - the summary has a section per field, one bullet per item
+  ---
+  duration_ms: 0.095954
+  type: 'test'
+  ...
+# Subtest: hostile item text loads as one plain bullet each, with no other block
+ok 133 - hostile item text loads as one plain bullet each, with no other block
+  ---
+  duration_ms: 207.735525
+  type: 'test'
+  ...
+# (node:4123896) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/src/stellis/static/notes-tasks.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /home/springbuilt/Repos/stellis-dev/.agents/worktrees/onboarding-task-policy/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: a date and time are found in a task line
+ok 134 - a date and time are found in a task line
+  ---
+  duration_ms: 152.391004
+  type: 'test'
+  ...
+# Subtest: a date without a time has no time
+ok 135 - a date without a time has no time
+  ---
+  duration_ms: 67.243696
+  type: 'test'
+  ...
+# Subtest: a weekday resolves forward from the typing day
+ok 136 - a weekday resolves forward from the typing day
+  ---
+  duration_ms: 0.389542
+  type: 'test'
+  ...
+# Subtest: text with no date gives nothing
+ok 137 - text with no date gives nothing
+  ---
+  duration_ms: 2.132142
+  type: 'test'
+  ...
+# Subtest: all scope groups by notebook and keeps the source
+ok 138 - all scope groups by notebook and keeps the source
+  ---
+  duration_ms: 0.679482
+  type: 'test'
+  ...
+# Subtest: a notebook scope stays flat
+ok 139 - a notebook scope stays flat
+  ---
+  duration_ms: 0.074465
+  type: 'test'
+  ...
+# Subtest: appendTodoMarkdown adds one open line
+ok 140 - appendTodoMarkdown adds one open line
+  ---
+  duration_ms: 0.152274
+  type: 'test'
+  ...
+# Subtest: rowDate shows the date that matches the status
+ok 141 - rowDate shows the date that matches the status
+  ---
+  duration_ms: 0.074945
+  type: 'test'
+  ...
+# Subtest: removes fillers and repairs the seams they leave
+ok 142 - removes fillers and repairs the seams they leave
+  ---
+  duration_ms: 2.15851
+  type: 'test'
+  ...
+# Subtest: a filler before a dash goes, hyphenated words stay
+ok 143 - a filler before a dash goes, hyphenated words stay
+  ---
+  duration_ms: 0.206371
+  type: 'test'
+  ...
+# Subtest: a word said three or more times is shown once, twice is kept
+ok 144 - a word said three or more times is shown once, twice is kept
+  ---
+  duration_ms: 0.561896
+  type: 'test'
+  ...
+# Subtest: words that only look like fillers stay
+ok 145 - words that only look like fillers stay
+  ---
+  duration_ms: 0.094113
+  type: 'test'
+  ...
+# Subtest: text without fillers is untouched
+ok 146 - text without fillers is untouched
+  ---
+  duration_ms: 0.35058
+  type: 'test'
+  ...
+# Subtest: a passage that is only filler stays as spoken
+ok 147 - a passage that is only filler stays as spoken
+  ---
+  duration_ms: 0.070961
+  type: 'test'
+  ...
+# Subtest: ranges point into the original text, so offsets stay valid
+ok 148 - ranges point into the original text, so offsets stay valid
+  ---
+  duration_ms: 0.14453
+  type: 'test'
+  ...
+1..148
+# tests 148
+# suites 0
+# pass 148
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 327.737211

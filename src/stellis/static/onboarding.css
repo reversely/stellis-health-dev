@@ -85,3 +85,8 @@
 .setup-source-book{padding:18px 0;border-top:1px solid var(--line-soft)}
 .setup-source-book>.setup-hint{margin:0 0 12px}
 .setup-source-book:last-child{padding-bottom:0}
+
+.setup-task-choice {grid-column:1 / -1;display:flex;align-items:center;gap:12px;min-height:44px;margin-top:16px;cursor:pointer}
+.setup-task-choice input {width:24px;height:24px;flex:none;accent-color:var(--ink)}
+.setup-task-choice span {display:grid;gap:4px;font-size:14px}
+.setup-task-choice small {font-size:12px;color:var(--muted)}

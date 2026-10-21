@@ -380,3 +380,7 @@ For notebook requests with multiple enabled deployments, agent_coordination plan
 ### Follow-up task proposals
 
 Final draft responses may carry one source-indexed, exact-quoted follow-up candidate. agent_followups stores it under the artifact and publishes a canonical pending suggestion atomically with successful job completion when notebook task suggestions are enabled. Existing suggestion editing, acceptance and dismissal control the task write into the notebook's To-dos note; deterministic IDs prevent repeated completion from duplicating proposals. Chat projects the suggestion beside its draft, and notebook Activity renders the same review controls. See [ADR 0077](decisions/0077-source-backed-agent-followups.md).
+
+### Task policy in onboarding review
+
+Setup persists explicit task_choices separately from displayed notebook/collection defaults. Starter and source-proposed notebook cards share the Suggest tasks control. Completion applies only explicit choices; untouched notebooks retain their existing/inherited setting, and reopening clears stale choices. Strict API booleans and preflight conflict checks protect additive setup. This enables proposals, not automatic task acceptance. See [ADR 0078](decisions/0078-onboarding-task-policy.md).

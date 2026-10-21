@@ -19,7 +19,7 @@ from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Reques
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
-from pydantic import BaseModel, Field
+from pydantic import StrictBool, BaseModel, Field
 
 from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, delegation, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, mail_style, mcp_server, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent, voice_call
 from stellis.gmail_api import GmailError
@@ -1097,6 +1097,7 @@ class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
     step: Literal["uses", "review"] = "review"
     agent_choices: dict[str, list[str]] | None = None
+    task_choices: dict[str, StrictBool] | None = None
 
 
 @api.get("/onboarding")
@@ -1109,7 +1110,7 @@ def onboarding_state(request: Request):
 def onboarding_choices(choices: OnboardingChoices, request: Request):
     from stellis import onboarding
     try:
-        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.agent_choices)
+        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.agent_choices, choices.task_choices)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

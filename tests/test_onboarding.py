@@ -77,3 +77,40 @@ class OnboardingTest(unittest.TestCase):
         account=self.account();before=onboarding.status(account)
         with self.assertRaises(ValueError):onboarding.choose(account,['learning'],'review',{'learning':['invented']})
         self.assertEqual(onboarding.status(account)['step'],before['step'])
+
+    def test_task_choices_survive_back_and_preserve_existing_policy(self):
+        account=self.account()
+        onboarding.choose(account,['projects','learning'],'review',task_choices={'projects':True,'learning':False})
+        onboarding.choose(account,['projects','learning'],'uses')
+        state=onboarding.choose(account,['projects','learning'],'review')
+        self.assertEqual(state['task_choices'],{'projects':True,'learning':False})
+        onboarding.complete(account)
+        books={b['name']:b for b in notebooks.list_notebooks()}
+        self.assertEqual(books['Projects']['todo_list'],'on')
+        self.assertEqual(books['Learning']['todo_list'],'off')
+        onboarding.reopen(account)
+        self.assertEqual(onboarding.status(account)['task_choices'],{})
+        self.assertTrue(onboarding.status(account)['task_defaults']['projects'])
+        onboarding.choose(account,['projects'],'review')
+        onboarding.complete(account)
+        self.assertEqual(next(b for b in notebooks.list_notebooks() if b['id']==books['Projects']['id'])['todo_list'],'on')
+        onboarding.reopen(account)
+        onboarding.choose(account,['projects'],'review',task_choices={'projects':False})
+        onboarding.complete(account)
+        self.assertEqual(next(b for b in notebooks.list_notebooks() if b['id']==books['Projects']['id'])['todo_list'],'off')
+
+    def test_invalid_task_choice_does_not_change_setup(self):
+        account=self.account()
+        with self.assertRaises(ValueError):
+            onboarding.choose(account,['projects'],'review',task_choices={'projects':'false'})
+        self.assertEqual(onboarding.status(account)['step'],'welcome')
+
+    def test_untouched_policy_keeps_collection_inheritance(self):
+        account=self.account()
+        group=collections.create('Work');collections.update(group['id'],todo_list='on')
+        state=onboarding.choose(account,['projects'],'review')
+        self.assertTrue(state['collection_task_defaults']['work'])
+        onboarding.complete(account)
+        book=notebooks.list_notebooks()[0]
+        self.assertEqual(book['todo_list'],'inherit')
+        self.assertTrue(onboarding.status(account)['task_defaults']['projects'])

@@ -25,7 +25,9 @@ class ProposalTest(unittest.TestCase):
             self.assertTrue(auth.needs_onboarding(account))
             onboarding_sources.select(account,'scan-1',[])
             self.assertEqual(onboarding_sources.status()['selected_group_ids'],[])
+            onboarding.choose(account,[],'review',task_choices={'group-1':True})
             onboarding.complete(account,'scan-1',['group-1']);book=notebooks.list_notebooks()[0]
+            self.assertEqual(book['todo_list'],'on')
             onboarding_sources.file_sources(book['id'],[source])
             self.assertEqual(len(pages.list_pages(book['id'])),1)
             self.assertIn('Source reference: note:1',pages.get(pages.list_pages(book['id'])[0]['id'])['markdown'])

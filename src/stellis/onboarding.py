@@ -39,7 +39,7 @@ def reopen(account_id):
     with _LOCK:
         state = _read()
         if not auth.needs_onboarding(account_id) and not state.get("editing"):
-            state.update(step="welcome", editing=True, uses=[], agent_choices={}, scan=None)
+            state.update(step="welcome", editing=True, uses=[], agent_choices={}, task_choices={}, scan=None)
             _save(state)
     return status(account_id)
 
@@ -51,14 +51,21 @@ def _require(account_id):
 
 def status(account_id):
     state = _read()
-    return {**state, "required":available(account_id), "catalog":USES,
+    defaults = {book['name'].lower():book['todo_enabled'] for book in notebooks.list_notebooks()}
+    inherited = {group['name'].lower():group['todo_list']=='on' for group in collections.list_collections()}
+    return {**state, "task_defaults":defaults, "collection_task_defaults":inherited, "required":available(account_id), "catalog":USES,
             "proposals":[item for item in USES if item["id"] in state["uses"]], "runtime":runtime_settings.status()}
 
 
-def choose(account_id, uses, step, agent_choices=None):
+def choose(account_id, uses, step, agent_choices=None, task_choices=None):
     _require(account_id)
     if any(item not in {entry["id"] for entry in USES} for item in uses):
         raise ValueError("Choose a listed use")
+    if task_choices is not None:
+        if not isinstance(task_choices, dict) or len(task_choices) > 32 or any(
+                not isinstance(key, str) or not 1 <= len(key) <= 100 or type(value) is not bool
+                for key, value in task_choices.items()):
+            raise ValueError("Choose whether each notebook suggests tasks")
     if agent_choices is not None:
         if not isinstance(agent_choices, dict) or len(agent_choices) > 32:
             raise ValueError("Choose agents for the proposed notebooks")
@@ -72,6 +79,8 @@ def choose(account_id, uses, step, agent_choices=None):
         state = _read(); state.update(uses=list(dict.fromkeys(uses)),step=step)
         if agent_choices is not None:
             state["agent_choices"] = {key:list(dict.fromkeys(values)) for key,values in agent_choices.items()}
+        if task_choices is not None:
+            state['task_choices'] = dict(task_choices)
         _save(state)
     return status(account_id)
 
@@ -105,6 +114,14 @@ def complete(account_id, proposal_id=None, group_ids=None):
         created = []
         chosen = [item for item in USES if item["id"] in state["uses"]]
         chosen += [{"id":g["id"],"notebook":g["name"],"collection":g["collection"],"agents":["steward", "writing"],"sources":g["sources"]} for g in imported]
+        selected_policies = {}
+        for item in chosen:
+            if item['id'] in state.get('task_choices', {}):
+                name = item['notebook'].casefold()
+                setting = state['task_choices'][item['id']]
+                if name in selected_policies and selected_policies[name] != setting:
+                    raise ValueError("Choose the same task setting for repeated notebook names")
+                selected_policies[name] = setting
         for item in chosen:
             collection = next((c for c in collections.list_collections() if c["name"].casefold()==item["collection"].casefold()),None)
             if collection is None: collection = collections.create(item["collection"])
@@ -112,6 +129,8 @@ def complete(account_id, proposal_id=None, group_ids=None):
             if book is None:
                 book = notebooks.create(item["notebook"])
                 collections.assign_notebook(book["id"],collection["id"])
+            if item['notebook'].casefold() in selected_policies:
+                notebooks.update(book['id'], todo_list='on' if selected_policies[item['notebook'].casefold()] else 'off')
             deployed = [agents.deploy(template, book["id"]) for template in state.get("agent_choices", {}).get(item["id"], item["agents"])]
             if item.get("sources"):
                 onboarding_sources.file_sources(book["id"],item["sources"])
