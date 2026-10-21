@@ -14,6 +14,7 @@ Stellis Health runs on Fly.io as one machine with one volume. The image starts t
 | `STELLIS_SECURE_COOKIES` | `1` | Marks the session cookie `Secure` |
 | `STELLIS_SHARED_PROVIDER_KEYS` | `1` | Gives every account the deployment's Nebius and Tavily keys |
 | `STELLIS_RUNTIME_PROFILE` | `direct` | Runs agent turns as Token Factory chat completions, with no NemoClaw sandbox |
+| `STELLIS_DAILY_TOKEN_LIMIT` | `200000` | Caps each account's Token Factory tokens per UTC day; the owner (account 1) has no cap. Over the cap, requests stop with "Today's AI allowance is used up and resets at midnight UTC" |
 
 Set these as Fly secrets, never in `fly.toml`:
 

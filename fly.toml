@@ -13,6 +13,7 @@ primary_region = 'yyz'
   STELLIS_SECURE_COOKIES = '1'
   STELLIS_SHARED_PROVIDER_KEYS = '1'
   STELLIS_RUNTIME_PROFILE = 'direct'
+  STELLIS_DAILY_TOKEN_LIMIT = '200000'
 
 # SQLite files, recordings and speech models. One volume means one machine.
 [mounts]

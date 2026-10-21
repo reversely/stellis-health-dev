@@ -505,6 +505,9 @@ def _request_impl(messages: list[dict[str, str]], max_tokens: int, metadata: dic
     provider = "Local inference" if runtime_profile.local_inference() else "Nebius"
     if not key:
         raise AIError("not_configured", "Nebius API key is unavailable")
+    from stellis import token_quota
+    if message := token_quota.exceeded():
+        raise AIError("rate_limited", message)
     schema = {"answer": ANSWER_SCHEMA, "clean": CLEAN_SCHEMA, "agent": AGENT_SCHEMA}.get(kind, SUMMARY_SCHEMA)
     body = {"model": runtime_profile.model_id(), "messages": messages,
             "response_format": {"type": "json_schema", "json_schema": {
@@ -536,6 +539,7 @@ def _request_impl(messages: list[dict[str, str]], max_tokens: int, metadata: dic
         data = response.json()
         runtime_trace.report(model=data.get("model"))
         usage = data.get("usage") or {}
+        token_quota.record(usage)
         for field in ("prompt_tokens", "completion_tokens", "total_tokens"):
             metadata["usage"][field] = metadata["usage"].get(field, 0) + int(usage.get(field) or 0)
         if data.get("id"):
