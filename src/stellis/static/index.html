@@ -156,7 +156,7 @@
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-abc"/></svg><h3 id="settings-vocabulary-title">Custom vocabulary</h3></div>
           <div class="settings-row"><p id="settings-vocabulary-count"></p><a class="settings-button" href="/vocabulary">Open custom vocabulary</a></div>
         </section>
-        <section class="settings-section" aria-labelledby="settings-ai-title">
+        <section class="settings-section" data-operator-only hidden aria-labelledby="settings-ai-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg><h3 id="settings-ai-title">AI features</h3></div>
           <p id="runtime-profile-status" role="status"></p>
           <p id="runtime-profile-note" class="settings-note">Loading AI configuration…</p>
@@ -167,7 +167,7 @@
             <p id="nebius-key-status" role="status" aria-live="polite"></p>
           </form>
         </section>
-        <section class="settings-section" aria-labelledby="settings-routing-title">
+        <section class="settings-section" data-operator-only hidden aria-labelledby="settings-routing-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><h3 id="settings-routing-title">Models and routing</h3></div>
           <div id="inference-routes" class="inference-routes"></div>
           <div class="settings-actions"><button id="inference-check" type="button">Check connections</button><p id="inference-check-status" role="status" aria-live="polite"></p></div>
@@ -179,7 +179,7 @@
             <div class="settings-actions"><button id="local-model-apply" type="button" disabled>Use model</button><p id="local-model-status" role="status" aria-live="polite"></p></div>
           </div>
         </section>
-        <section class="settings-section" aria-labelledby="settings-traces-title">
+        <section class="settings-section" data-operator-only hidden aria-labelledby="settings-traces-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-notebook"/></svg><h3 id="settings-traces-title">Recent requests</h3></div>
           <p class="settings-note">Execution steps and token counts when reported. Prompts and response text are not saved here.</p>
           <div class="settings-actions"><button id="inference-refresh" type="button">Refresh</button><button id="inference-clear" type="button">Clear history</button><p id="inference-trace-status" role="status" aria-live="polite"></p></div>
@@ -198,7 +198,7 @@
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-plug-connected"/></svg><h3 id="settings-integrations-title">Integrations</h3></div>
           <p class="settings-note">Stellis reads your calendar events</p><div id="settings-calendars" class="integration-list"></div><p id="settings-calendar-status" role="status" aria-live="polite"></p>
           <p class="settings-note">Research agents send their search queries to Tavily</p>
-          <form id="tavily-key-form" class="settings-form">
+          <form id="tavily-key-form" class="settings-form" data-operator-only hidden>
             <label for="tavily-key-input">Tavily API key</label>
             <input id="tavily-key-input" type="password" autocomplete="off" spellcheck="false" maxlength="512" placeholder="Paste your key" />
             <div class="settings-actions"><button id="tavily-key-save" type="submit">Save key</button><button id="tavily-key-remove" type="button" hidden>Remove key</button></div>

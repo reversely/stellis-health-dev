@@ -65,6 +65,30 @@ class ManagedOnboardingTest(unittest.TestCase):
                     self.assertNotIn("local_setup", status)
 
 
+class OperatorSettingsTest(unittest.TestCase):
+    def test_only_the_owner_changes_ai_settings_when_keys_are_shared(self):
+        writes = (("PUT", "/api/v1/settings/nebius-key", {"key": "nebius-new"}),
+                  ("DELETE", "/api/v1/settings/nebius-key", None),
+                  ("PUT", "/api/v1/settings/tavily-key", {"key": "tvly-new"}),
+                  ("DELETE", "/api/v1/settings/tavily-key", None),
+                  ("PUT", "/api/v1/settings/inference/routes", {"routes": {"transcript": "other/model"}}),
+                  ("PUT", "/api/v1/settings/inference/model", {"model": "other/model"}),
+                  ("POST", "/api/v1/settings/inference/check", None))
+        with tempfile.TemporaryDirectory() as directory:
+            base = {"STELLIS_DATA_DIR": directory, "STELLIS_AUTH_MODE": "off", "STELLIS_SHARED_PROVIDER_KEYS": "1"}
+            with patch.dict(os.environ, {**base, "STELLIS_ACCOUNT_ID": "2"}), TestClient(app) as client:
+                self.assertFalse(client.get("/api/v1/settings/runtime-profile").json()["operator"])
+                for method, path, body in writes:
+                    with self.subTest(path=path, method=method):
+                        response = client.request(method, path, json=body)
+                        self.assertEqual(response.status_code, 403)
+                        self.assertNotIn("nebius-new", response.text)
+            for env in ({**base, "STELLIS_ACCOUNT_ID": "1"}, {**base, "STELLIS_ACCOUNT_ID": "2", "STELLIS_SHARED_PROVIDER_KEYS": ""}):
+                with self.subTest(env=env), patch.dict(os.environ, env), TestClient(app) as client:
+                    self.assertTrue(client.get("/api/v1/settings/runtime-profile").json()["operator"])
+                    self.assertNotEqual(client.put("/api/v1/settings/tavily-key", json={"key": "tvly-new"}).status_code, 403)
+
+
 class SharedProviderKeyTest(unittest.TestCase):
     def test_other_accounts_use_the_deployment_keys_only_when_shared(self):
         base = {"STELLIS_ACCOUNT_ID": "2", "NEBIUS_API_KEY": "nebius-shared", "TAVILY_API_KEY": "tavily-shared"}

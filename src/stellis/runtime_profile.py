@@ -28,6 +28,11 @@ def shared_provider_keys() -> bool:
     return os.environ.get("STELLIS_SHARED_PROVIDER_KEYS") == "1"
 
 
+def operator() -> bool:
+    """This account may change provider keys and model routes: every account unless keys are shared, then only the owner."""
+    return not shared_provider_keys() or os.environ.get("STELLIS_ACCOUNT_ID", "1") == "1"
+
+
 def local_inference() -> bool:
     # Unset preserves existing installations until an explicit profile is selected.
     selected()
