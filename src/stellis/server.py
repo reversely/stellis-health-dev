@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, source_search, storage, suggestions, tavily, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -1744,6 +1744,40 @@ def update_document(document_id: str, request: DocumentUpdate):
 @api.delete("/documents/{document_id}")
 def delete_document(document_id: str) -> dict[str, bool]:
     _agent_result(lambda: documents.delete(document_id))
+    return {"deleted": True}
+
+
+@api.get("/documents/{document_id}/facts")
+def document_facts(document_id: str):
+    _agent_result(lambda: documents.get(document_id))
+    return {"facts": health_facts.list_for(document_id)}
+
+
+@api.post("/documents/{document_id}/facts/extract")
+async def extract_document_facts(document_id: str):
+    try:
+        return await health_facts.extract(document_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except health_facts.ExtractionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.get("/facts")
+def accepted_facts():
+    return {"facts": health_facts.accepted()}
+
+
+@api.post("/facts/{fact_id}/accept")
+def accept_fact(fact_id: str):
+    return _agent_result(lambda: health_facts.accept(fact_id))
+
+
+@api.delete("/facts/{fact_id}")
+def reject_fact(fact_id: str) -> dict[str, bool]:
+    _agent_result(lambda: health_facts.reject(fact_id))
     return {"deleted": True}
 
 

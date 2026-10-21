@@ -4610,7 +4610,7 @@ async function showDocument(id) {
   const status = document.querySelector('#document-status');
   status.textContent = '';
   const page = Number(new URLSearchParams(location.search).get('page')) || null;
-  window.StellisDocumentView.render(
+  const slot = window.StellisDocumentView.render(
       document.querySelector('#document-body'), record, page,
       async (item, button) => {
         if (!window.confirm(`Delete “${item.title}” and its file?`)) {
@@ -4629,6 +4629,7 @@ async function showDocument(id) {
         }
       });
   document.querySelector('#document-view').hidden = false;
+  await window.StellisHealthFacts.mount(slot, record);
 }
 
 async function showNote(id) {
