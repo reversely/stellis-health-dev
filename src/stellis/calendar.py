@@ -116,12 +116,26 @@ def connections() -> list[dict[str, object]]:
             for provider in PROVIDERS]
 
 
-def redirect_uri(provider: str, port: int) -> str:
+def public_origin() -> str | None:
+    """Return the hosted app's HTTPS origin, which web OAuth clients redirect to, when one is set."""
+    value = os.environ.get("STELLIS_PUBLIC_ORIGIN", "").strip().rstrip("/")
+    if not value:
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.path or parsed.query or parsed.fragment:
+        raise CalendarError("STELLIS_PUBLIC_ORIGIN must be an https origin such as https://example.com")
+    return value
+
+
+def redirect_uri(provider: str, port: int | None) -> str:
+    origin = public_origin()
+    if origin:
+        return f"{origin}/api/v1/calendar/{provider}/callback"
     host = "127.0.0.1" if provider == "google" else "localhost"
     return f"http://{host}:{port}/api/v1/calendar/{provider}/callback"
 
 
-def authorize(provider: str, port: int, return_origin: str) -> str:
+def authorize(provider: str, port: int | None, return_origin: str) -> str:
     configured_id = client_id(provider)
     if not configured_id:
         raise CalendarError(f"{provider.title()} Calendar is not configured")

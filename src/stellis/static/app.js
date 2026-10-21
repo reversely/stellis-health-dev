@@ -4662,11 +4662,11 @@ async function loadSettingsCalendars() {
     const name = document.createElement('strong');
     name.textContent = window.StellisCalendar.labels[item.provider];
     const state = document.createElement('small');
-    state.textContent = item.connected ? 'Connected' : item.configured ? 'Not connected' :
-      'Needs an OAuth client on this device';
+    state.textContent = item.connected ? 'Connected' : item.connectable ? 'Not connected' :
+      item.configured ? 'Not available on the web app yet' : 'Needs an OAuth client';
     text.append(name, state);
     row.append(icon('calendar'), text);
-    if (item.connected || item.configured) {
+    if (item.connected || item.connectable) {
       const action = document.createElement('button'); action.type = 'button';
       action.textContent = item.connected ? 'Disconnect' : 'Connect';
       action.addEventListener('click', async () => {

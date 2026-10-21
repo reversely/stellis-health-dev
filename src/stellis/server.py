@@ -703,18 +703,33 @@ async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+def _calendar_origin(request: Request) -> str | None:
+    """Pick the origin OAuth returns to: the configured public origin, or this loopback address."""
+    origin = calendar.public_origin()
+    if origin:
+        return origin
+    if request.url.hostname in {"127.0.0.1", "localhost"} and request.url.port is not None:
+        return str(request.base_url).rstrip("/")
+    return None
+
+
 @api.get("/calendar/connections")
-def calendar_connections() -> list[dict[str, object]]:
-    return calendar.connections()
+def calendar_connections(request: Request) -> list[dict[str, object]]:
+    try:
+        reachable = _calendar_origin(request) is not None
+    except calendar.CalendarError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return [{**row, "connectable": row["configured"] and reachable} for row in calendar.connections()]
 
 
 @api.get("/calendar/{provider}/authorize")
 def calendar_authorize(provider: str, request: Request,
                        return_to: Literal["/", "/settings", "/onboarding"] = "/") -> dict[str, str]:
-    if request.url.hostname not in {"127.0.0.1", "localhost"} or request.url.port is None:
-        raise HTTPException(status_code=400, detail="Open Stellis on its local address to connect a calendar")
     try:
-        return {"url": calendar.authorize(provider, request.url.port, str(request.base_url).rstrip("/") + return_to)}
+        origin = _calendar_origin(request)
+        if origin is None:
+            raise calendar.CalendarError("Calendar connection is not available on the web app yet")
+        return {"url": calendar.authorize(provider, request.url.port, origin + return_to)}
     except calendar.CalendarError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

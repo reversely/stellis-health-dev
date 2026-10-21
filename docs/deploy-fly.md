@@ -22,7 +22,7 @@ Set these as Fly secrets, never in `fly.toml`:
 | `NEBIUS_API_KEY` | Summaries, chat and agents |
 | `STELLIS_INVITE_CODE` | Optional. When set, sign-up requires this code; unset, anyone can sign up |
 | `TAVILY_API_KEY` | Web research |
-| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google Calendar; hosted redirects need ticket H-07 first |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google Calendar, from a web OAuth client (see below) |
 
 ```sh
 fly secrets list -a stellis-health
@@ -39,6 +39,22 @@ fly scale count 1 -a stellis-health
 ```
 
 Then open `https://stellis-health.fly.dev/api/health`. It returns `{"status":"ok",...}` when the app is up. The first start downloads about 500 MB of speech models to `/data/models`; transcription waits until the download finishes.
+
+## Google Calendar
+
+Calendar connection on the hosted app needs a Google OAuth client of type **Web application** and the app's public origin. Until both exist, Settings and onboarding show "Calendar connection is not available on the web app yet" instead of a Connect button.
+
+1. In Google Cloud Console, open APIs & Services, then Credentials, and create an OAuth client ID of type Web application.
+2. Add the authorized redirect URI `https://stellis-health.fly.dev/api/v1/calendar/google/callback`.
+3. Enable the Google Calendar API for the project.
+4. Set the client and the origin:
+
+```sh
+fly secrets set GOOGLE_OAUTH_CLIENT_ID=... GOOGLE_OAUTH_CLIENT_SECRET=... -a stellis-health
+fly secrets set STELLIS_PUBLIC_ORIGIN=https://stellis-health.fly.dev -a stellis-health
+```
+
+When the app moves to its own domain (ticket H-06), change both the redirect URI and `STELLIS_PUBLIC_ORIGIN` to the new origin.
 
 ## Backups
 

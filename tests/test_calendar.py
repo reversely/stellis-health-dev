@@ -50,6 +50,31 @@ class CalendarTest(unittest.IsolatedAsyncioTestCase):
         with TestClient(app, base_url="http://example.com:8765") as client:
             self.assertEqual(client.get("/api/v1/calendar/google/authorize").status_code, 400)
 
+    def test_hosted_app_without_public_origin_reports_calendar_unavailable(self):
+        with TestClient(app, base_url="https://health.example") as client:
+            rows = client.get("/api/v1/calendar/connections").json()
+            self.assertEqual([row["connectable"] for row in rows], [False, False])
+            response = client.get("/api/v1/calendar/google/authorize?return_to=/onboarding")
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()["detail"], "Calendar connection is not available on the web app yet")
+        with TestClient(app, base_url="http://127.0.0.1:8765") as client:
+            self.assertTrue(all(row["connectable"] for row in client.get("/api/v1/calendar/connections").json()))
+
+    def test_public_origin_redirects_to_the_hosted_callback(self):
+        with patch.dict(os.environ, {"STELLIS_PUBLIC_ORIGIN": "https://health.example/"}), \
+                TestClient(app, base_url="https://health.example") as client:
+            self.assertTrue(client.get("/api/v1/calendar/connections").json()[0]["connectable"])
+            url = client.get("/api/v1/calendar/google/authorize?return_to=/onboarding").json()["url"]
+            query = parse_qs(urlparse(url).query)
+            self.assertEqual(query["redirect_uri"], ["https://health.example/api/v1/calendar/google/callback"])
+            _, uri, return_origin = calendar.consume_state("google", query["state"][0])
+            self.assertEqual((uri, return_origin), ("https://health.example/api/v1/calendar/google/callback",
+                                                    "https://health.example/onboarding"))
+        for invalid in ("http://health.example", "https://health.example/app", "health.example"):
+            with self.subTest(origin=invalid), patch.dict(os.environ, {"STELLIS_PUBLIC_ORIGIN": invalid}), \
+                    self.assertRaises(calendar.CalendarError):
+                calendar.public_origin()
+
     async def test_google_disconnect_revokes_shared_grant(self):
         calendar._save("google", {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600})
         original = httpx.AsyncClient
