@@ -35,17 +35,20 @@
     function renderFeed(){if(!current)return;for(const button of filters.children)button.setAttribute('aria-pressed',String(button.dataset.filter===filter));const items=current.items.filter(item=>filter==='all'||item.state===filter);feed.replaceChildren();
       if(!items.length){feed.append(el('p',current.items.length?'No activity with this status.':'Ask an agent or add sources to start working in this notebook.','notebook-work-empty'));return;}
       for(const item of items){const card=el('article',null,'notebook-activity');card.dataset.activityId=item.id;const head=el('div',null,'notebook-activity-head');head.append(window.StellisAgentAvatar.avatarElement(document,{seed:item.agent_id||item.author,size:28}),el('strong',item.author),el('span',item.detail==='Stopped or interrupted'?'Stopped':item.detail==='Request failed'?'Failed':labels[item.state]),el('time',new Date(item.created_at).toLocaleString()));card.append(head);
-        if(item.artifact){card.append(window.StellisAgentChat.artifactCard(item.artifact,()=>refresh()));}
-        else {card.append(['job','delegation'].includes(item.kind)?window.StellisAgentChat.messageBody(item.text):el('p',item.text));if(item.detail)card.append(el('p',item.detail,'notebook-work-detail'));}
+        if(item.artifact){card.append(window.StellisAgentChat.artifactCard(item.artifact,()=>refresh(),false));}
+        else if(item.kind!=='suggestion'||item.suggestion.operation!=='add_todo'){card.append(['job','delegation'].includes(item.kind)?window.StellisAgentChat.messageBody(item.text):el('p',item.text));if(item.detail)card.append(el('p',item.detail,'notebook-work-detail'));}
         const actions=el('div',null,'notebook-work-actions');
         if(item.kind==='suggestion'){
-          for(const evidence of item.suggestion.evidence||[])card.append(el('blockquote',evidence.quote));
-          action(actions,item.suggestion.operation==='add_todo'?'Add task':'Update task',async()=>{await api('/suggestions/accept','POST',{ids:[item.id]});status.textContent='Task updated';});
-          action(actions,'Dismiss',async()=>{await api('/suggestions/reject','POST',{ids:[item.id]});status.textContent='Suggestion dismissed';});
+          if(item.suggestion.operation==='add_todo')card.append(window.StellisAgentChat.suggestionCard(item.suggestion,async()=>{await refresh();await onChange?.();}));
+          else {
+            for(const evidence of item.suggestion.evidence||[])card.append(el('blockquote',evidence.quote));
+            action(actions,'Update task',()=>api('/suggestions/accept','POST',{ids:[item.id]}));
+            action(actions,'Dismiss',()=>api('/suggestions/reject','POST',{ids:[item.id]}));
+          }
         }
         if(item.kind==='job'&&item.state==='working')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/jobs/'+item.id+'/stop','POST'));
         if(item.kind==='delegation'&&item.state==='working')action(actions,'Stop',()=>api('/agents/'+item.agent_id+'/delegations/'+item.id,'DELETE'));
-        actions.append(link(item.kind==='suggestion'?'Open source':'Open thread',item.target));card.append(actions);feed.append(card);
+        actions.append(link(item.kind==='suggestion'?(item.suggestion.source_target?'Open task note':'Open source'):'Open thread',item.target));card.append(actions);feed.append(card);
       }
     }
     async function refresh(){if(stopped)return;try{const data=await api('/notebooks/'+book.id+'/activity');if(stopped)return;current=data;const next=JSON.stringify(data.items);if(next!==signature){signature=next;renderFeed();}}catch(error){if(!stopped)status.textContent=error.message;}}

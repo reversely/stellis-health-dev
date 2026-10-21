@@ -1,5 +1,6 @@
 """Notebook instructions and activity derived from persisted work, never sample events."""
 from __future__ import annotations
+import json
 from stellis import agents, storage, suggestions, agent_artifacts
 from stellis.todos import markdown_inline_text
 
@@ -27,7 +28,13 @@ def activity(notebook_id):
     policy=instructions(notebook_id)
     team=[agent for agent in agents.list_agents() if any(book['notebook_id']==notebook_id for book in agent['notebooks'])]
     items=[]
+    with storage.connect() as conn:
+        followup_sources = {row['suggestion_id']:json.loads(row['candidate_json']) for row in conn.execute(
+            'SELECT f.suggestion_id,f.candidate_json FROM agent_followups f JOIN agent_artifacts d ON d.id=f.artifact_id WHERE d.notebook_id=? AND f.suggestion_id IS NOT NULL', (notebook_id,))}
     for suggestion in suggestions.list_pending(notebook_id=notebook_id):
+        if suggestion['id'] in followup_sources:
+            source = followup_sources[suggestion['id']]
+            suggestion.update(source_target=source['source_target'],source_title=source['source_title'])
         title=suggestion['values'].get('text') or 'Change task status to '+suggestion['values'].get('status','')
         items.append({'kind':'suggestion','id':suggestion['id'],'state':'needs_you','author':suggestion['author'],'text':title,'created_at':suggestion['created_at'],'suggestion':suggestion,'target':('/conversation/' if suggestion['target_kind']=='conversation' else '/page/')+suggestion['target_id']})
     with storage.connect() as conn:
@@ -35,7 +42,7 @@ def activity(notebook_id):
         artifact_jobs={row['job_id'] for row in drafts if row['job_id']}
         for row in drafts:
             state='needs_you' if row['state'] in {'draft','save_unknown'} else 'working' if row['state']=='saving' else 'done'
-            items.append({'kind':'artifact','artifact':agent_artifacts._record(row),'id':row['id'],'agent_id':row['agent_id'],'author':row['author'],'state':state,'text':row['title'],'detail':{'draft':'Draft ready for review','save_unknown':'Check Gmail save status','saving':'Saving draft','saved':'Saved to Gmail drafts · Not sent','filed':'Saved as a notebook note','discarded':'Draft discarded'}.get(row['state'],row['state']),'created_at':row['updated_at'],'target':'/chat/'+row['agent_id']+'#message-'+str(row['message_id'] or '')})
+            items.append({'kind':'artifact','artifact':agent_artifacts._record(row, conn),'id':row['id'],'agent_id':row['agent_id'],'author':row['author'],'state':state,'text':row['title'],'detail':{'draft':'Draft ready for review','save_unknown':'Check Gmail save status','saving':'Saving draft','saved':'Saved to Gmail drafts · Not sent','filed':'Saved as a notebook note','discarded':'Draft discarded'}.get(row['state'],row['state']),'created_at':row['updated_at'],'target':'/chat/'+row['agent_id']+'#message-'+str(row['message_id'] or '')})
         delegated=conn.execute('SELECT d.*,a.name AS author FROM agent_delegations d JOIN agents a ON a.id=d.specialist_id WHERE d.notebook_id=? ORDER BY d.created_at DESC LIMIT 100',(notebook_id,)).fetchall()
         for row in delegated:
             if row['id'] in artifact_jobs:continue

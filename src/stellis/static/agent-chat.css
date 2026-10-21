@@ -199,3 +199,12 @@
 .agent-work-step[data-state="running"] {border-left-color:var(--text)}
 .agent-step-result summary {cursor:pointer;min-height:44px;display:flex;align-items:center}
 .agent-step-result p {margin:4px 0}
+
+.agent-followup {margin-top:18px;padding-top:14px;border-top:1px solid var(--border);overflow-wrap:anywhere}
+.agent-followup h4 {margin:0 0 8px;font:inherit;font-weight:600}
+.agent-followup blockquote {margin:12px 0;padding-left:12px;border-left:2px solid var(--muted)}
+.agent-followup-actions,.agent-followup-editor {display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.agent-followup-editor[hidden] {display:none}
+.agent-followup input {min-width:0;flex:1 1 200px}
+.agent-followup button,.agent-followup input {min-height:44px}
+.agent-followup > a {display:inline-flex;align-items:center;min-height:44px}

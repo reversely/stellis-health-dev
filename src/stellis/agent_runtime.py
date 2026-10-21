@@ -171,6 +171,15 @@ def _prompt(agent: dict, memories: list[dict], history: list[dict], question: st
               "title (subject for email), recipients (email addresses explicitly supplied, otherwise []), "
               "and body (the full draft text with paragraph breaks and [[source:N]] citations). Do not invent recipients. "
               if artifact_kind else "Answer the latest question in 1-4 sentences and at most 130 words. Return only the answer. ")
+    if artifact_kind and notebook_id:
+        from stellis import suggestions
+        if sources and suggestions.todo_enabled(notebook_id):
+            output += ("Also include follow_up: null when no concrete next action is supported, otherwise "
+                       "an object with text (one concise proposed task, no invented dates or people), "
+                       "source_index (one-based retrieved source index), and quote (12-500 characters copied exactly from that source excerpt). "
+                       "Propose a useful unresolved action supported by that quote; never claim the task is already added. "
+                       "Describe the concrete next action, not another request to the same agents. "
+                       "When evidence or approval is missing, propose obtaining it from its owner; never propose fabricating or creating approval records to fill the gap. ")
     if collaboration:
         output += ("The collaboration findings below are completed work, not future tasks. "
                    "Use the completed findings now. Do not promise to ask those agents again or say you are waiting for their checks. "
@@ -305,6 +314,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
     artifact_kind = None if review_only else agent_artifacts.kind_for(question)
     word_limit = 2000 if artifact_kind else 170
     artifact_payload = None
+    artifact_error = ""
     prompt = _prompt(agent, memories, history, question, sources, notebook_id, review_only=review_only, collaboration=collaboration)
     job_id = started_job_id or agents.start_job(agent_id, notebook_id)
     _RUNNING_JOBS[job_id] = asyncio.current_task()
@@ -339,7 +349,8 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                 try:
                     artifact_payload = agent_artifacts.parse(answer, question, sources)
                     answer = artifact_payload["body"]
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as exc:
+                    artifact_error = str(exc)[:500]
                     artifact_payload = None
                     answer = ""
             answer = _normalize_citations(answer)
@@ -353,6 +364,8 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                 runtime_trace.event("answer_retry", attempt=attempt + 1)
                 if artifact_kind:
                     prompt += "\nReturn a valid JSON object with title, recipients and body, at most 1800 words. Put valid [[source:N]] citations in the body for supplied evidence. If no evidence is supplied, use no citations."
+                    if artifact_error:
+                        prompt += "\nCorrect the rejected draft field: " + artifact_error
                 elif sources:
                     prompt += ("\n\nYour previous answer did not follow the answer format. "
                                "Answer again in 1-4 sentences and at most 130 words. Do not list the "
@@ -362,6 +375,8 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                     prompt += ("\n\nNo retrieved sources are available for this turn. Answer again "
                                "without source markers, links, or source numbers.")
         if not answer or (artifact_kind and not artifact_payload) or (sources and not cited_indices) or not valid_indices or raw_reference or len(answer.split()) > word_limit:
+            if artifact_kind and artifact_error:
+                raise AgentRunError("Agent could not produce a supported draft. Try again.")
             raise AgentRunError("Agent could not cite its sources clearly. Try again.")
         raw_body = answer
         answer = _trusted_citations(answer, sources)
@@ -385,7 +400,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
                                  "target": sources[index]["target"]} for index in sorted(cited_indices)]
             agent_artifacts.create(agent_id, agent_message["id"], notebook_id, artifact_kind, artifact_payload["title"],
                 re.sub(r"\[\[source:\d+\]\]", "", raw_body).strip() if artifact_kind == "email" else answer,
-                artifact_payload["recipients"], artifact_sources)
+                artifact_payload["recipients"], artifact_sources, follow_up=artifact_payload.get("follow_up"))
         if not started_job_id:
             agents.finish_job(job_id, "succeeded")
         return {"job_id": job_id, "user_message": user_message, "agent_message": agent_message,

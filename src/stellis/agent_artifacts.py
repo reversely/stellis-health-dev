@@ -40,31 +40,37 @@ def parse(content, question, sources):
     explicit = re.search(r'\bto\s+([A-Za-z0-9.!#$%&*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})', question, re.I)
     if explicit and not result['recipients']:
         result['recipients'] = [explicit.group(1)]
+    from stellis import agent_followups
+    result['follow_up'] = agent_followups.validate(result.get('follow_up'), sources)
     return result
 
 
-def _record(row):
+def _record(row, conn=None):
     if row is None:raise LookupError('Draft not found')
     item=dict(row)
     item['recipients']=json.loads(item.pop('recipients_json'));item['sources']=json.loads(item.pop('sources_json'))
+    from stellis import agent_followups
+    item['follow_up'] = agent_followups.for_artifact(item['id'], conn)
     return item
 
 
 def get(identifier):
-    with storage.connect() as conn:return _record(conn.execute('SELECT * FROM agent_artifacts WHERE id = ?', (identifier,)).fetchone())
+    with storage.connect() as conn:return _record(conn.execute('SELECT * FROM agent_artifacts WHERE id = ?', (identifier,)).fetchone(), conn)
 
 
 def list_for(agent_id):
     agents.get(agent_id)
-    with storage.connect() as conn:return [_record(row) for row in conn.execute('SELECT * FROM agent_artifacts WHERE agent_id = ? ORDER BY created_at',(agent_id,))]
+    with storage.connect() as conn:return [_record(row, conn) for row in conn.execute('SELECT * FROM agent_artifacts WHERE agent_id = ? ORDER BY created_at',(agent_id,))]
 
 
-def create(agent_id, message_id, notebook_id, kind, title, body, recipients, sources):
+def create(agent_id, message_id, notebook_id, kind, title, body, recipients, sources, follow_up=None):
     validate(title,body,recipients);identifier=str(uuid.uuid4());stamp=_now()
     with storage.connect() as conn:
         conn.execute('''INSERT INTO agent_artifacts
             (id,agent_id,message_id,notebook_id,kind,title,body,recipients_json,sources_json,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?)''',(identifier,agent_id,message_id,notebook_id,kind,title.strip(),body.strip(),json.dumps(recipients),json.dumps(sources),stamp,stamp))
+        if follow_up:
+            conn.execute('INSERT INTO agent_followups(artifact_id,candidate_json) VALUES(?,?)', (identifier,json.dumps(follow_up)))
     return get(identifier)
 
 
@@ -124,7 +130,7 @@ def save_note(identifier, revision):
     """File the reviewed document and mark its artifact in the same transaction."""
     with storage.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        draft = _record(conn.execute("SELECT * FROM agent_artifacts WHERE id=?", (identifier,)).fetchone())
+        draft = _record(conn.execute("SELECT * FROM agent_artifacts WHERE id=?", (identifier,)).fetchone(), conn)
         if draft['state'] == 'filed':
             return draft
         if draft['kind'] != 'document' or draft['state'] != 'draft' or draft['revision'] != revision:

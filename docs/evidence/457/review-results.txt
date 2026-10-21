@@ -1,0 +1,1 @@
+Both surfaces: editor survives refresh, dismissal persists, no task created; geometry captured

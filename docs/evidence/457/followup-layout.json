@@ -1,0 +1,338 @@
+[
+  {
+    "location": "chat",
+    "width": 360,
+    "theme": "light",
+    "viewport": {
+      "width": 360,
+      "height": 844,
+      "scrollWidth": 360,
+      "scrollHeight": 2175
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 360,
+    "theme": "dark",
+    "viewport": {
+      "width": 360,
+      "height": 844,
+      "scrollWidth": 360,
+      "scrollHeight": 2175
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 390,
+    "theme": "light",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 2126
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 390,
+    "theme": "dark",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 2126
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 768,
+    "theme": "light",
+    "viewport": {
+      "width": 768,
+      "height": 1100,
+      "scrollWidth": 768,
+      "scrollHeight": 2162
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 768,
+    "theme": "dark",
+    "viewport": {
+      "width": 768,
+      "height": 1100,
+      "scrollWidth": 768,
+      "scrollHeight": 2162
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1024,
+    "theme": "light",
+    "viewport": {
+      "width": 1024,
+      "height": 1100,
+      "scrollWidth": 1024,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1024,
+    "theme": "dark",
+    "viewport": {
+      "width": 1024,
+      "height": 1100,
+      "scrollWidth": 1024,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1280,
+    "theme": "light",
+    "viewport": {
+      "width": 1280,
+      "height": 1100,
+      "scrollWidth": 1280,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1280,
+    "theme": "dark",
+    "viewport": {
+      "width": 1280,
+      "height": 1100,
+      "scrollWidth": 1280,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1440,
+    "theme": "light",
+    "viewport": {
+      "width": 1440,
+      "height": 1100,
+      "scrollWidth": 1440,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1440,
+    "theme": "dark",
+    "viewport": {
+      "width": 1440,
+      "height": 1100,
+      "scrollWidth": 1440,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1920,
+    "theme": "light",
+    "viewport": {
+      "width": 1920,
+      "height": 1100,
+      "scrollWidth": 1920,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "chat",
+    "width": 1920,
+    "theme": "dark",
+    "viewport": {
+      "width": 1920,
+      "height": 1100,
+      "scrollWidth": 1920,
+      "scrollHeight": 1100
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 360,
+    "theme": "light",
+    "viewport": {
+      "width": 360,
+      "height": 844,
+      "scrollWidth": 360,
+      "scrollHeight": 2835
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 360,
+    "theme": "dark",
+    "viewport": {
+      "width": 360,
+      "height": 844,
+      "scrollWidth": 360,
+      "scrollHeight": 2835
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 390,
+    "theme": "light",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 2835
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 390,
+    "theme": "dark",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390,
+      "scrollHeight": 2835
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 768,
+    "theme": "light",
+    "viewport": {
+      "width": 768,
+      "height": 1100,
+      "scrollWidth": 768,
+      "scrollHeight": 2660
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 768,
+    "theme": "dark",
+    "viewport": {
+      "width": 768,
+      "height": 1100,
+      "scrollWidth": 768,
+      "scrollHeight": 2660
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1024,
+    "theme": "light",
+    "viewport": {
+      "width": 1024,
+      "height": 1100,
+      "scrollWidth": 1024,
+      "scrollHeight": 1520
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1024,
+    "theme": "dark",
+    "viewport": {
+      "width": 1024,
+      "height": 1100,
+      "scrollWidth": 1024,
+      "scrollHeight": 1520
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1280,
+    "theme": "light",
+    "viewport": {
+      "width": 1280,
+      "height": 1100,
+      "scrollWidth": 1280,
+      "scrollHeight": 1422
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1280,
+    "theme": "dark",
+    "viewport": {
+      "width": 1280,
+      "height": 1100,
+      "scrollWidth": 1280,
+      "scrollHeight": 1422
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1440,
+    "theme": "light",
+    "viewport": {
+      "width": 1440,
+      "height": 1100,
+      "scrollWidth": 1440,
+      "scrollHeight": 1422
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1440,
+    "theme": "dark",
+    "viewport": {
+      "width": 1440,
+      "height": 1100,
+      "scrollWidth": 1440,
+      "scrollHeight": 1422
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1920,
+    "theme": "light",
+    "viewport": {
+      "width": 1920,
+      "height": 1100,
+      "scrollWidth": 1920,
+      "scrollHeight": 1422
+    },
+    "findings": []
+  },
+  {
+    "location": "notebook",
+    "width": 1920,
+    "theme": "dark",
+    "viewport": {
+      "width": 1920,
+      "height": 1100,
+      "scrollWidth": 1920,
+      "scrollHeight": 1422
+    },
+    "findings": []
+  }
+]

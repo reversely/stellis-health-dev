@@ -1,0 +1,78 @@
+{
+  "id": "2ece5661-5b1d-42f9-9cfd-dc03013c6fb3",
+  "agent_id": "754dcb4e-8d73-43ac-9254-82e91875b99a",
+  "notebook_id": "dba6a05a-bb73-42b8-8c9d-1e0eea47b309",
+  "state": "succeeded",
+  "error": null,
+  "created_at": "2026-10-21T00:46:24.527618+00:00",
+  "finished_at": "2026-10-21T00:48:49.387625+00:00",
+  "steps": [
+    {
+      "id": "6dda722b-80ba-4e69-938a-00391a06392d",
+      "job_id": "2ece5661-5b1d-42f9-9cfd-dc03013c6fb3",
+      "position": 0,
+      "agent_id": "754dcb4e-8d73-43ac-9254-82e91875b99a",
+      "agent_name": "Writing",
+      "task": "Plan the work",
+      "state": "succeeded",
+      "child_job_id": null,
+      "result": "Work plan ready.",
+      "error": null,
+      "sources": []
+    },
+    {
+      "id": "1a95af02-0a75-4e3a-bc12-1896b21040e6",
+      "job_id": "2ece5661-5b1d-42f9-9cfd-dc03013c6fb3",
+      "position": 1,
+      "agent_id": "e4cb1fc6-1844-4e75-9ebe-02c03fa3b3b3",
+      "agent_name": "Notebook steward",
+      "task": "Gather the relevant notebook evidence and identify any missing information needed for the review checklist",
+      "state": "succeeded",
+      "child_job_id": "96af821c-58c9-40c3-bf17-3cbf0ee23254",
+      "result": "The notebook indicates the review requires measured inputs and outputs and a signed approval record, but no approval record has been received [Review requirements](/page/1e687a97-7041-47a4-b8a4-97bd2beecde5). Measurements were recorded on Tuesday, yet the required approval documentation is missing [Review requirements](/page/1e687a97-7041-47a4-b8a4-97bd2beecde5).",
+      "error": null,
+      "sources": [
+        {
+          "source_id": "1e687a97-7041-47a4-b8a4-97bd2beecde5",
+          "target": "/page/1e687a97-7041-47a4-b8a4-97bd2beecde5"
+        }
+      ]
+    },
+    {
+      "id": "71f7eda0-e220-4022-a315-412184092812",
+      "job_id": "2ece5661-5b1d-42f9-9cfd-dc03013c6fb3",
+      "position": 2,
+      "agent_id": "76593504-84db-408f-bf37-40e99790806e",
+      "agent_name": "Reviewer",
+      "task": "Check the gathered evidence against the notebook requirements, determine which requirements remain unconfirmed, and propose a follow-up to obtain the missing evidence",
+      "state": "succeeded",
+      "child_job_id": "16237db4-620d-4c46-ba15-fe55be3017d1",
+      "result": "The review requirement for a signed approval record remains unconfirmed, as the source indicates no approval record has been received [Review requirements](/page/1e687a97-7041-47a4-b8a4-97bd2beecde5). To obtain the missing evidence, request the notebook steward to locate and provide the approval documentation [Review requirements](/page/1e687a97-7041-47a4-b8a4-97bd2beecde5).",
+      "error": null,
+      "sources": [
+        {
+          "source_id": "1e687a97-7041-47a4-b8a4-97bd2beecde5",
+          "target": "/page/1e687a97-7041-47a4-b8a4-97bd2beecde5"
+        }
+      ]
+    },
+    {
+      "id": "29a62ae5-4fee-4422-8aa8-ab17b45a3f94",
+      "job_id": "2ece5661-5b1d-42f9-9cfd-dc03013c6fb3",
+      "position": 3,
+      "agent_id": "754dcb4e-8d73-43ac-9254-82e91875b99a",
+      "agent_name": "Writing",
+      "task": "Prepare the response",
+      "state": "succeeded",
+      "child_job_id": null,
+      "result": "Response ready.",
+      "error": null,
+      "sources": [
+        {
+          "source_id": "1e687a97-7041-47a4-b8a4-97bd2beecde5",
+          "target": "/page/1e687a97-7041-47a4-b8a4-97bd2beecde5"
+        }
+      ]
+    }
+  ]
+}

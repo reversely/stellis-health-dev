@@ -376,3 +376,7 @@ Chat and notebook composers accept a stable, notebook-scoped agent recipient thr
 ### Notebook collaboration
 
 For notebook requests with multiple enabled deployments, agent_coordination plans up to three supporting turns through the configured managed route, persists ordered agent_work_steps under one parent job, gathers evidence and checks through the chosen agents, then asks the originating agent to produce the final response or review artifact. Child job IDs link step state to inference traces. The chat thread renders persisted steps and one parent Stop action. Off/removal and restart interrupt work without silently replaying it. Explicit mentions remain direct dispatch. See [ADR 0076](decisions/0076-notebook-agent-coordination.md).
+
+### Follow-up task proposals
+
+Final draft responses may carry one source-indexed, exact-quoted follow-up candidate. agent_followups stores it under the artifact and publishes a canonical pending suggestion atomically with successful job completion when notebook task suggestions are enabled. Existing suggestion editing, acceptance and dismissal control the task write into the notebook's To-dos note; deterministic IDs prevent repeated completion from duplicating proposals. Chat projects the suggestion beside its draft, and notebook Activity renders the same review controls. See [ADR 0077](decisions/0077-source-backed-agent-followups.md).

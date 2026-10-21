@@ -290,7 +290,7 @@ def messages(agent_id: str) -> list[dict[str, object]]:
         for row in rows:
             if row['id'] == row.get('reply_id') and row.get('target_message_id'):
                 artifact = conn.execute('SELECT * FROM agent_artifacts WHERE message_id=?', (row['target_message_id'],)).fetchone()
-                if artifact:row['routed_artifact'] = agent_artifacts._record(artifact)
+                if artifact:row['routed_artifact'] = agent_artifacts._record(artifact, conn)
         return rows
 
 
@@ -326,6 +326,9 @@ def finish_job(job_id: str, state: str, error: str | None = None) -> None:
     with storage.connect() as conn:
         conn.execute("""UPDATE agent_jobs SET state = ?, error = ?, finished_at = ? WHERE id = ?""",
                      (state, error, _now(), job_id))
+        if state == 'succeeded':
+            from stellis import agent_followups
+            agent_followups.publish(conn, job_id)
 
 
 def jobs(agent_id: str) -> list[dict[str, object]]:

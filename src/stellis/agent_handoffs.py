@@ -51,6 +51,8 @@ async def ask(origin_id, target_id, question, notebook_id):
             conn.execute('UPDATE agent_handoffs SET reply_id=?,target_message_id=? WHERE id=?',
                          (reply_id, result['agent_message']['id'], job_id))
             conn.execute("UPDATE agent_jobs SET state='succeeded',finished_at=? WHERE id=?", (agents._now(),job_id))
+            from stellis import agent_followups
+            agent_followups.publish(conn, job_id)
             reply = dict(conn.execute('SELECT * FROM agent_messages WHERE id=?',(reply_id,)).fetchone())
         return {**result, 'user_message':user, 'agent_message':reply, 'responding_agent_id':target_id}
     except asyncio.CancelledError:

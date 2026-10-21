@@ -177,7 +177,32 @@
     return chip;
   }
   const artifactEdits=new Map();
-  function artifactCard(draft,onChange) {
+  const followupEdits = new Map();
+  function suggestionCard(suggestion,onChange) {
+    const card=el('section','agent-followup');card.dataset.suggestionId=suggestion.id;
+    card.append(el('h4','','Suggested task'),el('p','',suggestion.values.text));
+    for(const evidence of suggestion.evidence||[])card.append(el('blockquote','',evidence.quote));
+    const target=suggestion.source_target || (suggestion.source_id ? (suggestion.source_kind==='page'?'/page/':'/conversation/')+suggestion.source_id : null);
+    if(target){const source=el('a','',suggestion.source_title||'Open source');source.href=target;card.append(source);}
+    const notice=el('p','agent-status');notice.role='status';
+    if(suggestion.state!=='pending'){
+      card.append(el('p','agent-job-state',suggestion.state==='accepted'?'Task added':suggestion.state==='rejected'?'Dismissed':'No longer pending'));
+      return card;
+    }
+    const actions=el('div','agent-followup-actions artifact-actions');
+    const send=async(path,body,method='POST')=>request(path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const button=(text,run,refresh=true)=>{const b=el('button','',text);b.type='button';b.onclick=async()=>{b.disabled=true;try{await run();if(refresh)await onChange();}catch(error){notice.textContent=error.message;}finally{b.disabled=false;}};actions.append(b);};
+    const editor=el('form','agent-followup-editor artifact-editor'),input=el('input');input.setAttribute('aria-label','Task');input.required=true;input.maxLength=500;
+    input.value=followupEdits.get(suggestion.id)??suggestion.values.text;
+    editor.hidden=!followupEdits.has(suggestion.id);input.oninput=()=>followupEdits.set(suggestion.id,input.value);
+    const save=el('button','','Save task');save.type='submit';editor.append(input,save);
+    editor.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await send('/suggestions/'+suggestion.id,{values:{...suggestion.values,text:input.value}},'PATCH');followupEdits.delete(suggestion.id);await onChange();}catch(error){notice.textContent=error.message;}finally{save.disabled=false;}};
+    button('Add task',()=>send('/suggestions/accept',{ids:[suggestion.id]}));
+    button('Edit task',async()=>{editor.hidden=false;followupEdits.set(suggestion.id,input.value);input.focus();},false);
+    button('Dismiss',()=>send('/suggestions/reject',{ids:[suggestion.id]}));
+    card.append(actions,editor,notice);return card;
+  }
+  function artifactCard(draft,onChange,showFollowup=true) {
     const card=el('section','agent-artifact');card.dataset.artifactId=draft.id;
     const state={draft:draft.kind==='email'?'Not sent':'Draft',filed:draft.notebook_id?'Saved to notebook':'Saved as note',saving:'Saving to Gmail…',saved:'Saved to Gmail drafts · Not sent',discarded:'Discarded',save_unknown:'Save status unknown · Not sent'}[draft.state]||draft.state;
     card.append(el('h4','',draft.title),el('p','artifact-meta',(draft.kind==='email'?(draft.recipients.length?'To '+draft.recipients.join(', '):'Recipient not set')+' · ':'')+state));
@@ -202,7 +227,7 @@
     if(draft.state==='save_unknown')button('Check Gmail status',()=>request(`/artifacts/${draft.id}/gmail-status`,{method:'POST'}));
     if(draft.state==='filed'){const link=el('a','agent-link-button','Open note');link.href='/page/'+encodeURIComponent(draft.id);actions.append(link);}
     if(draft.state==='saved'){const link=el('a','agent-link-button','Open Gmail drafts');link.href=`https://mail.google.com/mail/?authuser=${encodeURIComponent(draft.account_email||'')}#drafts`;link.target='_blank';link.rel='noopener noreferrer';actions.append(link);card.append(el('p','artifact-meta','Saved in '+draft.account_email));}
-    card.append(actions,notice);return card;
+    card.append(actions,notice);if(showFollowup && draft.follow_up)card.append(suggestionCard(draft.follow_up,onChange));return card;
   }
   async function refreshThread(section, agent) {
     const [messages, jobs, artifacts] = await Promise.all([
@@ -969,5 +994,5 @@
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }
   });
-  window.StellisAgentChat = {show, artifactCard, messageBody, stopScreen: () => tutorModule?.stop()};
+  window.StellisAgentChat = {show, artifactCard, suggestionCard, messageBody, stopScreen: () => tutorModule?.stop()};
 })();
