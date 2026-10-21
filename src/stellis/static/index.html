@@ -37,6 +37,8 @@
     <script src="/static/notebook-chat.js" defer></script>
     <script src="/static/document-view.js" defer></script>
     <script src="/static/health-facts.js" defer></script>
+    <script src="/static/timeline.js" defer></script>
+    <link rel="stylesheet" href="/static/timeline.css" />
     <link rel="stylesheet" href="/static/document-view.css" />
     <link rel="stylesheet" href="/static/notebook-chat.css" />
     <script src="/static/calendar.js" defer></script>
@@ -63,6 +65,7 @@
           <nav class="rail-pinned" aria-label="Pinned">
             <a id="rail-meetings" class="rail-pin" href="/" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-microphone"/></svg><span>Meetings</span></a>
             <a id="rail-todos" class="rail-pin" href="/todos"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg><span>To-dos</span></a>
+            <a id="rail-timeline" class="rail-pin" href="/timeline"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span>Timeline</span></a>
             <a id="rail-chat" class="rail-pin" href="/chat"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>Chat</span></a>
           </nav>
           <div class="home-rail-head"><h2 id="recent-title">Library</h2><div id="rail-tags" class="rail-tags" role="group" aria-label="Filter by tag"></div></div>
@@ -220,6 +223,7 @@
         </section>
       </section>
       <section id="todos-view" class="todos-view" hidden aria-label="To-dos"><div id="todos-page-widget"></div></section>
+      <section id="timeline-view" class="timeline-view" hidden aria-label="Timeline"></section>
       <section id="agent-chat-view" class="agent-chat-view" hidden aria-label="Chat">
         <a class="back-link" href="/">← Home</a>
         <div class="agent-chat-heading"><a id="agent-settings-link" class="agent-quiet agent-link-button" href="/chat/settings">Agent settings</a><button id="agent-new-toggle" type="button">New agent</button></div>

@@ -135,3 +135,14 @@ test('health fact helpers format values and split by status', () => {
       [suggested.map((fact) => fact.id), accepted.map((fact) => fact.id)],
       [['b'], ['a']]);
 });
+
+const {groupByYear, shortDate} = require('../src/stellis/static/timeline.js');
+
+test('timeline helpers group by year and format short dates', () => {
+  const groups = groupByYear(
+      [{date: '2026-04-02'}, {date: '2026-03-26'}, {date: '1997-12-04'}]);
+  assert.deepEqual(
+      groups.map((group) => [group.year, group.entries.length]),
+      [['2026', 2], ['1997', 1]]);
+  assert.equal(shortDate('2026-04-02'), 'Apr 2');
+});

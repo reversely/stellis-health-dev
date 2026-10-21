@@ -2706,6 +2706,7 @@ async function route() {
   else if (location.pathname === '/settings') await showSettings();
   else if (location.pathname === '/chat' || location.pathname.startsWith('/chat/')) await showAgentChat();
   else if (location.pathname === '/todos') await showTodos();
+  else if (location.pathname === '/timeline') await showTimeline();
   else if (location.pathname.match(/^\/page\/([^/]+)$/)) await showNote(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/document\/([^/]+)$/)) await showDocument(decodeURIComponent(location.pathname.split('/')[2]));
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
@@ -3538,7 +3539,7 @@ document.querySelector('#show-rematch-changes').addEventListener('click', () => 
 });
 window.addEventListener('popstate', () => route().catch(error => setStatus(error.message)));
 document.addEventListener('click', event => {
-  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
+  const link = event.target.closest('a[href="/"], a[href="/recording"], a[href^="/conversation/"], a[href^="/person/"], a[href="/vocabulary"], a[href^="/vocabulary/"], a[href="/settings"], a[href^="/notebook/"], a[href="/todos"], a[href="/timeline"], a[href^="/chat"], a[href^="/page/"], a[href^="/document/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   if (!capture && !link.matches('a[href^="/person/"]')) return;
   event.preventDefault(); history.pushState({}, '', link.getAttribute('href'));
@@ -3806,9 +3807,10 @@ function hideAppPages() {
   document.querySelector('#settings-view').hidden = true;
   document.querySelector('#notebook-view').hidden = true;
   document.querySelector('#todos-view').hidden = true;
+  document.querySelector('#timeline-view').hidden = true;
   document.querySelector('#agent-chat-view').hidden = true;
   notebookTodos?.destroy?.(); notebookTodos = null;
-  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'note-page', 'document-page', 'agent-chat-page');
+  document.body.classList.remove('settings-page', 'notebook-page', 'todos-page', 'timeline-page', 'note-page', 'document-page', 'agent-chat-page');
   activeNotebookId = null;
 }
 async function leaveForAppPage(bodyClass, title) {
@@ -4693,6 +4695,26 @@ async function showTodos() {
   pageTodos?.destroy?.();
   pageTodos = mountTodos(document.querySelector('#todos-page-widget'));
   captureControls();
+}
+
+/** Shows the health timeline with its notebook filter. */
+async function showTimeline() {
+  await leaveForAppPage('timeline-page', 'Timeline');
+  const books = await json(await fetch(`${API}/notebooks`));
+  libraryNotebooks = books.notebooks;
+  const view = document.querySelector('#timeline-view');
+  view.hidden = false;
+  const rail = document.querySelector('#home-rail');
+  document.querySelector('main').prepend(rail);
+  for (const link of rail.querySelectorAll('.rail-pin')) {
+    if (link.id === 'rail-timeline') {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+  }
+  await reloadLibrary();
+  await window.StellisTimeline.mount(view, libraryNotebooks);
 }
 
 async function showAgentChat() {
