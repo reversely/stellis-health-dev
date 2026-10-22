@@ -13,6 +13,9 @@
 'use strict';
 
 const LIBRARY = '/static/vendor/vitallens/vitallens.browser.js';
+const math = root.StellisVitalsMath || require('./vitals-math.js');
+/** The pulse waveform quality above which HRV counts as sure. */
+const HRV_MIN_QUALITY = 0.6;
 /** Milliseconds of good signal a reading needs. */
 const GOOD_MS = 30000;
 /** The longest attempt before the capture gives up. */
@@ -166,47 +169,6 @@ function stillCheck(centres) {
 }
 
 /**
- * Finds the pulse as the strongest rhythm in a stretch of waveform. Uses
- * each sample's own time, because the frame rate varies while measuring.
- * @param {!Array<{t: number, v: number}>} points Waveform samples; t is in
- *     seconds.
- * @return {?{bpm: number, share: number}} share is the part of the power in
- *     the pulse range that lies within 6 bpm of the peak; null when the
- *     stretch is shorter than 10 seconds.
- */
-function spectralPulse(points) {
-  const n = points.length;
-  if (n < 2 || points[n - 1].t - points[0].t < 10) {
-    return null;
-  }
-  const start = points[0].t;
-  const span = points[n - 1].t - start;
-  const mean = points.reduce((sum, point) => sum + point.v, 0) / n;
-  // A Hann window keeps the stretch's ends from adding false rhythms.
-  const windowed = points.map(
-      (point) => (point.v - mean) *
-          (0.5 - 0.5 * Math.cos((2 * Math.PI * (point.t - start)) / span)));
-  const powers = [];
-  for (let bpm = BPM_BOUNDS[0]; bpm <= BPM_BOUNDS[1]; bpm += 0.5) {
-    const omega = (2 * Math.PI * bpm) / 60;
-    let re = 0;
-    let im = 0;
-    for (let i = 0; i < n; i++) {
-      const phase = omega * (points[i].t - start);
-      re += windowed[i] * Math.cos(phase);
-      im -= windowed[i] * Math.sin(phase);
-    }
-    powers.push({bpm, power: re * re + im * im});
-  }
-  const peak =
-      powers.reduce((best, item) => item.power > best.power ? item : best);
-  const total = powers.reduce((sum, item) => sum + item.power, 0);
-  const near = powers.filter((item) => Math.abs(item.bpm - peak.bpm) <= 6)
-                   .reduce((sum, item) => sum + item.power, 0);
-  return {bpm: Math.round(peak.bpm), share: total ? near / total : 0};
-}
-
-/**
  * Sums up a capture into one reading. The waveform's strongest rhythm gives
  * the number; the median of vitallens' own estimates stands in when the
  * waveform is too short.
@@ -218,7 +180,7 @@ function spectralPulse(points) {
  *     the capture has too little signal.
  */
 function summarize(samples, wave = []) {
-  const rhythm = spectralPulse(wave);
+  const rhythm = math.pulse(wave);
   if (rhythm) {
     return {
       bpm: rhythm.bpm,
@@ -247,16 +209,84 @@ function summarize(samples, wave = []) {
 }
 
 /**
+ * Builds a finished reading: the pulse, then the HRV and breathing rate
+ * computed from the beats in the whole recording and the face's movement.
  * @param {{bpm: number, quality: number, sure: boolean}} summary
- * @return {{ok: boolean, bpm: number, quality: number, approximate: boolean}}
+ * @param {!Array<{t: number, v: number}>=} recording All good waveform.
+ * @param {!Array<{t: number, v: number}>=} motion The face centre's height.
+ * @return {{ok: boolean, bpm: number, quality: number, approximate: boolean,
+ *     hrv: ?{rmssd: number, approximate: boolean},
+ *     breathing: ?{rate: number, approximate: boolean}}}
  */
-function reading(summary) {
+function reading(summary, recording = [], motion = []) {
+  const beats = math.findBeats(recording, summary.bpm);
+  const hrv = math.heartRateVariability(beats);
+  const breathing = math.breathingRate(beats, motion);
   return {
     ok: true,
     bpm: summary.bpm,
     quality: summary.quality,
     approximate: !summary.sure,
+    hrv: hrv && {
+      rmssd: hrv.rmssd,
+      approximate: !(hrv.sure && summary.quality >= HRV_MIN_QUALITY),
+    },
+    breathing: breathing && {
+      rate: breathing.rate,
+      approximate: !breathing.sure,
+    },
   };
+}
+
+/**
+ * The rows under the pulse on the result screen.
+ * @param {!Object} summary A finished reading.
+ * @return {!Array<{label: string, value: string, approximate: boolean}>}
+ */
+function extraRows(summary) {
+  const rows = [];
+  if (summary.breathing) {
+    rows.push({
+      label: 'Breathing rate',
+      value: `${summary.breathing.rate} breaths a minute`,
+      approximate: summary.breathing.approximate,
+    });
+  }
+  if (summary.hrv) {
+    rows.push({
+      label: 'Heart rate variability',
+      value: `${summary.hrv.rmssd} ms`,
+      approximate: summary.hrv.approximate,
+    });
+  }
+  return rows;
+}
+
+/**
+ * The readings a finished capture saves: the pulse, and the breathing rate
+ * and HRV when the recording gave them. Approximate values say so in their
+ * note.
+ * @param {!Object} summary
+ * @return {!Array<!Object>} Bodies for POST /readings.
+ */
+function readingsToSave(summary) {
+  const body = (measure, value, approximate) => ({
+    measure,
+    value,
+    source: 'camera',
+    quality: summary.quality,
+    note: approximate ? 'Approximate' : '',
+  });
+  const result = [body('pulse', summary.bpm, summary.approximate)];
+  if (summary.breathing) {
+    result.push(body(
+        'breathing_rate', summary.breathing.rate,
+        summary.breathing.approximate));
+  }
+  if (summary.hrv) {
+    result.push(body('hrv', summary.hrv.rmssd, summary.hrv.approximate));
+  }
+  return result;
 }
 
 /**
@@ -275,6 +305,10 @@ class CaptureState {
     this.samples = [];
     /** Waveform samples from good signal, newest last. */
     this.wave = [];
+    /** Every good waveform sample, for beats, HRV and breathing. */
+    this.recording = [];
+    /** The face centre's height in the frame while measuring. */
+    this.motion = [];
     /** Milliseconds without a face, and with a face but no pulse signal. */
     this.missing = {face: 0, signal: 0};
     /** The current quality issue and when it began. */
@@ -325,6 +359,7 @@ class CaptureState {
       this.goodMs += step;
       this.samples.push({t: this.goodMs, bpm: event.bpm});
       this.addWave(event.waveData, event.waveTimes);
+      this.motion.push({t: event.now / 1000, v: this.centres.at(-1).y});
     } else {
       this.missing[stage] += step;
     }
@@ -338,7 +373,7 @@ class CaptureState {
       const summary = this.summary();
       if (summary.bpm != null &&
           (summary.sure || this.goodMs >= GOOD_MS + EXTRA_MS)) {
-        return this.finish(reading(summary));
+        return this.finish(reading(summary, this.recording, this.motion));
       }
     }
     if (event.now - this.start >= MAX_MS) {
@@ -356,7 +391,10 @@ class CaptureState {
     if (!values || !times || values.length !== times.length) {
       return;
     }
-    values.forEach((v, i) => this.wave.push({t: times[i], v}));
+    values.forEach((v, i) => {
+      this.wave.push({t: times[i], v});
+      this.recording.push({t: times[i], v});
+    });
     const from = this.wave[this.wave.length - 1].t - WINDOW_MS / 1000;
     const first = this.wave.findIndex((point) => point.t >= from);
     this.wave.splice(0, Math.max(0, first));
@@ -375,7 +413,7 @@ class CaptureState {
   lastResult() {
     const summary = this.summary();
     if (this.goodMs >= MIN_GOOD_MS && summary.bpm != null) {
-      return reading(summary);
+      return reading(summary, this.recording, this.motion);
     }
     return {
       ok: false,
@@ -1013,15 +1051,9 @@ class PulseDialog {
     save.addEventListener('click', async () => {
       save.disabled = true;
       try {
-        await dom.api('/readings', {
-          method: 'POST',
-          json: {
-            measure: 'pulse',
-            value: summary.bpm,
-            source: 'camera',
-            quality: summary.quality,
-          },
-        });
+        for (const json of readingsToSave(summary)) {
+          await dom.api('/readings', {method: 'POST', json});
+        }
         this.dialog.close();
         await this.onSaved();
       } catch (failure) {
@@ -1036,6 +1068,17 @@ class PulseDialog {
     this.body.replaceChildren(
         dom.el('p', 'Your pulse', 'pulse-label'), figure,
         dom.el('p', usualText(summary.bpm, this.usual), 'pulse-usual'));
+    const more = dom.el('dl', null, 'pulse-more');
+    for (const row of extraRows(summary)) {
+      const value = dom.el('dd', row.value);
+      if (row.approximate) {
+        value.append(dom.el('span', 'approximate', 'pulse-tag'));
+      }
+      more.append(dom.el('dt', row.label), value);
+    }
+    if (more.childElementCount) {
+      this.body.append(more);
+    }
     if (summary.approximate) {
       this.body.append(dom.el(
           'p', 'Measure again sitting still for a closer reading',
@@ -1111,9 +1154,9 @@ const exported = {
   lightCheck,
   open,
   ovalPath,
+  readingsToSave,
   speakChosen,
   stillCheck,
-  spectralPulse,
   summarize,
   supported,
   usualText,

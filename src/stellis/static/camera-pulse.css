@@ -287,6 +287,31 @@ html[data-theme='dark'] .pulse-dialog {
   color: var(--muted);
   font-size: 20px;
 }
+.pulse-more {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 4px 0 0;
+  font-size: 17px;
+}
+.pulse-more dt {
+  color: var(--muted);
+}
+.pulse-more dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.pulse-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 13px;
+}
 .pulse-usual {
   font-size: 17px;
 }
