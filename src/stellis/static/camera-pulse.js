@@ -329,12 +329,15 @@ function localVoice() {
       null;
 }
 
-/** @return {boolean} The remembered spoken-guidance choice. */
+/**
+ * Spoken guidance is on unless the person turned it off on this device.
+ * @return {boolean}
+ */
 function speakChosen() {
   try {
-    return root.localStorage.getItem(SPEAK_KEY) === 'on';
+    return root.localStorage.getItem(SPEAK_KEY) !== 'off';
   } catch (error) {
-    return false;
+    return true;
   }
 }
 
@@ -411,7 +414,7 @@ class PulseDialog {
     this.dom = dom;
     this.onSaved = onSaved;
     this.usual = measure ? measure.usual : null;
-    this.speak = speakChosen() && Boolean(localVoice());
+    this.speak = speakChosen();
     this.spokenAt = -Infinity;
     this.spoken = '';
     this.dialog = /** @type {!HTMLDialogElement} */ (
@@ -430,6 +433,8 @@ class PulseDialog {
     this.dialog.addEventListener('close', () => {
       this.stop();
       root.speechSynthesis?.cancel();
+      root.speechSynthesis?.removeEventListener(
+          'voiceschanged', this.paintVoice);
       this.dialog.remove();
     });
     document.body.append(this.dialog);
@@ -486,7 +491,11 @@ class PulseDialog {
     const {svg, ring, observer} = overlay(stage);
     this.ring = ring;
     this.observer = observer;
-    stage.append(this.video, svg);
+    // Desktop shows each cue as a caption on the video, next to the camera
+    // the person is looking at; the status line already sits there on phones.
+    this.caption = dom.el('p', null, 'pulse-caption');
+    this.caption.setAttribute('aria-hidden', 'true');
+    stage.append(this.video, svg, this.caption);
 
     this.status = dom.el('p', 'Starting the camera', 'pulse-status');
     this.status.setAttribute('role', 'status');
@@ -524,31 +533,38 @@ class PulseDialog {
     const dom = this.dom;
     const button = dom.button(null, 'pulse-voice');
     const paint = () => {
+      const available = Boolean(localVoice());
+      const on = this.speak && available;
       button.replaceChildren(
-          dom.icon(this.speak ? 'volume' : 'volume-off'),
-          dom.el('span', 'Voice'));
-      button.setAttribute('aria-pressed', String(this.speak));
+          dom.icon(on ? 'volume' : 'volume-off'), dom.el('span', 'Voice'));
+      button.setAttribute('aria-pressed', String(on));
+      button.disabled = !available;
+      button.title = available ? '' : 'No voice on this device';
     };
-    if (localVoice()) {
-      button.addEventListener('click', () => {
-        this.speak = !this.speak;
-        try {
-          root.localStorage.setItem(SPEAK_KEY, this.speak ? 'on' : 'off');
-        } catch (error) {
-          // Without storage the choice lasts for this capture only.
-        }
-        paint();
-      });
-    } else {
-      button.disabled = true;
-      button.title = 'No voice on this device';
-    }
+    button.addEventListener('click', () => {
+      this.speak = !this.speak;
+      try {
+        root.localStorage.setItem(SPEAK_KEY, this.speak ? 'on' : 'off');
+      } catch (error) {
+        // Without storage the choice lasts for this capture only.
+      }
+      if (!this.speak) {
+        root.speechSynthesis?.cancel();
+      }
+      paint();
+    });
+    // Chrome lists its voices only after the page asks for them once.
+    root.speechSynthesis?.addEventListener('voiceschanged', paint);
+    this.paintVoice = paint;
     paint();
     return button;
   }
 
   async measure() {
     this.live();
+    // Safari speaks only after a tap, so the first cue runs inside the Start
+    // tap, before anything waits.
+    this.cue('Starting the camera', true);
     this.state = null;
     this.box = null;
     this.luma = {face: null, frame: null};
@@ -654,7 +670,7 @@ class PulseDialog {
     if (this.status.textContent !== text) {
       this.status.textContent = text;
     }
-    this.say(measuring ? 'Hold still' : ISSUES[update.issue]);
+    this.cue(measuring ? 'Hold still' : ISSUES[update.issue]);
     this.dialog.classList.toggle('is-measuring', measuring);
     const progress = Math.min(update.goodMs / GOOD_MS, 1) * 100;
     this.ring.setAttribute('stroke-dasharray', `${progress.toFixed(1)} 100`);
@@ -708,19 +724,26 @@ class PulseDialog {
   }
 
   /**
-   * Speaks a short cue with an on-device voice, when the person chose to.
+   * Captions a short cue and speaks it with an on-device voice, unless the
+   * person turned the voice off.
    * @param {string} text
-   * @param {boolean=} force Speak even within the quiet gap.
+   * @param {boolean=} force Ignore the quiet gap between cues.
    */
-  say(text, force = false) {
-    const voice = this.speak ? localVoice() : null;
+  cue(text, force = false) {
     const now = performance.now();
-    if (!voice || text === this.spoken ||
+    if (text === this.spoken ||
         (!force && now - this.spokenAt < SPEAK_GAP_MS)) {
       return;
     }
     this.spoken = text;
     this.spokenAt = now;
+    if (this.caption) {
+      this.caption.textContent = text;
+    }
+    const voice = this.speak ? localVoice() : null;
+    if (!voice) {
+      return;
+    }
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice;
     utterance.rate = 0.95;
@@ -732,7 +755,7 @@ class PulseDialog {
   result(summary) {
     const dom = this.dom;
     this.setStage('done');
-    this.say(`Done. ${summary.bpm} beats per minute.`, true);
+    this.cue(`Done. ${summary.bpm} beats per minute.`, true);
     const figure = dom.el('p', null, 'pulse-figure');
     figure.append(
         dom.el('span', String(summary.bpm), 'pulse-value'),
@@ -826,6 +849,7 @@ const exported = {
   lightCheck,
   open,
   ovalPath,
+  speakChosen,
   stillCheck,
   summarize,
   supported,
