@@ -1036,6 +1036,19 @@ async def coach_call(websocket: WebSocket) -> None:
         script.end()
 
 
+async def tour_call(websocket: WebSocket) -> None:
+    """The guided tour, on a call docked over the app."""
+    from stellis import tour
+    if not _websocket_allowed(websocket):
+        await websocket.close(code=4401)
+        return
+    await asyncio.to_thread(tour.begin)
+    try:
+        await _run_call(websocket, tour)
+    finally:
+        tour.end()
+
+
 async def _run_call(websocket: WebSocket, script) -> None:
     """Runs a voice call through ``script``, a module as ``intake_voice.Call`` takes it."""
     from stellis import intake_voice
@@ -1080,6 +1093,7 @@ async def _run_call(websocket: WebSocket, script) -> None:
 
 app.add_api_websocket_route("/api/v1/intake/call", intake_call)
 app.add_api_websocket_route("/api/v1/coach/call", coach_call)
+app.add_api_websocket_route("/api/v1/tour/call", tour_call)
 
 
 class MorningAnswer(BaseModel):

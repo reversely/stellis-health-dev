@@ -413,7 +413,7 @@
       await saves;
       await save('review');
       await api('/onboarding/complete', 'POST', {record_groups: reviewed()});
-      location.assign(state.editing ? '/' : '/?guide=workspace');
+      location.assign(state.editing ? '/' : '/?tour=1');
     }, 'primary');
     finish.disabled = true;
     const paint = () => {
