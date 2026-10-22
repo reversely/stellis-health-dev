@@ -14,7 +14,7 @@ const STATUS = {
   thinking: 'Thinking',
   speaking: 'Speaking',
   typing: 'Type your answers below',
-  ended: 'Call ended',
+  ended: 'Call ended. Press Continue to add your records.',
   lost: 'The call dropped',
 };
 
@@ -38,10 +38,9 @@ function render(scene, kit) {
 
   const head = node('div', null, 'setup-call-head');
   head.append(
-      node('h1', 'Talk through your health'),
+      node('h1', 'Onboarding call'),
       node(
-          'p',
-          'Stellis asks one question at a time and writes your notes as you talk',
+          'p', 'Stellis learns what you need, then shows you around',
           'setup-hint'));
 
   // The call panel.
@@ -331,6 +330,7 @@ function render(scene, kit) {
     startButton.hidden = key === 'ended';
     startButton.querySelector('span').textContent = 'Call again';
     ring.style.setProperty('--level', '0');
+    next.classList.toggle('is-next', key === 'ended');
     await api('/intake/end', 'POST');
   }
 
