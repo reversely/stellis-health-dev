@@ -15,7 +15,7 @@ const STATUS = {
   speaking: 'Speaking',
   typing: 'Type your answers below',
   ended: 'Call ended. Press Continue to add your records.',
-  lost: 'The call dropped',
+  lost: "Sorry we couldn't reach the agent",
 };
 
 /**

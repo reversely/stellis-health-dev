@@ -18,7 +18,7 @@ from stellis import auth, calendar, intake_voice, server, storage
 from stellis.processing import model_paths
 
 _PUBLIC = {"/auth", "/api/health", "/api/v1/health"}
-_WEBSOCKETS = {"/api/v1/intake/call"}
+_WEBSOCKETS = {"/api/v1/intake/call", "/api/v1/coach/call", "/api/v1/tour/call"}
 _HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
                 "te", "trailers", "transfer-encoding", "upgrade"}
 
@@ -181,7 +181,7 @@ class AccountGateway:
         await response(scope, receive, send)
 
     async def _websocket(self, scope, receive, send) -> None:
-        """Relays the intake call's WebSocket to the account's own process."""
+        """Relays call WebSockets to the authenticated account process."""
         from starlette.websockets import WebSocket, WebSocketDisconnect
         from websockets.asyncio.client import unix_connect
         from websockets.exceptions import ConnectionClosed, InvalidHandshake
@@ -198,8 +198,10 @@ class AccountGateway:
             headers = {key: value for key, value in websocket.headers.items()
                        if key.lower() in {"cookie", "origin", "user-agent"}}
             # The URL sets Host, so the account process sees the browser's host.
+            query = scope.get("query_string", b"").decode("ascii")
+            target = scope["path"] + ("?" + query if query else "")
             upstream = await unix_connect(
-                str(socket), f"ws://{websocket.headers.get('host', 'stellis')}{scope['path']}",
+                str(socket), f"ws://{websocket.headers.get('host', 'stellis')}{target}",
                 additional_headers=headers, max_size=2**22)
         except (RuntimeError, OSError, ConnectionClosed, InvalidHandshake, ValueError):
             await websocket.close(code=1011)

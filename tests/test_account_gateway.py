@@ -149,3 +149,40 @@ class AccountGatewayTest(unittest.TestCase):
             opening = json.loads(call.recv(timeout=10))
             self.assertEqual(opening["type"], "say")
             self.assertTrue(opening["text"].startswith("Hi, I'm Stellis."))
+
+    def test_coach_and_tour_calls_relay_with_account_and_query(self) -> None:
+        """Hosted calls retain parameters and enforce session and origin checks."""
+        from websockets.exceptions import InvalidStatus
+        from websockets.sync.client import connect
+
+        with httpx.Client(base_url=self.url, timeout=30) as client:
+            client.post("/api/v1/auth/register", json={
+                "username": "caller", "password": "correct horse battery staple"}).raise_for_status()
+            cookie = "stellis_session=" + client.cookies.get("stellis_session")
+            for path in (
+                "/api/v1/coach/call?kind=call&today=2026-10-22&now=10:00&utc_offset=0",
+                "/api/v1/coach/call?kind=morning&today=2026-10-22&now=10:00&utc_offset=0",
+                "/api/v1/tour/call",
+            ):
+                with self.subTest(path=path):
+                    address = self.url.replace("http", "ws") + path
+                    with self.assertRaises(InvalidStatus):
+                        connect(address, open_timeout=10).close()
+                    with self.assertRaises(InvalidStatus):
+                        connect(address, additional_headers={
+                            "Cookie": cookie, "Origin": "https://example.com"},
+                            open_timeout=10).close()
+                    with connect(address, additional_headers={
+                            "Cookie": cookie, "Origin": self.url}, open_timeout=60) as call:
+                        ready = json.loads(call.recv(timeout=60))
+                        self.assertEqual(ready["type"], "ready")
+                        self.assertFalse(ready["voice"])
+                        opening = json.loads(call.recv(timeout=10))
+                        if path == "/api/v1/tour/call":
+                            self.assertEqual(opening["type"], "action")
+                            opening = json.loads(call.recv(timeout=10))
+                        self.assertEqual(opening["type"], "say")
+                        if "kind=call" in path:
+                            self.assertIn("Good morning", opening["text"])
+                        elif "kind=morning" in path:
+                            self.assertIn("check-in", opening["text"])
