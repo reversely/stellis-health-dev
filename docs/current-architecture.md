@@ -433,3 +433,18 @@ Optional comparison proposals bind two canonical notebook sources to exact quote
 
 ### Local deployment setup
 An operator CLI provisions a named local OpenClaw sandbox through NemoClaw on an isolated gateway port. Its private receipt records stages and immutable configuration; the browser reads only sanitized status through onboarding. Resume checks sandbox inventory, avoids repeating completed provisioning and performs both route and live-response verification. Onboarding polls setup progress separately from its current account readiness check. See ADR 0083 and local-agent-setup.md.
+
+## Shared speech-model setup
+
+The account gateway serves authenticated GET and POST /api/v1/setup requests in the process that owns the speech-model installer. Account workspace processes retain separate installer state and do not report shared download progress.
+
+The CLI starts installation automatically. POST starts or retries installation through one background-thread guard. Status includes the current file's received bytes, optional total size and connecting, receiving or verification stage. The browser shows a determinate bar only when the current file has a known total. Installed files make setup ready; failures retain a retry action.
+
+```mermaid
+flowchart LR
+  Browser[Authenticated browser] -->|GET status or POST retry| Gateway[Account gateway]
+  Gateway --> Installer[Shared speech-model installer]
+  Installer --> Models[(Shared model files)]
+  Gateway -->|Other workspace requests| Workspace[Account workspace process]
+  Workspace --> Models
+```

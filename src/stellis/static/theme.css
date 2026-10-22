@@ -2474,3 +2474,22 @@ body.recording-page #back-from-recording { min-height:44px; }
 html[data-theme='dark'] {
   --control-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F7F5F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
+
+#setup-retry {
+  justify-self: start;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--surface);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+#setup-retry[hidden], #setup-progress[hidden] { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  #setup-retry:enabled:hover {
+    background: color-mix(in oklch, var(--ink) 90%, var(--surface));
+  }
+}

@@ -77,3 +77,7 @@ Local setup explicitly says Completely local inference and names GN100. Cloud se
 ## Camera readings
 
 Home and Trends group pulse, breathing rate and heart rate variability under **Vital signs** with one inverted **Log vital signs** camera action per group. Home shows the latest values together; Trends keeps their charts and tables in the same section. Manual entries use the quieter **Log manually** action. Blood pressure, sleep and weight keep separate logging. Camera goals and the capture heading use **Log vital signs**. The capture explains the available readings before starting; it saves only estimates the recording can produce.
+
+## Transcription setup
+
+The Home setup card reports the shared speech-model installer. Waiting state offers Start setup. Downloading shows actual bytes for the current model and uses a determinate bar only when the response supplies its size. Connecting and checksum verification use an indeterminate bar. Failure offers Try again; unavailable status offers Check again. Ready state hides the card. Avoid estimated total sizes or a percentage when the installer cannot measure progress.

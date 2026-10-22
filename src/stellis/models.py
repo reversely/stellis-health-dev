@@ -24,7 +24,8 @@ MODELS = (
      "ad4a1802485d8b34c722d2a9d04249662f2ece5d28a7a039063ca22f515a789e", None),
 )
 
-_STATE = {"state": "idle", "model": None, "progress": 0.0, "error": None}
+_STATE = {"state": "idle", "model": None, "progress": 0.0, "error": None,
+          "stage": None, "downloaded_bytes": 0, "total_bytes": None}
 _LOCK = threading.Lock()
 _THREAD: threading.Thread | None = None
 
@@ -49,8 +50,8 @@ def missing() -> list[str]:
 def status() -> dict[str, object]:
     with _LOCK:
         state = dict(_STATE)
-    if not missing() and state["state"] != "failed":
-        state.update(state="ready", progress=1.0, model=None)
+    if not missing():
+        state.update(state="ready", progress=1.0, model=None, error=None, stage=None)
     return state
 
 
@@ -66,23 +67,29 @@ def _fetch(url: str, target: Path, index: int, count: int) -> None:
     with urllib.request.urlopen(url, timeout=60) as response, target.open("wb") as output:
         total = int(response.headers.get("Content-Length") or 0)
         done = 0
-        for block in iter(lambda: response.read(1 << 20), b""):
+        with _LOCK:
+            _STATE.update(stage="receiving", total_bytes=total or None)
+        for block in iter(lambda: response.read(1 << 18), b""):
             output.write(block)
             done += len(block)
             with _LOCK:
-                _STATE["progress"] = (index + (done / total if total else 0)) / count
+                _STATE.update(
+                    downloaded_bytes=done,
+                    progress=min(1.0, (index + done / total) / count) if total else None)
 
 
 def install() -> None:
     """Download each missing model; stop at the first failure and leave nothing half-written."""
-    folder = directory()
-    folder.mkdir(mode=0o700, parents=True, exist_ok=True)
-    absent = set(missing())
-    needed = [model for model in MODELS if model[0] in absent]
     try:
+        folder = directory()
+        folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+        absent = set(missing())
+        needed = [model for model in MODELS if model[0] in absent]
         for index, (name, url, digest, member) in enumerate(needed):
             with _LOCK:
-                _STATE.update(state="downloading", model=name, error=None)
+                _STATE.update(state="downloading", model=name, error=None,
+                              stage="connecting", downloaded_bytes=0, total_bytes=None,
+                              progress=index / len(needed))
             with tempfile.TemporaryDirectory(dir=folder) as work:
                 download = Path(work) / "download"
                 _fetch(url, download, index, len(needed))
@@ -91,14 +98,16 @@ def install() -> None:
                     with tarfile.open(download) as archive:
                         archive.extract(member, work, filter="data")
                     candidate = Path(work) / member
+                with _LOCK:
+                    _STATE["stage"] = "verifying"
                 if _digest(candidate) != digest:
                     raise RuntimeError(f"{name} did not match its published checksum")
                 candidate.chmod(0o600)
                 shutil.move(candidate, folder / name)
         with _LOCK:
-            _STATE.update(state="ready", model=None, progress=1.0, error=None)
+            _STATE.update(state="ready", model=None, progress=1.0, error=None, stage=None)
         _queue_waiting_conversations()
-    except Exception as exc:  # Network or disk errors are reported to the app and retried on the next start.
+    except Exception as exc:  # Network and disk errors remain available until the person retries.
         with _LOCK:
             _STATE.update(state="failed", error=str(exc) or "Download failed")
 
@@ -120,6 +129,7 @@ def ensure_in_background() -> None:
     with _LOCK:
         if _THREAD and _THREAD.is_alive():
             return
-        _STATE.update(state="downloading", progress=0.0, error=None)
+        _STATE.update(state="downloading", progress=0.0, error=None, stage="connecting",
+                      downloaded_bytes=0, total_bytes=None)
         _THREAD = threading.Thread(target=install, name="stellis-models", daemon=True)
         _THREAD.start()
