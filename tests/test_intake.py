@@ -172,6 +172,32 @@ class FollowOnTest(IntakeTestCase):
         self.assertTrue(whole.endswith("bypass surgery in ninety seven."))
 
 
+class BargeInTest(IntakeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.sent = []
+
+        async def send_json(message):
+            self.sent.append(message)
+
+        async def send_bytes(data):
+            pass
+        self.call = intake_voice.Call(send_json, send_bytes, None)
+        self.call.speaking = "Now, about your care team: do you see any other clinicians?"
+        self.call.speaking_until = float("inf")
+
+    def heard(self, text):
+        self.call.engine = type("Engine", (), {"transcribe": staticmethod(lambda segment: text)})()
+        asyncio.run(self.call._confirm_barge_in(np.zeros(1600, dtype=np.float32)))
+        return [m for m in self.sent if m["type"] == "stop"]
+
+    def test_the_agents_own_voice_does_not_stop_it(self):
+        self.assertEqual(self.heard("about your care team do you see"), [])
+
+    def test_the_person_talking_over_the_agent_stops_it(self):
+        self.assertEqual(len(self.heard("Wait, I forgot my inhaler")), 1)
+
+
 class PlanTest(IntakeTestCase):
     def test_the_plan_starts_with_the_goal_and_moves_on_as_notes_fill(self):
         self.assertEqual(intake.plan(intake.load())["next_topic"], "Goals")
@@ -181,7 +207,39 @@ class PlanTest(IntakeTestCase):
         self.assertEqual(intake.plan(state)["next_topic"], "Conditions")
         self.assertIn('"next_topic": "Conditions"', intake.conversation(state)[0]["content"])
         intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 1)
-        self.assertEqual(intake.plan(intake.load())["next_topic"], "read back and end")
+        self.assertEqual(intake.plan(intake.load())["next_topic"], intake.READ_BACK)
+
+    def test_a_topic_with_no_answer_is_dropped_after_two_answers(self):
+        intake.opening()
+        intake.add_person_turn("I want to lose weight.")
+        intake.save_notes([{"heading": "Goals", "items": ["Lose weight"]}], 0)
+        for answer in ("I don't know.", "No."):
+            self.assertEqual(intake.plan(intake.load())["next_topic"], "Conditions")
+            asyncio.run(self._reply_without_model("Any conditions?"))
+            intake.add_person_turn(answer)
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Medicines")
+
+    def test_the_call_ends_one_exchange_after_the_goodbye_step_starts(self):
+        intake.opening()
+        intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 0)
+        intake.add_person_turn("That's all.")
+        pieces = asyncio.run(self._reply_without_model("Here is what I heard. Is anything wrong?"))
+        self.assertNotIn(intake.END_MARK, pieces)
+        intake.add_person_turn("No, that's right.")
+        self.assertEqual(intake.plan(intake.load())["next_topic"], intake.GOODBYE)
+        pieces = asyncio.run(self._reply_without_model("Should I add a reminder?"))
+        self.assertNotIn(intake.END_MARK, pieces)
+        intake.add_person_turn("Maybe.")
+        pieces = asyncio.run(self._reply_without_model("Thank you. Your notes are ready."))
+        self.assertEqual(pieces[-1], intake.END_MARK)
+
+    async def _reply_without_model(self, text):
+        async def tokens(messages):
+            yield text
+        with patch.object(intake, "stream_tokens", tokens):
+            pieces = [piece async for piece in intake.reply()]
+        intake.add_agent_turn(" ".join(pieces))
+        return pieces
 
     def test_the_opening_states_the_purpose_and_asks_for_the_goal(self):
         self.assertIn("five minutes", intake.OPENING)
@@ -264,6 +322,8 @@ class VoiceCallTest(IntakeTestCase):
             messages.append(data)
             if data["type"] == "say" and data["audio"]:
                 socket.send_json({"type": "playing", "turn": data["turn"]})
+            if data["type"] == "ended":
+                return messages, audio
             if data["type"] == "state" and data["state"] == "listening":
                 # A caller waits for the agent to finish before answering.
                 socket.send_json({"type": "played"})
@@ -285,22 +345,31 @@ class VoiceCallTest(IntakeTestCase):
                 for start in range(0, len(pcm), 640):
                     socket.send_bytes(pcm[start:start + 640])
                 messages, _ = self.until_listening(socket)
+                if messages[-1]["type"] == "ended" and not any(m["type"] == "heard" for m in messages):
+                    break  # The call ended after the last reply; this answer went unheard.
                 # A pause can split an answer; the last "heard" has all of it.
                 heard = [m["text"] for m in messages if m["type"] == "heard"][-1]
                 overlaps.append(word_overlap(heard, turn["person"]))
                 transcripts.append(heard)
-            ended = socket.receive_json()
-            self.assertEqual(ended["type"], "ended")
+                replies = messages
+                if messages[-1]["type"] == "ended":
+                    break
+            while messages[-1]["type"] != "ended":
+                messages.append(socket.receive_json())
+            # The plan's goodbye step can end the call at the script's read-back.
+            said = " ".join(m["text"] for m in replies if m["type"] == "say")
+            self.assertTrue(said.endswith("anything wrong?") or said.endswith("ready to review."), said)
+        answered = len(overlaps)
         # Medicine names and spoken numbers miss most often.
         self.assertGreaterEqual(sum(overlaps) / len(overlaps), 0.75, overlaps)
         print("word overlap per answer", [round(o, 2) for o in overlaps])
         print("heard", transcripts)
         state = intake.load()
-        self.assertEqual(sum(t["role"] == "person" for t in state["turns"]), len(SCRIPT["turns"]) - 1)
-        self.assertEqual(state["notes"], intake.clean_notes(script_notes(len(SCRIPT["turns"]) - 1)))
+        self.assertEqual(sum(t["role"] == "person" for t in state["turns"]), answered)
+        self.assertEqual(state["notes"], intake.clean_notes(script_notes(answered)))
         log = (Path(self.tmp.name) / "intake-latency.jsonl").read_text().splitlines()
         stages = [json.loads(line) for line in log]
-        self.assertEqual(len(stages), len(SCRIPT["turns"]) - 1)
+        self.assertEqual(len(stages), answered)
         self.assertTrue(all(set(s) == {"stt_done", "first_token", "first_audio", "playing"} for s in stages))
         print("stage times in ms after the end of speech", stages)
 

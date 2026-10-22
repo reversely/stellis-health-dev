@@ -231,7 +231,14 @@ class Call:
         self.replying: asyncio.Task | None = None
         self.notes: asyncio.Task | None = None
         self.notes_again = False
+        # The current turn's spoken text, to recognise its echo.
         self.speaking = ""
+        self.speaking_turn = -1
+        # The history sample where the person's current speech started, and
+        # the sample count at which to check it for a barge-in next.
+        self.speech_sample: int | None = None
+        self.next_check = 0
+        self.checking: asyncio.Task | None = None
         self.answer_ended: float | None = None
         self.speaking_until = 0.0
         self.discard_reply = False
@@ -261,7 +268,7 @@ class Call:
             while not self.vad.empty():
                 segment = self._with_pre_roll(self.vad.front.start, len(self.vad.front.samples))
                 self.vad.pop()
-                self.speech_started = None
+                self.speech_started = self.speech_sample = None
                 ended_at = time.perf_counter() - END_SILENCE_S
                 await self._answer_audio(segment, ended_at)
 
@@ -278,12 +285,29 @@ class Call:
         return self.history[begin - self.history_start:start + length - self.history_start].copy()
 
     async def _check_barge_in(self) -> None:
+        """Stops the agent when the person talks over it.
+
+        Speech over the agent is transcribed first: the agent's own voice
+        from the speakers reaches the microphone too, and must not stop it.
+        """
         if not self.vad.is_speech_detected():
-            self.speech_started = None
+            self.speech_started = self.speech_sample = None
             return
         now = time.perf_counter()
         self.speech_started = self.speech_started or now
-        if self._busy() and now - self.speech_started >= BARGE_IN_S:
+        heard_until = self.history_start + len(self.history)
+        if self.speech_sample is None:
+            self.speech_sample = heard_until
+            self.next_check = heard_until + int(BARGE_IN_S * SAMPLE_RATE)
+        if (self._busy() and heard_until >= self.next_check
+                and (self.checking is None or self.checking.done())):
+            self.next_check = heard_until + int(BARGE_IN_S * SAMPLE_RATE)
+            segment = self._with_pre_roll(self.speech_sample, heard_until - self.speech_sample)
+            self.checking = asyncio.create_task(self._confirm_barge_in(segment))
+
+    async def _confirm_barge_in(self, segment: np.ndarray) -> None:
+        text = await asyncio.to_thread(self.engine.transcribe, segment)
+        if len(text.split()) >= 2 and not is_echo(text, self.speaking):
             await self._interrupt()
 
     def _busy(self) -> bool:
@@ -349,11 +373,15 @@ class Call:
 
     async def _reply(self, turn: int) -> None:
         await self.send_json({"type": "state", "state": "thinking"})
-        spoken: list[str] = []
+        # Each piece with the time its audio starts playing.
+        spoken: list[tuple[str, float]] = []
+        cut = False
         try:
             async for piece in intake.reply(self.timings[turn]):
-                await self._say(piece, turn)
-                spoken.append(piece)
+                spoken.append((piece, await self._say(piece, turn)))
+        except asyncio.CancelledError:
+            cut = True
+            raise
         except intake.IntakeError as exc:
             await self.send_json({"type": "error", "message": str(exc)})
         except Exception:  # Any other failure ends the reply, not the call.
@@ -361,9 +389,11 @@ class Call:
             await self.send_json({"type": "error", "message": "The reply failed. Try saying that again."})
         finally:
             if not self.discard_reply:
-                intake.add_agent_turn(" ".join(spoken))
+                # An interrupted reply keeps only the pieces that started playing.
+                now = time.perf_counter()
+                intake.add_agent_turn(" ".join(piece for piece, start in spoken if not cut or start <= now))
         await self.send_json({"type": "state", "state": "listening"})
-        if any(intake.END_MARK in piece for piece in spoken):
+        if any(intake.END_MARK in piece for piece, _ in spoken):
             self.ended = True
             await self.send_json({"type": "ended"})
 
@@ -374,11 +404,14 @@ class Call:
             intake.add_agent_turn(" ".join(pieces))
         await self.send_json({"type": "state", "state": "listening"})
 
-    async def _say(self, piece: str, turn: int) -> None:
+    async def _say(self, piece: str, turn: int) -> float:
+        """Sends one piece of speech; returns when its audio starts playing."""
         text = piece.replace(intake.END_MARK, "").strip()
+        start = max(time.perf_counter(), self.speaking_until)
         if not text:
-            return
-        self.speaking = text
+            return start
+        self.speaking = f"{self.speaking} {text}" if turn == self.speaking_turn else text
+        self.speaking_turn = turn
         audio = rate = None
         if self.engine is not None and self.speaker:
             audio, rate = await asyncio.to_thread(self.engine.speak, text)
@@ -391,7 +424,9 @@ class Call:
             await self.send_bytes(audio)
             # The browser plays pieces back to back; this is when the last ends.
             seconds = len(audio) / 2 / rate
-            self.speaking_until = max(time.perf_counter(), self.speaking_until) + seconds
+            start = max(time.perf_counter(), self.speaking_until)
+            self.speaking_until = start + seconds
+        return start
 
     def playing(self, turn: int) -> None:
         """The browser started playing a turn's first audio; logs its stages."""
@@ -442,7 +477,8 @@ class Call:
             await self._interrupt()
 
     async def close(self) -> None:
-        for task in (self.replying, self.notes):
-            if task is not None and not task.done():
+        tasks = [t for t in (self.replying, self.notes, self.checking) if t is not None]
+        for task in tasks:
+            if not task.done():
                 task.cancel()
-        await asyncio.gather(*(t for t in (self.replying, self.notes) if t), return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)

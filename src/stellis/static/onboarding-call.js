@@ -272,12 +272,14 @@ function render(scene, kit) {
                                                                message.state);
         }
         break;
-      case 'say':
-        addLine('agent', message.text, message.turn);
-        break;
       case 'caption':
+        // A line joins the transcript when it starts playing, so speech cut
+        // off by the person never appears there.
         caption.textContent = message.text;
-        if (message.text) setStatus('speaking');
+        if (message.text) {
+          setStatus('speaking');
+          addLine('agent', message.text, message.turn);
+        }
         break;
       case 'heard':
         // A continued answer drops the reply the agent had started to it.
