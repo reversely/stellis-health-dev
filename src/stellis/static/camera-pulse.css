@@ -1,8 +1,15 @@
-/* Camera pulse dialog, opened from the Trends page. */
+/* Camera pulse dialog, opened from the Trends page. While the camera is live
+   the dialog turns dark like a call screen: full screen on phones, camera
+   beside a checks panel on desktop. Design: plans/camera-vitals-capture.md */
 .pulse-dialog {
   --chart-series: oklch(0.6 0.1 200);
+  --pulse-live-bg: oklch(0.2 0.015 320);
+  --pulse-live-ink: oklch(0.97 0.005 320);
+  --pulse-live-muted: oklch(0.8 0.015 320);
+  --pulse-pass: oklch(0.72 0.12 196);
+  --pulse-fail: oklch(0.82 0.13 80);
   width: min(440px, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
   box-sizing: border-box;
   padding: 20px;
   border: 1px solid var(--line);
@@ -52,6 +59,10 @@ html[data-theme='dark'] .pulse-dialog {
   gap: 14px;
 }
 .pulse-dialog button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--line);
@@ -73,8 +84,6 @@ html[data-theme='dark'] .pulse-dialog {
   border-color: var(--line-soft);
 }
 .pulse-dialog .pulse-close {
-  display: inline-grid;
-  place-items: center;
   width: 44px;
   padding: 0;
   border-color: transparent;
@@ -90,73 +99,161 @@ html[data-theme='dark'] .pulse-dialog {
   gap: 8px;
   margin: 0;
   padding-left: 20px;
+  font-size: 17px;
   line-height: 1.45;
 }
 .pulse-note,
 .pulse-status,
 .pulse-label,
 .pulse-message,
+.pulse-usual,
 .pulse-error {
   margin: 0;
 }
 .pulse-note {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
-.pulse-frame {
+
+/* Live: the dark call-style screen. */
+.pulse-dialog[data-stage='live'] {
+  width: min(920px, calc(100vw - 48px));
+  padding: 16px;
+  border-color: transparent;
+  background: var(--pulse-live-bg);
+  color: var(--pulse-live-ink);
+}
+.pulse-dialog[data-stage='live'] .pulse-head h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+.pulse-dialog[data-stage='live'] .pulse-close,
+.pulse-dialog[data-stage='live'] .pulse-panel button {
+  border-color: color-mix(in oklch, var(--pulse-live-ink) 22%, transparent);
+  background: color-mix(in oklch, var(--pulse-live-ink) 10%, transparent);
+  color: var(--pulse-live-ink);
+}
+.pulse-dialog[data-stage='live'] .pulse-close {
+  border-radius: 50%;
+}
+.pulse-dialog[data-stage='live'] .pulse-panel button:disabled {
+  color: var(--pulse-live-muted);
+  opacity: 0.6;
+}
+.pulse-live {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
+  gap: 20px;
+  align-items: stretch;
+}
+.pulse-stage {
   position: relative;
   overflow: hidden;
   aspect-ratio: 3 / 4;
-  max-height: 52vh;
-  border-radius: 14px;
-  background: var(--raised);
+  max-height: 70dvh;
+  border-radius: 18px;
+  background: oklch(0.14 0.01 320);
 }
 .pulse-video {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
 }
-/* A soft oval guide: the face area stays clear, the edges dim. */
-.pulse-oval {
+.pulse-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse 34% 38% at 50% 46%,
-    transparent 97%,
-    color-mix(in oklch, black 45%, transparent) 100%
-  );
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
 }
-.pulse-oval::after {
-  content: '';
-  position: absolute;
-  left: 16%;
-  top: 8%;
-  width: 68%;
-  height: 76%;
-  box-sizing: border-box;
-  border: 2px solid color-mix(in oklch, white 80%, transparent);
-  border-radius: 50%;
+.pulse-shade {
+  fill: oklch(0 0 0 / 0.55);
+}
+.pulse-oval {
+  fill: none;
+  stroke: color-mix(in oklch, white 85%, transparent);
+  stroke-width: 2.5;
+  transition: stroke 200ms;
+}
+.pulse-dialog.is-measuring .pulse-oval {
+  stroke: color-mix(in oklch, var(--pulse-pass) 45%, transparent);
+}
+.pulse-ring {
+  fill: none;
+  stroke: var(--pulse-pass);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.pulse-panel {
+  display: grid;
+  align-content: center;
+  gap: 18px;
 }
 .pulse-status {
-  color: var(--ink);
+  min-height: 2.4em;
+  color: var(--pulse-live-ink);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.pulse-track {
-  overflow: hidden;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--raised);
+.pulse-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.pulse-bar {
-  height: 100%;
-  border-radius: 3px;
-  background: var(--chart-series);
-  transform: scaleX(0);
-  transform-origin: left;
+.pulse-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--pulse-live-ink) 10%, transparent);
+  color: var(--pulse-live-muted);
+  font-size: 14px;
 }
+.pulse-check-dot {
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.pulse-check[data-state='pass'] {
+  color: var(--pulse-live-ink);
+}
+.pulse-check[data-state='pass'] .pulse-check-dot {
+  border-color: var(--pulse-pass);
+  background: var(--pulse-pass);
+}
+.pulse-check[data-state='fail'] {
+  color: var(--pulse-live-ink);
+  box-shadow: inset 0 0 0 1.5px var(--pulse-fail);
+}
+.pulse-check[data-state='fail'] .pulse-check-dot {
+  border-color: var(--pulse-fail);
+}
+.pulse-dialog[data-stage='live'] {
+  --chart-series: var(--pulse-pass);
+}
+.pulse-wave {
+  display: block;
+  width: 100%;
+  height: 56px;
+}
+.pulse-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Result. */
 .pulse-label {
   color: var(--muted);
 }
@@ -167,14 +264,21 @@ html[data-theme='dark'] .pulse-dialog {
   margin: 0;
 }
 .pulse-value {
-  font-size: 56px;
+  font-size: 64px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 .pulse-unit {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 20px;
+}
+.pulse-usual {
+  font-size: 17px;
+}
+.pulse-message {
+  font-size: 17px;
+  line-height: 1.45;
 }
 .pulse-error {
   color: var(--failure);
@@ -182,8 +286,40 @@ html[data-theme='dark'] .pulse-dialog {
 .pulse-error:empty {
   display: none;
 }
-.pulse-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+
+/* Phones: the live screen fills the display, like a call. */
+@media (max-width: 640px) {
+  .pulse-dialog[data-stage='live'] {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 12px 12px max(16px, env(safe-area-inset-bottom));
+    border-radius: 0;
+  }
+  .pulse-dialog[data-stage='live'] .pulse-body,
+  .pulse-dialog[data-stage='live'] .pulse-live {
+    height: calc(100% - 56px);
+  }
+  .pulse-live {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 14px;
+  }
+  .pulse-stage {
+    aspect-ratio: auto;
+    max-height: none;
+    min-height: 0;
+  }
+  .pulse-panel {
+    gap: 12px;
+  }
+  .pulse-status {
+    min-height: 0;
+    font-size: 24px;
+  }
+  .pulse-wave {
+    height: 40px;
+  }
 }

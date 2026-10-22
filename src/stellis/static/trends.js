@@ -451,7 +451,8 @@ class TrendsPage {
     const button = this.dom.button(null, 'trend-add trend-camera');
     button.append(
         this.dom.icon('camera'), this.dom.el('span', 'Measure with camera'));
-    button.addEventListener('click', () => camera.open(() => this.load()));
+    button.addEventListener(
+        'click', () => camera.open(() => this.load(), measure));
     return button;
   }
 

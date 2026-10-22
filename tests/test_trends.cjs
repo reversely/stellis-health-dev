@@ -121,35 +121,114 @@ test('a date becomes a datetime-local value in local time', () => {
   assert.equal(value, '2026-10-22T07:05');
 });
 
-const {summarize} = require('../src/stellis/static/camera-pulse.js');
+const pulse = require('../src/stellis/static/camera-pulse.js');
 
-/**
- * Builds a capture of steady estimates, one every 100 ms.
- * @param {function(number): ?number} bpmAt
- * @param {function(number): boolean=} faceAt
- * @return {!Array<!Object>}
- */
-function capture(bpmAt, faceAt = () => true) {
-  const samples = [];
-  for (let t = 0; t <= 45000; t += 100) {
-    samples.push({t, bpm: bpmAt(t), face: faceAt(t)});
-  }
-  return samples;
-}
-
-test('a steady capture gives the median of its last 20 seconds', () => {
-  const result = summarize(capture((t) => t < 25000 ? 90 : 64 + (t % 3)));
-  assert.equal(result.ok, true);
-  assert.equal(result.bpm, 65);
-  assert.ok(result.quality > 0.8 && result.quality <= 1);
+test('the face check wants a centred face of the right size', () => {
+  assert.equal(pulse.faceCheck(null, 480, 640), 'none');
+  assert.equal(pulse.faceCheck([160, 140, 320, 450], 480, 640), '');
+  assert.equal(pulse.faceCheck([10, 140, 120, 450], 480, 640), 'off');
+  assert.equal(pulse.faceCheck([215, 250, 265, 330], 480, 640), 'far');
+  assert.equal(pulse.faceCheck([60, 10, 420, 600], 480, 640), 'close');
 });
 
-test('unsteady, faceless or short captures are refused', () => {
-  const jumpy = summarize(capture((t) => 60 + (t % 2000) / 100));
-  assert.deepEqual([jumpy.ok, jumpy.reason], [false, 'steady']);
-  const away = summarize(capture(() => 66, (t) => t % 1000 < 700));
-  assert.deepEqual([away.ok, away.reason], [false, 'face']);
-  const empty = summarize(capture(() => null));
-  assert.deepEqual([empty.ok, empty.reason], [false, 'short']);
-  assert.equal(summarize([]).reason, 'short');
+test('the light check finds dark, backlit and glaring faces', () => {
+  assert.equal(pulse.lightCheck(null, 120), '');
+  assert.equal(pulse.lightCheck(130, 140), '');
+  assert.equal(pulse.lightCheck(50, 55), 'dark');
+  assert.equal(pulse.lightCheck(80, 170), 'backlit');
+  assert.equal(pulse.lightCheck(230, 230), 'bright');
+});
+
+test('the still check measures the last second of movement', () => {
+  const steady = [0, 300, 600, 900].map((t) => ({t, x: 0.5, y: 0.46}));
+  assert.equal(pulse.stillCheck(steady), '');
+  const moving = steady.map((centre, i) => ({...centre, x: 0.5 + i * 0.03}));
+  assert.equal(pulse.stillCheck(moving), 'moving');
+  const old = [
+    {t: 0, x: 0.2, y: 0.46},
+    ...steady.map((centre) => ({...centre, t: centre.t + 1200}))
+  ];
+  assert.equal(pulse.stillCheck(old), '');
+});
+
+test('chips pass before the failing check and wait after it', () => {
+  assert.deepEqual(
+      pulse.checkStates(''),
+      {face: 'pass', light: 'pass', still: 'pass', signal: 'pass'});
+  assert.deepEqual(
+      pulse.checkStates('backlit'),
+      {face: 'pass', light: 'fail', still: 'wait', signal: 'wait'});
+});
+
+test('a reading is described against the usual range', () => {
+  const usual = {low: 60.2, high: 70.4};
+  assert.equal(pulse.usualText(64, usual), 'About your usual (60 to 70)');
+  assert.equal(pulse.usualText(76, usual), 'Higher than your usual (60 to 70)');
+  assert.equal(pulse.usualText(55, usual), 'Lower than your usual (60 to 70)');
+  assert.match(pulse.usualText(64, null), /few more readings/);
+});
+
+test('the summary takes the median of the last 20 s of good signal', () => {
+  const samples = [];
+  for (let t = 0; t <= 30000; t += 100) {
+    samples.push({t, bpm: t < 5000 ? 90 : 64 + (t % 3)});
+  }
+  const result = pulse.summarize(samples);
+  assert.deepEqual([result.ok, result.bpm], [true, 65]);
+  assert.ok(result.quality > 0.8);
+  const jumpy = samples.map((s) => ({...s, bpm: 60 + (s.t % 2000) / 100}));
+  assert.deepEqual(
+      [pulse.summarize(jumpy).ok, pulse.summarize(jumpy).reason],
+      [false, 'steady']);
+  assert.equal(pulse.summarize([]).reason, 'steady');
+});
+
+/**
+ * Feeds events to a capture until it finishes or time runs out.
+ * @param {function(number): !Object} eventAt Event fields by time.
+ * @return {!Object} The last update.
+ */
+function run(eventAt) {
+  const state = new pulse.CaptureState(0);
+  let update;
+  for (let now = 33; now <= pulse.MAX_MS + 100; now += 33) {
+    update = state.update({
+      now,
+      width: 480,
+      height: 640,
+      box: [160, 140, 320, 450],
+      wave: 1,
+      bpm: 66,
+      faceLuma: 130,
+      frameLuma: 140,
+      ...eventAt(now),
+    });
+    if (update.done) {
+      break;
+    }
+  }
+  return update;
+}
+
+test('the countdown pauses while a check fails and then finishes', () => {
+  const update = run((now) => now > 5000 && now < 15000 ? {box: null} : {});
+  assert.equal(update.done, true);
+  assert.deepEqual([update.result.ok, update.result.bpm], [true, 66]);
+  assert.ok(update.goodMs >= pulse.GOOD_MS);
+});
+
+test('a capture that never gets good light names the light', () => {
+  const update = run(() => ({faceLuma: 40, frameLuma: 45}));
+  assert.deepEqual(
+      [update.done, update.result.ok, update.result.reason],
+      [true, false, 'light']);
+});
+
+test('no waveform for three seconds is a missing signal', () => {
+  const update = run(() => ({wave: 0}));
+  assert.equal(update.result.reason, 'signal');
+});
+
+test('the oval path starts at the top of the oval', () => {
+  assert.equal(pulse.ovalPath(300, 400), 'M150 40A96 144 0 1 1 149.99 40Z');
 });
