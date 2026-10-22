@@ -1,8 +1,9 @@
 /**
- * @fileoverview First-run setup as three steps in order: a welcome that
- * introduces the agent team, adding records, and reviewing the notebooks the
- * model proposes from those records with each notebook's agents. Nothing is
- * filed or deployed until the person finishes the review.
+ * @fileoverview First-run setup as four steps in order: a welcome, an intake
+ * call about the person's health (onboarding-call.js), adding records, and
+ * reviewing the notebooks proposed from the call and the records, each with
+ * its goal and agents. Nothing is filed or deployed until the person
+ * finishes the review.
  */
 (() => {
   const main = document.querySelector('#setup-main');
@@ -16,6 +17,8 @@
   let choices = {};
   let taskChoices = {};
   let saves = Promise.resolve();
+  /** The call step, while it is on screen. */
+  let callStep = null;
   /** Records added during this setup, newest last. */
   const added = [];
 
@@ -93,7 +96,8 @@
   }
 
   function render(focus = true) {
-    window.StellisOnboardingSources?.stop();
+    callStep?.leave();
+    callStep = null;
     error.textContent = '';
     main.replaceChildren();
     const review = state.step === 'review';
@@ -103,6 +107,19 @@
     main.append(scene);
     if (state.step === 'welcome') {
       welcome(scene);
+    } else if (state.step === 'call') {
+      callStep = window.StellisOnboardingCall.render(scene, {
+        api,
+        node,
+        icon,
+        avatar,
+        button,
+        error: (text) => {
+          error.textContent = text;
+        },
+        next: () => go('records'),
+        back: () => go('welcome'),
+      });
     } else if (review) {
       reviewScreen(scene);
     } else {
@@ -123,32 +140,32 @@
         node('h1', 'Welcome to Stellis Health'),
         node(
             'strong',
-            'Stellis Health keeps your health records and vital signs in ' +
-                'one place with a team of AI agents.'),
+            'Stellis Health keeps your records and appointments in one place.'),
         node(
             'p',
-            'Agents read your records, answer your questions with the page ' +
-                'each answer comes from, and suggest tasks for you to ' +
-                'approve.'),
+            'Your agents answer health questions from your records and help ' +
+                'with the goals you set. Start with a short call with ' +
+                'Stellis about your health.'),
         node(
             'p',
             state.runtime.local_inference ?
                 'AI responses run on your connected computer.' :
                 'Agents run on Nebius Cloud with Token Factory inference.',
             'setup-hint'),
-        button('Get started', () => go('records'), 'primary'));
+        button('Get started', () => go('call'), 'primary'));
     scene.append(copy);
+    // The three goals and the agents who work on them.
     const orbit = [
       ['Records', 'file-text'],
       ['Chief of Staff', null],
-      ['Summary', 'sparkles'],
+      ['Appointments', 'calendar'],
       ['Steward', null],
-      ['Timeline', 'clock'],
+      ['Questions', 'message-2'],
       ['Deep research', null],
-      ['Notebooks', 'notebook'],
+      ['Goals', 'target'],
       ['Writing', null],
-      ['Collections', 'folder-plus'],
-      ['Private', 'key'],
+      ['Trends', 'activity'],
+      ['Reminders', 'clock'],
     ];
     const perSide = Math.ceil(orbit.length / 2);
     orbit.forEach(([name, glyph], index) => {
@@ -169,7 +186,7 @@
         node(
             'p',
             'Letters, lab results, scans and recordings all work, and your ' +
-                'agents propose notebooks for them next.',
+                'agents file them with the notebooks from your call.',
             'setup-hint'));
     const drop = node('div', null, 'setup-drop');
     drop.tabIndex = 0;
@@ -224,7 +241,7 @@
     const actions = node('div', null, 'setup-actions');
     actions.append(
         next, button('Add later', () => go('review')),
-        button('Back', () => go('welcome')));
+        button('Back', () => go('call')));
     scene.append(actions);
   }
 
@@ -392,13 +409,23 @@
     const head = node('div', null, 'setup-book-name');
     head.append(choose);
     if (group.reason) head.append(node('p', group.reason, 'setup-hint'));
-    const records = node('details');
-    records.append(node('summary', plural(group.items.length, 'record')));
-    const list = node('ul', null, 'setup-source-list');
-    for (const item of group.items) list.append(node('li', item.title));
-    records.append(list);
-    card.append(
-        head, records, teamChoice(key, DEFAULT_AGENTS), taskChoice(key));
+    const goalLabel = node('label', null, 'setup-goal');
+    goalLabel.append(icon('target'), node('span', 'Goal'));
+    const goal = node('input', null, 'setup-goal-input');
+    goal.value = group.goal || '';
+    goal.maxLength = 200;
+    goal.placeholder = 'No goal yet';
+    goalLabel.append(goal);
+    card.append(head, goalLabel);
+    if (group.items.length) {
+      const records = node('details');
+      records.append(node('summary', plural(group.items.length, 'record')));
+      const list = node('ul', null, 'setup-source-list');
+      for (const item of group.items) list.append(node('li', item.title));
+      records.append(list);
+      card.append(records);
+    }
+    card.append(teamChoice(key, DEFAULT_AGENTS), taskChoice(key));
     include.addEventListener('change', () => {
       card.classList.toggle('is-left-out', !include.checked);
       onChange();
@@ -413,15 +440,16 @@
         items: group.items.map((item) => ({kind: item.kind, id: item.id})),
         agents: choices[key],
         suggest_tasks: taskChoices[key],
+        goal: goal.value.trim(),
       };
     };
     return {card, read};
   }
 
-  /** Step 3: notebooks proposed from the records, with their agents. */
+  /** Step 4: notebooks proposed from the call and the records. */
   function reviewScreen(scene) {
     const title = node('h1', 'Review your notebooks');
-    const subtitle = node('p', 'Reading your records', 'setup-hint');
+    const subtitle = node('p', 'Reading your notes and records', 'setup-hint');
     subtitle.role = 'status';
     const head = node('div', null, 'setup-review-head');
     head.append(title, subtitle);
@@ -456,14 +484,14 @@
     const actions = node('div', null, 'setup-actions');
     actions.append(finish, button('Back', () => go('records')));
     scene.append(head, grid, actions);
-    api('/records/sort/suggest', 'POST')
+    api('/intake/notebooks', 'POST')
         .then((result) => {
           const groups = result.groups.slice(0, MAX_NOTEBOOKS);
           cards =
               groups.map((group, index) => notebookCard(group, index, paint));
           grid.replaceChildren(...cards.map((entry) => entry.card));
           subtitle.textContent = groups.length ?
-              'Choose who helps in each notebook before anything is filed' :
+              'Check each goal and choose who helps before anything is filed' :
               'Your agents sort records you add later from Records';
         })
         .catch((e) => {
@@ -503,8 +531,8 @@
         location.replace('/');
         return;
       }
-      // Setups saved by the earlier flow resume at the records step.
-      if (state.step === 'uses') state.step = 'records';
+      // Setups saved by the earlier flow resume at the call.
+      if (state.step === 'uses') state.step = 'call';
       render(false);
     } catch (e) {
       error.textContent = e.message;

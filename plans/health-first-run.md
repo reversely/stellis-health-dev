@@ -71,6 +71,37 @@ The intake is meant to feel like a call. Three ways to build it, as a proposal:
 
 Recommendation: A for the alpha, with B as a later ticket.
 
+### Intake call (O-01): status, 22 Oct 2026
+
+Setup now runs Welcome, the intake call, Your files, and Your notebooks in that order.
+
+The call works like this:
+- **Screen:** a dark call panel sits beside a notepad. The panel has the agent, a timer, Mute, Speaker and End, and a field for typed answers. Minimise shrinks the call to a floating card so the notes fill the screen.
+- **Notepad:** short notes fill in under fixed headings after each answer. The person can edit any line, and the transcript sits behind a second tab.
+- **After the call:** the notes and transcript are saved as the note "Intake call". The model proposes up to 5 notebooks from the notes and any files, each with a goal. A goal becomes a to-do on that notebook's Goals page.
+
+The call runs speech on the app's own machine through sherpa-onnx, already a dependency:
+
+| Stage | Model | Measured on 2 CPUs |
+| --- | --- | --- |
+| End of speech | Silero VAD, 0.45 s of silence ends an answer | 0.45 s by design |
+| Speech to text | Moonshine base, int8, 275 MB | 0.13 to 0.22 s for a 2 to 4 s answer |
+| Text to speech | Kitten nano 0.2, 42 MB | 0.19 s of compute per second of speech |
+| Agent reply | Token Factory agent model, streamed | Not measured here: this container has no model key |
+
+The build differs from the ticket in three places:
+- **Kitten replaces Kokoro.** Kokoro int8 needed 1.0 to 1.2 s of compute per second of speech on 2 CPUs, which alone exceeds the 1.2 s target. Kokoro returns once the machine has faster CPUs.
+- **A WebSocket replaces WebRTC.** Fly's HTTP proxy forwards TCP only, and WebRTC audio needs UDP. The browser streams 16 kHz audio over a WebSocket that the account gateway relays to the account's own process.
+- **Moonshine replaces Whisper for the call.** Whisper small takes seconds per answer on this machine. Moonshine misheard "lisinopril" in 4 of 4 synthetic tests, so the agent asks to confirm medicine names, and unconfirmed names go under "To confirm".
+
+Each turn logs, without content, the time from the end of speech to speech-to-text done, model first token, first audio ready, and audio playing. In the simulated Denver call with a scripted model, first audio was ready 0.9 to 1.1 s after Denver stopped speaking. Two answers that Denver continued after a pause took 2.2 to 2.4 s, because the agent dropped its first reply and started again.
+
+During a call the speech models add about 440 MB of memory to the account's process.
+
+Not built yet:
+- The S-01 emergency rules. The call runs the same empty `notebook_chat.check` hook as notebook chat, and the agent's instructions tell it to send a possible emergency to the local emergency number.
+- The latency report over 20 runs on the hosted app. `tests/test_intake.py` has the simulated two-sided call, and it needs the hosted model to measure model time.
+
 ## Today: goals, habits and reminders
 
 Today is the third pillar's home and the first page after onboarding. It shows:

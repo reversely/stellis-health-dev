@@ -44,6 +44,8 @@ def reopen(account_id):
         if not auth.needs_onboarding(account_id) and not state.get("editing"):
             state.update(step="welcome", editing=True, uses=[], agent_choices={}, task_choices={}, scan=None)
             _save(state)
+            from stellis import intake
+            intake.reset()
     return status(account_id)
 
 
@@ -125,9 +127,11 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
         account_id: The account finishing setup.
         proposal_id: A reviewed calendar proposal, or None.
         group_ids: The calendar groups the person kept.
-        record_groups: Notebooks proposed from the person's records, each with
-            ``notebook_name``, ``notebook_id``, ``items`` ({kind, id}),
-            ``agents`` (template ids) and ``suggest_tasks``.
+        record_groups: Notebooks proposed from the intake call and the
+            person's records, each with ``notebook_name``, ``notebook_id``,
+            ``items`` ({kind, id}), ``agents`` (template ids),
+            ``suggest_tasks`` and an optional ``goal``, which becomes a to-do
+            on the notebook's Goals page.
     """
     record_groups = record_groups or []
     _check_record_groups(record_groups)
@@ -180,6 +184,8 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
                 collections.assign_notebook(book["id"], health["id"])
             deployed = [agents.deploy(template, book["id"])
                         for template in dict.fromkeys(group.get("agents", []))]
+            if group.get("goal", "").strip():
+                pages.create("Goals", book["id"], f"- [ ] {' '.join(group['goal'].split())}\n")
             created.append({"notebook_id": book["id"], "name": book["name"],
                             "agent_ids": [a["id"] for a in deployed], "filed": filed["moved"]})
         default = next(item for item in agents.list_agents() if item["is_default"])

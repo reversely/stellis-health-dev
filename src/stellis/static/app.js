@@ -939,6 +939,9 @@ async function showList() {
   renderNotebooks();
   renderHomeAgents();
   renderCategoryGroups();
+  // Tag cards wait for the first conversation; an empty account sees none.
+  document.querySelector('#list-view [data-widget="tags"]')?.toggleAttribute('hidden', !libraryConversations.length);
+  window.StellisHealthPillars?.home(document.querySelector('#home-pillars'));
   watchSetup();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
@@ -2715,7 +2718,7 @@ async function showVocabulary(section = null) {
     else link.removeAttribute('aria-current');
   }
   vocabularyKind = section === 'names' ? 'name' : 'other';
-  document.querySelector('#page-title').textContent = 'Custom vocabulary';
+  document.querySelector('#page-title').textContent = 'Terms';
   document.querySelector('#vocabulary-kind-title').textContent = section === 'names' ? 'Names of people' : 'Other vocabulary';
   document.querySelector('#vocabulary-form label').textContent = section === 'names' ? 'Add names of people' : 'Add words or phrases';
   document.querySelector('#vocabulary-move-selected').textContent = section === 'names' ? 'Move to Other vocabulary' : 'Move to Names of people';
@@ -4324,7 +4327,7 @@ function paintNotebookItems() {
   const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; };
   const table = el('table', 'items-table');
   const head = el('thead'); const headRow = el('tr');
-  for (const [label, className] of [['Type', 'items-icon'], ['Title', 'items-title'], ['Date', 'items-date'], ['Tags', 'items-tags'], ['To-dos', 'items-todos']]) {
+  for (const [label, className] of [['Type', 'items-icon'], ['Title', 'items-title'], ['Date', 'items-date'], ['Tags', 'items-tags'], ['Check-ins', 'items-todos']]) {
     const cell = el('th', className); cell.scope = 'col';
     cell.append(el('span', className === 'items-icon' ? 'visually-hidden' : '', label)); headRow.append(cell);
   }
@@ -4416,6 +4419,7 @@ async function showNotebook(id) {
   notebookTodos?.destroy?.();
   notebookTodos = mountTodos(document.querySelector('#notebook-todos'), {scope: id, onChange: refreshNotebookItems});
   await loadNotebookItems(notebook);
+  window.StellisHealthPillars?.notebook(document.querySelector('#notebook-pillars'), notebook, showNotebookTab);
   await Promise.all([
     window.StellisNotebookChat.mount(document.querySelector('#notebook-chat'), notebook,
       {onNote: trigger => newNoteIn(notebook, trigger),
@@ -4730,7 +4734,7 @@ document.querySelector('#note-delete').addEventListener('click', async () => {
   } catch (error) { noteStatus.textContent = error.message; }
 });
 async function showTodos() {
-  await leaveForAppPage('todos-page', 'To-dos');
+  await leaveForAppPage('todos-page', 'Check-ins');
   const books = await json(await fetch(`${API}/notebooks`)); libraryNotebooks = books.notebooks;
   document.querySelector('#todos-view').hidden = false;
   pageTodos?.destroy?.();
@@ -5001,9 +5005,10 @@ document.querySelector('#nebius-key-remove').addEventListener('click', async () 
 
 // Edit widgets: choose which Home widgets show. The choice is kept per browser.
 const WIDGETS_KEY = 'stellis-home-widgets';
-const HOME_WIDGETS = [['agents', 'Agents', 'users'], ['todos', 'To-dos', 'circle-check'], ['coming-up', 'Coming up', 'calendar'], ['notebooks', 'Notebooks', 'notebook'],
+const HOME_WIDGETS = [['brief', 'Daily brief', 'sparkles'], ['agents', 'Agents', 'users'], ['todos', 'Check-ins', 'circle-check'], ['coming-up', 'Coming up', 'calendar'], ['notebooks', 'Notebooks', 'notebook'],
   ['recent', 'Recent conversations', 'clock'], ['tags', 'Tags', 'tag']];
-const hiddenWidgets = new Set((() => { try { return JSON.parse(localStorage.getItem(WIDGETS_KEY)) || []; } catch { return []; } })());
+// The daily brief is off until the person turns it on.
+const hiddenWidgets = new Set((() => { try { return JSON.parse(localStorage.getItem(WIDGETS_KEY)) || ['brief']; } catch { return ['brief']; } })());
 function applyWidgets() {
   for (const [id] of HOME_WIDGETS) for (const node of document.querySelectorAll(`#list-view [data-widget="${id}"]`)) node.classList.toggle('widget-off', hiddenWidgets.has(id));
   document.querySelector('.home-columns').classList.toggle('single-column', hiddenWidgets.has('todos'));

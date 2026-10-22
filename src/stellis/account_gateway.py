@@ -14,10 +14,11 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from starlette.background import BackgroundTask
 
-from stellis import auth, calendar, server, storage
+from stellis import auth, calendar, intake_voice, server, storage
 from stellis.processing import model_paths
 
 _PUBLIC = {"/auth", "/api/health", "/api/v1/health"}
+_WEBSOCKETS = {"/api/v1/intake/call"}
 _HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
                 "te", "trailers", "transfer-encoding", "upgrade"}
 
@@ -57,7 +58,8 @@ class AccountGateway:
                        STELLIS_ACCOUNT_ID=str(account_id), STELLIS_AUTH_MODE="required",
                        STELLIS_WHISPER_MODEL=str(model_files[0]),
                        STELLIS_SEGMENTATION_MODEL=str(model_files[1]),
-                       STELLIS_EMBEDDING_MODEL=str(model_files[2]))
+                       STELLIS_EMBEDDING_MODEL=str(model_files[2]),
+                       STELLIS_CALL_MODELS=str(intake_voice.directory()))
             if account_id != 1:
                 shared = ("NEBIUS_API_KEY", "TAVILY_API_KEY") if env.get("STELLIS_SHARED_PROVIDER_KEYS") == "1" else ()
                 for key in ("NEBIUS_API_KEY", "TAVILY_API_KEY",
@@ -147,6 +149,9 @@ class AccountGateway:
                                 process.kill()
                     await send({"type": "lifespan.shutdown.complete"})
                     return
+        if scope["type"] == "websocket":
+            await self._websocket(scope, receive, send)
+            return
         if scope["type"] != "http":
             await Response(status_code=404)(scope, receive, send)
             return
@@ -170,6 +175,60 @@ class AccountGateway:
                 return
         response = await self._proxy(request, account_id)
         await response(scope, receive, send)
+
+    async def _websocket(self, scope, receive, send) -> None:
+        """Relays the intake call's WebSocket to the account's own process."""
+        from starlette.websockets import WebSocket, WebSocketDisconnect
+        from websockets.asyncio.client import unix_connect
+        from websockets.exceptions import ConnectionClosed, InvalidHandshake
+
+        websocket = WebSocket(scope, receive, send)
+        origin = websocket.headers.get("origin")
+        account_id = auth.current_account_id(websocket.cookies.get(auth.COOKIE_NAME))
+        if (scope["path"] not in _WEBSOCKETS or account_id is None
+                or (origin and origin.split("://", 1)[-1] != websocket.headers.get("host"))):
+            await websocket.close(code=4401)
+            return
+        try:
+            socket = await self._ready(account_id)
+            headers = {key: value for key, value in websocket.headers.items()
+                       if key.lower() in {"cookie", "origin", "user-agent"}}
+            # The URL sets Host, so the account process sees the browser's host.
+            upstream = await unix_connect(
+                str(socket), f"ws://{websocket.headers.get('host', 'stellis')}{scope['path']}",
+                additional_headers=headers, max_size=2**22)
+        except (RuntimeError, OSError, ConnectionClosed, InvalidHandshake, ValueError):
+            await websocket.close(code=1011)
+            return
+        await websocket.accept()
+
+        async def browser_to_account() -> None:
+            while True:
+                message = await websocket.receive()
+                if message["type"] == "websocket.disconnect":
+                    return
+                await upstream.send(message["bytes"] if message.get("bytes") is not None
+                                    else message.get("text") or "")
+
+        async def account_to_browser() -> None:
+            async for message in upstream:
+                if isinstance(message, bytes):
+                    await websocket.send_bytes(message)
+                else:
+                    await websocket.send_text(message)
+
+        tasks = [asyncio.create_task(browser_to_account()), asyncio.create_task(account_to_browser())]
+        try:
+            await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await upstream.close()
+            try:
+                await websocket.close()
+            except (RuntimeError, WebSocketDisconnect):
+                pass  # The browser already left.
 
 
 app = AccountGateway()

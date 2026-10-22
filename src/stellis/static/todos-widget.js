@@ -4,7 +4,7 @@
 (function (root) {
   const NOTE_TITLE = 'To-dos';
   const STATUSES = [
-    {id: 'open', label: 'Open', icon: 'circle', empty: 'Add your first to-do above'},
+    {id: 'open', label: 'Open', icon: 'circle', empty: 'Add your first check-in above'},
     {id: 'done', label: 'Completed', icon: 'circle-check', empty: 'Nothing completed yet'},
     {id: 'canceled', label: 'Canceled', icon: 'circle-x', empty: 'Nothing canceled'},
   ];
@@ -42,7 +42,7 @@
   }
 
   function mount(host, options) {
-    const {api = '/api/v1', icon, setStatus = () => {}, formatListDate, notebooks, title = NOTE_TITLE,
+    const {api = '/api/v1', icon, setStatus = () => {}, formatListDate, notebooks, title = 'Check-ins',
       linkTitle = false, onChange = () => {}} = options;
     const scope = options.scope?.notebookId || 'all';
     let filter = 'open';
@@ -62,7 +62,7 @@
     const head = el('div', 'list-widget-head');
     const heading = el('h2'); heading.append(icon('circle-check'));
     if (linkTitle) { const link = el('a', '', title); link.href = '/todos'; heading.append(link); } else heading.append(el('span', '', title));
-    const filters = el('div', 'todo-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Show to-dos');
+    const filters = el('div', 'todo-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Show check-ins');
     const filterButtons = STATUSES.map(item => {
       const button = el('button', 'todo-filter'); button.type = 'button'; button.dataset.status = item.id;
       button.append(icon(item.icon), el('span', '', item.label));
@@ -73,8 +73,8 @@
     head.append(heading, filters);
 
     const form = el('form', 'todo-add');
-    const label = el('label', 'visually-hidden', 'New to-do'); const input = el('input'); input.id = `todo-input-${Math.random().toString(36).slice(2, 8)}`;
-    label.htmlFor = input.id; input.type = 'text'; input.maxLength = 500; input.autocomplete = 'off'; input.placeholder = 'Add a to-do'; input.required = true;
+    const label = el('label', 'visually-hidden', 'New check-in'); const input = el('input'); input.id = `todo-input-${Math.random().toString(36).slice(2, 8)}`;
+    label.htmlFor = input.id; input.type = 'text'; input.maxLength = 500; input.autocomplete = 'off'; input.placeholder = 'Add a check-in'; input.required = true;
     const add = el('button', 'invert-button todo-add-button'); add.type = 'submit'; add.append(icon('plus'), el('span', '', 'Add'));
     form.append(icon('circle'), label, input, add);
     form.firstChild.classList.add('todo-add-lead');
@@ -120,7 +120,7 @@
       if (item.pending_suggestions?.length) {
         const count = item.pending_suggestions.length;
         // The label opens the note or meeting that holds the suggestion's cards.
-        const mark = el('a', 'todo-suggestion'); mark.title = 'An agent suggested a change to this to-do';
+        const mark = el('a', 'todo-suggestion'); mark.title = 'An agent suggested a change to this check-in';
         mark.href = `/${source.kind === 'conversation' ? 'conversation' : 'page'}/${encodeURIComponent(source.id)}`;
         mark.append(icon('sparkles'), el('span', '', count === 1 ? 'Suggested change' : `${count} suggested changes`));
         text.append(mark);

@@ -15,7 +15,7 @@ import threading
 from typing import Literal
 from urllib.parse import urlsplit, urlencode
 
-from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
@@ -870,7 +870,7 @@ def onboarding_page(request: Request):
 
 class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
-    step: Literal["records", "uses", "review"] = "review"
+    step: Literal["welcome", "call", "records", "uses", "review"] = "review"
     agent_choices: dict[str, list[str]] | None = None
     task_choices: dict[str, StrictBool] | None = None
 
@@ -916,6 +916,7 @@ class OnboardingRecordGroup(BaseModel):
     items: list[OnboardingRecordItem] = Field(default_factory=list, max_length=120)
     agents: list[str] = Field(default_factory=list, max_length=16)
     suggest_tasks: StrictBool = False
+    goal: str = Field(default="", max_length=200)
 
 
 class OnboardingFinish(BaseModel):
@@ -972,6 +973,129 @@ def onboarding_complete(request: Request, choices: OnboardingFinish | None = Non
                                    [group.model_dump() for group in choices.record_groups] if choices else [])
     except (ValueError, LookupError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class IntakeNotesSection(BaseModel):
+    heading: str = Field(max_length=40)
+    items: list[str] = Field(default_factory=list, max_length=40)
+
+
+class IntakeNotes(BaseModel):
+    sections: list[IntakeNotesSection] = Field(max_length=12)
+    revision: int = Field(ge=0)
+
+
+class IntakeAnswer(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+@api.get("/intake")
+def intake_state():
+    from stellis import intake, intake_voice
+    return {**intake.load(), "voice": intake_voice.status(), "agent_name": intake.AGENT_NAME}
+
+
+@api.put("/intake/notes")
+def intake_notes(request: IntakeNotes):
+    from stellis import intake
+    try:
+        return intake.save_notes([section.model_dump() for section in request.sections], request.revision)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@api.post("/intake/answer")
+async def intake_answer(request: IntakeAnswer):
+    """A typed turn, for a call without a microphone or speech models."""
+    from stellis import intake
+    try:
+        return await intake.run_text_turn(request.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except intake.IntakeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@api.post("/intake/start")
+def intake_start():
+    """Starts or resumes a typed call: records the agent's opening line."""
+    from stellis import intake
+    return {"text": intake.opening(), **intake.load()}
+
+
+@api.post("/intake/end")
+def intake_end():
+    from stellis import intake
+    return intake.end()
+
+
+@api.post("/intake/notebooks")
+async def intake_notebooks():
+    from stellis import intake
+    try:
+        return await intake.propose_notebooks()
+    except intake.IntakeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def _websocket_allowed(websocket: WebSocket) -> bool:
+    """The same session and origin checks the HTTP gate applies."""
+    origin = websocket.headers.get("origin")
+    if origin and origin.split("://", 1)[-1] != websocket.headers.get("host"):
+        return False
+    if not auth.enabled():
+        return True
+    token = websocket.cookies.get(auth.COOKIE_NAME)
+    account_id = auth.current_account_id(token)
+    bound_id = os.environ.get("STELLIS_ACCOUNT_ID")
+    if bound_id:
+        return account_id == int(bound_id)
+    return account_id is not None or (auth.dev_enabled() and auth.current_account(token) == "dev")
+
+
+async def intake_call(websocket: WebSocket) -> None:
+    """The intake call: microphone audio in, the agent's speech and notes out."""
+    from stellis import intake_voice
+    if not _websocket_allowed(websocket):
+        await websocket.close(code=4401)
+        return
+    await websocket.accept()
+    try:
+        engine = await asyncio.to_thread(intake_voice.acquire)
+    except Exception:  # Missing or unloadable models fall back to a typed call.
+        logging.getLogger(__name__).exception("Intake voice unavailable")
+        engine = None
+    call = intake_voice.Call(websocket.send_json, websocket.send_bytes, engine)
+    try:
+        await call.start()
+        while True:
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                break
+            if message.get("bytes") is not None:
+                await call.audio(message["bytes"])
+            elif message.get("text"):
+                try:
+                    data = json.loads(message["text"])
+                except ValueError:
+                    continue
+                if isinstance(data, dict):
+                    if data.get("type") == "end":
+                        break
+                    await call.message(data)
+    except (WebSocketDisconnect, RuntimeError):
+        pass
+    finally:
+        await call.close()
+        if engine is not None:
+            intake_voice.release()
+        try:
+            await websocket.close()
+        except RuntimeError:
+            pass
+
+
+app.add_api_websocket_route("/api/v1/intake/call", intake_call)
 
 
 @app.get("/", include_in_schema=False)

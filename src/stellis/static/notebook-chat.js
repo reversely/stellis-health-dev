@@ -229,6 +229,15 @@ class NotebookChat {
     this.toggleCount.textContent = `${checked}/${total}`;
   }
 
+  /**
+   * Puts a suggested question in the box for the person to send.
+   * @param {string} question
+   */
+  prefill(question) {
+    this.input.value = question.slice(0, this.input.maxLength);
+    if (!this.input.disabled) this.input.focus();
+  }
+
   paintComposer() {
     const count = this.checkedSources().length;
     this.input.placeholder = count ?
@@ -525,13 +534,19 @@ let current = null;
  */
 function mount(host, book, options = {}) {
   current?.stop();
-  current = new NotebookChat(host, book, options);
-  return current.start();
+  const chat = new NotebookChat(host, book, options);
+  current = chat;
+  // A question chosen on Home arrives as ?ask= and waits in the box.
+  const ask = new URLSearchParams(root.location?.search || '').get('ask');
+  return chat.start().then(() => {
+    if (ask && chat === current) chat.prefill(ask);
+  });
 }
 
 const exported = {
   mount,
   stop: () => current?.stop(),
+  prefill: (question) => current?.prefill(question),
   answerParts,
   answerMarkdown,
   sourceTarget,
