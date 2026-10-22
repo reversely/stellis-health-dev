@@ -688,3 +688,6 @@
     width: 100%;
   }
 }
+
+/* Match the bare dashboard theme control despite onboarding button defaults. */
+.onboarding-page #setup-theme { width:44px; height:44px; padding:0; border:0; background:transparent; }

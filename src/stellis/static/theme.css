@@ -160,7 +160,7 @@ header {
 }
 #logout-button:hover { border-color: var(--accent); }
 /* Icon-only theme switch on the bare header: the sun shows in dark mode, the moon in light mode. */
-#theme-toggle {
+:is(#theme-toggle, #setup-theme) {
   display: grid;
   place-items: center;
   width: 44px;
@@ -175,11 +175,11 @@ header {
   transition-duration: 150ms;
   transition-timing-function: ease-out;
 }
-#theme-toggle svg { width: 22px; height: 22px; }
-#theme-toggle .icon-moon, html[data-theme='light'] #theme-toggle .icon-sun { display: none; }
-html[data-theme='light'] #theme-toggle .icon-moon { display: block; }
-#theme-toggle:active { scale: .96; }
-@media (hover: hover) and (pointer: fine) { #theme-toggle:hover { color: var(--ink); } }
+:is(#theme-toggle, #setup-theme) svg { width: 22px; height: 22px; }
+:is(#theme-toggle, #setup-theme) .icon-moon, html[data-theme='light'] :is(#theme-toggle, #setup-theme) .icon-sun { display: none; }
+html[data-theme='light'] :is(#theme-toggle, #setup-theme) .icon-moon { display: block; }
+:is(#theme-toggle, #setup-theme):active { scale: .96; }
+@media (hover: hover) and (pointer: fine) { :is(#theme-toggle, #setup-theme):hover { color: var(--ink); } }
 h1, .transcript-heading h2, .ai-heading h2 {
   color: var(--ink);
   font-family: Piazzolla, Georgia, serif;
@@ -924,7 +924,7 @@ html[data-theme='dark'] body::before { display: none; }
     background: #37303D;
     color: #F7F5F6;
   }
-  body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) header #theme-toggle, body.recording-page header #theme-toggle { color: #F7F5F6; }
+  body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) header :is(#theme-toggle, #setup-theme), body.recording-page header :is(#theme-toggle, #setup-theme) { color: #F7F5F6; }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) main, body.recording-page main {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -1113,7 +1113,7 @@ html[data-theme='dark'] body::before { display: none; }
   }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) header .brand, body.recording-page header .brand { color: #F7F5F6; }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) header #logout-button, body.recording-page header #logout-button { background: #37303D; color: #F7F5F6; border-color: #605465; }
-  body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) header #theme-toggle, body.recording-page header #theme-toggle { color: #F7F5F6; }
+  body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) header :is(#theme-toggle, #setup-theme), body.recording-page header :is(#theme-toggle, #setup-theme) { color: #F7F5F6; }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) main, body.recording-page main { max-width: none; padding: 0; }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) .heading {
     display: grid;
@@ -1157,7 +1157,7 @@ body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timel
 }
 body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page):has(#capture-header-controls:not([hidden])) header .brand { grid-column: 1; grid-row: 1; align-self: center; }
 body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page):has(#capture-header-controls:not([hidden])) header .header-side { display: contents; }
-body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page):has(#capture-header-controls:not([hidden])) #theme-toggle { grid-column: 2; grid-row: 1; align-self: center; }
+body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page):has(#capture-header-controls:not([hidden])) :is(#theme-toggle, #setup-theme) { grid-column: 2; grid-row: 1; align-self: center; }
 body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page):has(#capture-header-controls:not([hidden])) .capture-header-controls { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
 @media (min-width: 1001px) {
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page):has(#capture-header-controls:not([hidden])) { grid-template-rows: 112px minmax(calc(100vh - 112px), auto); }
@@ -2304,4 +2304,173 @@ body.recording-page #back-from-recording { min-height:44px; }
   height: 20px;
   margin: 0;
   accent-color: var(--accent);
+}
+
+
+/* Shared form defaults stay below component styles in specificity. */
+:root {
+  --control-disabled-ink: color-mix(in oklch, var(--ink) 55%, var(--input));
+  --control-disabled-fill: color-mix(in oklch, var(--input) 60%, var(--surface));
+  --control-hover-line: var(--muted);
+  --control-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232A252F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --control-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232A252F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 4 4 10-10'/%3E%3C/svg%3E");
+}
+:where(button:not(.visually-hidden), input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='hidden'], [type='file']), textarea, select) {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--input);
+  font: inherit;
+}
+:where(textarea) { resize: vertical; }
+:where(button) { cursor: pointer; }
+:where(input[type='radio'], input[type='range']) { accent-color: var(--check-bg); }
+:root :is(input, textarea, select):disabled {
+  color: var(--control-disabled-ink);
+  background-color: var(--control-disabled-fill);
+  cursor: default;
+  opacity: 1;
+}
+:root :is(input, textarea, select):user-invalid {
+  border-color: var(--failure);
+  outline: 2px solid var(--failure);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  :root :is(input, textarea, select):enabled:hover {
+    border-color: var(--control-hover-line);
+  }
+}
+/* Keep form semantics, label activation and the browser's keyboard handling. */
+:root select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-inline-end: 36px;
+  background-image: var(--control-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+  cursor: pointer;
+}
+:root select:not([multiple]):not([size]):disabled { cursor: default; }
+:root select option { color: var(--ink); background: var(--input); }
+@supports (appearance: base-select) {
+  :root select:not([multiple]):not([size]),
+  :root select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+  :root select:not([multiple]):not([size]) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-inline-end: 12px;
+    background-image: none;
+  }
+  :root select::picker-icon {
+    content: '';
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-inline-start: auto;
+    color: var(--muted);
+    background: currentColor;
+    mask: var(--control-chevron) center / contain no-repeat;
+  }
+  :root select:disabled::picker-icon { color: var(--control-disabled-ink); }
+  :root select::picker(select) {
+    max-height: min(320px, 60vh);
+    max-width: calc(100vw - 16px);
+    margin-block: 4px;
+    padding: 4px;
+    border: 0;
+    border-radius: 8px;
+    color: var(--ink);
+    background: var(--raised);
+    box-shadow: var(--shadow);
+    font: inherit;
+  }
+  :root select option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    background: transparent;
+  }
+  :root select option:checked { background: var(--selected); }
+  :root select option:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  :root select option:disabled { color: var(--control-disabled-ink); }
+  :root select option::checkmark {
+    content: '';
+    order: 1;
+    margin-inline-start: auto;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+    mask: var(--control-check) center / contain no-repeat;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :root select option:enabled:hover { background: var(--selected); }
+  }
+}
+:root input[type='checkbox']:not([hidden]) {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--input);
+  color: var(--surface);
+  vertical-align: middle;
+  cursor: pointer;
+}
+:root input[type='checkbox']:not([hidden]):checked,
+:root input[type='checkbox']:not([hidden]):indeterminate {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+:root input[type='checkbox']:not([hidden])::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  mask: var(--control-check) center / contain no-repeat;
+  visibility: hidden;
+}
+:root input[type='checkbox']:not([hidden]):checked::before { visibility: visible; }
+:root input[type='checkbox']:not([hidden]):indeterminate::before {
+  width: 12px;
+  height: 2px;
+  mask: none;
+  visibility: visible;
+}
+@media (max-width: 760px) {
+  :root :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), textarea, select) {
+    font-size: max(16px, 1em);
+  }
+}
+@media (forced-colors: active) {
+  :root input[type='checkbox']:not([hidden]) { appearance: auto; }
+  :root input[type='checkbox']:not([hidden])::before { display: none; }
+}
+
+html[data-theme='dark'] {
+  --control-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F7F5F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
