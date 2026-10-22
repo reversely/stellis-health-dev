@@ -63,6 +63,8 @@ MEASURES = {
                                                         "pulse rate")),
         Measure("breathing_rate", "Breathing rate", "breaths/min", 0, (4, 60), (
             "breathing rate", "respiratory rate", "respiration rate")),
+        Measure("hrv", "Heart rate variability", "ms", 0, (5, 300), (
+            "heart rate variability", "hrv", "rmssd")),
         Measure("hba1c", "HbA1c", "%", 1, (
             3, 20), ("hba1c", "a1c", "hemoglobin a1c", "haemoglobin a1c",
                      "hemoglobin a1c/hemoglobin.total in blood")),

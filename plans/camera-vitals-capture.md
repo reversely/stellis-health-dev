@@ -44,6 +44,29 @@ Each check runs on every vitals event, 20 to 30 times a second. The values are f
 | Sure reading | Share of 0.3 or more. Below that, measuring runs up to 15 seconds longer, then gives the reading with "Measure again sitting still for a closer reading". |
 | Longest attempt | 90 seconds. 15 seconds or more of good signal still gives a reading. Less gives "No reading yet" with advice for the face or the light. |
 
+## Breathing rate and HRV
+
+`vitals-math.js` computes both on the device from the same recording, with no extra model.
+
+| Measure | Formula | Sure when |
+| --- | --- | --- |
+| Beats | The highest point in each window of 0.6 beat lengths, refined by a least-squares parabola over the raw samples within a quarter beat of it | Not applicable |
+| HRV | RMSSD and SDNN of the intervals between beats; an interval more than 25% from the median is left out as a missed or extra beat; 15 clean intervals or more | 80% of intervals are clean and the pulse waveform's quality is 0.6 or more |
+| Breathing rate | The strongest rhythm between 6 and 30 a minute in three signals: each beat's height, the interval between beats and the face centre's height in the frame; 20 seconds or more | Two or more signals agree within 2 breaths a minute, with an average peak share of 0.35 or more |
+
+The result screen shows both under the pulse, with an "approximate" tag when they are not sure, and Save stores them as camera readings with the note "Approximate".
+
+Measured on synthetic recordings with known values (45 seconds, uneven 22 to 30 samples a second):
+
+| Noise against a pulse height of 1 | Breathing rate, true 14 | RMSSD, true 52 ms |
+| --- | --- | --- |
+| 0.1 | 14 | 55 |
+| 0.3 | 14 | 58 |
+| 0.6 | 14 | 65 |
+| 1.0 | 14 | 76 |
+
+Noise inflates RMSSD because it moves each beat's timing. On the 11.8 second reference waveform from vitallens' sample video, the formula gives an SDNN of 19 ms against the ECG's 38 ms over 12 intervals, too few to judge. T-09 compares both measures with a chest strap and a counted breathing rate.
+
 ## Screen states and copy
 
 | State | Status line | Progress steps |

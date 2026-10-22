@@ -122,6 +122,7 @@ test('a date becomes a datetime-local value in local time', () => {
 });
 
 const pulse = require('../src/stellis/static/camera-pulse.js');
+const vitals = require('../src/stellis/static/vitals-math.js');
 
 test('the face check wants a centred face of the right size', () => {
   assert.equal(pulse.faceCheck(null, 480, 640), 'none');
@@ -201,19 +202,18 @@ function waveform(bpm, noise, seconds) {
   const points = [];
   for (let t = 0; t < seconds; t += 1 / 22 + random() * (1 / 30 - 1 / 22)) {
     const v = Math.sin(2 * Math.PI * (bpm / 60) * t) +
-        0.4 * Math.sin(4 * Math.PI * (bpm / 60) * t) +
-        noise * (random() - 0.5);
+        0.4 * Math.sin(4 * Math.PI * (bpm / 60) * t) + noise * (random() - 0.5);
     points.push({t, v});
   }
   return points;
 }
 
 test('the waveform gives the pulse even when it is noisy', () => {
-  assert.equal(pulse.spectralPulse(waveform(72, 0, 20)).bpm, 72);
-  const noisy = pulse.spectralPulse(waveform(72, 3, 20));
+  assert.equal(vitals.pulse(waveform(72, 0, 20)).bpm, 72);
+  const noisy = vitals.pulse(waveform(72, 3, 20));
   assert.equal(noisy.bpm, 72);
-  assert.ok(noisy.share < pulse.spectralPulse(waveform(72, 0, 20)).share);
-  assert.equal(pulse.spectralPulse(waveform(72, 0, 5)), null);
+  assert.ok(noisy.share < vitals.pulse(waveform(72, 0, 20)).share);
+  assert.equal(vitals.pulse(waveform(72, 0, 5)), null);
   const summary = pulse.summarize([], waveform(58, 1, 20));
   assert.deepEqual([summary.bpm, summary.sure], [58, true]);
 });
@@ -319,4 +319,21 @@ test('spoken guidance is on until the person turns it off', () => {
       delete globalThis.localStorage;
     }
   }
+});
+
+test('a reading saves its breathing rate and HRV beside the pulse', () => {
+  const bodies = pulse.readingsToSave({
+    bpm: 66,
+    quality: 0.55,
+    approximate: false,
+    breathing: {rate: 14, approximate: false},
+    hrv: {rmssd: 41, approximate: true},
+  });
+  assert.deepEqual(bodies.map((b) => [b.measure, b.value, b.note]), [
+    ['pulse', 66, ''], ['breathing_rate', 14, ''], ['hrv', 41, 'Approximate']
+  ]);
+  assert.deepEqual(
+      pulse.readingsToSave({bpm: 70, quality: 0.4, approximate: true})
+          .map((b) => b.measure),
+      ['pulse']);
 });

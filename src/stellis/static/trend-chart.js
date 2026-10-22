@@ -31,6 +31,7 @@ const MIN_SPAN = {
   blood_pressure: 50,
   pulse: 30,
   breathing_rate: 8,
+  hrv: 20,
   hba1c: 2,
 };
 const SOURCE_LABELS = {
