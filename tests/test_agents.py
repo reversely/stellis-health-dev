@@ -37,13 +37,27 @@ class AgentTest(unittest.TestCase):
         self.assertTrue(mira["notebooks"][0]["is_steward"])
         self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], mira["id"])
         fallback = agents.resolved_agent()
-        self.assertEqual((fallback["agent"]["name"], fallback["reason"]), ("General", "general_default"))
+        self.assertEqual((fallback["agent"]["name"], fallback["reason"]), ("Stellis", "general_default"))
         self.assertEqual(agents.resolved_agent(explicit_id=mira["id"])["agent"]["id"], mira["id"])
         self.assertEqual(agents.resolved_agent(book["id"], mira["id"])["reason"], "explicit")
         self.client.close()
         self.client = TestClient(app)
         self.assertEqual(self.client.get(f"/api/v1/agents/{mira['id']}").json()["name"], "Mira")
-        self.assertEqual(len(self.client.get("/api/v1/agents").json()), 2)  # General and Mira
+        self.assertEqual(len(self.client.get("/api/v1/agents").json()), 2)  # Stellis and Mira
+
+    def test_stellis_is_the_one_assistant_in_every_notebook(self):
+        stellis = agents.list_agents()[0]
+        self.assertEqual((stellis["name"], stellis["is_default"]), ("Stellis", True))
+        self.assertIn("Never diagnose", stellis["instructions"])
+        book = notebooks.create("Diabetes and blood sugar")
+        stellis = agents.get(stellis["id"])
+        self.assertEqual([n["notebook_id"] for n in stellis["notebooks"]], [book["id"]])
+
+    def test_an_earlier_chief_of_staff_becomes_stellis(self):
+        default = agents.list_agents()[0]
+        agents.update(default["id"], name="Chief of Staff", role="Coordinates your notebooks and agents")
+        renamed = agents.get(default["id"])
+        self.assertEqual((renamed["name"], renamed["role"]), ("Stellis", agents.DEFAULT_ROLE))
 
     def test_legacy_agent_column_migrates_and_general_is_fallback(self):
         mira = agents.create("Mira", "Coordinator")
@@ -52,9 +66,9 @@ class AgentTest(unittest.TestCase):
             conn.execute("ALTER TABLE agents RENAME COLUMN slug TO openclaw_id")
             conn.execute("UPDATE agents SET openclaw_id = 'main' WHERE is_default = 1")
         restored = {item["name"]: item for item in agents.list_agents()}
-        self.assertEqual(restored["General"]["slug"], "main")  # Preserve existing identifiers.
+        self.assertEqual(restored["Stellis"]["slug"], "main")  # Preserve existing identifiers.
         self.assertEqual(restored["Mira"]["slug"], mira["slug"])
-        self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], restored["General"]["id"])
+        self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], restored["Stellis"]["id"])
 
     def test_steward_reassignment_keeps_other_assignment(self):
         first = notebooks.create("First")

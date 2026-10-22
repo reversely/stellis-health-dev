@@ -188,9 +188,7 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
                 pages.create("Goals", book["id"], f"- [ ] {' '.join(group['goal'].split())}\n")
             created.append({"notebook_id": book["id"], "name": book["name"],
                             "agent_ids": [a["id"] for a in deployed], "filed": filed["moved"]})
-        default = next(item for item in agents.list_agents() if item["is_default"])
-        if default["name"] == "General" and not any(a["name"]=="Chief of Staff" for a in agents.list_agents()):
-            agents.update(default["id"],name="Chief of Staff",role="Coordinates your notebooks and agents")
+        agents.list_agents()  # Stellis answers in each new notebook.
         state.update(step="complete",created=created,editing=False); _save(state)
         auth.complete_onboarding(account_id)
     return {"complete":True, "created":created}

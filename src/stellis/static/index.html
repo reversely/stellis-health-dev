@@ -15,7 +15,6 @@
     <script src="/shared/notes-merge.js" defer></script>
     <script src="/shared/list-date.js" defer></script>
     <script src="/shared/agent-avatar.js" defer></script>
-    <script src="/shared/agent-groups.js" defer></script>
     <script src="/shared/summary-text.js" defer></script>
     <script src="/shared/transcript-fillers.js" defer></script>
     <script src="/static/todos-widget.js" defer></script>
@@ -97,12 +96,8 @@
           <section id="home-pillars" class="home-pillars" aria-label="Your health"></section>
           <section id="daily-brief" class="daily-brief" data-widget="brief" aria-labelledby="daily-brief-title">
             <div class="daily-brief-heading"><h2 id="daily-brief-title">Daily brief</h2><button type="button" id="daily-brief-refresh">Prepare brief</button><button type="button" id="daily-brief-stop" hidden>Stop</button></div>
-            <p id="daily-brief-status" role="status">Your Chief of Staff can review tasks, notebook activity and upcoming events.</p>
+            <p id="daily-brief-status" role="status">Stellis can review your check-ins, notebooks and upcoming appointments.</p>
             <div id="daily-brief-content"></div><p id="daily-brief-coverage"></p><a id="daily-brief-thread" hidden>Open in Chat</a>
-          </section>
-          <section id="home-agents" class="home-agents" data-widget="agents" aria-labelledby="home-agents-title" hidden>
-            <div class="list-widget-head"><h2 id="home-agents-title"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>Agents</span></h2></div>
-            <div id="home-agent-groups" class="home-agent-groups"></div>
           </section>
           <div class="home-topbar">
             <form id="library-search-form" class="home-search" role="search"><label class="visually-hidden" for="library-search-input">Search conversations</label><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input id="library-search-input" type="search" minlength="2" maxlength="120" autocomplete="off" placeholder="Search" /><button class="visually-hidden" type="submit">Search</button></form>
@@ -246,7 +241,7 @@
       <section id="trends-view" class="trends-view" hidden aria-label="Trends"></section>
       <section id="agent-chat-view" class="agent-chat-view" hidden aria-label="Chat">
         <a class="back-link" href="/">← Home</a>
-        <div class="agent-chat-heading"><a id="agent-settings-link" class="agent-quiet agent-link-button" href="/chat/settings">Agent settings</a><button id="agent-new-toggle" type="button">New agent</button></div>
+        <div class="agent-chat-heading" hidden><a id="agent-settings-link" class="agent-quiet agent-link-button" href="/chat/settings">Agent settings</a><button id="agent-new-toggle" type="button">New agent</button></div>
         <form id="agent-new-form" class="agent-new-form" hidden aria-label="Add agent"></form>
         <p id="agent-chat-status" role="status" aria-live="polite"></p>
         <div class="agent-chat-layout"><nav id="agent-list" class="agent-list" aria-label="Agents"></nav><div id="agent-detail" class="agent-detail"></div></div>

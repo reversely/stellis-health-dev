@@ -2,19 +2,14 @@
  * @fileoverview First-run setup as four steps in order: a welcome, an intake
  * call about the person's health (onboarding-call.js), adding records, and
  * reviewing the notebooks proposed from the call and the records, each with
- * its goal and agents. Nothing is filed or deployed until the person
- * finishes the review.
+ * its goal. Nothing is filed until the person finishes the review.
  */
 (() => {
   const main = document.querySelector('#setup-main');
   const error = document.querySelector('#setup-error');
   /** Proposed notebooks from records; more would overwhelm a first run. */
   const MAX_NOTEBOOKS = 5;
-  /** Agents each proposed notebook starts with. */
-  const DEFAULT_AGENTS = ['steward', 'research'];
   let state;
-  let templates = [];
-  let choices = {};
   let taskChoices = {};
   let saves = Promise.resolve();
   /** The call step, while it is on screen. */
@@ -80,7 +75,6 @@
     const payload = {
       uses: [],
       step,
-      agent_choices: structuredClone(choices),
       task_choices: structuredClone(taskChoices),
     };
     saves = saves.catch(() => {}).then(async () => {
@@ -143,7 +137,7 @@
             'Stellis Health keeps your records and appointments in one place.'),
         node(
             'p',
-            'Your agents answer health questions from your records and help ' +
+            'Stellis answers health questions from your records and helps ' +
                 'with the goals you set. Start with a short call with ' +
                 'Stellis about your health.'),
         node(
@@ -154,27 +148,25 @@
             'setup-hint'),
         button('Get started', () => go('call'), 'primary'));
     scene.append(copy);
-    // The three goals and the agents who work on them.
+    // What Stellis helps with, around the three goals.
     const orbit = [
       ['Records', 'file-text'],
-      ['Chief of Staff', null],
       ['Appointments', 'calendar'],
-      ['Steward', null],
+      ['Notes', 'notes'],
       ['Questions', 'message-2'],
-      ['Deep research', null],
+      ['Research', 'search'],
       ['Goals', 'target'],
-      ['Writing', null],
+      ['Check-ins', 'circle-check'],
       ['Trends', 'activity'],
       ['Reminders', 'clock'],
+      ['Notebooks', 'notebook'],
     ];
     const perSide = Math.ceil(orbit.length / 2);
     orbit.forEach(([name, glyph], index) => {
       const item = node('div', null, 'setup-orbit');
       item.style.setProperty('--orbit-index', index % perSide);
       item.dataset.side = index < perSide ? 'left' : 'right';
-      item.append(
-          glyph ? icon(glyph) : avatar(name, name === 'Chief of Staff', 36),
-          node('span', name));
+      item.append(icon(glyph), node('span', name));
       scene.append(item);
     });
   }
@@ -185,8 +177,8 @@
         node('h1', 'Add your records'),
         node(
             'p',
-            'Letters, lab results, scans and recordings all work, and your ' +
-                'agents file them with the notebooks from your call.',
+            'Letters, lab results, scans and recordings all work, and ' +
+                'Stellis files them with the notebooks from your call.',
             'setup-hint'));
     const drop = node('div', null, 'setup-drop');
     drop.tabIndex = 0;
@@ -256,7 +248,7 @@
                     'cloud AI service' :
                 'Connect your cloud agent deployment and Token Factory key'));
     const result = node(
-        'p', state.ready ? 'AI is ready' : 'Test that your agents can respond',
+        'p', state.ready ? 'AI is ready' : 'Test that Stellis can respond',
         'setup-hint');
     result.role = 'status';
     panel.append(result, button('Check setup', async () => {
@@ -316,7 +308,7 @@
     return row;
   }
 
-  /** Keys a self-hosted deployment needs before agents can respond. */
+  /** Keys a self-hosted deployment needs before Stellis can respond. */
   function connections() {
     const panel = node('section', null, 'setup-connections');
     panel.setAttribute('aria-label', 'Connections');
@@ -326,45 +318,6 @@
           keyRow('Nebius Token Factory', 'nebius', 'For cloud inference'));
     }
     return panel;
-  }
-
-  function teamChoice(key, defaults) {
-    const team = node('div', null, 'setup-agents');
-    team.setAttribute('role', 'group');
-    team.setAttribute('aria-label', 'Agents');
-    const checked = new Set(choices[key] ?? defaults);
-    choices[key] = [...checked];
-    const more = node('details', null, 'setup-more-agents');
-    more.append(node('summary', 'More agents'));
-    for (const template of templates) {
-      const label = node('label', null, 'setup-agent');
-      const input = node('input');
-      input.type = 'checkbox';
-      input.checked = checked.has(template.id);
-      input.setAttribute('aria-label', template.name);
-      const text = node('span', template.name);
-      text.append(node('small', template.does));
-      label.append(
-          input, avatar(template.id, template.id === 'steward', 24), text);
-      label.classList.toggle('selected', input.checked);
-      input.addEventListener('change', () => {
-        if (input.checked) {
-          checked.add(template.id);
-        } else {
-          checked.delete(template.id);
-        }
-        choices[key] = [...checked];
-        label.classList.toggle('selected', input.checked);
-      });
-      if (defaults.includes(template.id) || checked.has(template.id) ||
-          template.id === 'writing') {
-        team.append(label);
-      } else {
-        more.append(label);
-      }
-    }
-    if (more.childElementCount > 1) team.append(more);
-    return team;
   }
 
   function taskChoice(key) {
@@ -385,9 +338,9 @@
   }
 
   /**
-   * One proposed notebook: whether to include it, its name, its records and
-   * its agents.
-   * @param {!Object} group A group from POST /records/sort/suggest.
+   * One proposed notebook: whether to include it, its name, goal, records
+   * and whether it suggests check-ins.
+   * @param {!Object} group A group from POST /intake/notebooks.
    * @param {number} index
    * @param {function()} onChange
    * @return {{card: !Element, read: function(): ?Object}} read returns the
@@ -425,7 +378,7 @@
       records.append(list);
       card.append(records);
     }
-    card.append(teamChoice(key, DEFAULT_AGENTS), taskChoice(key));
+    card.append(taskChoice(key));
     include.addEventListener('change', () => {
       card.classList.toggle('is-left-out', !include.checked);
       onChange();
@@ -438,7 +391,7 @@
         notebook_name: name.value.trim(),
         notebook_id: renamed ? null : group.notebook_id,
         items: group.items.map((item) => ({kind: item.kind, id: item.id})),
-        agents: choices[key],
+        agents: [],
         suggest_tasks: taskChoices[key],
         goal: goal.value.trim(),
       };
@@ -466,8 +419,8 @@
     finish.disabled = true;
     const paint = () => {
       const groups = reviewed();
-      title.textContent = groups.length ? 'Review your notebooks' :
-                                          'Start with your Chief of Staff';
+      title.textContent =
+          groups.length ? 'Review your notebooks' : 'No notebooks yet';
       finish.textContent = groups.length ?
           `Set up ${plural(groups.length, 'notebook')}` :
           'Open workspace';
@@ -491,8 +444,8 @@
               groups.map((group, index) => notebookCard(group, index, paint));
           grid.replaceChildren(...cards.map((entry) => entry.card));
           subtitle.textContent = groups.length ?
-              'Check each goal and choose who helps before anything is filed' :
-              'Your agents sort records you add later from Records';
+              'Check each goal before anything is filed' :
+              'Stellis sorts records you add later from Records';
         })
         .catch((e) => {
           subtitle.textContent = e.message;
@@ -521,11 +474,7 @@
 
   (async () => {
     try {
-      const [setup, catalog] =
-          await Promise.all([api('/onboarding'), api('/agents/templates')]);
-      state = setup;
-      templates = catalog;
-      choices = state.agent_choices || {};
+      state = await api('/onboarding');
       taskChoices = state.task_choices || {};
       if (!state.required) {
         location.replace('/');

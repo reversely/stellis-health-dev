@@ -17,6 +17,9 @@ def participants(origin_id: str, notebook_id: str) -> list[dict]:
     for agent in agents.list_agents():
         if not agent['enabled']:
             continue
+        # Stellis is in every notebook; it joins a plan only when the person asked it.
+        if agent['is_default'] and agent['id'] != origin_id:
+            continue
         if agent['id'] == origin_id or any(n['notebook_id'] == notebook_id and n.get('enabled', True) for n in agent['notebooks']):
             eligible.append(agent)
     return eligible
