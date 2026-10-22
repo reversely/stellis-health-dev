@@ -17,7 +17,7 @@ const STATUS = {
   speaking: 'Speaking',
   typing: 'Chat',
   ended: 'Call ended',
-  lost: 'The call dropped',
+  lost: "Sorry we couldn't reach the agent",
 };
 const TITLES = {
   morning: 'Morning check-in',
@@ -352,7 +352,11 @@ function open({kind, chat, onAction}) {
     setStatus(key);
     foot.hidden = true;
     ended.hidden = false;
-    close.focus({preventScroll: true});
+    panel.classList.remove('is-minimised');
+    shrink.setAttribute('aria-label', 'Minimise call');
+    shrink.title = 'Minimise call';
+    setGlyph(shrink, 'arrows-diagonal-minimize-2');
+    again.focus({preventScroll: true});
   }
 
   function remove() {
@@ -382,7 +386,7 @@ function open({kind, chat, onAction}) {
   });
   hangUp.addEventListener('click', () => finish('ended'));
   close.addEventListener('click', remove);
-  again.addEventListener('click', () => open({kind: 'call', chat, onAction}));
+  again.addEventListener('click', () => open({kind, chat, onAction}));
   shrink.addEventListener('click', () => {
     const small = panel.classList.toggle('is-minimised');
     shrink.setAttribute('aria-label', small ? 'Expand call' : 'Minimise call');
