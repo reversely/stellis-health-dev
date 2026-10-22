@@ -1965,7 +1965,8 @@ class GoalIn(BaseModel):
     activity: str = Field(max_length=40)
     amount: float | None = None
     medicine: str = Field(default="", max_length=goals.MAX_NAME)
-    dose: str = Field(default="", max_length=goals.MAX_DOSE)
+    dose_amount: float | None = None
+    dose_unit: str = Field(default="", max_length=20)
     times_per_week: int
     reminder: str | None = Field(default=None, max_length=5)
 

@@ -330,6 +330,21 @@ function create(host) {
     host.replaceChildren(...parts);
   }
 
+  /**
+   * Joins words and values, with each value (odd index) in a pill.
+   * @param {!Array<string>} parts
+   * @param {string} tag
+   * @return {!Element}
+   */
+  function sentence(parts, tag) {
+    const node = dom.el(tag, null, 'coach-sentence');
+    parts.forEach((part, i) => {
+      if (i) node.append(' ');
+      node.append(i % 2 ? dom.el('span', part, 'coach-pill') : part);
+    });
+    return node;
+  }
+
   /** A due reminder: a question with Yes and Not yet, or a pending banner. */
   function banner(reminder) {
     const goal = data.goals.find((g) => g.id === reminder.goal_id);
@@ -348,7 +363,7 @@ function create(host) {
           dom.el(
               'span', `${clockText(reminder.reminder)} reminder`,
               'coach-reminder-when'),
-          dom.el('strong', reminder.question));
+          sentence(reminder.ask, 'strong'));
       const later = dom.button('Not yet', 'coach-button');
       later.addEventListener(
           'click',
@@ -360,8 +375,11 @@ function create(host) {
       actions.append(yes, later);
     } else {
       text.append(
-          dom.el('strong', reminder.title),
-          dom.el('span', ` is due from ${clockText(reminder.reminder)}`));
+          dom.el('span', 'Still to do today', 'coach-reminder-when'),
+          sentence(goal.title_parts, 'strong'),
+          dom.el(
+              'span', `Reminder at ${clockText(reminder.reminder)}`,
+              'coach-reminder-time'));
       actions.append(yes);
     }
     node.append(text, actions, status);
@@ -548,9 +566,15 @@ function create(host) {
         goal?.activity);
     const amount = select('Amount', [], null);
     const medicine = text('Medicine', goal?.medicine, 40);
-    const dose = text('Dose', goal?.dose, 30);
+    const dose = text('Dose', goal?.dose_amount ?? '', 8);
+    dose.control.type = 'number';
+    dose.control.min = '0';
+    dose.control.step = 'any';
+    dose.control.inputMode = 'decimal';
+    const unit = select(
+        'Unit', data.dose_units.map((u) => [u, u]), goal?.dose_unit || 'mg');
     medicine.control.placeholder = 'Metformin';
-    dose.control.placeholder = '500 mg';
+    dose.control.placeholder = '500';
     const often = select(
         'How often', [7, 6, 5, 4, 3, 2, 1].map((n) => [n, frequencyText(n)]),
         goal?.times_per_week ?? 4);
@@ -584,7 +608,8 @@ function create(host) {
             String(chosen.amounts.includes(saved) ? saved : middle);
       }
       amount.field.hidden = !chosen.amounts.length;
-      medicine.field.hidden = dose.field.hidden = chosen.key !== 'medicine';
+      medicine.field.hidden = dose.field.hidden = unit.field.hidden =
+          chosen.key !== 'medicine';
       medicine.control.required = chosen.key === 'medicine';
       time.disabled = !toggle.checked;
     };
@@ -619,8 +644,8 @@ function create(host) {
     }
     const fields = dom.el('div', null, 'coach-form-fields');
     fields.append(
-        activity.field, amount.field, medicine.field, dose.field, often.field,
-        remind);
+        activity.field, amount.field, medicine.field, dose.field, unit.field,
+        often.field, remind);
     node.append(heading, fields, buttons, status);
     node.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -628,7 +653,9 @@ function create(host) {
         activity: activity.control.value,
         amount: amount.field.hidden ? null : Number(amount.control.value),
         medicine: medicine.control.value,
-        dose: dose.control.value,
+        dose_amount: dose.control.value === '' ? null :
+                                                 Number(dose.control.value),
+        dose_unit: unit.control.value,
         times_per_week: Number(often.control.value),
         reminder: toggle.checked ? time.value : null,
       };
