@@ -1,0 +1,166 @@
+/* Motion for changes the person causes: opening a page, a dialog, a form or
+   the next step of a flow. Rules: .claude/skills/frontend-and-motion. Pages
+   and panels fade only; dialogs and new content also travel or scale a
+   little. Under reduced motion only the fades remain. */
+:root {
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-page: 200ms;
+  --motion-dialog: 220ms;
+  --motion-exit: 180ms;
+  --motion-press: 120ms;
+}
+
+/* Pages: a view fades in when the rail opens it. */
+:is(
+    .settings-view,
+    .todos-view,
+    .timeline-view,
+    .records-view,
+    .summary-view,
+    .trends-view,
+    .agent-chat-view,
+    .note-view,
+    .document-view,
+    .notebook-view
+  ) {
+  transition: opacity var(--motion-page) var(--ease-enter);
+}
+@starting-style {
+  :is(
+      .settings-view,
+      .todos-view,
+      .timeline-view,
+      .records-view,
+      .summary-view,
+      .trends-view,
+      .agent-chat-view,
+      .note-view,
+      .document-view,
+      .notebook-view
+    ) {
+    opacity: 0;
+  }
+}
+
+/* Dialogs scale up from 0.96 on open and leave faster than they arrive.
+   Transitions with allow-discrete reverse cleanly when interrupted. */
+dialog {
+  transition:
+    opacity var(--motion-dialog) var(--ease-enter),
+    scale var(--motion-dialog) var(--ease-enter),
+    overlay var(--motion-dialog) allow-discrete,
+    display var(--motion-dialog) allow-discrete;
+}
+dialog:not([open]) {
+  opacity: 0;
+  scale: 0.96;
+  transition-duration: var(--motion-exit);
+}
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+dialog::backdrop {
+  transition:
+    opacity var(--motion-dialog) var(--ease-enter),
+    overlay var(--motion-dialog) allow-discrete,
+    display var(--motion-dialog) allow-discrete;
+}
+dialog:not([open])::backdrop {
+  opacity: 0;
+}
+@starting-style {
+  dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Steps inside a dialog or flow: each new screen's content rises 6px into
+   place, so the person sees what changed. */
+:is(.pulse-body, .summary-body) > *,
+:is(.trend-form, .trend-table-wrap):not([hidden]) {
+  transition:
+    opacity var(--motion-dialog) var(--ease-enter),
+    translate var(--motion-dialog) var(--ease-enter);
+}
+@starting-style {
+  :is(.pulse-body, .summary-body) > *,
+  :is(.trend-form, .trend-table-wrap):not([hidden]) {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* Capture progress: the ring fills at the pace of time, and each step
+   changes colour as it starts or finishes. */
+.pulse-ring {
+  transition: stroke-dasharray 300ms linear;
+}
+.pulse-step,
+.pulse-step-dot {
+  transition:
+    color 150ms var(--ease-enter),
+    background-color 150ms var(--ease-enter),
+    border-color 150ms var(--ease-enter);
+}
+
+/* Press feedback on the buttons that start or finish a task. */
+:is(
+    .pulse-dialog button,
+    .trend-add,
+    .trend-save,
+    .trend-open,
+    .welcome-actions button,
+    .summary-update
+  ) {
+  transition:
+    scale var(--motion-press) var(--ease-enter),
+    background-color var(--motion-press) var(--ease-enter),
+    border-color var(--motion-press) var(--ease-enter);
+}
+:is(
+    .pulse-dialog button,
+    .trend-add,
+    .trend-save,
+    .trend-open,
+    .welcome-actions button,
+    .summary-update
+  ):active:not(:disabled) {
+  scale: 0.97;
+}
+
+/* A theme switch changes colours at once. app.js sets this class for two
+   frames around the swap. */
+html.theme-swapping *,
+html.theme-swapping *::before,
+html.theme-swapping *::after {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog,
+  dialog:not([open]) {
+    scale: 1;
+  }
+  @starting-style {
+    dialog[open] {
+      scale: 1;
+    }
+    :is(.pulse-body, .summary-body) > *,
+    :is(.trend-form, .trend-table-wrap):not([hidden]) {
+      translate: none;
+    }
+  }
+  :is(
+      .pulse-dialog button,
+      .trend-add,
+      .trend-save,
+      .trend-open,
+      .welcome-actions button,
+      .summary-update
+    ):active:not(:disabled) {
+    scale: 1;
+  }
+}

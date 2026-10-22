@@ -57,6 +57,8 @@ const START_FAILED = 'Try again in Chrome or Safari';
 /** Gaps between events longer than this count as this long. */
 const MAX_STEP_MS = 250;
 const SPEAK_GAP_MS = 3000;
+/** The dialog's closing transition, from motion.css. */
+const CLOSE_MS = 200;
 const SPEAK_KEY = 'stellis-pulse-speak';
 const WAVE_SAMPLES = 150;
 
@@ -610,7 +612,8 @@ class PulseDialog {
       root.speechSynthesis?.cancel();
       root.speechSynthesis?.removeEventListener(
           'voiceschanged', this.paintVoice);
-      this.dialog.remove();
+      // Removal waits for the closing transition in motion.css.
+      setTimeout(() => this.dialog.remove(), CLOSE_MS);
     });
     document.body.append(this.dialog);
   }

@@ -114,3 +114,41 @@ class OnboardingTest(unittest.TestCase):
         book=notebooks.list_notebooks()[0]
         self.assertEqual(book['todo_list'],'inherit')
         self.assertTrue(onboarding.status(account)['task_defaults']['projects'])
+
+
+class RecordSetupTest(unittest.TestCase):
+    """Setup files reviewed record groups and deploys each notebook's agents."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.env = patch.dict(os.environ, {'STELLIS_DATA_DIR': self.tmp.name, 'STELLIS_AUTH_DB_DIR': self.tmp.name,
+                                           'STELLIS_AUTH_MODE': 'required'}, clear=True)
+        self.env.start()
+        auth.register('denver', 'correct horse battery staple')
+        self.account = auth.account_id_for_username('denver')
+
+    def tearDown(self):
+        self.env.stop()
+        self.tmp.cleanup()
+
+    def test_record_groups_become_notebooks_with_their_agents(self):
+        onboarding.choose(self.account, [], 'review')
+        result = onboarding.complete(self.account, record_groups=[
+            {'notebook_name': 'Diabetes care', 'items': [], 'agents': ['steward', 'research'], 'suggest_tasks': True},
+            {'notebook_name': 'Physiotherapy', 'items': [], 'agents': [], 'suggest_tasks': False},
+        ])
+        self.assertFalse(auth.needs_onboarding(self.account))
+        diabetes = next(b for b in result['created'] if b['name'] == 'Diabetes care')
+        self.assertEqual([agents.get(i)['template_id'] for i in diabetes['agent_ids']], ['steward', 'research'])
+        self.assertIn('Health', [c['name'] for c in collections.list_collections()])
+        book = next(b for b in notebooks.list_notebooks() if b['name'] == 'Diabetes care')
+        self.assertTrue(book['todo_enabled'])
+
+    def test_record_groups_are_checked_before_anything_is_created(self):
+        onboarding.choose(self.account, [], 'review')
+        with self.assertRaises(ValueError):
+            onboarding.complete(self.account, record_groups=[{'notebook_name': 'A', 'agents': ['invented']}])
+        with self.assertRaises(ValueError):
+            onboarding.complete(self.account, record_groups=[{'notebook_name': str(i)} for i in range(6)])
+        self.assertEqual(notebooks.list_notebooks(), [])
+        self.assertTrue(auth.needs_onboarding(self.account))

@@ -162,7 +162,7 @@ export class BookmarkNode extends DecoratorNode {
     loadPreview(this.__url).then(data => {
       if (!caption && data.title) title.textContent = data.title;
       if (data.description) {description.textContent = data.description; description.hidden = false;}
-      if (data.site_name) address.textContent = `${data.site_name} · ${hostOf(this.__url)}`;
+      if (data.site_name) address.textContent = `${data.site_name}, ${hostOf(this.__url)}`;
       const iconUrl = httpUrl(data.icon_url); if (iconUrl) {favicon.src = iconUrl; favicon.hidden = false;}
       const image = httpUrl(data.image_url); if (image) {picture.src = image; picture.hidden = false;}
       picture.addEventListener('error', () => {picture.hidden = true;});

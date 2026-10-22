@@ -182,10 +182,10 @@ class TrendsPage {
             'span', chartApi.formatValue(latest, measure.decimals),
             'trend-value'),
         dom.el('span', measure.unit, 'trend-unit'));
-    const when = latest.source === 'record' ?
-        `${chartApi.longDate(latestAt)} · ${latest.title}` :
-        `${chartApi.longDate(latestAt)} · ${
-            chartApi.SOURCE_LABELS[latest.source]}`;
+    const origin = latest.source === 'record' ?
+        latest.title :
+        chartApi.SOURCE_LABELS[latest.source];
+    const when = `${chartApi.longDate(latestAt)}, ${origin}`;
     const head = dom.el('div', null, 'trend-card-head');
     head.append(title, figure, dom.el('p', when, 'trend-when'));
     if (measure.status in STATUS_TEXT) {

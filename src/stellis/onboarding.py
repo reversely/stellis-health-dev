@@ -104,7 +104,33 @@ async def check(account_id):
     return status(account_id)
 
 
-def complete(account_id, proposal_id=None, group_ids=None):
+MAX_RECORD_GROUPS = 5
+HEALTH_COLLECTION = "Health"
+
+
+def _check_record_groups(record_groups):
+    """Checks the reviewed notebooks proposed from the person's records."""
+    if len(record_groups) > MAX_RECORD_GROUPS:
+        raise ValueError(f"Choose at most {MAX_RECORD_GROUPS} notebooks")
+    allowed = set(agent_templates.TEMPLATES)
+    for group in record_groups:
+        if any(template not in allowed for template in group.get("agents", [])):
+            raise ValueError("Choose an available agent template")
+
+
+def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
+    """Finishes setup: files reviewed record groups and deploys their agents.
+
+    Args:
+        account_id: The account finishing setup.
+        proposal_id: A reviewed calendar proposal, or None.
+        group_ids: The calendar groups the person kept.
+        record_groups: Notebooks proposed from the person's records, each with
+            ``notebook_name``, ``notebook_id``, ``items`` ({kind, id}),
+            ``agents`` (template ids) and ``suggest_tasks``.
+    """
+    record_groups = record_groups or []
+    _check_record_groups(record_groups)
     if not available(account_id):
         return {"complete":True, "created":_read()["created"]}
     with _LOCK:
@@ -139,6 +165,23 @@ def complete(account_id, proposal_id=None, group_ids=None):
             if item.get("sources"):
                 onboarding_sources.file_sources(book["id"],item["sources"])
             created.append({"notebook_id":book["id"], "name":book["name"], "agent_ids":[a["id"] for a in deployed]})
+        if record_groups:
+            from stellis import sorting
+            health = next((c for c in collections.list_collections()
+                           if c["name"].casefold() == HEALTH_COLLECTION.casefold()), None)
+            if health is None:
+                health = collections.create(HEALTH_COLLECTION)
+        for group in record_groups:
+            filed = sorting.apply(group.get("notebook_name", ""), group.get("items", []),
+                                  group.get("notebook_id"))
+            book = notebooks.update(filed["notebook_id"],
+                                    todo_list="on" if group.get("suggest_tasks") else "off")
+            if not group.get("notebook_id"):
+                collections.assign_notebook(book["id"], health["id"])
+            deployed = [agents.deploy(template, book["id"])
+                        for template in dict.fromkeys(group.get("agents", []))]
+            created.append({"notebook_id": book["id"], "name": book["name"],
+                            "agent_ids": [a["id"] for a in deployed], "filed": filed["moved"]})
         default = next(item for item in agents.list_agents() if item["is_default"])
         if default["name"] == "General" and not any(a["name"]=="Chief of Staff" for a in agents.list_agents()):
             agents.update(default["id"],name="Chief of Staff",role="Coordinates your notebooks and agents")

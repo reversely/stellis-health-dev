@@ -73,8 +73,8 @@ class SummaryPage {
       return;
     }
     const when = new Date(summary.created_at).toLocaleDateString();
-    this.meta.textContent = `From ${
-        dom.plural(summary.document_count, 'document')} · written ${when}`;
+    this.meta.textContent = `Written ${when} from ${
+        dom.plural(summary.document_count, 'document')}`;
     this.update.textContent = 'Write again';
     this.body.replaceChildren(
         ...sections(summary.content, summary.citations).map((section) => {

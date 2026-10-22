@@ -17,7 +17,7 @@ def _now() -> str:
 def _value(value: str, label: str, limit: int) -> str:
     cleaned = " ".join(value.split())
     if not cleaned or len(cleaned) > limit:
-        raise ValueError(f"{label} must be 1–{limit} characters")
+        raise ValueError(f"{label} must be 1 to {limit} characters")
     return cleaned
 
 
