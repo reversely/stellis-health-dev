@@ -44,6 +44,10 @@ Each check runs on every vitals event, 20 to 30 times a second. The values are f
 | Sure reading | Share of 0.3 or more. Below that, measuring runs up to 15 seconds longer, then gives the reading with "Measure again sitting still for a closer reading". |
 | Longest attempt | 90 seconds. 15 seconds or more of good signal still gives a reading. Less gives "No reading yet" with advice for the face or the light. |
 
+## Camera reading group
+
+Home and Trends group pulse, breathing rate and heart rate variability under Vital signs. One Log vital signs button opens one recording for the group. Manual entry remains available on Trends. Camera goals use the same action and capture heading.
+
 ## Breathing rate and HRV
 
 `vitals-math.js` computes both on the device from the same recording, with no extra model.
@@ -130,7 +134,7 @@ These are counted for each attempt, with no video and no reading stored. They gu
 The capture needs HTTPS, which Fly provides. Before a test session:
 
 1. Deploy main with `fly deploy -a stellis-health`.
-2. On a phone and a laptop, open Trends, choose Measure with camera, and allow the camera.
+2. On a phone and a laptop, open Trends, choose Log vital signs, and allow the camera.
 3. Check that the voice speaks "Starting the camera" and then one cue at a time, and that desktop shows the same cue as a caption.
 4. Compare the reading with a pulse oximeter or a cuff taken at the same time, and note the device, browser, lighting and the difference in bpm.
 

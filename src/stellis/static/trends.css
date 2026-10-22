@@ -82,7 +82,7 @@ html[data-theme='dark'] .trends-view {
   border-radius: 16px;
   background: var(--surface);
 }
-.trend-card h3 {
+.trend-card :is(h3, h4) {
   margin: 0;
   color: var(--muted);
   font-size: 15px;
@@ -436,4 +436,19 @@ p.trend-status:not([class*='is-']) {
   .trend-value {
     font-size: 38px;
   }
+}
+
+.trend-vitals {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.trend-card .trend-manual {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+@media (hover: hover) and (pointer: fine) {
+  .trend-card .trend-manual:hover { color: var(--ink); }
 }

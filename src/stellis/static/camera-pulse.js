@@ -484,7 +484,7 @@ function cameraError(error) {
     return 'Allow the camera in your browser settings and try again';
   }
   if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-    return 'Connect a camera to measure your pulse';
+    return 'Connect a camera to log vital signs';
   }
   return 'Try again in a moment';
 }
@@ -635,7 +635,7 @@ class PulseDialog {
     this.dialog = /** @type {!HTMLDialogElement} */ (
         dom.el('dialog', null, 'pulse-dialog'));
     this.dialog.setAttribute('aria-labelledby', 'pulse-title');
-    const title = dom.el('h2', 'Measure your pulse');
+    const title = dom.el('h2', 'Log vital signs');
     title.id = 'pulse-title';
     const close = dom.button(null, 'pulse-close');
     close.append(dom.icon('x'));
@@ -663,6 +663,9 @@ class PulseDialog {
 
   intro() {
     const dom = this.dom;
+    const readings = dom.el(
+        'p', 'Pulse and breathing rate with heart rate variability when available',
+        'pulse-note');
     const tips = dom.el('ul', null, 'pulse-tips');
     for (const text
              of ['Rest for a minute before you start',
@@ -678,7 +681,7 @@ class PulseDialog {
     const note =
         dom.el('p', 'A home estimate for following your trends ', 'pulse-note');
     note.append(dom.accuracyNote('camera', 'About accuracy'));
-    this.body.replaceChildren(tips, start, note);
+    this.body.replaceChildren(readings, tips, start, note);
     start.focus();
   }
 
@@ -1163,7 +1166,30 @@ function supported() {
       navigator.mediaDevices.getUserMedia);
 }
 
+/** The readings computed from one camera recording. */
+const MEASURE_KEYS = Object.freeze(['pulse', 'breathing_rate', 'hrv']);
+
+/**
+ * Builds the shared action for one camera capture.
+ * @param {function(): !Promise<void>} onSaved
+ * @param {!Array<!Object>} measures
+ * @param {string} className
+ * @return {!HTMLButtonElement}
+ */
+function logButton(onSaved, measures, className) {
+  const dom = root.StellisDom;
+  const button = dom.button(null, className);
+  button.append(dom.icon('camera'), dom.el('span', 'Log vital signs'));
+  button.disabled = !supported();
+  if (button.disabled) button.title = 'Camera access is unavailable in this browser';
+  button.addEventListener(
+      'click', () => open(onSaved, measures.find((m) => m.key === 'pulse')));
+  return button;
+}
+
 const exported = {
+  MEASURE_KEYS,
+  logButton,
   CaptureState,
   GOOD_MS,
   MAX_MS,

@@ -67,7 +67,7 @@ try {
         }
       `}));
     await page.goto(origin + '/trends');
-    await page.getByRole('button', {name: 'Measure with camera', exact: true}).click();
+    await page.getByRole('button', {name: 'Log vital signs', exact: true}).click();
     await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.getByRole('button', {name: 'Try again', exact: true}).waitFor();
     assert.equal(await page.evaluate(() => window.captureEvents), 1);
@@ -95,7 +95,7 @@ try {
         stream => stream.getTracks().every(track => track.readyState === 'ended'))));
     // A successful capture must clear its deadline without replacing its result.
     await page.evaluate(() => { window.captureScenario = 'success'; });
-    await page.getByRole('button', {name: 'Measure with camera', exact: true}).click();
+    await page.getByRole('button', {name: 'Log vital signs', exact: true}).click();
     await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.getByRole('button', {name: 'Save', exact: true}).waitFor();
     await page.waitForTimeout(750);
@@ -108,8 +108,40 @@ try {
     assert.match(await page.locator('.pulse-details').textContent(), /no result/);
     assert.equal(await page.evaluate(() => window.captureStops), 5);
     await page.getByRole('button', {name: 'Close', exact: true}).click();
+    await page.getByRole('dialog').waitFor({state: 'detached'});
+    // Controlled derived readings check the complete save and refresh path.
+    await page.evaluate(() => {
+      window.captureScenario = 'success';
+      window.StellisVitalsMath.heartRateVariability = () => ({rmssd: 42, sure: true});
+      window.StellisVitalsMath.breathingRate = () => ({rate: 14, sure: true});
+    });
+    await page.getByRole('button', {name: 'Log vital signs', exact: true}).click();
+    await page.getByRole('button', {name: 'Start', exact: true}).click();
+    await page.getByRole('button', {name: 'Save', exact: true}).waitFor();
+    const responses = ['pulse', 'breathing_rate', 'hrv'].map(measure =>
+      page.waitForResponse(response =>
+        response.url().endsWith('/api/v1/readings') &&
+        response.request().method() === 'POST' &&
+        response.request().postDataJSON().measure === measure));
+    await page.getByRole('button', {name: 'Save', exact: true}).click();
+    const saved = await Promise.all((await Promise.all(responses)).map(
+        response => response.json()));
+    try {
+      await page.getByRole('dialog').waitFor({state: 'detached'});
+      for (const value of ['70', '14', '42']) {
+        await page.locator('.trend-vitals .trend-value', {hasText: value}).waitFor();
+      }
+      await page.goto(origin + '/');
+      for (const value of ['70', '14', '42']) {
+        await page.locator('.overview-vitals .overview-value', {hasText: value}).waitFor();
+      }
+    } finally {
+      for (const point of saved) {
+        await context.request.delete(origin + '/api/v1/readings/' + point.id);
+      }
+    }
     assert.deepEqual(exceptions, []);
-    console.log(`PASS ${width}px: stalled events, silent retry, close and success cleanup`);
+    console.log(`PASS ${width}px: capture cleanup, grouped save, Trends refresh and Home reload`);
     await context.close();
   }
 } finally {

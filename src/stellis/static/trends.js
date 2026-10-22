@@ -175,10 +175,30 @@ class TrendsPage {
     }
     this.charts = [];
     const span = rangeSpan(this.rangeKey, this.measures, Date.now());
-    const tracked = this.measures.filter((measure) => measure.points.length);
-    const untracked = this.measures.filter((measure) => !measure.points.length);
-    this.cards.replaceChildren(
-        ...tracked.map((measure) => this.card(measure, span)));
+    const camera = root.StellisCameraPulse;
+    const cameraKeys = new Set(camera?.MEASURE_KEYS || []);
+    const vitalSigns = this.measures.filter((measure) => cameraKeys.has(measure.key));
+    const other = this.measures.filter((measure) => !cameraKeys.has(measure.key));
+    const tracked = other.filter((measure) => measure.points.length);
+    const untracked = other.filter((measure) => !measure.points.length);
+    this.cards.replaceChildren();
+    if (vitalSigns.length) {
+      const group = this.dom.el('section', null, 'trend-vitals');
+      group.setAttribute('aria-labelledby', 'trends-vital-signs');
+      const head = this.dom.el('div', null, 'vital-signs-head');
+      const title = this.dom.el('h3', 'Vital signs');
+      title.id = 'trends-vital-signs';
+      head.append(title, camera.logButton(
+          () => this.load(), this.measures, 'trend-add trend-camera'));
+      group.append(head);
+      for (const measure of vitalSigns.filter((m) => m.points.length)) {
+        group.append(this.card(measure, span, 'h4'));
+      }
+      const empty = vitalSigns.filter((m) => !m.points.length);
+      if (empty.length) group.append(this.startCard(empty, 'trend-start-vitals', 'h4'));
+      this.cards.append(group);
+    }
+    this.cards.append(...tracked.map((measure) => this.card(measure, span)));
     if (untracked.length) {
       this.cards.append(this.startCard(untracked));
     }
@@ -188,9 +208,10 @@ class TrendsPage {
    * Renders one tracked measure.
    * @param {!Object} measure
    * @param {{start: number, end: number}} span
+   * @param {string=} heading Heading level within its group.
    * @return {!Element}
    */
-  card(measure, span) {
+  card(measure, span, heading = 'h3') {
     const dom = this.dom;
     const chartApi = root.StellisTrendChart;
     const card = dom.el('section', null, 'trend-card');
@@ -199,7 +220,7 @@ class TrendsPage {
     const latest = measure.points[measure.points.length - 1];
     const latestAt = chartApi.parseTime(latest.time);
 
-    const title = dom.el('h3', measure.label);
+    const title = dom.el(heading, measure.label);
     title.id = titleId;
     const figure = dom.el('p', null, 'trend-figure');
     figure.append(
@@ -297,8 +318,10 @@ class TrendsPage {
   actions(measure, card) {
     const dom = this.dom;
     const row = dom.el('div', null, 'trend-actions');
-    const camera = this.cameraButton(measure);
-    const add = dom.button('Add a reading', camera ? '' : 'trend-add');
+    const cameraMeasure = root.StellisCameraPulse?.MEASURE_KEYS.includes(measure.key);
+    const add = dom.button(
+        cameraMeasure ? 'Log manually' : 'Add a reading',
+        cameraMeasure ? 'trend-manual' : 'trend-add');
     const tableButton = dom.button('Show table');
     tableButton.setAttribute('aria-expanded', 'false');
     const table = this.table(measure);
@@ -320,9 +343,6 @@ class TrendsPage {
     });
     if (!measure.points.length) {
       tableButton.hidden = true;
-    }
-    if (camera) {
-      row.append(camera);
     }
     row.append(add, tableButton);
     card.append(row, table);
@@ -468,42 +488,30 @@ class TrendsPage {
   }
 
   /**
-   * Offers a camera reading for measures the camera can take.
-   * @param {!Object} measure
-   * @return {?Element} Null for other measures or without a camera API.
-   */
-  cameraButton(measure) {
-    const camera = root.StellisCameraPulse;
-    if (measure.key !== 'pulse' || !camera || !camera.supported()) {
-      return null;
-    }
-    const button = this.dom.button(null, 'trend-add trend-camera');
-    button.append(
-        this.dom.icon('camera'), this.dom.el('span', 'Measure with camera'));
-    button.addEventListener(
-        'click', () => camera.open(() => this.load(), measure));
-    return button;
-  }
-
-  /**
    * Offers logging for measures with no readings yet.
    * @param {!Array<!Object>} measures
+   * @param {string=} titleId Unique heading ID for this group.
+   * @param {string=} heading Heading level within its group.
    * @return {!Element}
    */
-  startCard(measures) {
+  startCard(measures, titleId = 'trend-start', heading = 'h3') {
     const dom = this.dom;
     const card = dom.el('section', null, 'trend-card trend-start');
-    const title = dom.el('h3', 'Start tracking');
-    title.id = 'trend-start';
+    const title = dom.el(heading, 'Start tracking');
+    title.id = titleId;
     card.setAttribute('aria-labelledby', title.id);
     card.append(title);
     for (const measure of measures) {
       const row = dom.el('div', null, 'trend-start-row');
       row.append(dom.el('span', measure.label, 'trend-start-name'));
-      const camera = this.cameraButton(measure);
-      const add = dom.button('Add a reading', camera ? '' : 'trend-add');
+      const cameraMeasure = root.StellisCameraPulse?.MEASURE_KEYS.includes(measure.key);
+      const add = dom.button(
+          cameraMeasure ? 'Log manually' : 'Add a reading',
+          cameraMeasure ? 'trend-manual' : 'trend-add');
       add.setAttribute(
-          'aria-label', `Add a ${measure.label.toLowerCase()} reading`);
+          'aria-label', cameraMeasure ?
+              `Log ${measure.label.toLowerCase()} manually` :
+              `Add a ${measure.label.toLowerCase()} reading`);
       add.addEventListener('click', () => {
         add.hidden = true;
         const form = this.form(measure, () => {
@@ -515,9 +523,6 @@ class TrendsPage {
         form.querySelector('input').focus();
       });
       const buttons = dom.el('div', null, 'trend-start-buttons');
-      if (camera) {
-        buttons.append(camera);
-      }
       buttons.append(add);
       row.append(buttons);
       card.append(row);
