@@ -111,22 +111,15 @@ Today is the third pillar's home and the first page after onboarding. It shows:
 - the latest readings against the person's plan,
 - the agent's suggestions waiting for a yes or no.
 
-### Goals and trackers: status, 22 Oct 2026
+### Goals and reminders: status, 22 Oct 2026
 
-Home now opens with Today: one card per goal (`goals.py`, `goals.js`). Each goal has up to 4 trackers of five kinds:
+Home opens with a health overview and goals (`goals.py`, `goals.js`), as #82 describes:
 
-| Kind | Example | Progress shown |
-| --- | --- | --- |
-| Daily target on a measure | 7,000 steps; at most 2 drinks | Today's ring, the last 7 days and a streak in days |
-| Value to reach | Weight down to 85 kg | Share of the way from the starting reading |
-| Days a week | Exercise 3 days a week | This week's days and a streak in weeks |
-| Timer | Fasting 14 hours | Start and Stop, then a streak of days that reached the target |
-| Days without | Smoking | Days since the count last started; Reset starts it again |
-
-- **New measures:** readings gained steps, active minutes, sleep, water, alcoholic drinks, blood sugar and pain. Counted measures add up per day, and Trends charts one total per day.
-- **Preset goals:** 11 presets suggest how often to log something, with everyday defaults such as 7,000 steps and 8 glasses. Clinical targets, such as a weight or a blood pressure, are left for the person to enter.
-- **Goals from the call:** each goal from the intake call becomes a goal with the trackers its words suggest. "Walk without knee pain" gets steps and exercise.
-- **Days:** every day is the person's local day, from the browser's UTC offset.
+- **Reminder banners:** a reminder due now asks "Did you ... yet?" with Yes and Not yet. Yes logs the day. Not yet keeps a banner up until the person logs it that day.
+- **Health overview:** one card shows resting pulse, blood pressure, sleep and weight. Each reading has a trend line of up to 12 readings, the usual range as a band, one line of context and its source.
+- **Goals:** a person builds each goal from selectors: activity, amount, 1 to 7 times a week, and an optional reminder time. Each goal card shows this week's count, a 6-week bar chart with a dashed goal line, one sentence of encouragement and one log button.
+- **Readings count:** a blood pressure reading, a camera pulse reading or a night of sleep at or above the goal counts toward the matching goal on its local day.
+- **Steps:** Stellis tracks no steps until it reads them from a device or an export.
 
 ### Proposed building blocks
 

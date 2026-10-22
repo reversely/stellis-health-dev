@@ -1,4 +1,4 @@
-"""Tests for goals, trackers, streaks and timers."""
+"""Tests for goals built from selectors, weekly progress and reminders."""
 
 import datetime
 import os
@@ -12,11 +12,11 @@ from stellis import goals
 from stellis import readings
 from stellis import server
 
-TODAY = "2026-10-22"  # A Thursday.
-
-
-def _goal(result: dict[str, object], goal_id: str) -> dict[str, object]:
-    return next(goal for goal in result["goals"] if goal["id"] == goal_id)
+TODAY = "2026-10-22"  # A Thursday; its week starts on Monday, Oct 19.
+WALK = {"activity": "walk", "amount": 30, "times_per_week": 4,
+        "reminder": None}
+METFORMIN = {"activity": "medicine", "medicine": "metformin", "dose": "500 mg",
+             "times_per_week": 7, "reminder": "20:00"}
 
 
 class GoalsTest(unittest.TestCase):
@@ -30,157 +30,101 @@ class GoalsTest(unittest.TestCase):
         environment.start()
         self.addCleanup(environment.stop)
 
-    def tracker(self, goal_id: str, today: str = TODAY,
-                offset: int = 0) -> dict[str, object]:
-        return _goal(goals.overview(today, offset), goal_id)["trackers"][0]
+    def overview(self, now="12:00", today=TODAY, offset=0):
+        return goals.overview(today, offset, now)
 
-    def test_daily_steps_sum_each_local_day_into_a_streak(self):
-        goal = goals.create("Walk more", trackers=[
-            {"kind": "daily", "measure": "steps", "target": 7000}],
-            today="2026-10-19")
-        for time, steps in (("2026-10-19T12:00:00+00:00", 7200),
-                            ("2026-10-20T09:00:00+00:00", 4000),
-                            ("2026-10-20T18:00:00+00:00", 3500),
-                            ("2026-10-21T12:00:00+00:00", 7000),
-                            ("2026-10-22T08:00:00+00:00", 2000)):
-            readings.add("steps", steps, taken_at=time)
+    def test_a_goal_takes_its_title_from_its_selectors(self):
+        goals.create(WALK)
+        goals.create(METFORMIN)
+        goals.create({"activity": "sleep", "amount": 7, "times_per_week": 5})
+        goals.create({"activity": "blood_pressure", "times_per_week": 3})
 
-        tracker = self.tracker(goal["id"])
+        titles = [goal["title"] for goal in self.overview()["goals"]]
 
-        self.assertEqual(tracker["today"], 2000)
-        self.assertFalse(tracker["met_today"])
-        # Today is unmet, so the streak counts Oct 19 to 21.
-        self.assertEqual(tracker["streak"], 3)
-        self.assertEqual([day["met"] for day in tracker["days"][-4:]],
-                         [True, True, True, False])
-        self.assertEqual(tracker["days"][-3]["value"], 7500)
-        self.assertFalse(tracker["days"][0]["tracked"])
+        self.assertEqual(titles, ["Walk 30 minutes", "Take metformin 500 mg",
+                                  "Sleep at least 7 hours",
+                                  "Check blood pressure"])
 
-    def test_a_reading_late_in_the_evening_counts_on_the_local_day(self):
-        goal = goals.create("Water", trackers=[
-            {"kind": "daily", "measure": "water", "target": 2}],
-            today="2026-10-21")
-        # 23:30 on Oct 21 in New York (UTC-4) is Oct 22 in UTC.
-        readings.add("water", 2, taken_at="2026-10-22T03:30:00+00:00")
+    def test_values_outside_the_selectors_are_refused(self):
+        for fields, message in (
+            ({**WALK, "activity": "steps"}, "activity"),
+            ({**WALK, "amount": 25}, "amount"),
+            ({**WALK, "times_per_week": 8}, "1 to 7"),
+            ({**WALK, "reminder": "8pm"}, "reminder"),
+            ({**METFORMIN, "medicine": " "}, "medicine name"),
+        ):
+            with self.subTest(fields=fields):
+                with self.assertRaisesRegex(ValueError, message):
+                    goals.create(fields)
 
-        tracker = self.tracker(goal["id"], "2026-10-21", offset=-240)
+    def test_logged_days_fill_this_week_and_the_weekly_history(self):
+        goal_id = goals.create(WALK)["id"]
+        for day in ("2026-10-06", "2026-10-08", "2026-10-19", "2026-10-21",
+                    "2026-10-22"):
+            goals.mark(goal_id, day, True)
 
-        self.assertEqual(tracker["today"], 2)
-        self.assertTrue(tracker["met_today"])
+        goal = self.overview()["goals"][0]
 
-    def test_an_at_most_target_counts_days_with_nothing_logged(self):
-        goal = goals.create("Fewer drinks", trackers=[
-            {"kind": "daily", "measure": "drinks", "target": 1,
-             "direction": "at_most"}], today="2026-10-20")
-        readings.add("drinks", 3, taken_at="2026-10-21T20:00:00+00:00")
+        self.assertEqual(goal["this_week"], 3)
+        self.assertTrue(goal["done_today"])
+        self.assertEqual(goal["weeks"], [0, 0, 0, 2, 0, 3])
 
-        tracker = self.tracker(goal["id"])
+        goals.mark(goal_id, TODAY, False)
+        self.assertEqual(self.overview()["goals"][0]["this_week"], 2)
 
-        self.assertTrue(tracker["met_today"])
-        self.assertEqual(tracker["streak"], 1)
-
-    def test_weekly_habit_counts_marked_days_and_whole_weeks(self):
-        goal = goals.create("Exercise", trackers=[
-            {"kind": "weekly", "label": "Exercise", "target": 2}],
-            today="2026-10-12")
-        tracker_id = self.tracker(goal["id"])["id"]
-        for day in ("2026-10-13", "2026-10-15", "2026-10-20", "2026-10-22"):
-            goals.mark(tracker_id, day, True)
-
-        tracker = self.tracker(goal["id"])
-
-        self.assertEqual(tracker["this_week"], 2)
-        self.assertEqual(tracker["streak"], 2)
-        self.assertEqual(len(tracker["days"]), 7)
-        self.assertEqual(tracker["days"][0]["date"], "2026-10-19")
-
-        goals.mark(tracker_id, "2026-10-22", False)
-        tracker = self.tracker(goal["id"])
-        self.assertEqual(tracker["this_week"], 1)
-        # This week is short, so the streak keeps last week's count.
-        self.assertEqual(tracker["streak"], 1)
-
-    def test_a_habit_tied_to_a_measure_counts_days_with_a_reading(self):
-        goal = goals.from_template("blood_pressure", today="2026-10-19")
+    def test_readings_count_toward_a_goal_tied_to_their_measure(self):
+        goals.create({"activity": "blood_pressure", "times_per_week": 3})
+        goals.create({"activity": "sleep", "amount": 7, "times_per_week": 5})
+        goals.create({"activity": "pulse", "times_per_week": 7})
         readings.add("blood_pressure", 128, 82,
                      taken_at="2026-10-20T08:00:00+00:00")
+        readings.add("sleep", 7.5, taken_at="2026-10-21T07:00:00+00:00")
+        readings.add("sleep", 6, taken_at="2026-10-22T07:00:00+00:00")
+        readings.add("pulse", 64, taken_at="2026-10-22T07:00:00+00:00")
+        readings.add("pulse", 66, source="camera", quality=0.8,
+                     taken_at="2026-10-21T07:00:00+00:00")
 
-        tracker = self.tracker(goal["id"])
+        weeks = [goal["this_week"] for goal in self.overview()["goals"]]
 
-        self.assertTrue(tracker["from_readings"])
-        self.assertEqual(tracker["this_week"], 1)
+        # The 6-hour night misses a 7-hour goal; only camera pulses count.
+        self.assertEqual(weeks, [1, 1, 1])
 
-    def test_timer_logs_minutes_on_the_day_it_started(self):
-        goal = goals.create("Fast", trackers=[
-            {"kind": "timer", "label": "Fasting", "target": 840}],
-            today="2026-10-21")
-        tracker_id = self.tracker(goal["id"])["id"]
-        start = datetime.datetime(2026, 10, 21, 20, tzinfo=datetime.timezone.utc)
-        with mock.patch.object(goals, "_now", return_value=start):
-            goals.start_timer(tracker_id)
-        with self.assertRaisesRegex(ValueError, "already running"):
-            goals.start_timer(tracker_id)
-        self.assertEqual(self.tracker(goal["id"])["running_since"],
-                         "2026-10-21T20:00:00+00:00")
-        with mock.patch.object(goals, "_now",
-                               return_value=start + datetime.timedelta(hours=15)):
-            self.assertEqual(goals.stop_timer(tracker_id, 0), {"minutes": 900})
+    def test_a_reminder_asks_from_its_time_until_the_day_is_logged(self):
+        goal_id = goals.create(METFORMIN)["id"]
 
-        tracker = self.tracker(goal["id"])
+        self.assertEqual(self.overview("19:59")["reminders"], [])
+        reminder = self.overview("20:00")["reminders"][0]
+        self.assertEqual(reminder["question"],
+                         "Did you take metformin 500 mg yet?")
+        self.assertEqual(reminder["state"], "ask")
 
-        self.assertIsNone(tracker["running_since"])
-        self.assertEqual(tracker["days"][-2]["value"], 900)
-        self.assertEqual(tracker["streak"], 1)
+        goals.not_yet(goal_id, TODAY)
+        self.assertEqual(self.overview("21:00")["reminders"][0]["state"],
+                         "pending")
 
-    def test_days_without_count_from_the_last_slip(self):
-        goal = goals.from_template("smoking", today="2026-10-10")
-        tracker_id = self.tracker(goal["id"])["id"]
-        self.assertEqual(self.tracker(goal["id"])["streak"], 13)
+        goals.mark(goal_id, TODAY, True)
+        self.assertEqual(self.overview("21:00")["reminders"], [])
+        # A new day asks again.
+        tomorrow = self.overview("20:30", "2026-10-23")["reminders"][0]
+        self.assertEqual(tomorrow["state"], "ask")
 
-        goals.mark(tracker_id, "2026-10-18", True)
+    def test_a_met_weekly_goal_stops_its_reminders_for_the_week(self):
+        goal_id = goals.create({**WALK, "times_per_week": 2,
+                                "reminder": "08:00"})["id"]
+        goals.mark(goal_id, "2026-10-19", True)
+        goals.mark(goal_id, "2026-10-20", True)
 
-        tracker = self.tracker(goal["id"])
-        self.assertEqual(tracker["streak"], 4)
-        self.assertEqual(tracker["last_slip"], "2026-10-18")
+        self.assertEqual(self.overview("09:00")["reminders"], [])
 
-    def test_target_progress_runs_from_the_starting_reading(self):
-        readings.add("weight", 90, taken_at="2026-09-01T08:00:00+00:00")
-        goal = goals.from_template("weight", targets={0: 85},
-                                   today="2026-09-02")
-        readings.add("weight", 88, taken_at="2026-10-20T08:00:00+00:00")
+    def test_a_late_evening_reading_counts_on_the_local_day(self):
+        goals.create({"activity": "blood_pressure", "times_per_week": 3})
+        # 23:30 on Oct 21 in New York (UTC-4) is Oct 22 in UTC.
+        readings.add("blood_pressure", 120, 80,
+                     taken_at="2026-10-22T03:30:00+00:00")
 
-        tracker = self.tracker(goal["id"])
+        goal = self.overview(today="2026-10-21", offset=-240)["goals"][0]
 
-        self.assertEqual(tracker["baseline"], 90)
-        self.assertEqual(tracker["latest"], 88)
-        self.assertAlmostEqual(tracker["fraction"], 0.4)
-
-    def test_a_template_skips_a_target_the_person_left_blank(self):
-        goal = goals.from_template("weight", today=TODAY)
-
-        trackers = _goal(goals.overview(TODAY, 0), goal["id"])["trackers"]
-
-        self.assertEqual([t["label"] for t in trackers], ["Weigh in"])
-
-    def test_invalid_trackers_are_refused(self):
-        for tracker, message in (
-            ({"kind": "daily", "measure": "steps"}, "target"),
-            ({"kind": "daily", "measure": "blood_pressure", "target": 120},
-             "habit"),
-            ({"kind": "weekly", "label": "Walk", "target": 8}, "1 to 7"),
-            ({"kind": "laps", "label": "Swim", "target": 1}, "kind"),
-        ):
-            with self.subTest(tracker=tracker):
-                with self.assertRaisesRegex(ValueError, message):
-                    goals.create("Goal", trackers=[tracker])
-
-    def test_goal_words_suggest_templates(self):
-        self.assertEqual(goals.suggest("Keep the weight off, and my knees"),
-                         ["move", "weight"])
-        self.assertEqual(goals.suggest("Lower my blood pressure"),
-                         ["blood_pressure"])
-        self.assertEqual(goals.suggest("Feel less anxious"), ["unwind"])
-        self.assertEqual(goals.suggest("Understand my scan"), [])
+        self.assertTrue(goal["done_today"])
 
 
 class GoalsApiTest(unittest.TestCase):
@@ -196,62 +140,40 @@ class GoalsApiTest(unittest.TestCase):
         self.client = testclient.TestClient(server.app)
         self.addCleanup(self.client.close)
 
-    def test_a_goal_from_a_template_is_logged_and_deleted(self):
-        templates = self.client.get("/api/v1/goals/templates").json()
-        self.assertIn("water", [t["key"] for t in templates["templates"]])
-        created = self.client.post("/api/v1/goals", json={
-            "template": "water", "targets": {"0": 6}, "today": TODAY})
+    def listed(self, now="21:00"):
+        return self.client.get("/api/v1/goals", params={
+            "today": datetime.date.today().isoformat(), "now": now}).json()
+
+    def test_a_goal_is_added_answered_edited_and_deleted(self):
+        created = self.client.post("/api/v1/goals", json=METFORMIN)
         self.assertEqual(created.status_code, 200, created.text)
-        self.client.post("/api/v1/readings", json={"measure": "water",
-                                                   "value": 6})
+        goal_id = created.json()["id"]
+        today = datetime.date.today().isoformat()
+        self.assertEqual(self.listed()["reminders"][0]["state"], "ask")
 
-        listed = self.client.get("/api/v1/goals",
-                                 params={"today": datetime.date.today()
-                                         .isoformat()}).json()
-        tracker = listed["goals"][0]["trackers"][0]
-        self.assertEqual((tracker["target"], tracker["unit"]),
-                         (6, "glasses"))
-        self.assertTrue(tracker["met_today"])
+        self.client.post(f"/api/v1/goals/{goal_id}/days/{today}/not-yet")
+        self.assertEqual(self.listed()["reminders"][0]["state"], "pending")
+        self.client.put(f"/api/v1/goals/{goal_id}/days/{today}",
+                        json={"done": True})
+        self.assertEqual(self.listed()["reminders"], [])
 
-        deleted = self.client.delete(f"/api/v1/goals/{created.json()['id']}")
-        self.assertEqual(deleted.status_code, 200)
-        self.assertEqual(self.client.get("/api/v1/goals", params={
-            "today": TODAY}).json(), {"goals": []})
+        edited = self.client.put(f"/api/v1/goals/{goal_id}",
+                                 json={**METFORMIN, "dose": "1000 mg"})
+        self.assertEqual(edited.status_code, 200)
+        self.assertEqual(self.listed()["goals"][0]["title"],
+                         "Take metformin 1000 mg")
+        self.assertIn("walk", [a["key"] for a in self.listed()["activities"]])
 
-    def test_a_custom_goal_with_a_bad_tracker_is_a_400(self):
-        reply = self.client.post("/api/v1/goals", json={
-            "title": "Swim", "trackers": [{"kind": "weekly", "target": 9,
-                                          "label": "Swim"}]})
-
-        self.assertEqual(reply.status_code, 400)
-        self.assertIn("1 to 7", reply.json()["detail"])
-
-    def test_habit_days_and_timers_round_trip(self):
-        goal = self.client.post("/api/v1/goals", json={
-            "title": "Calm", "trackers": [
-                {"kind": "weekly", "label": "Stretch", "target": 3},
-                {"kind": "timer", "label": "Meditation", "target": 10}]}).json()
-        trackers = self.client.get("/api/v1/goals", params={
-            "today": TODAY}).json()["goals"][0]["trackers"]
-        habit, timer = trackers[0]["id"], trackers[1]["id"]
-
-        self.assertEqual(self.client.put(f"/api/v1/trackers/{habit}/days",
-                                         json={"day": TODAY, "done": True})
+        self.assertEqual(self.client.delete(f"/api/v1/goals/{goal_id}")
                          .status_code, 200)
-        self.assertEqual(self.client.post(f"/api/v1/trackers/{timer}/timer")
-                         .status_code, 200)
-        self.assertEqual(self.client.post(f"/api/v1/trackers/{timer}/timer")
-                         .status_code, 400)
-        self.assertEqual(self.client.delete(f"/api/v1/trackers/{timer}/timer")
-                         .json(), {"minutes": 0})
-        self.assertEqual(self.client.patch(f"/api/v1/trackers/{habit}",
-                                           json={"target": 5}).status_code,
-                         200)
-        self.assertEqual(self.client.delete(f"/api/v1/trackers/{timer}")
-                         .status_code, 200)
-        self.assertEqual(self.client.delete("/api/v1/trackers/missing")
-                         .status_code, 404)
-        self.assertEqual(goal.keys(), {"id"})
+        self.assertEqual(self.listed()["goals"], [])
+
+    def test_bad_values_are_a_400_and_a_missing_goal_a_404(self):
+        bad = self.client.post("/api/v1/goals", json={**WALK, "amount": 25})
+        self.assertEqual(bad.status_code, 400)
+        missing = self.client.put("/api/v1/goals/nope/days/2026-10-22",
+                                  json={"done": True})
+        self.assertEqual(missing.status_code, 404)
 
 
 if __name__ == "__main__":
