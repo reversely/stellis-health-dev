@@ -231,7 +231,7 @@ Models also degrade when tested on a different dataset from their training data.
 3. **The licences shape the build.**
    - **rPPG-Toolbox:** its licence forbids diagnosing a medical condition without human oversight, and inferring health conditions in its surveillance clause. A wellness pulse trend may fall outside both, but counsel should confirm before the toolbox's models or code are used.
    - **pyVHR:** GPL-3.0 would require releasing linked code under the same licence.
-   - **Proposed route:** implement the published POS and CHROM methods directly in browser JavaScript.
+   - **Proposed route:** use vitallens.js, which ships the published POS, CHROM and G methods for the browser under the MIT licence (see "Libraries").
    - **Patents:** the authors of both methods were at Philips Research, so a patent search comes first.
 
 ### What it measures
@@ -249,7 +249,7 @@ The alpha shows only the readings that published validation supports.
 
 The video is processed in the browser and never uploaded. Only the numbers and a quality score reach the server.
 
-This matches the brief's direction of keeping raw personal data under the person's control. It also removes the need for a vision model call per video. Face detection uses a browser face-landmark model. The pulse comes from a published signal method (POS or CHROM) written in JavaScript, or later from a small model run in the browser. The licence findings are in "What the benchmarks mean for the design".
+This matches the brief's direction of keeping raw personal data under the person's control. It also removes the need for a vision model call per video. Face detection uses a browser face-landmark model. The pulse comes from the POS or CHROM method in vitallens.js (see "Libraries"). The licence findings are in "What the benchmarks mean for the design".
 
 ### Why it matters for Denver
 
@@ -282,6 +282,59 @@ Home opens on Today. The rail starts with Today, Records and Ask. Each other fea
 | Terms | After the first recording |
 
 The 8-step tour leaves first run and stays available in Settings.
+
+## Libraries
+
+Each row names the package proposed for the build. Versions, dates and licences were read from the npm and PyPI registries and the repositories' licence files on 22 Oct 2026.
+
+### Daily vitals by camera (T-08, T-09)
+
+| Use | Package | Version, date | Licence | Why this one | Caveats |
+| --- | --- | --- | --- | --- | --- |
+| Pulse in the browser | `vitallens` (npm, Rouast Labs) | 0.4.8, 19 Oct 2026 | MIT | Runs POS, CHROM and G locally with built-in face detection and webcam support, with no API key. Video stays on the device. | Its own model (`method: 'vitallens'`) sends video to Rouast's paid API, so the app sets `pos` or `chrom` only. The engine `vitallens-core` 0.3.4 states MIT in its README but has no licence field in package.json. The package unpacks to 7 MB, including ffmpeg.wasm for file input, so the app loads it only on the capture page. The publisher calls the local methods less accurate than its API model. |
+| Offline validation (T-09) | `open-rppg` (PyPI) | 0.1.1, 23 Dec 2025 | MIT code | One interface to 8 published models (PhysMamba, RhythmMamba, PhysFormer, the ME models, FacePhys), with a signal quality index, HRV and breathing rate. Runs on recorded validation videos to compare against the browser result. | The pretrained weights are under each paper's own terms, so they stay in validation, not production. Needs JAX and OpenCV. |
+| Benchmark reference | `rPPG-Toolbox` (GitHub) | NeurIPS 2023 | Responsible AI Source Code License 1.1 | Standard benchmark configs for MMPD and PURE | Use restrictions on health inference. Counsel review before use. |
+| Avoid | `pyVHR` (PyPI) | 2.0, 15 Jan 2023 | PyPI says BSD, repository LICENSE says GPL-3.0 | | Conflicting licence and no release since 2023 |
+
+The patent search on POS and CHROM applies whichever package implements them.
+
+### Food photos and food log (T-07a, T-07)
+
+| Use | Package or service | Version, date | Licence | Why this one | Caveats |
+| --- | --- | --- | --- | --- | --- |
+| Name the foods and portions | An open-weight vision model on Token Factory, called through the existing `agent_gateway` path | | Model's own licence, commonly Apache-2.0 for Qwen-VL | Keeps one inference provider, as the brief requires | The model list is unconfirmed, because Token Factory's site is blocked from the development container. T-07a picks the model. |
+| Nutrient values | USDA FoodData Central bulk download (FNDDS and Foundation Foods CSV), loaded into the account database | Released twice a year | Public domain (CC0) | Lookups stay on the server with no third-party call per meal. No client library needed. | The full download is large. The import keeps only FNDDS and Foundation Foods, and only the columns the app uses. |
+| Packaged food by barcode | `openfoodfacts` (PyPI) | 5.4.1, 20 Oct 2026 | MIT (SDK), ODbL (data) | Official SDK for the Open Food Facts API and data dumps | Data quality varies by product. The app shows the product photo so the person can confirm the match. |
+| Barcode scanning in the browser | `barcode-detector` (npm) | 3.2.3, 19 Oct 2026 | MIT | Uses the browser's native BarcodeDetector where it exists and falls back to `zxing-wasm` elsewhere, including iPhone Safari | Adds a WASM file, loaded only when scanning. Its size needs measuring in the build. |
+| Calorie app exports | Python `csv` module | | | MyFitnessPal and Cronometer exports are CSV | No library needed |
+| Avoid | `ultralytics` (YOLO) | 8.4.183 | AGPL-3.0 | | AGPL would require releasing the hosted app's source |
+
+An in-browser Food-101 classifier through `@huggingface/transformers` (4.3.1, Apache-2.0) was considered. Food-101 has 101 single-dish classes, which does not cover a mixed plate, so the plan leaves it out.
+
+### Diet plans (T-10)
+
+| Use | Package | Version, date | Licence | Why this one | Caveats |
+| --- | --- | --- | --- | --- | --- |
+| Energy and protein targets | No package. Mifflin-St Jeor, activity factors, adaptive TDEE and PROT-AGE ranges as a small Python module. | | | Each formula is a few lines and needs no dependency. Tests check them against published worked examples. | |
+| Meal plan solver | `scipy` (`scipy.optimize.milp`, which runs the HiGHS solver) | 1.18.1, 21 Aug 2026 | BSD-3-Clause | Mixed-integer solver for portions that meet nutrient targets, built on numpy, which the app already uses | Adds tens of megabytes to the image. `highspy` (MIT) is the lighter option if image size matters. |
+| The person's own recipes | `recipe-scrapers` (PyPI) | 15.13.0, 18 Oct 2026 | MIT | Imports ingredients from recipe sites the person already cooks from, so plans use meals they know | Optional |
+
+### Scale, Apple Health and medicines (T-05, T-06)
+
+| Use | Package or service | Version, date | Licence | Why this one | Caveats |
+| --- | --- | --- | --- | --- | --- |
+| Withings scale | Withings Public API, called with `httpx` (already a dependency) | | Withings developer terms | Estimated at a few hundred lines of OAuth and measure calls. The Python client `withings-api` last released in Feb 2022. | Withings' non-standard OAuth needs care. Their push notifications need a public callback URL. |
+| Apple Health export | `apple-health-parser` (PyPI) | 2.0.4, 23 Sep 2026 | MIT | Parses the export.zip that iPhone users can produce today | Large exports can take minutes to parse, so the import runs as a background job. `healthkit-to-sqlite` has had no release since 2021. |
+| Medicine names | NLM RxNav REST API, called with `httpx` | | Public NLM service | Normalises a name from a label or record to an RxNorm code | |
+| Medicine label facts | openFDA drug label API, called with `httpx` | | Public FDA service | Official label text for the A-02 sources | |
+| Read a bottle label in the browser | `tesseract.js` (npm) | 7.0.0, 15 Dec 2025 | Apache-2.0 | OCR on the device, so the label photo can stay local. The vision model is the fallback when the person agrees. | OCR on curved labels misses text. The person confirms each field. |
+
+### Reminders (T-02)
+
+| Use | Package | Version, date | Licence | Why this one | Caveats |
+| --- | --- | --- | --- | --- | --- |
+| Phone notifications | `pywebpush` with `py-vapid` (PyPI) | 2.5.0, 30 Aug 2026; 1.9.6, 14 Oct 2026 | MPL-2.0 | The standard Python Web Push sender | MPL-2.0 applies to changes made to those files. Using the packages unchanged has no effect on the app's licence. |
+| Schedule due check-ins | `APScheduler` (PyPI) | 3.11.3, 28 Jun 2026 | MIT | Cron-style schedules per check-in, in the existing worker process | The worker's existing hourly sweep could poll instead. That suits one machine, but per-minute precision needs the scheduler. |
 
 ## Proposed tickets
 
