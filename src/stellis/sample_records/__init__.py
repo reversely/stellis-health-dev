@@ -35,21 +35,25 @@ def _notebook_id(name: str) -> str:
     return str(row["id"]) if row else str(notebooks.create(name)["id"])
 
 
-def load(notebook_name: str | None = None) -> dict[str, object]:
+def load(notebook_name: str | None = None,
+         files: tuple[str, ...] | None = None) -> dict[str, object]:
     """Uploads every sample record, as a person dumping all their files.
 
     Args:
         notebook_name: A notebook to file the records in, created when
             missing. None leaves them in no notebook, ready to sort.
+        files: Record file names to load, or None for every record.
 
     Returns:
-        ``notebook_id`` (or None), the number of records ``added`` and the
-        ``total``. Records the account already has are skipped, so a second
-        run adds nothing.
+        ``notebook_id`` (or None), the number of records ``added``, the
+        ``total`` and ``document_ids``, oldest record first. Records the
+        account already has are skipped, so a second run adds nothing.
     """
     notebook_id = _notebook_id(notebook_name) if notebook_name else None
-    records = manifest()
+    records = [record for record in manifest()
+               if files is None or record["file"] in files]
     added = 0
+    ids = []
     for record in records:
         content = (FOLDER / record["file"]).read_bytes()
         document, duplicate = documents.create(record["file"], content,
@@ -58,4 +62,6 @@ def load(notebook_name: str | None = None) -> dict[str, object]:
         if not duplicate:
             documents.update(str(document["id"]), title=record["title"])
             added += 1
-    return {"notebook_id": notebook_id, "added": added, "total": len(records)}
+        ids.append(str(document["id"]))
+    return {"notebook_id": notebook_id, "added": added, "total": len(records),
+            "document_ids": ids}

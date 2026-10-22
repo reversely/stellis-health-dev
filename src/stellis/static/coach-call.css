@@ -102,6 +102,7 @@
   bottom: 20px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr);
   width: min(400px, calc(100vw - 32px));
   max-height: min(560px, calc(100vh - 40px));
   border: 1px solid var(--line);
@@ -283,12 +284,18 @@
   .coach-incoming-actions .coach-button {
     flex: 1 1 auto;
   }
+  .coach-call-log {
+    min-height: 72px;
+  }
+  .coach-call-heard {
+    display: none;
+  }
   .coach-call {
     right: 8px;
     bottom: 8px;
     left: 8px;
     width: auto;
-    max-height: 70vh;
+    max-height: 46vh;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -300,4 +307,31 @@
     animation: none;
     opacity: 0.4;
   }
+}
+
+/* The tour's highlight on the control Stellis is describing */
+.tour-target {
+  outline: 3px solid var(--accent);
+  outline-offset: 6px;
+  box-shadow: 0 0 0 12px color-mix(in oklch, var(--accent) 12%, transparent);
+  scroll-margin: 96px;
+  transition:
+    outline-offset 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@starting-style {
+  .tour-target {
+    outline-offset: 16px;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+.coach-offer {
+  grid-template-rows: auto auto;
+}
+.coach-offer .coach-call-head {
+  border-bottom: 0;
+}
+.coach-offer .coach-call-ended {
+  border-top: 0;
+  padding-top: 0;
 }

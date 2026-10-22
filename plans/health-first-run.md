@@ -120,6 +120,14 @@ Home opens with a health overview and goals (`goals.py`, `goals.js`), as #82 des
 - **Goals:** a person builds each goal from selectors: activity, amount, 1 to 7 times a week, and an optional reminder time. Each goal card shows this week's count, a 6-week bar chart with a dashed goal line, one sentence of encouragement and one log button.
 - **Readings count:** a blood pressure reading, a camera pulse reading or a night of sleep at or above the goal counts toward the matching goal on its local day.
 - **Steps:** Stellis tracks no steps until it reads them from a device or an export.
+- **Goals filled in by Stellis:** a person describes goals in their own words, or names them on a call. The model calls `fill_goal`, the server checks each value against the selectors, and Home fills in Add a goal for the person to confirm (`coach.py`).
+- **Coach calls:** each morning from 5 am to noon, Home shows an incoming call card. The check-in opens with today's appointments and reminders, written from the person's data, then asks how they are doing. Call Stellis starts a call at any time. Both run in a panel docked over the page. The model can fill in a goal, log a goal for today, or hang up after the person says they have nothing else (`coach_call.py`, `coach-call.js`).
+
+### Onboarding call and tour: status, 22 Oct 2026
+
+- **Onboarding call:** the intake model hangs up with an `end_call` tool at the goodbye step, after asking the person to press Continue.
+- **Tour:** finishing setup opens Home with an offer of a two-minute tour. The tour runs on a call docked over the app. Each of its seven steps opens a page, highlights one control and speaks one pre-written line: health overview, goals, a sample notebook, a sample record, the summary, the timeline and recording. The person says "next" or presses Next, or asks a question, which the model answers from the step. The tour closes by naming the features and the goals from the onboarding call (`tour.py`).
+- **Sample notebook:** the tour adds four of Denver Lang's records to a notebook named "Sample: Denver Lang", which the person can delete.
 
 ### Proposed building blocks
 

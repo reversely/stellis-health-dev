@@ -1,0 +1,122 @@
+"""Tests for the guided tour on a docked call."""
+
+import asyncio
+import os
+import tempfile
+import unittest
+from unittest import mock
+
+from fastapi import testclient
+
+from stellis import documents
+from stellis import intake
+from stellis import notebooks
+from stellis import server
+from stellis import tour
+
+
+class TourTest(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        environment = mock.patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
+        environment.start()
+        self.addCleanup(environment.stop)
+
+    def say(self, text, answer=("Notebooks group records.",)):
+        async def model(messages, tools=None):
+            for piece in answer:
+                yield piece
+
+        tour.add_person_turn(text)
+        with mock.patch.object(intake, "stream_tokens", model):
+            async def pieces():
+                return [piece async for piece in tour.reply()]
+            return asyncio.run(pieces())
+
+    def test_the_tour_loads_a_sample_notebook_once(self):
+        first = tour.begin()["sample"]
+        second = tour.begin()["sample"]
+
+        self.assertEqual(first, second)
+        names = {book["id"]: book["name"] for book in notebooks.list_notebooks()}
+        self.assertEqual(names[first["notebook"]], tour.SAMPLE_NOTEBOOK)
+        self.assertEqual(documents.get(first["record"])["title"], "Annual exam")
+
+    def test_next_walks_every_step_then_sums_up_and_hangs_up(self):
+        sample = tour.begin()["sample"]
+        self.assertEqual(tour.opening_actions()[0]["selector"], "#home-goals .overview")
+        tour.opening()
+        shown = []
+        for _ in tour.STEPS[1:]:
+            pieces = self.say("Okay, next")
+            shown.append(pieces[0]["path"])
+            self.assertIsInstance(pieces[1], str)
+
+        self.assertEqual(shown, ["/", f"/notebook/{sample['notebook']}",
+                                 f"/document/{sample['record']}", "/summary", "/timeline",
+                                 "/recording"])
+        last = self.say("Got it")
+        self.assertEqual(last[0]["path"], "/")
+        self.assertEqual(last[-2], "Have a nice day.")
+        self.assertEqual(last[-1], tour.END_MARK)
+
+    def test_a_question_is_answered_and_the_tour_waits(self):
+        tour.begin()
+        tour.opening()
+
+        pieces = self.say("What goes in a notebook?")
+
+        self.assertEqual(pieces, ["Notebooks group records.", tour.WAIT])
+        self.assertEqual(tour.load()["step"], 0)
+
+    def test_stop_ends_the_tour_early(self):
+        tour.begin()
+        tour.opening()
+
+        self.assertEqual(self.say("Please stop the tour")[-1], tour.END_MARK)
+
+    def test_the_closing_names_the_goals_from_the_onboarding_call(self):
+        self.assertIn("Add your first goal", tour.closing())
+        intake.save_notes([{"heading": "Goals", "items": ["Walk after dinner",
+                                                          "Lower my blood pressure."]}], 0)
+
+        self.assertIn("You told me your goals: walk after dinner and lower my blood pressure.",
+                      tour.closing())
+
+    def test_intent(self):
+        self.assertEqual(tour.intent("Next"), "next")
+        self.assertEqual(tour.intent("okay sounds good"), "next")
+        self.assertEqual(tour.intent("Yes, but how do I add a record from my doctor?"), "question")
+        self.assertEqual(tour.intent("I'm done, thanks"), "stop")
+
+
+class TourSocketTest(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        environment = mock.patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name,
+                                                   "STELLIS_CALL_MODELS": self.temp.name})
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.client = testclient.TestClient(server.app)
+        self.addCleanup(self.client.close)
+
+    def test_the_first_step_is_shown_before_the_first_line(self):
+        with self.client.websocket_connect("/api/v1/tour/call") as socket:
+            messages = [socket.receive_json() for _ in range(3)]
+            socket.send_json({"type": "text", "text": "Next"})
+            while not (messages[-1]["type"] == "action" and messages[-1]["step"] == "goals"):
+                messages.append(socket.receive_json())
+
+        self.assertEqual([m["type"] for m in messages[:3]], ["ready", "action", "say"])
+        self.assertEqual(messages[1]["step"], "overview")
+        self.assertTrue(messages[2]["text"].startswith("Hi again"))
+
+
+if __name__ == "__main__":
+    unittest.main()

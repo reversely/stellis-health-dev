@@ -4,6 +4,8 @@
  * call. A call runs in a panel docked over the page, with its chat log, so
  * the person sees Stellis fill in the page as they talk. A call by text
  * ("Chat instead") uses the same panel without the microphone or speech.
+ * The guided tour runs in the same panel: each step opens a page and
+ * highlights one control while Stellis describes it.
  */
 (function(root) {
 'use strict';
@@ -20,7 +22,9 @@ const STATUS = {
 const TITLES = {
   morning: 'Morning check-in',
   call: 'Call with Stellis',
+  tour: 'Tour with Stellis',
 };
+const TOUR_WAIT_MS = 8000;
 
 function localParams() {
   const now = new Date();
@@ -105,6 +109,64 @@ function incoming(on) {
 }
 
 let current = null;
+let target = null;
+
+/** Removes the tour's highlight. */
+function clearTarget() {
+  target?.classList.remove('tour-target');
+  target = null;
+}
+
+/**
+ * Opens a page in the app, then highlights a control once it shows.
+ * @param {string} path
+ * @param {string} selector
+ */
+function showStep(path, selector) {
+  if (location.pathname !== path) {
+    history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+  clearTarget();
+  const started = Date.now();
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  (function find() {
+    const found = document.querySelector(selector);
+    if (found?.checkVisibility()) {
+      target = found;
+      target.classList.add('tour-target');
+      target.scrollIntoView(
+          {block: 'start', behavior: still ? 'instant' : 'smooth'});
+    } else if (Date.now() - started < TOUR_WAIT_MS) {
+      setTimeout(find, 150);
+    }
+  })();
+}
+
+/** Offers the tour in the docked panel, after setup. */
+function offerTour() {
+  const dom = root.StellisDom;
+  const panel = dom.el('section', null, 'coach-call coach-offer');
+  panel.setAttribute('aria-labelledby', 'coach-offer-title');
+  const head = dom.el('div', null, 'coach-call-head');
+  const who = dom.el('div', null, 'coach-call-who');
+  const title = dom.el('strong', 'Stellis is ready to show you around');
+  title.id = 'coach-offer-title';
+  who.append(
+      title, dom.el('span', 'A two-minute tour, by voice', 'coach-call-line'));
+  head.append(avatar(36), who);
+  const actions = dom.el('div', null, 'coach-call-ended');
+  const start = button('phone', 'Start tour', 'coach-button is-primary');
+  const later = dom.button('Not now', 'coach-button is-quiet');
+  start.addEventListener('click', () => {
+    panel.remove();
+    open({kind: 'tour', chat: false, onAction() {}});
+  });
+  later.addEventListener('click', () => panel.remove());
+  actions.append(start, later);
+  panel.append(head, actions);
+  document.body.append(panel);
+}
 
 /**
  * Opens a call in the docked panel; an open call is ended first.
@@ -150,6 +212,12 @@ function open({kind, chat, onAction}) {
   const sound = button('volume', 'Speaker off', 'coach-call-icon', true);
   mute.hidden = sound.hidden = chat;
   foot.append(mute, sound, input, send);
+  if (kind === 'tour') {
+    const next = dom.button('Next', 'coach-button is-primary');
+    next.addEventListener('click', () => call.sendText('Next'));
+    foot.append(next);
+    input.placeholder = 'Ask a question';
+  }
 
   const ended = dom.el('div', null, 'coach-call-ended');
   const close = dom.button('Close', 'coach-button');
@@ -207,11 +275,13 @@ function open({kind, chat, onAction}) {
     switch (message.type) {
       case 'ready':
         started = Date.now();
-        clock = setInterval(() => {
-          const seconds = Math.floor((Date.now() - started) / 1000);
-          timer.textContent = `${Math.floor(seconds / 60)}:${
-              String(seconds % 60).padStart(2, '0')}`;
-        }, 1000);
+        // A tour shows its step in place of the call's length.
+        if (kind !== 'tour')
+          clock = setInterval(() => {
+            const seconds = Math.floor((Date.now() - started) / 1000);
+            timer.textContent = `${Math.floor(seconds / 60)}:${
+                String(seconds % 60).padStart(2, '0')}`;
+          }, 1000);
         setStatus(message.voice && !chat ? 'listening' : 'typing');
         if (!message.voice) mute.hidden = sound.hidden = true;
         input.focus({preventScroll: true});
@@ -235,13 +305,18 @@ function open({kind, chat, onAction}) {
         }
         break;
       case 'heard':
+        // The Next button's own word needs no bubble.
+        if (kind === 'tour' && message.text === 'Next') break;
         [...log.children]
             .find((item) => item.dataset.agentTurn === String(message.turn))
             ?.remove();
         addLine('person', message.text, message.turn);
         break;
       case 'action':
-        if (message.action === 'fill_goal') {
+        if (message.action === 'show_step') {
+          timer.textContent = `Step ${message.position} of ${message.total}`;
+          showStep(message.path, message.selector);
+        } else if (message.action === 'fill_goal') {
           addAction(`Filled in: ${message.values.title}`);
         } else if (message.action === 'logged') {
           addAction('Logged for today');
@@ -261,7 +336,9 @@ function open({kind, chat, onAction}) {
   }
 
   const call = root.StellisIntakeCall.start(onEvent, {
-    path: `/api/v1/coach/call?${new URLSearchParams({kind, ...localParams()})}`,
+    path: kind === 'tour' ?
+        '/api/v1/tour/call' :
+        `/api/v1/coach/call?${new URLSearchParams({kind, ...localParams()})}`,
     listen: !chat,
   });
   call.setSpeaker(speaker);
@@ -271,6 +348,7 @@ function open({kind, chat, onAction}) {
     finished = true;
     call.end();
     clearInterval(clock);
+    clearTarget();
     setStatus(key);
     foot.hidden = true;
     ended.hidden = false;
@@ -320,6 +398,7 @@ function open({kind, chat, onAction}) {
 root.StellisCoachCall = {
   incoming,
   open,
+  offerTour,
   localParams
 };
 })(window);

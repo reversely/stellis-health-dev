@@ -260,6 +260,8 @@ class Call:
         await self.send_json({"type": "ready", "voice": self.engine is not None,
                               "notes": state.get("notes", []),
                               "revision": state.get("notes_revision", 0)})
+        for action in getattr(self.script, "opening_actions", list)():
+            await self.send_json({"type": "action", **action})
         text = self.script.opening()
         self.replying = asyncio.create_task(self._say_all([text], record=False))
 
