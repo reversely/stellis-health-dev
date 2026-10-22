@@ -8,3 +8,7 @@ __pycache__/
 .pytest_cache/
 node_modules/
 docs/progress/
+
+# Local worktrees and OCR verification artifacts.
+/.agents/worktrees/
+/.agents/ocr-runtime/

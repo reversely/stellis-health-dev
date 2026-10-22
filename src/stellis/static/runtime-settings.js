@@ -2,10 +2,10 @@ const $ = selector => document.querySelector(selector);
 let current;
 let busy = false;
 const draftRoutes = new Map();
-const kindLabels = {onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', agent_plan: 'Work planning', agent_review: 'Agent review',
+const kindLabels = {document_ocr: 'Text recognition', agent_request: 'Agent request', onboarding_plan: 'Notebook proposals', agent_chat: 'Agent chat', agent_plan: 'Work planning', agent_review: 'Agent review',
   answer: 'Transcript question', summary: 'Summary', clean: 'Transcript cleanup', agent: 'To-do extraction', categorization: 'Category scoring'};
 const stateLabels = {running: 'Running', succeeded: 'Completed', failed: 'Failed', interrupted: 'Interrupted'};
-const eventLabels = {request_started: 'Request started', sources_selected: 'Sources selected',
+const eventLabels = {page_started: 'Page started', page_completed: 'Page completed', request_started: 'Request started', sources_selected: 'Sources selected',
   model_requested: 'Model requested', model_replied: 'Model replied', answer_retry: 'Answer format retry',
   sources_validated: 'Source citations validated', answer_validated: 'Answer validated',
   structured_reply_received: 'Structured reply received', category_scored: 'Categories scored',

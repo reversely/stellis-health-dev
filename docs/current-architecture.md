@@ -1,5 +1,39 @@
 # Current architecture (development)
 
+## Hosted document recognition and request timing
+
+The hosted health build lets people read printed scans and photos, correct the text and use saved pages in search, notebook chat, health facts and summaries. An authenticated account gateway routes requests to account-local workspaces. The workspace keeps original files and page text separately. Page revisions protect corrections from concurrent recognition results; changing a page clears facts derived from its previous wording.
+
+Recognition uses a bounded subprocess and local Tesseract with English language data. A host-wide file lock permits one OCR worker across account processes. The worker limits memory, CPU time, output size and raster dimensions. Its parent enforces a wall-time deadline and terminates the process group on expiry. The hosted image contains the OCR packages. The Python PDF dependency remains below major version 2 to keep layout-analysis model loading out of this path.
+
+```mermaid
+flowchart LR
+  Person[Person] --> Browser[Records and document review]
+  Browser --> Gateway[Authenticated account gateway]
+  Gateway --> API[Account workspace API]
+  API --> Original[Private original PDF or image]
+  API --> Worker[Bounded page worker]
+  Original --> Worker
+  Worker --> Tesseract[Local Tesseract English OCR]
+  Tesseract --> API
+  API --> Pages[(Account SQLite page text and revisions)]
+  Pages --> Sources[Search and selected source passages]
+  Sources --> Facts[Reviewable health facts]
+  Sources --> AI[Explicit agent or summary request]
+  AI --> Nebius[Nebius Token Factory in direct mode]
+  API --> Trace[(Account request timing metadata)]
+  AI --> Trace
+  Trace --> Settings[Settings Recent requests]
+```
+
+OCR traces record timestamps, duration, page number and character count. Agent gateway requests create a trace when the calling workflow has none and retain existing trace context otherwise. Prompt, reply and document text stay outside these records. Signed-in people can inspect request timing in Settings; provider credentials and model changes retain their operator restriction. The browser source viewer reads saved text while the full document page provides correction controls.
+
+Verification covers an isolated authenticated browser workspace and the built image under resource limits. It does not establish the deployed service revision. [OCR evidence](evidence/97/README.md) records tests, benchmarks and the reviewed licence sources. Issue #104 tracks the subsequent speech upgrade and stage timing.
+
+## Earlier development architecture
+
+The following sections preserve the earlier development runtime and its acceptance evidence. Issue #99 tracks reconciliation of that material and the broader health roadmap.
+
 Last updated: 2026-10-19, including the Rust preview and managed live agent work with isolated GN100 checks. This page describes development code and verified isolated browser runs; the GN100 service remains on the earlier deployed revision. Proposed components are in [ADR 0003](decisions/0003-cross-client-architecture.md) and are not drawn below.
 
 The browser client shown here is the running development product and primary acceptance surface. Flutter is required for the native iOS app and the shared iOS/Android/desktop stretch in ticket #25; it is not yet part of the running architecture. Flutter web is optional.

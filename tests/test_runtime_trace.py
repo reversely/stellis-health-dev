@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from stellis import agents, runtime_profile, runtime_settings, runtime_trace, storage
 
@@ -19,6 +19,34 @@ class RuntimeTraceTest(unittest.TestCase):
     def tearDown(self):
         self.env.stop()
         self.temp.cleanup()
+
+    def test_gateway_creates_timed_trace_and_reuses_existing_request(self):
+        from stellis import agent_gateway
+        reply = AsyncMock(return_value=("private reply", "session"))
+        with patch.object(agent_gateway, "_turn", reply):
+            asyncio.run(agent_gateway.turn("private prompt", "session"))
+            with runtime_trace.span("agent_chat"):
+                asyncio.run(agent_gateway.turn("private prompt", "session"))
+        traces = runtime_trace.recent()
+        self.assertEqual(len(traces), 2)
+        self.assertEqual({trace["kind"] for trace in traces},
+                         {"agent_request", "agent_chat"})
+        for trace in traces:
+            self.assertEqual(trace["state"], "succeeded")
+            self.assertIsNotNone(trace["duration_ms"])
+            self.assertNotIn("private prompt", json.dumps(trace))
+            self.assertNotIn("private reply", json.dumps(trace))
+
+    def test_gateway_failure_still_records_finished_time(self):
+        from stellis import agent_gateway
+        with patch.object(agent_gateway, "_turn", AsyncMock(
+                side_effect=agent_gateway.GatewayError("Private provider body"))):
+            with self.assertRaises(agent_gateway.GatewayError):
+                asyncio.run(agent_gateway.turn("private prompt", "session"))
+        trace = runtime_trace.recent()[0]
+        self.assertEqual(trace["state"], "failed")
+        self.assertTrue(trace["finished_at"])
+        self.assertNotIn("Private provider body", json.dumps(trace))
 
     def test_trace_records_steps_usage_and_outcome_without_content(self):
         agent = agents.assistant()

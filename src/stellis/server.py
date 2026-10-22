@@ -1892,6 +1892,36 @@ def get_document(document_id: str):
     return _agent_result(lambda: documents.get(document_id))
 
 
+class DocumentPageText(BaseModel):
+    text: str = Field(max_length=documents.MAX_PAGE_TEXT)
+    revision: int = Field(ge=0)
+
+
+@api.patch("/documents/{document_id}/pages/{number}")
+def update_document_page(document_id: str, number: int, request: DocumentPageText):
+    try:
+        return documents.save_page(document_id, number, request.text, request.revision)
+    except documents.DocumentConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.post("/documents/{document_id}/pages/{number}/read")
+def read_document_page(document_id: str, number: int):
+    from stellis import document_ocr
+    try:
+        return document_ocr.read_page(document_id, number)
+    except documents.DocumentConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except document_ocr.OcrError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @api.get("/documents/{document_id}/file")
 def document_file(document_id: str) -> FileResponse:
     try:

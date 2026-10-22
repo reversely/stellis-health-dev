@@ -1,6 +1,9 @@
 # Hosted Stellis Health: the account gateway and one workspace process per account, data on a Fly volume.
 FROM python:3.12-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr tesseract-ocr-eng && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir uv==0.11.32
 
 ENV PYTHONUNBUFFERED=1 \

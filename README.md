@@ -12,6 +12,12 @@ The alpha runs at <https://stellis-health.fly.dev>. Ticket-sized work toward the
 2. Pick what you will use Stellis Health for. Setup creates a notebook and agents for each choice.
 3. Choose **Record** to capture an appointment, or import an MP3. Transcription runs on the server's speech models; the first start after a deploy downloads about 500 MB of models before the first transcript appears.
 
+To read a scanned page or photo, open it in Records and choose **Read text**.
+Use **Edit text** to correct the result before extracting health facts. Recognition
+supports English printed text and runs on the server. The original file stays
+available through **Open PDF** or **Open image**. Settings lists timed requests
+under **Recent requests**.
+
 ## Run it locally
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
@@ -21,6 +27,9 @@ git clone https://github.com/reversely/stellis-health-dev.git
 cd stellis-health-dev
 STELLIS_RUNTIME_PROFILE=direct NEBIUS_API_KEY=... uv run stellis
 ```
+
+Install Tesseract and its English language data for local OCR (`tesseract-ocr`
+and `tesseract-ocr-eng` on Debian or Ubuntu). The hosted image includes them.
 
 Open <http://127.0.0.1:8765/>. Set `STELLIS_DATA_DIR` to choose where the local data folder lives. Add `TAVILY_API_KEY` to let research agents search the web.
 

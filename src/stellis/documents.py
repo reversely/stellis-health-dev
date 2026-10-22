@@ -1,9 +1,8 @@
 """Uploaded documents: PDFs and images filed into a notebook, with page text.
 
-A digital PDF's text is read on upload. A PDF without a text layer, such as a
-scan, and every image keep the status ``needs_text`` until text recognition
-exists. The original file stays in the account's data directory and is served
-back unchanged.
+Digital PDFs provide text on upload. Scanned pages and images offer local
+recognition and revision-checked corrections. Each page records how its text
+was obtained. The account retains the original file.
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ MAX_BYTES = 20_000_000
 MAX_LABEL = "20 MB"
 MAX_PAGES = 300
 MAX_TITLE = 180
+MAX_PAGE_TEXT = 100_000
 MEDIA_TYPES = {
     ".pdf": "application/pdf",
     ".png": "image/png",
@@ -41,6 +41,10 @@ _LIST_ITEM = re.compile(r"^(\d+[.)]|[-*•])\s")
 _COLUMN_GAP = re.compile(r"\S {3,}\S")
 _SUMMARY_COLUMNS = ("id, title, media_type, page_count, status, notebook_id, "
                     "record_date, created_at")
+
+
+class DocumentConflict(ValueError):
+    """A page changed while an operation was in progress."""
 
 
 class DocumentError(ValueError):
@@ -77,6 +81,16 @@ def _create_tables(conn) -> None:
             page_number INTEGER NOT NULL,
             text TEXT NOT NULL,
             PRIMARY KEY (document_id, page_number))""")
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(document_pages)")}
+    for name, definition in {
+            "text_source": "TEXT NOT NULL DEFAULT 'embedded'",
+            "ocr_status": "TEXT NOT NULL DEFAULT 'idle'",
+            "revision": "INTEGER NOT NULL DEFAULT 0",
+    }.items():
+        if name not in columns:
+            conn.execute(f"ALTER TABLE document_pages ADD COLUMN {name} {definition}")
+    conn.execute("UPDATE document_pages SET text_source = 'none' "
+                 "WHERE text = '' AND text_source = 'embedded'")
 
 
 def _directory() -> pathlib.Path:
@@ -204,11 +218,14 @@ def _record(conn, row) -> dict[str, object]:
                                  "record_date", "created_at")
     }
     pages = conn.execute(
-        "SELECT page_number, text FROM document_pages "
+        "SELECT page_number, text, text_source, ocr_status, revision FROM document_pages "
         "WHERE document_id = ? ORDER BY page_number", (row["id"],))
     record["pages"] = [{
         "number": page["page_number"],
-        "text": page["text"]
+        "text": page["text"],
+        "text_source": page["text_source"],
+        "ocr_status": page["ocr_status"],
+        "revision": page["revision"],
     } for page in pages]
     return record
 
@@ -264,8 +281,9 @@ def create(filename: str,
              len(content), len(pages), "ready" if any(pages) else "needs_text",
              notebook_id, record_date, _now()))
         conn.executemany(
-            "INSERT INTO document_pages (document_id, page_number, text) "
-            "VALUES (?, ?, ?)", [(document_id, number, text)
+            "INSERT INTO document_pages (document_id, page_number, text, text_source) "
+            "VALUES (?, ?, ?, ?)", [(document_id, number, text,
+                                     "embedded" if text else "none")
                                  for number, text in enumerate(pages, 1)])
         row = conn.execute("SELECT * FROM documents WHERE id = ?",
                            (document_id,)).fetchone()
@@ -293,9 +311,9 @@ def file_path(document_id: str) -> tuple[pathlib.Path, str]:
     Raises:
         LookupError: The document does not exist.
     """
-    media_type = str(get(document_id)["media_type"])
-    suffix = next(
-        key for key, value in MEDIA_TYPES.items() if value == media_type)
+    record = get(document_id)
+    media_type = str(record["media_type"])
+    suffix = pathlib.PurePath(str(record["filename"])).suffix.lower()
     return _directory() / (document_id + suffix), media_type
 
 
@@ -408,3 +426,55 @@ def delete(document_id: str) -> None:
                      (document_id,))
         conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
     path.unlink(missing_ok=True)
+
+
+def get_page(record: dict[str, object], number: int) -> dict[str, object]:
+    """Returns a page of an already resolved account-local document."""
+    for page in record["pages"]:
+        if page["number"] == number:
+            return page
+    raise LookupError("Page not found")
+
+
+def save_page(document_id: str, number: int, text: str, revision: int,
+              *, source: str = "manual") -> dict[str, object]:
+    """Saves page text and clears facts derived from its previous wording."""
+    if len(text) > MAX_PAGE_TEXT:
+        raise ValueError("Page text is too long")
+    text = text.strip()
+    with storage.connect() as conn:
+        _create_tables(conn)
+        row = conn.execute("SELECT text, revision FROM document_pages "
+                           "WHERE document_id = ? AND page_number = ?",
+                           (document_id, number)).fetchone()
+        if row is None:
+            raise LookupError("Page not found")
+        if row["revision"] != revision:
+            raise DocumentConflict("This page changed while you were working")
+        changed = conn.execute("""UPDATE document_pages SET text = ?, text_source = ?,
+                     ocr_status = ?, revision = revision + 1
+                     WHERE document_id = ? AND page_number = ? AND revision = ?""",
+                     (text, source if text else "none",
+                      "ready" if text else "empty", document_id, number, revision)).rowcount
+        if not changed:
+            raise DocumentConflict("This page changed while you were working")
+        if text != row["text"] and conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE name = 'health_facts'").fetchone():
+            conn.execute("DELETE FROM health_facts WHERE document_id = ? AND page = ?",
+                         (document_id, number))
+        conn.execute("""UPDATE documents SET status = CASE WHEN EXISTS (
+                     SELECT 1 FROM document_pages WHERE document_id = ? AND text != '')
+                     THEN 'ready' ELSE 'needs_text' END WHERE id = ?""",
+                     (document_id, document_id))
+    return get(document_id)
+
+
+def page_failed(document_id: str, number: int, revision: int) -> None:
+    """Records a retryable failure without replacing a newer page revision."""
+    with storage.connect() as conn:
+        _create_tables(conn)
+        changed = conn.execute("""UPDATE document_pages SET ocr_status = 'failed'
+                              WHERE document_id = ? AND page_number = ? AND revision = ?""",
+                              (document_id, number, revision)).rowcount
+        if not changed:
+            raise DocumentConflict("This page changed while you were working")
