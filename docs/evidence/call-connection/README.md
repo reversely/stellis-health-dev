@@ -12,14 +12,22 @@ The gateway now relays all three explicit call routes with their query parameter
 
 ## Verification
 
-Status: implemented and locally verified
+Status: verified locally through the authenticated account gateway
 
-- Targeted Python suite: 21 tests passed and three route subtests passed across account gateway, coach call and tour tests
+- Current main and the deployed gateway allowed only /api/v1/intake/call before this change
+- The deployed app.js matched current main and included the speech setup fix
+- Targeted Python suite: 28 tests and three route subtests passed across account gateway, coach call, tour and model setup tests
 - Real gateway subprocess checks: ordinary calls, morning check-ins and tours reach ready and their opening messages
 - Gateway security checks: missing sessions and foreign origins fail for each added call route
-- Isolated browser panel checks: 360, 390, 768, 1024, 1280 and 1920 pixels in light and dark themes
-- Browser checks cover apology visibility, termination while minimized, retry retaining the call kind and Close removing the panel
-- Geometry checks found no clipped status or button text and no horizontal viewport overflow among those controls
+- Real browser gateway checks: Call Stellis reaches its opening greeting and sends the call kind, local date, time and UTC offset
+- Forced connection loss expands a minimized panel and exposes the apology, Call again and Close
+- Retry opens a new connection and reaches the greeting again
+- Browser and panel layout checks pass at 360, 390, 768, 1024, 1280 and 1920 pixels in both themes
 - Browser page errors: none
+- Panel layout audit excludes the background workspace and decorative canvas
 
-The browser harness uses the actual panel scripts and styles with simulated connection events. Screenshots are saved under /tmp/stellis-call-{theme}-{width}.png. The layout-audit skill's bundled script is absent from this checkout, so these checks use Playwright geometry assertions. Full-page layout auditing remains unverified. Live microphone, speech output and hosted deployment remain unverified.
+Regression: tests/browser/coach_call.mjs uses an isolated authenticated account gateway and removes its test account. The local fixture has no voice models and exercises the text fallback. Live microphone recognition, generated audio and provider replies remain unverified. The deployed route allowlist must be checked again after deploying the merged fix.
+
+Local panel audit reports: /tmp/stellis-call-panel-{theme}-{width}.json with a screenshot beside each report. The browser test accepts STELLIS_LAYOUT_AUDIT_MODULE for the layout-audit skill's exported page check.
+
+Follow-up request and deployment evidence: [ticket #112](https://github.com/reversely/stellis-health-dev/issues/112)
