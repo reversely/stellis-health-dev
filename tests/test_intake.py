@@ -81,9 +81,9 @@ class NotesTest(IntakeTestCase):
         notes = intake.clean_notes([
             {"heading": "Medicines", "items": ["- Metformin 500 mg", "Metformin 500 mg", " "]},
             {"heading": "Invented", "items": ["x"]},
-            {"heading": "What brought you here", "items": ["Knees"]},
+            {"heading": "Goals", "items": ["Knees"]},
         ])
-        self.assertEqual(notes, [{"heading": "What brought you here", "items": ["Knees"]},
+        self.assertEqual(notes, [{"heading": "Goals", "items": ["Knees"]},
                                  {"heading": "Medicines", "items": ["Metformin 500 mg"]}])
 
     def test_an_edit_against_an_old_revision_is_refused(self):
@@ -108,8 +108,8 @@ class ReplyTest(IntakeTestCase):
         intake.opening()
         intake.add_person_turn("Keeping the weight off, and my knees.")
         pieces = asyncio.run(self._collect())
-        self.assertEqual(pieces, ["Weight and knees, got it.",
-                                  "How much have you lost so far, and what has helped most?"])
+        self.assertEqual(pieces, ["Eight kilos is real progress.",
+                                  "Which knee is it, and how bad is the pain on the stairs now?"])
         timings = {}
         asyncio.run(self._collect(timings))
         self.assertIn("first_token", timings)
@@ -141,6 +141,34 @@ class ReplyTest(IntakeTestCase):
             self.assertEqual(result["reply"], SCRIPT["turns"][index + 1]["agent"].replace(" [END]", ""))
         self.assertTrue(result["ended"])
         self.assertEqual(intake.load()["notes"], intake.clean_notes(script_notes(len(SCRIPT["turns"]) - 1)))
+
+
+class FollowOnTest(IntakeTestCase):
+    def test_an_answer_continued_over_the_reply_joins_its_first_part(self):
+        intake.opening()
+        intake.add_person_turn("Type two diabetes and high blood pressure.")
+        intake.add_agent_turn("Thank you. What medicines do you take?")
+        intake.drop_agent_reply()
+        whole = intake.extend_person_turn("And I had bypass surgery in ninety seven.")
+        turns = intake.load()["turns"]
+        self.assertEqual([t["role"] for t in turns], ["agent", "person"])
+        self.assertTrue(whole.endswith("bypass surgery in ninety seven."))
+
+
+class PlanTest(IntakeTestCase):
+    def test_the_plan_starts_with_the_goal_and_moves_on_as_notes_fill(self):
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Goals")
+        intake.save_notes([{"heading": "Goals", "items": ["Keep the weight off"]},
+                           {"heading": "Medicines", "items": ["Metformin"]}], 0)
+        state = intake.load()
+        self.assertEqual(intake.plan(state)["next_topic"], "Conditions")
+        self.assertIn('"next_topic": "Conditions"', intake.conversation(state)[0]["content"])
+        intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 1)
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "read back and end")
+
+    def test_the_opening_states_the_purpose_and_asks_for_the_goal(self):
+        self.assertIn("five minutes", intake.OPENING)
+        self.assertTrue(intake.OPENING.endswith("what's the main health goal you'd like help with?"))
 
 
 class NotebookProposalTest(IntakeTestCase):
@@ -220,10 +248,12 @@ class VoiceCallTest(IntakeTestCase):
             if data["type"] == "say" and data["audio"]:
                 socket.send_json({"type": "playing", "turn": data["turn"]})
             if data["type"] == "state" and data["state"] == "listening":
+                # A caller waits for the agent to finish before answering.
+                socket.send_json({"type": "played"})
                 return messages, audio
 
     def test_denver_completes_the_scripted_call_by_voice(self):
-        overlaps = []
+        overlaps, transcripts = [], []
         with self.client.websocket_connect("/api/v1/intake/call") as socket:
             ready = socket.receive_json()
             self.assertTrue(ready["voice"])
@@ -241,11 +271,13 @@ class VoiceCallTest(IntakeTestCase):
                 # A pause can split an answer; the last "heard" has all of it.
                 heard = [m["text"] for m in messages if m["type"] == "heard"][-1]
                 overlaps.append(word_overlap(heard, turn["person"]))
+                transcripts.append(heard)
             ended = socket.receive_json()
             self.assertEqual(ended["type"], "ended")
         # Medicine names and spoken numbers miss most often.
         self.assertGreaterEqual(sum(overlaps) / len(overlaps), 0.75, overlaps)
         print("word overlap per answer", [round(o, 2) for o in overlaps])
+        print("heard", transcripts)
         state = intake.load()
         self.assertEqual(sum(t["role"] == "person" for t in state["turns"]), len(SCRIPT["turns"]) - 1)
         self.assertEqual(state["notes"], intake.clean_notes(script_notes(len(SCRIPT["turns"]) - 1)))

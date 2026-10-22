@@ -222,15 +222,27 @@ function render(scene, kit) {
     }
   });
 
+  /**
+   * Shows a turn in the transcript. The agent speaks a reply in pieces, so
+   * pieces of the same turn join one line, and an answer the person
+   * continued after a pause replaces its earlier line.
+   */
   function addLine(role, text, turn) {
-    const existing = turn != null && role === 'person' ?
-        transcript.querySelector(`[data-turn="${turn}"]`) :
+    const key = role === 'agent' ? 'agentTurn' : 'turn';
+    const selector = role === 'agent' ? 'data-agent-turn' : 'data-turn';
+    const existing = turn != null ?
+        transcript.querySelector(`[${selector}="${turn}"]`) :
         null;
+    if (existing && role === 'agent') {
+      existing.querySelector('span').textContent += ' ' + text;
+      existing.scrollIntoView({block: 'nearest'});
+      return;
+    }
     const line = existing || node('li', null, 'is-' + role);
     line.replaceChildren(
         node('strong', role === 'agent' ? 'Stellis' : 'You'),
         node('span', text));
-    if (turn != null && role === 'person') line.dataset.turn = turn;
+    if (turn != null) line.dataset[key] = turn;
     if (!existing) transcript.append(line);
     line.scrollIntoView({block: 'nearest'});
   }
@@ -261,13 +273,16 @@ function render(scene, kit) {
         }
         break;
       case 'say':
-        addLine('agent', message.text);
+        addLine('agent', message.text, message.turn);
         break;
       case 'caption':
         caption.textContent = message.text;
         if (message.text) setStatus('speaking');
         break;
       case 'heard':
+        // A continued answer drops the reply the agent had started to it.
+        transcript.querySelector(`[data-agent-turn="${message.turn}"]`)
+            ?.remove();
         addLine('person', message.text, message.turn);
         break;
       case 'notes':

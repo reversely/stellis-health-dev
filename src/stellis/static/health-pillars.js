@@ -182,8 +182,7 @@ function questions(notes, within = null) {
       new Set(within.toLowerCase().split(/\W+/).filter((w) => w.length > 3)) :
       null;
   const asks = [];
-  for (const heading
-           of ['Conditions', 'Goals', 'Medicines', 'What brought you here']) {
+  for (const heading of ['Goals', 'Conditions', 'Medicines']) {
     const section = notes.find((s) => s.heading === heading);
     for (const item of section?.items || []) {
       const subject = topic(item);

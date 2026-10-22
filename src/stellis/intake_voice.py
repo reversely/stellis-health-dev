@@ -43,8 +43,12 @@ MODELS = (
 )
 SAMPLE_RATE = 16000
 VAD_WINDOW = 512
-# Silence that ends an answer. Shorter cuts people off mid-thought.
-END_SILENCE_S = 0.45
+# Silence that ends an answer. Shorter splits answers at a breath.
+END_SILENCE_S = 0.7
+# Audio kept before detected speech: the detector starts late, and without
+# it the first word is clipped ("Type 2 diabetes" heard as "2 diabetes").
+PRE_ROLL_S = 0.3
+HISTORY_S = 30
 # Speech this long while the agent talks interrupts it.
 BARGE_IN_S = 0.6
 # Speech that starts this soon after an answer ends continues that answer.
@@ -220,12 +224,16 @@ class Call:
         self.engine = engine
         self.vad = engine.vad() if engine else None
         self.pending = np.zeros(0, dtype=np.float32)
+        # Recent audio, so each answer can start a little before detection.
+        self.history = np.zeros(0, dtype=np.float32)
+        self.history_start = 0
         self.speaker = True
         self.replying: asyncio.Task | None = None
         self.notes: asyncio.Task | None = None
         self.notes_again = False
         self.speaking = ""
         self.answer_ended: float | None = None
+        self.speaking_until = 0.0
         self.discard_reply = False
         self.speech_started: float | None = None
         self.turn = 0
@@ -248,13 +256,26 @@ class Call:
         while len(self.pending) >= VAD_WINDOW:
             window, self.pending = self.pending[:VAD_WINDOW], self.pending[VAD_WINDOW:]
             self.vad.accept_waveform(window)
+            self._remember(window)
             await self._check_barge_in()
             while not self.vad.empty():
-                segment = np.array(self.vad.front.samples, dtype=np.float32)
+                segment = self._with_pre_roll(self.vad.front.start, len(self.vad.front.samples))
                 self.vad.pop()
                 self.speech_started = None
                 ended_at = time.perf_counter() - END_SILENCE_S
                 await self._answer_audio(segment, ended_at)
+
+    def _remember(self, window: np.ndarray) -> None:
+        self.history = np.concatenate([self.history, window])
+        excess = len(self.history) - HISTORY_S * SAMPLE_RATE
+        if excess > 0:
+            self.history = self.history[excess:]
+            self.history_start += excess
+
+    def _with_pre_roll(self, start: int, length: int) -> np.ndarray:
+        """An answer's audio from PRE_ROLL_S before the detector's start."""
+        begin = max(self.history_start, start - int(PRE_ROLL_S * SAMPLE_RATE))
+        return self.history[begin - self.history_start:start + length - self.history_start].copy()
 
     async def _check_barge_in(self) -> None:
         if not self.vad.is_speech_detected():
@@ -266,16 +287,21 @@ class Call:
             await self._interrupt()
 
     def _busy(self) -> bool:
-        return self.replying is not None and not self.replying.done()
+        """Whether the agent is preparing a reply or its audio is still playing."""
+        writing = self.replying is not None and not self.replying.done()
+        return writing or time.perf_counter() < self.speaking_until
 
     async def _interrupt(self) -> None:
-        if self._busy():
+        if not self._busy():
+            return
+        if self.replying is not None and not self.replying.done():
             self.replying.cancel()
             try:
                 await self.replying
             except asyncio.CancelledError:
                 pass
-            await self.send_json({"type": "stop"})
+        self.speaking_until = 0.0
+        await self.send_json({"type": "stop"})
 
     async def _answer_audio(self, segment: np.ndarray, ended_at: float) -> None:
         started_at = ended_at - len(segment) / SAMPLE_RATE
@@ -306,6 +332,7 @@ class Call:
         turn = self.turn if follow_on else self.turn + 1
         try:
             if follow_on:
+                intake.drop_agent_reply()
                 text = intake.extend_person_turn(text)
                 turn = self.turn
             else:
@@ -362,6 +389,9 @@ class Call:
                               "audio": audio is not None})
         if audio is not None:
             await self.send_bytes(audio)
+            # The browser plays pieces back to back; this is when the last ends.
+            seconds = len(audio) / 2 / rate
+            self.speaking_until = max(time.perf_counter(), self.speaking_until) + seconds
 
     def playing(self, turn: int) -> None:
         """The browser started playing a turn's first audio; logs its stages."""
@@ -404,6 +434,10 @@ class Call:
             self.speaker = bool(data.get("on"))
         elif kind == "playing" and isinstance(data.get("turn"), int):
             self.playing(data["turn"])
+        elif kind == "played":
+            # The browser finished the queued speech, which can be sooner
+            # than estimated, for example after a stall.
+            self.speaking_until = 0.0
         elif kind == "interrupt":
             await self._interrupt()
 

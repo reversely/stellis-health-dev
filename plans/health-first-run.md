@@ -84,7 +84,7 @@ The call runs speech on the app's own machine through sherpa-onnx, already a dep
 
 | Stage | Model | Measured on 2 CPUs |
 | --- | --- | --- |
-| End of speech | Silero VAD, 0.45 s of silence ends an answer | 0.45 s by design |
+| End of speech | Silero VAD, 0.7 s of silence ends an answer, with 0.3 s of audio kept before detected speech | 0.7 s by design |
 | Speech to text | Moonshine base, int8, 275 MB | 0.13 to 0.22 s for a 2 to 4 s answer |
 | Text to speech | Kitten nano 0.2, 42 MB | 0.19 s of compute per second of speech |
 | Agent reply | Token Factory agent model, streamed | Not measured here: this container has no model key |
@@ -94,7 +94,9 @@ The build differs from the ticket in three places:
 - **A WebSocket replaces WebRTC.** Fly's HTTP proxy forwards TCP only, and WebRTC audio needs UDP. The browser streams 16 kHz audio over a WebSocket that the account gateway relays to the account's own process.
 - **Moonshine replaces Whisper for the call.** Whisper small takes seconds per answer on this machine. Moonshine misheard "lisinopril" in 4 of 4 synthetic tests, so the agent asks to confirm medicine names, and unconfirmed names go under "To confirm".
 
-Each turn logs, without content, the time from the end of speech to speech-to-text done, model first token, first audio ready, and audio playing. In the simulated Denver call with a scripted model, first audio was ready 0.9 to 1.1 s after Denver stopped speaking. Two answers that Denver continued after a pause took 2.2 to 2.4 s, because the agent dropped its first reply and started again.
+Each turn logs, without content, the time from the end of speech to speech-to-text done, model first token, first audio ready, and audio playing. In the simulated Denver call with a scripted model, first audio was ready 1.2 to 1.5 s after Denver stopped speaking. An answer that Denver continued after a pause took 2.6 s, because the agent dropped its first reply and started again. Speech that starts within 1.5 s of an answer ending, including while the agent's reply is still playing, joins that answer.
+
+The agent follows a call plan: it states the call's purpose, asks for the person's main goal, then covers conditions, medicines, care team, what has helped and reminders. Each topic fills the notepad heading of the same name, and the next uncovered topic goes into the agent's context on every turn.
 
 During a call the speech models add about 440 MB of memory to the account's process.
 
