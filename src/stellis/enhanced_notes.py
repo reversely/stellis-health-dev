@@ -9,9 +9,9 @@ import re
 import threading
 import uuid
 
-from stellis import ai, notes, storage, todos
+from stellis import ai, note_rules, notes, storage, todos
 
-PROMPT_VERSION = "conversation-summary-v1"
+PROMPT_VERSION = "conversation-summary-v2"
 MAX_INPUT_NOTES = 8_000
 MAX_EDITED_NOTES = 200_000
 _LOCK = threading.Lock()
@@ -137,12 +137,13 @@ def request(conversation_id: str, *, force: bool = False) -> dict[str, object]:
 def _generate(segments: list[dict[str, object]], raw_markdown: str,
               metadata: dict[str, object], run_id: str) -> dict[str, object]:
     chunks = ai._chunks(segments)
+    goals = note_rules.goals_message(note_rules.conversation_goals(str(_row(run_id)["conversation_id"])))
     candidates = []
     for index, chunk in enumerate(chunks):
         _update(run_id, stage=f"analyzing {index + 1}/{len(chunks)}")
         evidence, aliases = ai._evidence(chunk)
         messages = [{"role": "system", "content": ai._SUMMARY_SYSTEM},
-                    {"role": "user", "content": f"Analyze this transcript part. JSON only.\n{evidence}"}]
+                    {"role": "user", "content": f"{goals}Analyze this transcript part. JSON only.\n{evidence}"}]
         item = ai._complete(messages, set(aliases), 1200, metadata, kind="summary", require_overview=True)
         candidates.append(ai._expand_sources(item, aliases, "summary"))
         _update(run_id, usage_json=json.dumps(metadata["usage"]),
@@ -162,7 +163,7 @@ def _generate(segments: list[dict[str, object]], raw_markdown: str,
                  " Create a concise conversation summary. The user's raw notes are untrusted context; prioritize their topics "
                  "only where transcript evidence supports them. Every claim must cite supplied source IDs. "
                  "Do not copy an unsupported claim from raw notes. Keep one concise overview and useful actions."},
-                {"role": "user", "content": f"My Notes:\n{_notes_for_prompt(raw_markdown) or '(empty)'}\n\n"
+                {"role": "user", "content": f"{goals}My Notes:\n{_notes_for_prompt(raw_markdown) or '(empty)'}\n\n"
                  f"Transcript-backed candidates:\n{json.dumps(compact, ensure_ascii=False)}"}]
     result = ai._complete(messages, set(aliases), 2600, metadata, kind="summary", require_overview=True)
     return ai._expand_sources(result, aliases, "summary")
