@@ -11,6 +11,7 @@
   gap: 16px;
 }
 .home-pillars {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   min-height: 196px;
   margin: 8px 0 28px;
 }
@@ -208,40 +209,6 @@
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
-.pillar-reading {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-.pillar-spark {
-  width: 120px;
-  height: 36px;
-  overflow: visible;
-}
-.pillar-spark-line {
-  fill: none;
-  stroke: var(--pillar-hue);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 800ms var(--ease-enter);
-}
-.pillar-spark.is-drawn .pillar-spark-line {
-  stroke-dashoffset: 0;
-}
-.pillar-spark-end {
-  fill: var(--pillar-hue);
-  opacity: 0;
-  transition: opacity 200ms 700ms;
-}
-.pillar-spark.is-drawn .pillar-spark-end {
-  opacity: 1;
-}
-
 /* The cards fade in together once their data arrives. */
 :is(.home-pillars, .notebook-pillars).is-ready > .pillar {
   animation: pillar-rise 320ms var(--ease-enter) both;
@@ -311,8 +278,7 @@
     translate: none;
     scale: none;
   }
-  .pillar-ring-arc,
-  .pillar-spark-line {
+  .pillar-ring-arc {
     transition: none;
   }
   @keyframes pillar-fade {

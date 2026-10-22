@@ -105,6 +105,19 @@ def _check_record_groups(record_groups):
         raise ValueError(f"Choose at most {MAX_RECORD_GROUPS} notebooks")
 
 
+def _add_goal(text, notebook_id):
+    """Turns a goal from the call into a goal with the trackers it suggests."""
+    from stellis import goals
+    matches = goals.suggest(text)
+    try:
+        if matches:
+            goals.from_template(matches[0], text[:goals.MAX_TITLE], notebook_id=notebook_id)
+        else:
+            goals.create(text[:goals.MAX_TITLE], notebook_id)
+    except ValueError:
+        pass  # At MAX_GOALS the goal stays on the Goals page only.
+
+
 def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
     """Finishes setup: files the reviewed record groups into notebooks.
 
@@ -167,7 +180,9 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
             if not group.get("notebook_id"):
                 collections.assign_notebook(book["id"], health["id"])
             if group.get("goal", "").strip():
-                pages.create("Goals", book["id"], f"- [ ] {' '.join(group['goal'].split())}\n")
+                goal = " ".join(group["goal"].split())
+                pages.create("Goals", book["id"], f"- [ ] {goal}\n")
+                _add_goal(goal, book["id"])
             created.append({"notebook_id": book["id"], "name": book["name"],
                             "filed": filed["moved"]})
         agents.list_agents()  # Stellis answers in each new notebook.
