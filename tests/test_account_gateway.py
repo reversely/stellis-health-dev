@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import subprocess
@@ -124,3 +125,27 @@ class AccountGatewayTest(unittest.TestCase):
             self.assertEqual(setup["uses"], ["learning"])
             replay = owner.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
             self.assertEqual(replay.headers["location"], "/onboarding?calendar=expired")
+
+    def test_the_intake_call_needs_a_session_from_this_site(self) -> None:
+        """The gateway relays the call's WebSocket to the account's process."""
+        from websockets.exceptions import InvalidStatus
+        from websockets.sync.client import connect
+
+        address = self.url.replace("http", "ws") + "/api/v1/intake/call"
+        with self.assertRaises(InvalidStatus):
+            connect(address, open_timeout=10).close()
+        with httpx.Client(base_url=self.url, timeout=20) as client:
+            self.assertEqual(client.post("/api/v1/auth/register", json={
+                "username": "denver", "password": "correct horse battery staple"}).status_code, 200)
+            cookie = "stellis_session=" + client.cookies.get("stellis_session")
+        with self.assertRaises(InvalidStatus):
+            connect(address, additional_headers={"Cookie": cookie, "Origin": "https://example.com"},
+                    open_timeout=10).close()
+        with connect(address, additional_headers={"Cookie": cookie, "Origin": self.url},
+                     open_timeout=60) as call:
+            ready = json.loads(call.recv(timeout=60))
+            self.assertEqual(ready["type"], "ready")
+            self.assertFalse(ready["voice"])
+            opening = json.loads(call.recv(timeout=10))
+            self.assertEqual(opening["type"], "say")
+            self.assertTrue(opening["text"].startswith("Hi, I'm Stellis."))

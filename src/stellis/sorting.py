@@ -110,20 +110,25 @@ def build_prompt(items: list[Item], notebook_names: list[str]) -> str:
     return _INSTRUCTIONS + "\n\n" + json.dumps(context, ensure_ascii=False)
 
 
-def parse_groups(reply: str, items: list[Item],
-                 notebook_ids: dict[str, str]) -> list[dict[str, object]]:
+def parse_groups(reply: str,
+                 items: list[Item],
+                 notebook_ids: dict[str, str],
+                 keep_empty: bool = False) -> list[dict[str, object]]:
     """Checks a model reply and turns it into proposed groups.
 
     Args:
         reply: The model's JSON reply, with or without a code fence.
         items: The records the model saw, in prompt order.
         notebook_ids: Existing notebook IDs by case-folded name.
+        keep_empty: Keeps groups with no records, for notebooks proposed
+            from a conversation.
 
     Returns:
         Up to ``MAX_GROUPS`` groups with ``notebook_name``, ``notebook_id``
-        (None for a new notebook), ``reason`` and ``items``. Indexes outside
-        the list and records already placed in an earlier group are dropped,
-        and groups left empty are removed.
+        (None for a new notebook), ``reason``, ``goal`` and ``items``.
+        Indexes outside the list and records already placed in an earlier
+        group are dropped, and groups left empty are removed unless
+        ``keep_empty`` is set.
 
     Raises:
         SortingError: The reply is not a JSON object with a groups list.
@@ -149,12 +154,14 @@ def parse_groups(reply: str, items: list[Item],
                     index not in placed):
                 placed.add(index)
                 chosen.append(items[index - 1].public())
-        if chosen:
+        if chosen or keep_empty:
             reason = " ".join(str(proposal.get("reason", "")).split())
+            goal = " ".join(str(proposal.get("goal") or "").split())
             groups.append({
                 "notebook_name": name,
                 "notebook_id": notebook_ids.get(name.casefold()),
                 "reason": reason[:MAX_REASON],
+                "goal": goal[:MAX_REASON],
                 "items": chosen,
             })
     return groups

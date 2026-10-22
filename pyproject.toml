@@ -17,6 +17,7 @@ dependencies = [
     "sherpa-onnx-core==1.13.8",
     "soundfile>=0.13.1,<0.14",
     "uvicorn>=0.54.0",
+    "websockets>=15.0.1",
 ]
 
 [project.scripts]

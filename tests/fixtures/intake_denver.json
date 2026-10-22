@@ -1,0 +1,96 @@
+{
+  "about": "A full intake call for Denver Lang, the sample patient: both sides of each turn and the notepad after it. The simulated call test speaks Denver's lines and checks the transcript, the notes and the proposed notebooks against this script.",
+  "turns": [
+    {
+      "agent": "Hi, I'm Stellis. I'll ask about your health and take notes while we talk. What would you most like help with right now?",
+      "person": "Keeping the weight off, and my knees.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]}
+      ]
+    },
+    {
+      "agent": "Weight and knees, got it. How much have you lost so far, and what has helped most?",
+      "person": "About eight kilos since April last year. The dietitian's plate method, and walking with my trainer.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]},
+        {"heading": "Care team", "items": ["Dietitian", "Personal trainer"]},
+        {"heading": "Goals", "items": ["Keep the weight off, after losing about 8 kg since April 2024"]},
+        {"heading": "What has helped", "items": ["The dietitian's plate method", "Walking with his trainer"]}
+      ]
+    },
+    {
+      "agent": "That's real progress. Which knee bothers you, and what can't you do now that you could a year ago?",
+      "person": "The right one. Stairs mostly. Physio got it from a six to about a three.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]},
+        {"heading": "Conditions", "items": ["Right knee pain on stairs, about 3 out of 10, down from 6"]},
+        {"heading": "Care team", "items": ["Dietitian", "Personal trainer", "Physiotherapist"]},
+        {"heading": "Goals", "items": ["Keep the weight off, after losing about 8 kg since April 2024"]},
+        {"heading": "What has helped", "items": ["The dietitian's plate method", "Walking with his trainer", "Physiotherapy for the right knee"]}
+      ]
+    },
+    {
+      "agent": "Stairs with the right knee, down from six to three. Do you have any ongoing conditions I should know about?",
+      "person": "Type two diabetes and blood pressure, since the eighties. And I had bypass surgery in ninety seven.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]},
+        {"heading": "Conditions", "items": ["Right knee pain on stairs, about 3 out of 10, down from 6", "Type 2 diabetes since the 1980s", "High blood pressure since the 1980s", "Heart bypass surgery in 1997"]},
+        {"heading": "Care team", "items": ["Dietitian", "Personal trainer", "Physiotherapist"]},
+        {"heading": "Goals", "items": ["Keep the weight off, after losing about 8 kg since April 2024"]},
+        {"heading": "What has helped", "items": ["The dietitian's plate method", "Walking with his trainer", "Physiotherapy for the right knee"]}
+      ]
+    },
+    {
+      "agent": "Thank you. What medicines do you take for those?",
+      "person": "Metformin five hundred in the morning, lisinopril, and simvastatin at night.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]},
+        {"heading": "Conditions", "items": ["Right knee pain on stairs, about 3 out of 10, down from 6", "Type 2 diabetes since the 1980s", "High blood pressure since the 1980s", "Heart bypass surgery in 1997"]},
+        {"heading": "Medicines", "items": ["Metformin 500 mg in the morning", "Simvastatin at night"]},
+        {"heading": "Care team", "items": ["Dietitian", "Personal trainer", "Physiotherapist"]},
+        {"heading": "Goals", "items": ["Keep the weight off, after losing about 8 kg since April 2024"]},
+        {"heading": "What has helped", "items": ["The dietitian's plate method", "Walking with his trainer", "Physiotherapy for the right knee"]},
+        {"heading": "To confirm", "items": ["Lisinopril"]}
+      ]
+    },
+    {
+      "agent": "Did you say lisinopril, the blood pressure medicine?",
+      "person": "Yes, lisinopril. They stopped my water pill last year because I got dizzy standing up.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]},
+        {"heading": "Conditions", "items": ["Right knee pain on stairs, about 3 out of 10, down from 6", "Type 2 diabetes since the 1980s", "High blood pressure since the 1980s", "Heart bypass surgery in 1997"]},
+        {"heading": "Medicines", "items": ["Metformin 500 mg in the morning", "Simvastatin at night", "Lisinopril", "Water pill stopped in 2024 after dizziness on standing"]},
+        {"heading": "Care team", "items": ["Dietitian", "Personal trainer", "Physiotherapist"]},
+        {"heading": "Goals", "items": ["Keep the weight off, after losing about 8 kg since April 2024"]},
+        {"heading": "What has helped", "items": ["The dietitian's plate method", "Walking with his trainer", "Physiotherapy for the right knee"]}
+      ]
+    },
+    {
+      "agent": "Lisinopril, thanks. Who is your main doctor, and would reminders help with anything?",
+      "person": "My family doctor, Doctor Patel. A reminder to weigh in on Monday mornings would help.",
+      "notes": [
+        {"heading": "What brought you here", "items": ["Keeping the weight off", "Knees"]},
+        {"heading": "Conditions", "items": ["Right knee pain on stairs, about 3 out of 10, down from 6", "Type 2 diabetes since the 1980s", "High blood pressure since the 1980s", "Heart bypass surgery in 1997"]},
+        {"heading": "Medicines", "items": ["Metformin 500 mg in the morning", "Simvastatin at night", "Lisinopril", "Water pill stopped in 2024 after dizziness on standing"]},
+        {"heading": "Care team", "items": ["Dietitian", "Personal trainer", "Physiotherapist", "Dr. Patel, family doctor"]},
+        {"heading": "Goals", "items": ["Keep the weight off, after losing about 8 kg since April 2024"]},
+        {"heading": "What has helped", "items": ["The dietitian's plate method", "Walking with his trainer", "Physiotherapy for the right knee"]},
+        {"heading": "Reminders", "items": ["Weigh in on Monday mornings"]}
+      ]
+    },
+    {
+      "agent": "Here is what I heard. You want to keep the weight off and look after your right knee. You manage diabetes and blood pressure with metformin, lisinopril and simvastatin. You see Dr. Patel, a dietitian, a physiotherapist and a trainer, and you'd like a Monday weigh-in reminder. I'll suggest notebooks for weight and knees, and for diabetes and heart care. Is anything wrong?",
+      "person": "No, that's right.",
+      "notes": "same"
+    },
+    {
+      "agent": "Thank you, Denver. Your notes are ready to review. [END]",
+      "person": null,
+      "notes": "same"
+    }
+  ],
+  "notebooks": [
+    {"notebook": "Weight and knees", "goal": "Keep the weight off", "records": ["Dietitian"]},
+    {"notebook": "Diabetes and heart care", "goal": "", "records": ["Lab results"]}
+  ]
+}

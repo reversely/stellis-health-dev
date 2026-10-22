@@ -96,3 +96,385 @@
 .setup-uploads{display:grid;gap:6px;margin:16px 0 0;padding:0;list-style:none;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
 .setup-group-choice{display:flex;align-items:center;gap:10px}.setup-book-input{flex:1;min-width:0;font:600 17px/1.3 inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
 .setup-record-book{grid-template-columns:1fr;gap:12px;padding:18px;border:1px solid var(--line);border-radius:12px;transition:opacity 150ms}.setup-record-book:first-of-type{border-top:1px solid var(--line)}.setup-record-book.is-left-out{opacity:.55}
+
+/* Intake call: a dark call panel beside the notepad on desktop, stacked on
+   phones. Minimised, the call becomes a floating card over the notes. */
+.setup-call {
+  --call-bg: oklch(0.22 0.02 300);
+  --call-ink: oklch(0.97 0.005 300);
+  --call-muted: oklch(0.8 0.015 300);
+  --call-live: oklch(0.72 0.12 196);
+  --call-end: oklch(0.6 0.19 25);
+}
+.setup-call-head h1 {
+  margin-bottom: 8px;
+}
+.call-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  gap: 24px;
+  align-items: stretch;
+  margin-top: 24px;
+}
+.call-panel {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 520px;
+  padding: 32px 24px;
+  border-radius: 20px;
+  background: var(--call-bg);
+  color: var(--call-ink);
+  view-transition-name: intake-call;
+}
+.call-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 160px;
+  height: 160px;
+  margin-bottom: 6px;
+}
+.call-face .agent-avatar {
+  position: relative;
+  z-index: 1;
+}
+/* The ring follows the voice of whoever is speaking. */
+.call-ring {
+  --level: 0;
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--call-live) 35%, transparent);
+  scale: calc(1 + var(--level) * 0.6);
+  opacity: calc(0.25 + var(--level) * 0.75);
+  transition:
+    scale 90ms linear,
+    opacity 90ms linear;
+}
+.call-panel[data-state='thinking'] .call-ring {
+  animation: call-think 1.4s ease-in-out infinite;
+}
+@keyframes call-think {
+  50% {
+    scale: 1.12;
+    opacity: 0.6;
+  }
+}
+.call-name {
+  font: 300 28px/1.2 Piazzolla, serif;
+}
+.onboarding-page .call-status {
+  margin: 0;
+  color: var(--call-muted);
+  font-size: 16px;
+}
+.call-timer {
+  color: var(--call-muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.onboarding-page .call-caption {
+  min-height: 3.2em;
+  max-width: 34ch;
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.onboarding-page .call-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--call-live);
+  color: oklch(0.2 0.02 300);
+}
+.onboarding-page .call-shrink {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-color: transparent;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--call-ink) 10%, transparent);
+  color: var(--call-ink);
+}
+.call-controls {
+  display: flex;
+  gap: 22px;
+  margin-top: 16px;
+}
+.onboarding-page .call-control {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--call-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.call-control .icon {
+  box-sizing: content-box;
+  width: 24px;
+  height: 24px;
+  padding: 16px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--call-ink) 14%, transparent);
+  transition: background-color 120ms var(--ease-enter, ease-out);
+}
+.call-control[aria-pressed='true'] .icon {
+  background: var(--call-ink);
+  color: var(--call-bg);
+}
+.call-end .icon {
+  background: var(--call-end);
+}
+.call-type {
+  display: flex;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin-top: 8px;
+}
+.onboarding-page .call-type input {
+  flex: 1;
+  min-width: 0;
+  border-color: color-mix(in oklch, var(--call-ink) 25%, transparent);
+  background: color-mix(in oklch, var(--call-ink) 8%, transparent);
+  color: var(--call-ink);
+}
+.onboarding-page .call-type input::placeholder {
+  color: var(--call-muted);
+}
+.onboarding-page .call-type button {
+  border-color: color-mix(in oklch, var(--call-ink) 25%, transparent);
+  background: transparent;
+  color: var(--call-ink);
+}
+
+/* Notepad. */
+.call-notepad {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 520px;
+  max-height: 72vh;
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.call-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.onboarding-page .call-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.onboarding-page .call-tab[aria-selected='true'] {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+}
+.call-notes,
+.call-transcript {
+  overflow: auto;
+  padding: 20px 24px 28px;
+}
+.call-note h3 {
+  margin: 18px 0 6px;
+  font: 600 13px/1.4 Inter, sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.call-note:first-child h3 {
+  margin-top: 0;
+}
+.call-note ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 20px;
+}
+.call-note li {
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 17px;
+  line-height: 1.45;
+  outline: none;
+}
+.call-note li:focus {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* A line the notepad just wrote rises in and fades from highlighted. */
+.call-note li.is-new {
+  animation: call-note-in 900ms var(--ease-enter, ease-out);
+}
+@keyframes call-note-in {
+  from {
+    translate: 0 6px;
+    opacity: 0;
+    background: color-mix(in oklch, var(--call-live) 30%, transparent);
+  }
+  30% {
+    translate: 0 0;
+    opacity: 1;
+  }
+}
+.call-transcript {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  margin: 0;
+  list-style: none;
+}
+.call-transcript li {
+  display: grid;
+  gap: 2px;
+  line-height: 1.5;
+}
+.call-transcript strong {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Minimised: notes take the screen; the call floats in a corner. */
+.setup-call.is-minimised .call-layout {
+  grid-template-columns: 1fr;
+}
+.setup-call.is-minimised .call-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 5;
+  grid-template-columns: auto 1fr auto;
+  justify-items: start;
+  align-items: center;
+  gap: 4px 14px;
+  width: 340px;
+  min-height: 0;
+  padding: 14px 16px;
+  box-shadow: 0 18px 48px oklch(0 0 0 / 0.35);
+}
+.setup-call.is-minimised .call-face {
+  grid-row: span 2;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+}
+.setup-call.is-minimised .call-face .agent-avatar {
+  width: 40px;
+  height: 40px;
+}
+.setup-call.is-minimised .call-ring {
+  inset: 0;
+}
+.setup-call.is-minimised .call-name {
+  font-size: 18px;
+}
+.setup-call.is-minimised :is(.call-caption, .call-type, .call-start, .call-timer) {
+  display: none;
+}
+.setup-call.is-minimised .call-shrink {
+  position: static;
+  grid-column: 3;
+  grid-row: 1;
+}
+.setup-call.is-minimised .call-controls {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  justify-content: center;
+  margin-top: 6px;
+}
+.setup-call.is-minimised .call-control span {
+  display: none;
+}
+.setup-call.is-minimised .call-control .icon {
+  padding: 10px;
+}
+.setup-call.is-minimised .call-notepad {
+  max-height: none;
+  min-height: 60vh;
+}
+::view-transition-group(intake-call) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* Goals on the proposed notebooks. */
+.setup-goal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.setup-goal .icon {
+  width: 20px;
+  height: 20px;
+}
+.onboarding-page .setup-goal-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 10px;
+  background: var(--surface);
+}
+
+@media (max-width: 760px) {
+  .call-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .call-panel {
+    min-height: 0;
+    padding: 24px 16px;
+  }
+  .call-face {
+    width: 120px;
+    height: 120px;
+  }
+  .call-notepad {
+    min-height: 320px;
+    max-height: none;
+  }
+  .setup-call.is-minimised .call-panel {
+    right: 12px;
+    left: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto;
+  }
+  .setup-call.is-minimised .call-notepad {
+    margin-bottom: 150px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-ring,
+  .call-panel[data-state='thinking'] .call-ring {
+    animation: none;
+    transition: none;
+  }
+  .call-note li.is-new {
+    animation-name: call-note-fade;
+  }
+  @keyframes call-note-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

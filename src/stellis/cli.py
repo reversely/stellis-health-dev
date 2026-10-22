@@ -9,7 +9,7 @@ import os
 
 import uvicorn
 
-from stellis import models, tools
+from stellis import intake_voice, models, tools
 from stellis.processing import model_paths
 
 
@@ -34,7 +34,7 @@ def main() -> None:
             print(f"{label}: {model if model.is_file() else 'missing (downloads when Stellis starts)'}")
         return
     if args.command == "setup":
-        if not models.missing():
+        if not models.missing() and not intake_voice.missing():
             print(f"Speech models are ready in {models.directory()}")
             return
         print(f"Downloading speech models to {models.directory()} …")
@@ -43,6 +43,9 @@ def main() -> None:
         if state["state"] != "ready":
             raise SystemExit(f"Model download failed: {state['error']}")
         print("Speech models are ready.")
+        intake_voice.install()
+        if intake_voice.status()["state"] != "ready":
+            raise SystemExit(f"Call model download failed: {intake_voice.status()['error']}")
         return
 
     if not 1 <= args.port <= 65535:
@@ -52,6 +55,7 @@ def main() -> None:
     if args.command == "serve":
         os.environ.setdefault("STELLIS_AUTH_MODE", "required")
         models.ensure_in_background()
+        intake_voice.ensure_in_background()
         print(f"Stellis Health is running at http://{host}:{args.port}/")
     target = ("stellis.sync_server:app" if args.command == "sync-serve" else
               "stellis.account_gateway:app" if os.environ.get("STELLIS_AUTH_MODE") == "required" else
