@@ -870,7 +870,7 @@ def onboarding_page(request: Request):
 
 class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
-    step: Literal["uses", "review"] = "review"
+    step: Literal["records", "uses", "review"] = "review"
     agent_choices: dict[str, list[str]] | None = None
     task_choices: dict[str, StrictBool] | None = None
 
@@ -905,9 +905,23 @@ async def onboarding_check(request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+class OnboardingRecordItem(BaseModel):
+    kind: str = Field(max_length=20)
+    id: str = Field(max_length=100)
+
+
+class OnboardingRecordGroup(BaseModel):
+    notebook_name: str = Field(default="", max_length=80)
+    notebook_id: str | None = Field(default=None, max_length=100)
+    items: list[OnboardingRecordItem] = Field(default_factory=list, max_length=120)
+    agents: list[str] = Field(default_factory=list, max_length=16)
+    suggest_tasks: StrictBool = False
+
+
 class OnboardingFinish(BaseModel):
     proposal_id: str | None = Field(default=None, max_length=80)
     group_ids: list[str] = Field(default_factory=list, max_length=8)
+    record_groups: list[OnboardingRecordGroup] = Field(default_factory=list, max_length=5)
 
 
 class OnboardingRead(BaseModel):
@@ -954,8 +968,9 @@ def onboarding_complete(request: Request, choices: OnboardingFinish | None = Non
     from stellis import onboarding
     try:
         return onboarding.complete(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)),
-                                   choices.proposal_id if choices else None, choices.group_ids if choices else [])
-    except ValueError as exc:
+                                   choices.proposal_id if choices else None, choices.group_ids if choices else [],
+                                   [group.model_dump() for group in choices.record_groups] if choices else [])
+    except (ValueError, LookupError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -2761,7 +2776,7 @@ def delete_vocabulary(term_id: str) -> dict[str, bool]:
 def add_vocabulary_batch(request: VocabularyBatch) -> dict[str, object]:
     terms = [term.strip() for term in request.terms]
     if any(not term or len(term) > 100 for term in terms):
-        raise HTTPException(status_code=400, detail="Each term must be 1–100 characters")
+        raise HTTPException(status_code=400, detail="Each term must be 1 to 100 characters")
     return storage.add_vocabulary_batch(terms, request.kind)
 
 

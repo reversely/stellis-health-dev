@@ -123,7 +123,7 @@ async def ask(origin_id: str, question: str, notebook_id: str | None) -> dict:
         return await agent_runtime.ask(origin_id, question, notebook_id)
     question = ' '.join(question.split())
     if not question or len(question) > 2000:
-        raise ValueError('Question must be 1–2000 characters')
+        raise ValueError('Question must be 1 to 2000 characters')
     origin = agents.get(origin_id)
     job_id = agents.start_job(origin_id, notebook_id)
     user = agents.append_message(origin_id, 'user', question, notebook_id, job_id)

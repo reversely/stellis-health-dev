@@ -32,9 +32,16 @@ function syncThemeButton() {
   document.querySelector('meta[name="theme-color"]').content = light ? '#27222B' : '#2A252F';
 }
 syncThemeButton();
+// Colours change at once on a theme switch; transitions return two frames later (motion.css).
+function swapTheme(theme) {
+  const root = document.documentElement;
+  root.classList.add('theme-swapping');
+  root.dataset.theme = theme;
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-swapping')));
+}
 themeButton.addEventListener('click', () => {
   const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-  document.documentElement.dataset.theme = theme;
+  swapTheme(theme);
   try { localStorage.setItem('stellis-theme', theme); } catch {}
   syncThemeButton();
 });
@@ -1606,7 +1613,7 @@ function renderCleanRun() {
     const heading = document.createElement('div'); heading.className = 'turn-heading';
     const speaker = document.createElement('strong'); speaker.textContent = group[0].speaker_display_name;
     const range = document.createElement('span');
-    range.textContent = `${time(group[0].start_ms / 1000)}${group.length > 1 ? `–${time(group.at(-1).end_ms / 1000)}` : ''}`;
+    range.textContent = `${time(group[0].start_ms / 1000)}${group.length > 1 ? ` to ${time(group.at(-1).end_ms / 1000)}` : ''}`;
     heading.append(speaker, range); turn.append(heading);
     const body = document.createElement('div'); body.className = 'turn-body';
     for (const segment of group) {
@@ -1947,7 +1954,7 @@ async function showTranscript(id) {
       turnSpeaker.setAttribute('aria-label', `Tag speaker for turn at ${time(visible[0].start_ms / 1000)}${manual ? ', labelled by you' : ''}`);
       turnSpeaker.addEventListener('click', () => showSpeakerPicker(turnSpeaker, turn.querySelector('.segment'), firstSegment));
     }
-    const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? `–${time(visible.at(-1).end_ms / 1000)}` : ''}`;
+    const range = document.createElement('span'); range.textContent = `${time(visible[0].start_ms / 1000)}${visible.length > 1 ? ` to ${time(visible.at(-1).end_ms / 1000)}` : ''}`;
     heading.append(turnSpeaker, range);
     turn.append(heading);
     const body = document.createElement('div'); body.className = 'turn-body';
@@ -1967,7 +1974,7 @@ async function showTranscript(id) {
     const speaker = document.createElement('button');
     speaker.type = 'button';
     speaker.className = 'segment-speaker';
-    speaker.textContent = '⋯';
+    speaker.append(icon('dots'));
     speaker.setAttribute('aria-label', `Edit speaker label for ${segment.speaker_display_name} at ${time(segment.start_ms / 1000)}`);
     if (segment.speaker_match_source === 'embedding_suggestion') speaker.title = 'Suggested from this passage’s voice; click to confirm or edit';
     if (segment.speaker_match_source === 'unresolved') speaker.title = 'Speaker unresolved; click to assign';
@@ -2164,7 +2171,7 @@ function selectedSnippet(excerpt) {
   const source = new URL(`/conversation/${encodeURIComponent(activeConversationId)}`, location.origin);
   source.searchParams.set('at', segment.id);
   source.searchParams.set('t', String(sourceTime));
-  return {text:`“${quote}”\n— ${segment.speaker_display_name}, ${time(sourceTime / 1000)}\nSource on this device: ${source.href}`,
+  return {text:`“${quote}”\n${segment.speaker_display_name}, ${time(sourceTime / 1000)}\nSource on this device: ${source.href}`,
     sourceTime};
 }
 function openSelectionShare(toolbar, excerpt) {
@@ -2417,7 +2424,7 @@ async function showManageSpeakers(row, segment) {
   const dialog = document.createElement('dialog'); dialog.id = 'manage-speakers-dialog';
   const heading = document.createElement('div'); heading.className = 'manage-speakers-heading';
   const title = document.createElement('h2'); title.textContent = 'Manage Speakers';
-  const close = document.createElement('button'); close.type = 'button'; close.textContent = '×'; close.setAttribute('aria-label', 'Close');
+  const close = document.createElement('button'); close.type = 'button'; close.append(icon('x')); close.setAttribute('aria-label', 'Close');
   close.addEventListener('click', () => dialog.close()); heading.append(title, close);
   const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Search'; search.setAttribute('aria-label', 'Search speakers');
   const list = document.createElement('div'); list.className = 'manage-speakers-list';
@@ -4839,32 +4846,31 @@ async function loadSettingsCalendars() {
   const container = document.querySelector('#settings-calendars');
   // On a direct /settings load this runs before the deferred calendar.js; DOMContentLoaded follows it.
   if (!window.StellisCalendar) await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, {once:true}));
-  const rows = await window.StellisCalendar.request('/connections');
+  // Only providers this deployment can connect are listed; with none, the calendar block stays hidden.
+  const rows = (await window.StellisCalendar.request('/connections')).filter(item => item.connected || item.connectable);
+  document.querySelector('#settings-calendar-block').hidden = !rows.length;
   container.replaceChildren(...rows.map(item => {
     const row = document.createElement('div'); row.className = 'integration-row';
     const text = document.createElement('div');
     const name = document.createElement('strong');
     name.textContent = window.StellisCalendar.labels[item.provider];
     const state = document.createElement('small');
-    state.textContent = item.connected ? 'Connected' : item.connectable ? 'Not connected' :
-      item.configured ? 'Not available on the web app yet' : 'Needs an OAuth client';
+    state.textContent = item.connected ? 'Connected' : 'Not connected';
     text.append(name, state);
     row.append(icon('calendar'), text);
-    if (item.connected || item.connectable) {
-      const action = document.createElement('button'); action.type = 'button';
-      action.textContent = item.connected ? 'Disconnect' : 'Connect';
-      action.addEventListener('click', async () => {
-        action.disabled = true; document.querySelector('#settings-calendar-status').textContent = '';
-        try {
-          if (item.connected) {
-            await window.StellisCalendar.request(`/${item.provider}/disconnect`, {method:'POST'});
-            await loadSettingsCalendars();
-          }
-          else location.assign((await window.StellisCalendar.request(`/${item.provider}/authorize?return_to=/settings`)).url);
-        } catch (error) { document.querySelector('#settings-calendar-status').textContent = error.message; action.disabled = false; }
-      });
-      row.append(action);
-    }
+    const action = document.createElement('button'); action.type = 'button';
+    action.textContent = item.connected ? 'Disconnect' : 'Connect';
+    action.addEventListener('click', async () => {
+      action.disabled = true; document.querySelector('#settings-calendar-status').textContent = '';
+      try {
+        if (item.connected) {
+          await window.StellisCalendar.request(`/${item.provider}/disconnect`, {method:'POST'});
+          await loadSettingsCalendars();
+        }
+        else location.assign((await window.StellisCalendar.request(`/${item.provider}/authorize?return_to=/settings`)).url);
+      } catch (error) { document.querySelector('#settings-calendar-status').textContent = error.message; action.disabled = false; }
+    });
+    row.append(action);
     return row;
   }));
 }

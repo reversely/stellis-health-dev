@@ -111,7 +111,7 @@ class Timeline {
     const text = dom.el('div', null, 'timeline-text');
     text.append(link);
     const detail =
-        entry.source ? `${entry.detail} · ${entry.source}` : entry.detail;
+        entry.source ? `${entry.detail}, ${entry.source}` : entry.detail;
     if (detail) {
       text.append(dom.el('span', detail, 'timeline-detail'));
     }

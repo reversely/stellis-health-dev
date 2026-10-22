@@ -283,7 +283,7 @@ async def _ask(agent_id: str, question: str, notebook_id: str | None = None,
         raise AgentRunError("Agent replies are unavailable for this deployment")
     question = " ".join(question.split())
     if not question or len(question) > 2000:
-        raise ValueError("Question must be 1–2000 characters")
+        raise ValueError("Question must be 1 to 2000 characters")
     agent = agents.require_enabled(agent_id, notebook_id)
     agent = {**agent, "notebooks": [item for item in agent["notebooks"] if item.get("enabled", True)]}
     if (notebook_id and not agent["is_default"]

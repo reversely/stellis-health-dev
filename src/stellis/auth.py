@@ -119,7 +119,7 @@ def has_account() -> bool:
 def register(username: str, password: str) -> str:
     username = username.strip()
     if not 3 <= len(username) <= 80 or len(password) < 12 or len(password) > 1024:
-        raise ValueError("Use a username of 3–80 characters and a password of at least 12 characters")
+        raise ValueError("Use a username of 3 to 80 characters and a password of at least 12 characters")
     salt = secrets.token_bytes(32)
     stamp = datetime.now(timezone.utc).isoformat()
     with _connect() as conn:
@@ -242,7 +242,7 @@ def update_profile(name: str, email: str, account_id: int = 1) -> dict[str, str]
 def change_username(username: str, password: str, account_id: int = 1) -> dict[str, str]:
     username = username.strip()
     if not 3 <= len(username) <= 80:
-        raise ValueError("Use a username of 3–80 characters")
+        raise ValueError("Use a username of 3 to 80 characters")
     with _connect() as conn:
         _check_password(conn, password, account_id)
         conn.execute("UPDATE account SET username = ? WHERE id = ?", (username, account_id))

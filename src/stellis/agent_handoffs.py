@@ -24,7 +24,7 @@ async def ask(origin_id, target_id, question, notebook_id):
         return await agent_runtime.ask(target_id, question, notebook_id)
     question = ' '.join(question.split())
     if not question or len(question) > 2000:
-        raise ValueError('Question must be 1–2000 characters')
+        raise ValueError('Question must be 1 to 2000 characters')
     job_id = agents.start_job(origin_id, notebook_id)
     with storage.connect() as conn:
         conn.execute('INSERT INTO agent_handoffs(id,origin_id,target_id,target_name,notebook_id) VALUES(?,?,?,?,?)',

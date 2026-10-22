@@ -73,7 +73,7 @@ def search_library(query: str, limit: int = 150, category_id: str | None = None)
     """Search effective text and labels afresh, so overlays never need a stale index."""
     needle = query.strip().casefold()
     if len(needle) < 2 or len(needle) > 120:
-        raise ValueError("Enter 2–120 characters to search")
+        raise ValueError("Enter 2 to 120 characters to search")
     results: list[dict[str, object]] = []
     total = 0
     conversations = storage.list_conversations()

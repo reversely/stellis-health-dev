@@ -82,7 +82,7 @@ def _digest(token: str) -> bytes:
 def register(username: str, password: str) -> str:
     username = username.strip()
     if not 3 <= len(username) <= 80 or not 12 <= len(password) <= 1024:
-        raise ValueError("Use a username of 3–80 characters and a password of at least 12 characters")
+        raise ValueError("Use a username of 3 to 80 characters and a password of at least 12 characters")
     user_id = str(uuid.uuid4())
     with connect() as conn:
         try:
