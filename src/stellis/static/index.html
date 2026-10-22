@@ -226,6 +226,12 @@
             <p id="tavily-key-status" role="status" aria-live="polite"></p>
           </form>
         </section>
+        <section class="settings-section" aria-labelledby="settings-debug-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-file-zip"/></svg><h3 id="settings-debug-title">Debug data</h3></div>
+          <p class="settings-note">Saves call audio, transcripts and Stellis replies, and keeps Recently Deleted items</p>
+          <label class="settings-check"><input id="keep-debug-data" type="checkbox" />Keep debug data</label>
+          <div class="settings-row"><a id="debug-data-download" class="settings-button" href="/api/v1/account/debug-data" download>Download debug data</a><p id="debug-data-status" role="status" aria-live="polite"></p></div>
+        </section>
         <section class="settings-section settings-danger" aria-labelledby="settings-delete-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg><h3 id="settings-delete-title">Delete account</h3></div>
           <p>This removes every conversation, recording, and note on this device</p>

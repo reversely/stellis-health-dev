@@ -139,10 +139,12 @@ class NotebookAccountTest(unittest.TestCase):
         self.assertEqual(row["notebook_id"], book["id"])
 
     def test_profile_username_and_password_changes(self):
-        self.assertEqual(self.client.get("/api/v1/account").json(), {"username": "owner", "name": "", "email": ""})
+        self.assertEqual(self.client.get("/api/v1/account").json(),
+                         {"username": "owner", "name": "", "email": "", "keep_debug_data": False})
         self.assertEqual(self.client.patch("/api/v1/account", json={"name": "A", "email": "nope"}).status_code, 400)
         updated = self.client.patch("/api/v1/account", json={"name": " Ada  Lovelace ", "email": "ada@example.com"})
-        self.assertEqual(updated.json(), {"username": "owner", "name": "Ada Lovelace", "email": "ada@example.com"})
+        self.assertEqual(updated.json(), {"username": "owner", "name": "Ada Lovelace", "email": "ada@example.com",
+                                          "keep_debug_data": False})
         self.assertEqual(self.client.post("/api/v1/account/username",
                                           json={"username": "ada", "password": "wrong password"}).status_code, 403)
         self.assertEqual(self.client.post("/api/v1/account/username",

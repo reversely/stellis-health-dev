@@ -2289,3 +2289,19 @@ body.recording-page #back-from-recording { min-height:44px; }
 
 .daily-brief{margin:0 0 32px;padding:0 0 24px;border-bottom:1px solid var(--line);min-width:0;overflow-wrap:anywhere}.daily-brief-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.daily-brief h2{font:300 26px/1.15 Piazzolla,Georgia,serif;margin:0 auto 0 0}.daily-brief button{min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}.daily-brief button:disabled{opacity:.6;cursor:default}.daily-brief button:hover:not(:disabled){background:var(--ink);color:var(--surface)}.daily-brief p{line-height:1.6}.daily-brief a{display:inline-flex;align-items:center;min-height:44px}.daily-brief [hidden]{display:none!important}#daily-brief-coverage,#daily-brief-status{font-size:13px;color:var(--muted)}
 @media(max-width:767px){.home-main .todo-group-head a,.home-main .category-card-name{display:inline-flex;align-items:center;min-height:44px}.home-rail .rail-name{display:inline-flex;align-items:center;min-height:24px}}
+
+.settings-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.settings-check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}

@@ -4796,6 +4796,15 @@ function settingsForm(selector, statusSelector, action) {
     finally { button.disabled = false; }
   });
 }
+document.querySelector('#keep-debug-data').addEventListener('change', async ({target}) => {
+  const status = document.querySelector('#debug-data-status');
+  status.classList.remove('success');
+  try {
+    await accountRequest('/debug-data', 'PUT', {keep: target.checked});
+    status.textContent = target.checked ? 'Keeping debug data' : 'Debug data off';
+    status.classList.add('success');
+  } catch (error) { target.checked = !target.checked; status.textContent = error.message; }
+});
 settingsForm('#profile-form', '#profile-status', async () => {
   await accountRequest('', 'PATCH', {name:document.querySelector('#profile-name').value, email:document.querySelector('#profile-email').value});
   return 'Profile saved';
@@ -4853,12 +4862,14 @@ async function loadSettingsCalendars() {
 }
 async function showSettings() {
   await leaveForAppPage('settings-page', 'Account settings');
-  for (const id of ['#profile-status', '#username-status', '#password-status', '#delete-status', '#settings-calendar-status'])
+  for (const id of ['#profile-status', '#username-status', '#password-status', '#delete-status', '#settings-calendar-status', '#debug-data-status'])
     document.querySelector(id).textContent = '';
   if (calendarOutcome) { document.querySelector('#settings-calendar-status').textContent = calendarOutcomeText(); calendarOutcome = null; }
   document.querySelector('#settings-view').hidden = false;
   const [account, terms] = await Promise.all([fetch(`${API}/account`), fetch(`${API}/vocabulary`).then(json)]);
   const signedIn = account.ok;
+  document.querySelector('#keep-debug-data').disabled = !signedIn;
+  document.querySelector('#debug-data-download').hidden = !signedIn;
   for (const form of document.querySelectorAll('#settings-view form')) {
     form.querySelectorAll('input, button').forEach(control => { control.disabled = !signedIn; });
   }
@@ -4867,6 +4878,7 @@ async function showSettings() {
     document.querySelector('#profile-name').value = profile.name;
     document.querySelector('#profile-email').value = profile.email;
     document.querySelector('#account-username').value = profile.username;
+    document.querySelector('#keep-debug-data').checked = profile.keep_debug_data;
   } else document.querySelector('#profile-status').textContent = 'Sign in with your own account to change these settings';
   const names = terms.filter(term => term.kind === 'name').length;
   document.querySelector('#settings-vocabulary-count').textContent =

@@ -213,7 +213,13 @@ def delete_permanently(conversation_id: str, *, expired_before: str | None = Non
 
 
 def delete_expired(*, now: datetime | None = None) -> dict[str, object]:
-    """Sweep expired items; retry busy jobs during the next scheduled sweep."""
+    """Sweep expired items; retry busy jobs during the next scheduled sweep.
+
+    An account that keeps debug data keeps Recently Deleted too.
+    """
+    from stellis import debug_data
+    if debug_data.enabled():
+        return {"deleted": [], "deferred": []}
     cutoff = ((now or datetime.now(timezone.utc)).astimezone(timezone.utc) -
               timedelta(days=RETENTION_DAYS)).isoformat()
     with storage.connect() as conn:
@@ -257,4 +263,6 @@ def erase_all() -> dict[str, int]:
         conn.execute("DELETE FROM schema_migrations WHERE name = 'initial_categories'")
     from stellis import images
     images.remove_files(page_image_ids)
+    from stellis import debug_data
+    debug_data.erase()
     return {"conversations": len(conversation_ids), "recordings": len(captures)}

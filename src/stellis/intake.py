@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from stellis import note_rules, notebook_chat, pages, runtime_profile, sorting, storage, token_quota
+from stellis import debug_data, note_rules, notebook_chat, pages, runtime_profile, sorting, storage, token_quota
 
 AGENT_NAME = "Stellis"
 OPENING = ("Hi, I'm Stellis. In the next five minutes I'll learn what you want help with, "
@@ -151,9 +151,11 @@ def load() -> dict[str, object]:
 def reset() -> dict[str, object]:
     """Starts the intake over, for a person who reopens setup."""
     with _LOCK, storage.connect() as conn:
-        _read(conn)  # Creates the table on first use.
+        previous = _read(conn)  # Creates the table on first use.
         _write(conn, _empty())
-        return _empty()
+    if previous["turns"]:
+        debug_data.record("intake-calls", {"reason": "reset", "call": previous})
+    return _empty()
 
 
 def _update(change) -> dict[str, object]:
@@ -251,6 +253,7 @@ def add_agent_turn(text: str) -> None:
 def end() -> dict[str, object]:
     """Marks the call ended and saves its notes as the person's first note."""
     state = _update(lambda state: state.update(ended_at=state["ended_at"] or _now()))
+    debug_data.record("intake-calls", {"reason": "end", "call": state})
     markdown = notes_markdown(state["notes"], state["turns"])
     if state["page_id"]:
         try:
@@ -421,13 +424,14 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str]:
     # for a correction, it ends whatever the model writes.
     must_end = step == GOODBYE and _answers(state["turns"]).get(GOODBYE, 0) > 0
     _update(lambda current: current.__setitem__("asking", step))
-    pending = ""
+    pending = written = ""
     first = True
     ended = False
     async for token in stream_tokens(conversation(state)):
         if timings is not None and "first_token" not in timings:
             timings["first_token"] = time.perf_counter()
         pending += token
+        written += token
         while True:
             parts = _SENTENCE.split(pending, maxsplit=1)
             if len(parts) == 1 and first:
@@ -446,6 +450,7 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str]:
         yield pending.strip()
     if must_end and not ended:
         yield END_MARK
+    debug_data.record("intake-replies", {"step": step, "reply": written})
 
 
 async def complete_json(instructions: str, context: dict[str, object], schema: dict | None,
@@ -482,6 +487,7 @@ async def update_notes() -> dict[str, object]:
         "topics": [{"heading": heading, "covers": about} for heading, about in PLAN],
         "notepad": state["notes"], "transcript": _transcript(state["turns"])}, _NOTES_SCHEMA, 900)
     notes = clean_notes(result.get("sections") if isinstance(result, dict) else None)
+    debug_data.record("intake-notes", {"revision": revision, "model_result": result, "notes": notes})
 
     def change(current):
         # An edit made while the model was writing wins; the next turn merges it.
