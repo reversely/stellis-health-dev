@@ -107,9 +107,10 @@
           <a id="live-recording-card" class="live-recording-card" href="/recording" hidden><span id="live-recording-state" class="live-recording-state">Live</span><strong id="live-recording-title">New recording</strong><small id="live-recording-time">0:00</small><div class="live-recording-preview"><span id="live-recording-preview-status">Listening for speech</span><div id="live-recording-preview-lines"></div></div><span class="live-recording-arrow" aria-hidden="true">→</span></a>
           <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
           <section id="setup-card" class="setup-card" aria-labelledby="setup-title" hidden>
-            <h2 id="setup-title">Getting transcription ready</h2>
+            <h2 id="setup-title">Transcription setup</h2>
             <p id="setup-status" role="status" aria-live="polite"></p>
-            <progress id="setup-progress" max="1" value="0"></progress>
+            <progress id="setup-progress" max="1" aria-label="Speech model download"></progress>
+            <button id="setup-retry" type="button" hidden>Try again</button>
           </section>
           <div class="home-columns">
             <div class="home-col home-col-left"><section id="home-todos" data-widget="todos" aria-label="Check-ins"></section></div>

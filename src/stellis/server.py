@@ -1608,6 +1608,14 @@ def setup_status() -> dict[str, object]:
     return {**models.status(), "missing": models.missing()}
 
 
+@api.post("/setup")
+def start_setup() -> dict[str, object]:
+    """Starts or retries the shared speech-model installer."""
+    from stellis import models
+    models.ensure_in_background()
+    return setup_status()
+
+
 @api.get("/category-groups")
 def category_groups() -> list[dict[str, object]]:
     return notebooks.category_groups()

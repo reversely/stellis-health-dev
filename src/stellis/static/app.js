@@ -4076,21 +4076,71 @@ function tagCard(tag) {
   return card;
 }
 let setupTimer;
+const setupRetry = document.querySelector('#setup-retry');
 async function watchSetup() {
-  // First run downloads the speech models; recordings transcribe once they are in place.
   clearTimeout(setupTimer);
   const card = document.querySelector('#setup-card');
+  const status = document.querySelector('#setup-status');
+  const progress = document.querySelector('#setup-progress');
   let state;
-  try { state = await json(await fetch(`${API}/setup`)); } catch { card.hidden = true; return; }
+  try {
+    state = await json(await fetch(`${API}/setup`));
+  } catch {
+    card.hidden = false;
+    progress.hidden = true;
+    status.textContent = 'Transcription setup status is unavailable';
+    setupRetry.textContent = 'Check again';
+    setupRetry.dataset.action = 'check';
+    setupRetry.hidden = false;
+    return;
+  }
   card.hidden = state.state === 'ready';
   if (card.hidden) return;
-  const percent = Math.round((state.progress || 0) * 100);
-  document.querySelector('#setup-progress').value = state.progress || 0;
-  document.querySelector('#setup-status').textContent = state.state === 'failed'
-    ? `The speech models could not be downloaded (${state.error}). Check your connection and restart Stellis Health.`
-    : `Downloading the speech models, about 500 MB: ${percent}%. Recordings and imports transcribe as soon as this finishes.`;
-  if (state.state !== 'failed') setupTimer = setTimeout(watchSetup, 2000);
+  const waiting = state.state === 'idle';
+  const failed = state.state === 'failed';
+  setupRetry.hidden = !waiting && !failed;
+  setupRetry.textContent = waiting ? 'Start setup' : 'Try again';
+  setupRetry.dataset.action = 'start';
+  progress.hidden = waiting || failed;
+  if (state.total_bytes > 0 && state.stage === 'receiving') {
+    progress.value = Math.min(1, (state.downloaded_bytes || 0) / state.total_bytes);
+  } else {
+    progress.removeAttribute('value');
+  }
+  if (waiting) {
+    status.textContent = 'Speech models are waiting to download';
+  } else if (failed) {
+    status.textContent = 'Sorry transcription setup failed';
+  } else if (state.stage === 'verifying') {
+    status.textContent = 'Checking the downloaded speech model';
+  } else if (state.stage === 'receiving') {
+    const size = (bytes) => bytes >= 1e6 ?
+        `${Math.round(bytes / 1e5) / 10} MB` : `${Math.ceil(bytes / 1000)} KB`;
+    const received = size(state.downloaded_bytes || 0);
+    const total = state.total_bytes ? size(state.total_bytes) : null;
+    status.textContent = !state.downloaded_bytes ?
+        'Waiting for speech model data' : total === null ?
+        `Downloaded ${received} of the current speech model` :
+        `Downloaded ${received} of ${total} for the current speech model`;
+  } else {
+    status.textContent = 'Connecting to the speech model download';
+  }
+  if (!waiting && !failed) setupTimer = setTimeout(watchSetup, 2000);
 }
+setupRetry.addEventListener('click', async () => {
+  setupRetry.disabled = true;
+  try {
+    if (setupRetry.dataset.action !== 'check') {
+      await json(await fetch(`${API}/setup`, {method: 'POST'}));
+    }
+    await watchSetup();
+  } catch {
+    document.querySelector('#setup-status').textContent = 'Sorry transcription setup could not start';
+    setupRetry.hidden = false;
+  } finally {
+    setupRetry.disabled = false;
+  }
+});
 function renderCategoryGroups() {
   // Most used first, so the busiest tags lead.
   const tags = [...libraryCategories].sort((a, b) => b.conversation_count - a.conversation_count ||

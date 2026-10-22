@@ -173,6 +173,10 @@ class AccountGateway:
                             if path.startswith("/api/") else RedirectResponse("/auth", status_code=303))
                 await response(scope, receive, send)
                 return
+        if path == "/api/v1/setup":
+            # The gateway owns the installer; account processes have separate state.
+            await server.app(scope, receive, send)
+            return
         response = await self._proxy(request, account_id)
         await response(scope, receive, send)
 

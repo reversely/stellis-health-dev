@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import stat
 import tempfile
@@ -18,6 +19,7 @@ class ModelDownloadTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.env = patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
         self.env.start()
+        self.original_state = dict(models._STATE)
         self.payload = b"model bytes"
         digest = hashlib.sha256(self.payload).hexdigest()
         self.catalog = patch.object(models, "MODELS", (("tiny.bin", "https://example.invalid/tiny.bin", digest, None),))
@@ -27,7 +29,8 @@ class ModelDownloadTest(unittest.TestCase):
         self.catalog.stop()
         self.env.stop()
         self.temp.cleanup()
-        models._STATE.update(state="idle", model=None, progress=0.0, error=None)
+        models._STATE.clear()
+        models._STATE.update(self.original_state)
 
     def _fetch(self, payload: bytes):
         def fetch(url: str, target: Path, index: int, count: int) -> None:
@@ -59,6 +62,59 @@ class ModelDownloadTest(unittest.TestCase):
         with self._fetch(self.payload), patch.object(processing, "request_processing") as request:
             models.install()
         request.assert_called_once_with("waiting")
+
+    def test_an_unwritable_destination_reports_failure(self) -> None:
+        blocker = Path(self.temp.name) / "blocker"
+        blocker.write_bytes(b"file")
+        with patch.object(models, "directory", return_value=blocker):
+            models.install()
+            self.assertEqual(models.status()["state"], "failed")
+
+    def test_progress_tracks_bytes_when_the_server_omits_its_size(self) -> None:
+        response = io.BytesIO(self.payload)
+        response.headers = {}
+        with patch.object(models.urllib.request, "urlopen", return_value=response):
+            models._fetch("https://example.invalid/model", Path(self.temp.name) / "download", 0, 1)
+        state = models.status()
+        self.assertEqual(state["downloaded_bytes"], len(self.payload))
+        self.assertIsNone(state["total_bytes"])
+        self.assertIsNone(state["progress"])
+
+    def test_progress_advances_for_a_known_size(self) -> None:
+        response = io.BytesIO(self.payload)
+        response.headers = {"Content-Length": str(len(self.payload))}
+        with patch.object(models.urllib.request, "urlopen", return_value=response):
+            models._fetch("https://example.invalid/model", Path(self.temp.name) / "download", 0, 2)
+        state = models.status()
+        self.assertEqual(state["downloaded_bytes"], len(self.payload))
+        self.assertEqual(state["total_bytes"], len(self.payload))
+        self.assertEqual(state["progress"], 0.5)
+
+    def test_hosted_status_uses_the_gateway_installer_and_checks_the_session(self) -> None:
+        from fastapi.testclient import TestClient
+        from stellis import auth
+        from stellis.account_gateway import AccountGateway
+
+        gateway = AccountGateway()
+        models._STATE.update(state="downloading", progress=0.4, downloaded_bytes=400,
+                             total_bytes=1000, stage="receiving")
+        with patch.dict(os.environ, {"STELLIS_AUTH_MODE": "required"}), \
+                patch.object(auth, "current_account_id", return_value=None), \
+                TestClient(gateway) as client:
+            self.assertEqual(client.get("/api/v1/setup").status_code, 401)
+            self.assertEqual(client.post("/api/v1/setup").status_code, 401)
+            with patch.object(auth, "current_account_id", return_value=2), \
+                    patch.object(gateway, "_proxy", side_effect=AssertionError("Account proxy used")):
+                state = client.get("/api/v1/setup").json()
+                self.assertEqual(state["progress"], 0.4)
+                self.assertEqual(state["downloaded_bytes"], 400)
+                with patch.object(models, "ensure_in_background") as start:
+                    self.assertEqual(client.post("/api/v1/setup").status_code, 200)
+                    start.assert_called_once_with()
+                with patch.object(models, "ensure_in_background") as start:
+                    self.assertEqual(client.post("/api/v1/setup", headers={
+                        "Origin": "https://another.example"}).status_code, 403)
+                    start.assert_not_called()
 
 
 if __name__ == "__main__":
