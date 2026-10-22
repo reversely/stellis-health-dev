@@ -252,6 +252,8 @@ function create(host) {
   let measures = [];
   let editing = null;
   let adding = false;
+  // Goals Stellis filled in from the person's words, waiting for Add goal.
+  let drafts = [];
   let timer = 0;
 
   const query = () => new URLSearchParams({
@@ -286,7 +288,7 @@ function create(host) {
     try {
       await change();
       editing = null;
-      adding = false;
+      adding = drafts.length > 0;
       await load();
     } catch (error) {
       if (status) status.textContent = error.message;
@@ -325,7 +327,7 @@ function create(host) {
       grid.append(editing === goal.id ? form(goal) : goalCard(goal));
     }
     if (data.goals.length) parts.push(grid);
-    if (!data.goals.length || adding) parts.push(form(null));
+    if (!data.goals.length || adding) parts.push(form(null, drafts[0]));
     host.replaceChildren(...parts);
   }
 
@@ -541,8 +543,72 @@ function create(host) {
     return node;
   }
 
-  /** Selectors that add a goal, or edit one when given. */
-  function form(goal) {
+  /**
+   * Fills the Add a goal form with goals Stellis drafted from the person's
+   * words; the person adds each one with Add goal.
+   * @param {!Array<!Object>} filled Values as POST /goals/drafts returns.
+   */
+  function fill(filled) {
+    if (!filled.length) return;
+    drafts = filled.slice();
+    editing = null;
+    adding = true;
+    paint();
+    host.querySelector('.coach-form')
+        ?.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  }
+
+  /**
+   * A field where the person describes goals for Stellis to fill in. It
+   * sits inside the Add a goal form, so Enter in it fills in rather than
+   * adding a goal.
+   */
+  function describe() {
+    const node = dom.el('div', null, 'coach-describe');
+    const label = dom.el('label', 'Describe your goals', 'coach-field');
+    const input = /** @type {!HTMLInputElement} */ (dom.el('input'));
+    input.maxLength = 500;
+    input.placeholder = 'Walk 30 minutes, 4 times a week';
+    label.append(input);
+    const go = dom.button('Fill in', 'coach-button');
+    const status = dom.el('p', null, 'coach-describe-status');
+    status.setAttribute('role', 'status');
+    node.append(label, go, status);
+    const run = async () => {
+      const text = input.value.trim();
+      if (!text || go.disabled) return;
+      go.disabled = true;
+      status.textContent = 'Filling in your goal';
+      try {
+        const result =
+            await dom.api('/goals/drafts', {method: 'POST', json: {text}});
+        if (result.drafts.length) {
+          fill(result.drafts);
+          return;
+        }
+        status.textContent = result.reply || result.skipped[0] ||
+            'Name an activity, such as walking or a medicine.';
+      } catch (error) {
+        status.textContent = error.message;
+      }
+      go.disabled = false;
+    };
+    go.addEventListener('click', run);
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      run();
+    });
+    return node;
+  }
+
+  /**
+   * Selectors that add a goal, or edit one when given.
+   * @param {?Object} goal Goal to edit, or null to add one.
+   * @param {?Object=} draft Values Stellis filled in for a new goal.
+   */
+  function form(goal, draft = null) {
+    const initial = goal || draft;
     const node = dom.el('form', null, 'coach-form');
     node.setAttribute('aria-labelledby', 'coach-form-title');
     const heading = dom.el('h3', goal ? `Edit ${goal.title}` : 'Add a goal');
@@ -567,32 +633,32 @@ function create(host) {
     };
     const activity = select(
         'Activity', data.activities.map((a) => [a.key, a.label]),
-        goal?.activity);
+        initial?.activity);
     const amount = select('Amount', [], null);
-    const medicine = text('Medicine', goal?.medicine, 40);
-    const dose = text('Dose', goal?.dose_amount ?? '', 8);
+    const medicine = text('Medicine', initial?.medicine, 40);
+    const dose = text('Dose', initial?.dose_amount ?? '', 8);
     dose.control.type = 'number';
     dose.control.min = '0';
     dose.control.step = 'any';
     dose.control.inputMode = 'decimal';
     const unit = select(
-        'Unit', data.dose_units.map((u) => [u, u]), goal?.dose_unit || 'mg');
+        'Unit', data.dose_units.map((u) => [u, u]), initial?.dose_unit || 'mg');
     medicine.control.placeholder = 'Metformin';
     dose.control.placeholder = '500';
     const often = select(
         'How often', [7, 6, 5, 4, 3, 2, 1].map((n) => [n, frequencyText(n)]),
-        goal?.times_per_week ?? 4);
+        initial?.times_per_week ?? 4);
     const remind = dom.el('div', null, 'coach-field coach-remind');
     const toggle = /** @type {!HTMLInputElement} */ (dom.el('input'));
     toggle.type = 'checkbox';
-    toggle.checked = !!goal?.reminder;
+    toggle.checked = !!initial?.reminder;
     toggle.id = 'coach-remind-toggle';
     const toggleLabel = dom.el('label', 'Remind me at');
     toggleLabel.htmlFor = toggle.id;
     const time = /** @type {!HTMLInputElement} */ (dom.el('input'));
     time.type = 'time';
     time.step = '900';
-    time.value = goal?.reminder || '08:00';
+    time.value = initial?.reminder || '08:00';
     time.setAttribute('aria-label', 'Reminder time');
     const row = dom.el('span', null, 'coach-remind-row');
     row.append(toggle, toggleLabel, time);
@@ -604,7 +670,7 @@ function create(host) {
           data.activities.find((a) => a.key === activity.control.value);
       if (chosen.key !== chosenKey) {
         chosenKey = chosen.key;
-        const saved = goal?.activity === chosen.key ? goal.amount : null;
+        const saved = initial?.activity === chosen.key ? initial.amount : null;
         amount.control.replaceChildren(...chosen.amounts.map(
             (n) => new Option(`${n} ${chosen.unit}`, String(n))));
         const middle = chosen.amounts[Math.floor(chosen.amounts.length / 2)];
@@ -628,7 +694,16 @@ function create(host) {
         dom.button(goal ? 'Save goal' : 'Add goal', 'coach-button is-primary');
     save.type = 'submit';
     buttons.append(save);
-    if (goal || data.goals.length) {
+    if (draft) {
+      const skip = dom.button(
+          drafts.length > 1 ? 'Skip' : 'Cancel', 'coach-button is-quiet');
+      skip.addEventListener('click', () => {
+        drafts.shift();
+        adding = drafts.length > 0 || !data.goals.length;
+        paint();
+      });
+      buttons.append(skip);
+    } else if (goal || data.goals.length) {
       const cancel = dom.button('Cancel', 'coach-button is-quiet');
       cancel.addEventListener('click', () => {
         editing = null;
@@ -650,7 +725,19 @@ function create(host) {
     fields.append(
         activity.field, amount.field, medicine.field, dose.field, unit.field,
         often.field, remind);
-    node.append(heading, fields, buttons, status);
+    node.append(heading);
+    if (draft) {
+      node.classList.add('is-drafted');
+      const more = drafts.length - 1;
+      node.append(dom.el(
+          'p',
+          'Stellis filled in this goal. Check each value, then add it.' +
+              (more ? ` ${more} more to review.` : ''),
+          'coach-drafted'));
+    } else if (!goal) {
+      node.append(describe());
+    }
+    node.append(fields, buttons, status);
     node.addEventListener('submit', (event) => {
       event.preventDefault();
       const values = {
@@ -663,14 +750,19 @@ function create(host) {
         times_per_week: Number(often.control.value),
         reminder: toggle.checked ? time.value : null,
       };
-      act(() => goal ? dom.api(goalPath(goal), {method: 'PUT', json: values}) :
-                       dom.api('/goals', {method: 'POST', json: values}),
-          status);
+      act(async () => {
+        if (goal) {
+          await dom.api(goalPath(goal), {method: 'PUT', json: values});
+        } else {
+          await dom.api('/goals', {method: 'POST', json: values});
+          if (draft) drafts.shift();
+        }
+      }, status);
     });
     return node;
   }
 
-  return {load};
+  return {load, fill};
 }
 
 let mounted = null;

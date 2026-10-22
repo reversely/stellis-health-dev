@@ -167,6 +167,24 @@ def _clean(fields: dict[str, object]) -> tuple:
     return activity.key, amount, medicine, dose, unit, times, reminder
 
 
+def draft(fields: dict[str, object]) -> dict[str, object]:
+    """Checks selector values proposed for a new goal, without saving them.
+
+    Returns:
+        Checked values, as ``create`` takes them, plus ``title_parts``.
+
+    Raises:
+        ValueError: A value is outside its selector's choices.
+    """
+    activity, amount, medicine, dose, unit, times, reminder = _clean(fields)
+    parts = title_parts(ACTIVITIES[activity], amount, medicine,
+                        dose_text(dose, unit))
+    return {"activity": activity, "amount": amount, "medicine": medicine,
+            "dose_amount": dose, "dose_unit": unit, "times_per_week": times,
+            "reminder": reminder, "title_parts": parts,
+            "title": " ".join(parts)}
+
+
 def create(fields: dict[str, object]) -> dict[str, str]:
     """Adds a goal from selector values.
 
