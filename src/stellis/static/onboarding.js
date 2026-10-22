@@ -320,47 +320,108 @@
     return panel;
   }
 
-  function taskChoice(key) {
-    const label = node('label', null, 'setup-task-choice');
-    const input = node('input');
-    input.type = 'checkbox';
-    input.checked = taskChoices[key] ?? true;
-    taskChoices[key] = input.checked;
-    input.setAttribute('aria-label', 'Suggest tasks');
-    const text = node('span', 'Suggest tasks');
-    text.append(
-        node('small', 'You approve each suggestion before it is added'));
-    label.append(input, text);
-    input.addEventListener('change', () => {
-      taskChoices[key] = input.checked;
-    });
-    return label;
+  /** Labels for the kind of subject each notebook covers. */
+  const KIND_LABELS = {
+    condition: 'Condition',
+    treatment: 'Treatment',
+    objective: 'Goal',
+    symptom: 'Symptom',
+    recovery: 'Recovery',
+  };
+  /** The select value for records left out of every notebook. */
+  const NOT_FILED = 'not-filed';
+
+  /**
+   * Turns a reply from POST /intake/notebooks into the layout the review
+   * screen edits, keeping task choices for notebooks that keep their name.
+   * @param {!Object} result
+   * @param {?Object} before The layout the reply revises, or null.
+   * @return {!Object} {groups, unsorted}
+   */
+  function layoutFrom(result, before) {
+    const tasks = new Map(
+        (before?.groups || [])
+            .map(
+                (group) =>
+                    [group.notebook_name.toLowerCase(), group.suggest_tasks]));
+    const groups =
+        result.groups.slice(0, MAX_NOTEBOOKS)
+            .map(
+                (group, index) => ({
+                  ...group,
+                  proposed_name: group.notebook_name,
+                  include: true,
+                  suggest_tasks: tasks.get(group.notebook_name.toLowerCase()) ??
+                      taskChoices['records-' + index] ?? true,
+                }));
+    return {groups, unsorted: result.unsorted || []};
+  }
+
+  /** The layout as POST /intake/notebooks reads it, for a revision. */
+  function layoutRequest(layout) {
+    return layout.groups.filter((group) => group.include)
+        .map((group) => ({
+               notebook_name: group.notebook_name,
+               kind: group.kind || '',
+               goal: group.goal || '',
+               items:
+                   group.items.map((item) => ({kind: item.kind, id: item.id})),
+               named_by_person: Boolean(group.named_by_person),
+             }));
   }
 
   /**
-   * One proposed notebook: whether to include it, its name, goal, records
-   * and whether it suggests check-ins.
-   * @param {!Object} group A group from POST /intake/notebooks.
-   * @param {number} index
-   * @param {function()} onChange
-   * @return {{card: !Element, read: function(): ?Object}} read returns the
-   *     reviewed group, or null when the person left it out.
+   * One record in the layout, with a select that moves it to another
+   * notebook or out of every notebook.
    */
-  function notebookCard(group, index, onChange) {
-    const key = 'records-' + index;
+  function recordRow(item, here, layout, move) {
+    const row = node('li', null, 'setup-layout-record');
+    const text = node('span', null, 'setup-layout-record-title');
+    text.append(icon('file-text'), node('span', item.title));
+    if (item.date) text.append(node('small', item.date));
+    const where = node('select', null, 'setup-layout-move');
+    where.setAttribute('aria-label', `Notebook for ${item.title}`);
+    layout.groups.forEach((group, index) => {
+      if (!group.include) return;
+      const option = node('option', group.notebook_name || 'New notebook');
+      option.value = String(index);
+      where.append(option);
+    });
+    const loose = node('option', 'Not filed');
+    loose.value = NOT_FILED;
+    where.append(loose);
+    where.value = here;
+    where.addEventListener('change', () => move(item, here, where.value));
+    row.append(text, where);
+    return row;
+  }
+
+  /**
+   * One proposed notebook: whether to include it, its name, kind, goal,
+   * records and whether it suggests check-ins.
+   */
+  function notebookCard(group, index, layout, {move, changed}) {
     const card = node('article', null, 'setup-book setup-record-book');
+    card.classList.toggle('is-left-out', !group.include);
     const include = node('input');
     include.type = 'checkbox';
-    include.checked = true;
+    include.checked = group.include;
     include.setAttribute('aria-label', 'Include this notebook');
     const name = node('input', null, 'setup-book-input');
     name.value = group.notebook_name;
     name.maxLength = 80;
+    name.placeholder = 'Name this notebook';
     name.setAttribute('aria-label', 'Notebook name');
     const choose = node('div', null, 'setup-group-choice');
     choose.append(include, name);
+    if (KIND_LABELS[group.kind]) {
+      choose.append(node('span', KIND_LABELS[group.kind], 'setup-kind'));
+    }
     const head = node('div', null, 'setup-book-name');
     head.append(choose);
+    const problem = node('p', group.problem || '', 'setup-problem');
+    problem.hidden = !group.problem;
+    head.append(problem);
     if (group.reason) head.append(node('p', group.reason, 'setup-hint'));
     const goalLabel = node('label', null, 'setup-goal');
     goalLabel.append(icon('target'), node('span', 'Goal'));
@@ -369,36 +430,115 @@
     goal.maxLength = 200;
     goal.placeholder = 'No goal yet';
     goalLabel.append(goal);
-    card.append(head, goalLabel);
-    if (group.items.length) {
-      const records = node('details');
-      records.append(node('summary', plural(group.items.length, 'record')));
-      const list = node('ul', null, 'setup-source-list');
-      for (const item of group.items) list.append(node('li', item.title));
-      records.append(list);
-      card.append(records);
+    const records = node('ul', null, 'setup-layout-records');
+    for (const item of group.items) {
+      records.append(recordRow(item, String(index), layout, move));
     }
-    card.append(taskChoice(key));
+    if (!group.items.length) {
+      records.append(node('li', 'No records yet', 'setup-layout-empty'));
+    }
+    const tasks = node('label', null, 'setup-task-choice');
+    const tasksInput = node('input');
+    tasksInput.type = 'checkbox';
+    tasksInput.checked = group.suggest_tasks;
+    tasksInput.setAttribute('aria-label', 'Suggest tasks');
+    const tasksText = node('span', 'Suggest tasks');
+    tasksText.append(
+        node('small', 'You approve each suggestion before it is added'));
+    tasks.append(tasksInput, tasksText);
+    card.append(head, goalLabel, records, tasks);
     include.addEventListener('change', () => {
-      card.classList.toggle('is-left-out', !include.checked);
-      onChange();
+      group.include = include.checked;
+      changed(true);
     });
-    name.addEventListener('input', onChange);
-    const read = () => {
-      if (!include.checked || !name.value.trim()) return null;
-      const renamed = name.value.trim() !== group.notebook_name;
-      return {
-        notebook_name: name.value.trim(),
-        notebook_id: renamed ? null : group.notebook_id,
-        items: group.items.map((item) => ({kind: item.kind, id: item.id})),
-        suggest_tasks: taskChoices[key],
-        goal: goal.value.trim(),
-      };
-    };
-    return {card, read};
+    name.addEventListener('input', () => {
+      group.notebook_name = name.value.trim();
+      group.named_by_person = group.notebook_name !== group.proposed_name;
+      // A name the person chose replaces Stellis's check of the old name.
+      problem.hidden = true;
+      changed(false);
+    });
+    goal.addEventListener('input', () => {
+      group.goal = goal.value.trim();
+    });
+    tasksInput.addEventListener('change', () => {
+      group.suggest_tasks = tasksInput.checked;
+    });
+    return {card, name};
   }
 
-  /** Step 4: notebooks proposed from the call and the records. */
+  /** Records in no notebook, each with a select to file it. */
+  function notFiledCard(layout, move) {
+    const card = node('article', null, 'setup-book setup-record-book is-loose');
+    card.append(node('h2', 'Not filed', 'setup-layout-title'));
+    const records = node('ul', null, 'setup-layout-records');
+    for (const item of layout.unsorted) {
+      records.append(recordRow(item, NOT_FILED, layout, move));
+    }
+    card.append(records);
+    return card;
+  }
+
+  /**
+   * The box where the person asks Stellis to change the layout in their
+   * own words, with Stellis's answer and an undo for its last change.
+   */
+  function changeBox({ask, undo}) {
+    const box = node('form', null, 'setup-change');
+    const label = node('label', null, 'setup-change-label');
+    label.append(icon('sparkles'), node('span', 'Ask for changes'));
+    const input = node('input', null, 'setup-change-input');
+    input.id = 'setup-change-input';
+    label.htmlFor = input.id;
+    input.maxLength = 500;
+    input.placeholder =
+        'Rename Diabetes to Blood sugar, or split a notebook in two';
+    const submit = node('button', 'Update', 'primary');
+    submit.type = 'submit';
+    const row = node('div', null, 'setup-change-row');
+    row.append(input, submit);
+    const answer = node('p', '', 'setup-change-answer');
+    answer.role = 'status';
+    const back = button('Undo', undo);
+    back.hidden = true;
+    const foot = node('div', null, 'setup-change-foot');
+    foot.append(answer, back);
+    box.append(label, row, foot);
+    box.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const request = input.value.trim();
+      if (!request) {
+        input.focus();
+        return;
+      }
+      submit.disabled = true;
+      answer.textContent = 'Updating your notebooks';
+      try {
+        await ask(request);
+        input.value = '';
+      } catch (e) {
+        answer.textContent = e.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+    return {
+      box,
+      say(text, canUndo) {
+        answer.textContent = text;
+        back.hidden = !canUndo;
+      },
+      setBusy(busy) {
+        submit.disabled = busy;
+        input.disabled = busy;
+      },
+    };
+  }
+
+  /**
+   * Step 4: notebooks proposed from the call and the records, laid out as
+   * folders. The person edits them directly or asks Stellis for changes.
+   */
   function reviewScreen(scene) {
     const title = node('h1', 'Review your notebooks');
     const subtitle = node('p', 'Reading your notes and records', 'setup-hint');
@@ -407,16 +547,80 @@
     head.append(title, subtitle);
     const grid = node('div', null, 'setup-grid setup-plan');
     const tree = document.querySelector('#setup-tree');
-    let cards = [];
-    const reviewed = () => cards.map((entry) => entry.read()).filter(Boolean);
+    let layout = {groups: [], unsorted: []};
+    /** Layouts before each of Stellis's changes, newest last. */
+    const history = [];
+    const reviewed = () =>
+        layout.groups.filter((group) => group.include && group.notebook_name);
     const finish = button('Open workspace', async () => {
       await saves;
       await save('review');
-      await api('/onboarding/complete', 'POST', {record_groups: reviewed()});
+      await api('/onboarding/complete', 'POST', {
+        record_groups: reviewed().map(
+            (group) => ({
+              notebook_name: group.notebook_name,
+              notebook_id: group.notebook_name === group.proposed_name ?
+                  group.notebook_id :
+                  null,
+              items:
+                  group.items.map((item) => ({kind: item.kind, id: item.id})),
+              suggest_tasks: group.suggest_tasks,
+              goal: group.goal || '',
+            })),
+      });
       location.assign(state.editing ? '/' : '/?tour=1');
     }, 'primary');
     finish.disabled = true;
-    const paint = () => {
+    const add = button('Add a notebook', () => {
+      layout.groups.push({
+        notebook_name: '',
+        proposed_name: '',
+        kind: '',
+        reason: '',
+        goal: '',
+        items: [],
+        include: true,
+        named_by_person: true,
+        suggest_tasks: true,
+      });
+      paint();
+      grid.querySelectorAll('.setup-book-input')[layout.groups.length - 1]
+          ?.focus();
+    });
+    add.prepend(icon('folder-plus'));
+    add.classList.add('setup-add-book');
+    const change = changeBox({
+      async ask(request) {
+        change.setBusy(true);
+        try {
+          const result = await api('/intake/notebooks', 'POST', {
+            request,
+            layout: layoutRequest(layout),
+          });
+          history.push(structuredClone(layout));
+          layout = layoutFrom(result, layout);
+          paint();
+          change.say(
+              [
+                result.reply || 'Stellis updated your notebooks.',
+                result.question
+              ].filter(Boolean)
+                  .join(' '),
+              true);
+        } finally {
+          change.setBusy(false);
+        }
+      },
+      undo() {
+        layout = history.pop() || layout;
+        paint();
+        change.say('Your notebooks are back as they were.', history.length > 0);
+      },
+    });
+    change.box.hidden = true;
+
+    /** Lists the notebooks and their record counts in the side rail. */
+    function paintTree() {
       const groups = reviewed();
       title.textContent =
           groups.length ? 'Review your notebooks' : 'No notebooks yet';
@@ -424,27 +628,67 @@
           `Set up ${plural(groups.length, 'notebook')}` :
           'Open workspace';
       tree.replaceChildren();
-      if (groups.length) {
-        const branch = node('div', null, 'setup-tree-group');
-        branch.append(node('strong', 'Health'));
-        for (const group of groups) {
-          branch.append(node('div', group.notebook_name));
-        }
-        tree.append(branch);
+      if (!groups.length) return;
+      const branch = node('div', null, 'setup-tree-group');
+      branch.append(node('strong', 'Health'));
+      for (const group of groups) {
+        const leaf = node('div', null, 'setup-tree-leaf');
+        leaf.append(
+            icon('folder'), node('span', group.notebook_name),
+            node('small', String(group.items.length)));
+        branch.append(leaf);
       }
-    };
+      tree.append(branch);
+    }
+
+    /** Moves a record from one notebook, or Not filed, to another. */
+    function move(item, from, to) {
+      const take = (list) => list.splice(
+          list.findIndex(
+              (other) => other.kind === item.kind && other.id === item.id),
+          1);
+      take(
+          from === NOT_FILED ? layout.unsorted :
+                               layout.groups[Number(from)].items);
+      (to === NOT_FILED ? layout.unsorted : layout.groups[Number(to)].items)
+          .push(item);
+      paint();
+    }
+
+    function paint() {
+      const cards = layout.groups.map(
+          (group, index) => notebookCard(group, index, layout, {
+            move,
+            changed(structural) {
+              if (structural) {
+                paint();
+                return;
+              }
+              // Record selects name each notebook, so they follow a rename.
+              for (const option of grid.querySelectorAll(
+                       `option[value="${index}"]`)) {
+                option.textContent = group.notebook_name || 'New notebook';
+              }
+              paintTree();
+            },
+          }));
+      grid.replaceChildren(...cards.map((entry) => entry.card));
+      if (layout.unsorted.length) grid.append(notFiledCard(layout, move));
+      add.hidden = layout.groups.length >= MAX_NOTEBOOKS;
+      paintTree();
+    }
+
     const actions = node('div', null, 'setup-actions');
     actions.append(finish, button('Back', () => go('records')));
-    scene.append(head, grid, actions);
+    scene.append(head, change.box, grid, add, actions);
     api('/intake/notebooks', 'POST')
         .then((result) => {
-          const groups = result.groups.slice(0, MAX_NOTEBOOKS);
-          cards =
-              groups.map((group, index) => notebookCard(group, index, paint));
-          grid.replaceChildren(...cards.map((entry) => entry.card));
-          subtitle.textContent = groups.length ?
-              'Check each goal before anything is filed' :
+          layout = layoutFrom(result, null);
+          subtitle.textContent = layout.groups.length ?
+              'Check each name, goal and record before anything is filed' :
               'Stellis sorts records you add later from Records';
+          if (result.question) change.say(result.question, false);
+          change.box.hidden = false;
         })
         .catch((e) => {
           subtitle.textContent = e.message;
