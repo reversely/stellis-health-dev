@@ -167,6 +167,8 @@ Status, 22 Oct 2026: T-08 is built for pulse.
 - On Rouast's sample video 1, looped as a fake camera in headless Chromium, the app read 75 bpm. The clip's ECG heart rate ranges from 75 to 87 bpm, with a mean of 78.1.
 - The page made no requests beyond its own origin.
 
+The live capture design (checks, copy, spoken guidance and assistant instructions) is in `plans/camera-vitals-capture.md`.
+
 That is one clip, so it shows the pipeline works but not its accuracy. Accuracy is T-09's job, and breathing rate waits for T-09. The local POS method returns heart rate only.
 
 Remote photoplethysmography (rPPG) reads the pulse from small colour changes in facial skin on video. A daily 45-second front-camera video gives a passive health reading with no device beyond the phone.
