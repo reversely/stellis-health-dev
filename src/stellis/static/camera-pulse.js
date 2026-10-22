@@ -781,6 +781,7 @@ class PulseDialog {
     // tap, before anything waits.
     this.cue(STAGE_TEXT.camera, true);
     this.state = null;
+    this.gotResult = false;
     this.box = null;
     this.luma = {face: null, frame: null};
     this.lensStage = 'camera';
@@ -815,6 +816,8 @@ class PulseDialog {
       this.state = new CaptureState(performance.now());
       this.sampler = setInterval(() => this.sampleLight(), SAMPLE_MS);
       this.watchdog = setTimeout(() => this.startTimedOut(), FIRST_RESULT_MS);
+      // The capture must settle even when the reader stops emitting events.
+      this.deadline = setTimeout(() => this.captureTimedOut(), MAX_MS);
     } catch (error) {
       this.stop();
       if (error && error.name === 'TimeoutError') {
@@ -870,6 +873,13 @@ class PulseDialog {
     this.failed(
         START_FAILED,
         `no result after ${FIRST_RESULT_MS / 1000} s (last stage: ${stage})`);
+  }
+
+  /** Completes an active capture when its independent deadline expires. */
+  captureTimedOut() {
+    if (this.lens && this.state) {
+      this.finishCapture(this.state.lastResult());
+    }
   }
 
   /** Samples brightness from a small canvas; nothing leaves the device. */
@@ -937,11 +947,16 @@ class PulseDialog {
       this.paintLive(update, samples);
       return;
     }
+    this.finishCapture(update.result);
+  }
+
+  /** @param {!Object} result The completed reading or failure. */
+  finishCapture(result) {
     this.stop();
-    if (update.result.ok) {
-      this.result(update.result);
+    if (result.ok) {
+      this.result(result);
     } else {
-      this.failed(FAILURE_TEXT[update.result.reason]);
+      this.failed(FAILURE_TEXT[result.reason]);
     }
   }
 
@@ -1115,6 +1130,7 @@ class PulseDialog {
   stop() {
     clearInterval(this.sampler);
     clearTimeout(this.watchdog);
+    clearTimeout(this.deadline);
     this.observer?.disconnect();
     if (this.lens) {
       const lens = this.lens;
