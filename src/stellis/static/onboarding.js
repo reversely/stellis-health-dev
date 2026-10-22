@@ -699,12 +699,21 @@
         });
   }
 
-  document.querySelector('#setup-theme').addEventListener('click', () => {
+  const themeButton = document.querySelector('#setup-theme');
+  function syncThemeButton() {
+    const light = document.documentElement.dataset.theme === 'light';
+    const label = `Switch to ${light ? 'dark' : 'light'} mode`;
+    themeButton.setAttribute('aria-label', label);
+    themeButton.title = label;
+  }
+  syncThemeButton();
+  themeButton.addEventListener('click', () => {
     const root = document.documentElement;
     const theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
     // Colours change at once; transitions return two frames later.
     root.classList.add('theme-swapping');
     root.dataset.theme = theme;
+    syncThemeButton();
     requestAnimationFrame(
         () => requestAnimationFrame(
             () => root.classList.remove('theme-swapping')));

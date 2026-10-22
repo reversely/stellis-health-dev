@@ -435,7 +435,7 @@ html[data-theme='dark'] .home-goals {
   display: none;
 }
 .coach-field :is(select, input:not([type='checkbox'])) {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
