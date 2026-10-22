@@ -101,9 +101,9 @@ body.trends-page .heading {
     background-color 120ms;
 }
 .timeline-view button[aria-pressed='true'] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--surface);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 @media (hover: hover) and (pointer: fine) {
   .timeline-view button:hover,
