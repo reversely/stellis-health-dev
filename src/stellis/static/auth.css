@@ -98,3 +98,25 @@ html[data-theme='light'] body.auth-page .brand { color: #2A252F; }
   .auth-main { margin-top: 44px; }
   .auth-card { padding: 24px; }
 }
+
+.auth-card .auth-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-card .auth-check input {
+  width: 20px;
+  min-height: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #413A48;
+  color-scheme: light;
+}
+.auth-hint {
+  margin: -8px 0 6px 30px;
+  font-size: 13px;
+  opacity: 0.75;
+}

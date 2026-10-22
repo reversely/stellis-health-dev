@@ -84,6 +84,8 @@ def _connect() -> Iterator[sqlite3.Connection]:
             conn.execute(f"ALTER TABLE account ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
     if "onboarding_completed" not in account_columns:
         conn.execute("ALTER TABLE account ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 1")
+    if "keep_debug_data" not in account_columns:
+        conn.execute("ALTER TABLE account ADD COLUMN keep_debug_data INTEGER NOT NULL DEFAULT 0")
     conn.execute("""CREATE TABLE IF NOT EXISTS sessions (
         token_hash BLOB PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES account(id),
         expires_at TEXT NOT NULL
@@ -116,7 +118,7 @@ def has_account() -> bool:
         return conn.execute("SELECT 1 FROM account LIMIT 1").fetchone() is not None
 
 
-def register(username: str, password: str) -> str:
+def register(username: str, password: str, keep_debug_data: bool = False) -> str:
     username = username.strip()
     if not 3 <= len(username) <= 80 or len(password) < 12 or len(password) > 1024:
         raise ValueError("Use a username of 3 to 80 characters and a password of at least 12 characters")
@@ -124,8 +126,8 @@ def register(username: str, password: str) -> str:
     stamp = datetime.now(timezone.utc).isoformat()
     with _connect() as conn:
         try:
-            conn.execute("INSERT INTO account (username, salt, verifier, created_at, onboarding_completed) VALUES (?, ?, ?, ?, 0)",
-                         (username, salt, _verifier(password, salt), stamp))
+            conn.execute("INSERT INTO account (username, salt, verifier, created_at, onboarding_completed, keep_debug_data) "
+                         "VALUES (?, ?, ?, ?, 0, ?)", (username, salt, _verifier(password, salt), stamp, int(keep_debug_data)))
         except sqlite3.IntegrityError as exc:
             raise RuntimeError("That username is taken") from exc
     return username
@@ -219,15 +221,29 @@ def _check_password(conn: sqlite3.Connection, password: str, account_id: int = 1
         raise PermissionError("Your current password is incorrect")
 
 
-def profile(account_id: int = 1) -> dict[str, str]:
+def profile(account_id: int = 1) -> dict[str, object]:
     with _connect() as conn:
-        row = conn.execute("SELECT username, name, email FROM account WHERE id = ?", (account_id,)).fetchone()
+        row = conn.execute("SELECT username, name, email, keep_debug_data FROM account WHERE id = ?",
+                           (account_id,)).fetchone()
     if row is None:
         raise LookupError("Account not found")
-    return {"username": row["username"], "name": row["name"], "email": row["email"]}
+    return {"username": row["username"], "name": row["name"], "email": row["email"],
+            "keep_debug_data": bool(row["keep_debug_data"])}
 
 
-def update_profile(name: str, email: str, account_id: int = 1) -> dict[str, str]:
+def keeps_debug_data(account_id: int) -> bool:
+    """Whether the account's owner opted in to keeping debug data."""
+    return bool(profile(account_id)["keep_debug_data"])
+
+
+def set_keep_debug_data(keep: bool, account_id: int = 1) -> dict[str, object]:
+    with _connect() as conn:
+        if not conn.execute("UPDATE account SET keep_debug_data = ? WHERE id = ?", (int(keep), account_id)).rowcount:
+            raise LookupError("Account not found")
+    return profile(account_id)
+
+
+def update_profile(name: str, email: str, account_id: int = 1) -> dict[str, object]:
     name, email = " ".join(name.split()), email.strip()
     if len(name) > 100:
         raise ValueError("Your name must be at most 100 characters")
@@ -239,7 +255,7 @@ def update_profile(name: str, email: str, account_id: int = 1) -> dict[str, str]
     return profile(account_id)
 
 
-def change_username(username: str, password: str, account_id: int = 1) -> dict[str, str]:
+def change_username(username: str, password: str, account_id: int = 1) -> dict[str, object]:
     username = username.strip()
     if not 3 <= len(username) <= 80:
         raise ValueError("Use a username of 3 to 80 characters")

@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stellis import intake, storage
+from stellis import debug_data, intake, storage
 
 _log = logging.getLogger(__name__)
 
@@ -331,6 +331,7 @@ class Call:
         started_at = ended_at - len(segment) / SAMPLE_RATE
         text = await asyncio.to_thread(self.engine.transcribe, segment)
         stt_done = time.perf_counter()
+        await asyncio.to_thread(debug_data.save_answer_audio, segment, SAMPLE_RATE, text)
         if len(text) < 2 or is_echo(text, self.speaking):
             return
         follow_on = (self.answer_ended is not None and self._busy()

@@ -19,6 +19,8 @@ function showMode(createAccount) {
   const invite = document.querySelector('#invite-code');
   invite.hidden = invite.labels[0].hidden = !(createAccount && inviteRequired);
   invite.required = createAccount && inviteRequired;
+  for (const id of ['#keep-debug-label', '#keep-debug-hint'])
+    document.querySelector(id).hidden = !createAccount;
   error.textContent = '';
 }
 
@@ -51,7 +53,8 @@ form.addEventListener('submit', async event => {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({username: document.querySelector('#username').value,
         password: document.querySelector('#password').value,
-        ...(registration && inviteRequired ? {invite_code: document.querySelector('#invite-code').value} : {})}),
+        ...(registration && inviteRequired ? {invite_code: document.querySelector('#invite-code').value} : {}),
+        ...(registration ? {keep_debug_data: document.querySelector('#keep-debug').checked} : {})}),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Sign in failed');

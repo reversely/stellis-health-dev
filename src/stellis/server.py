@@ -90,6 +90,7 @@ class Credentials(BaseModel):
     username: str = Field(min_length=3, max_length=80)
     password: str = Field(min_length=12, max_length=1024)
     invite_code: str | None = Field(default=None, max_length=200)
+    keep_debug_data: bool = False
 
 
 class LoginCredentials(BaseModel):
@@ -137,7 +138,7 @@ def auth_register(credentials: Credentials, request: Request) -> JSONResponse:
     if not auth.invite_accepted(credentials.invite_code):
         raise HTTPException(status_code=403, detail="That invite code is not valid")
     try:
-        username = auth.register(credentials.username, credentials.password)
+        username = auth.register(credentials.username, credentials.password, credentials.keep_debug_data)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -168,6 +169,10 @@ def auth_login(credentials: LoginCredentials, request: Request) -> JSONResponse:
 class ProfileUpdate(BaseModel):
     name: str = Field(max_length=100)
     email: str = Field(max_length=254)
+
+
+class DebugDataChoice(BaseModel):
+    keep: bool
 
 
 class UsernameChange(BaseModel):
@@ -212,19 +217,33 @@ def _account_errors(action):
 
 
 @app.get("/api/v1/account")
-def account_profile(request: Request) -> dict[str, str]:
+def account_profile(request: Request) -> dict[str, object]:
     _, account_id = _account_request(request)
     return _account_errors(lambda: auth.profile(account_id))
 
 
+@app.put("/api/v1/account/debug-data")
+def account_debug_data(request: Request, choice: DebugDataChoice) -> dict[str, object]:
+    _, account_id = _account_request(request)
+    return _account_errors(lambda: auth.set_keep_debug_data(choice.keep, account_id))
+
+
+@app.get("/api/v1/account/debug-data")
+def account_debug_data_download(request: Request) -> Response:
+    from stellis import debug_data
+    _account_request(request)
+    return Response(debug_data.archive(), media_type="application/zip", headers={
+        "Content-Disposition": 'attachment; filename="stellis-debug-data.zip"', "Cache-Control": "no-store"})
+
+
 @app.patch("/api/v1/account")
-def account_update(request: Request, update: ProfileUpdate) -> dict[str, str]:
+def account_update(request: Request, update: ProfileUpdate) -> dict[str, object]:
     _, account_id = _account_request(request)
     return _account_errors(lambda: auth.update_profile(update.name, update.email, account_id))
 
 
 @app.post("/api/v1/account/username")
-def account_username(request: Request, change: UsernameChange) -> dict[str, str]:
+def account_username(request: Request, change: UsernameChange) -> dict[str, object]:
     _, account_id = _account_request(request)
     return _account_errors(lambda: auth.change_username(change.username, change.password, account_id))
 
