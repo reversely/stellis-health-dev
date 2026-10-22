@@ -1,8 +1,8 @@
 {
-  "about": "A full intake call for Denver Lang, the sample patient, following the call plan: goal first, then conditions, medicines, care team, what has helped and reminders. Each turn has both sides and the notepad after it. The simulated call test speaks Denver's lines and checks the transcript, the notes and the proposed notebooks against this script.",
+  "about": "A full intake call for Denver Lang, the sample patient, following the call plan: one question each about the goal, health and reminders, with no follow-up questions, then a goodbye that ends the call. Each turn has both sides and the notepad after it. The simulated call test speaks Denver's lines and checks the transcript, the notes and the proposed notebooks against this script.",
   "turns": [
     {
-      "agent": "Hi, I'm Stellis. In the next five minutes I'll learn what you want help with, your conditions, medicines and care team, and what reminders would help. I'll take notes as we go, and you can edit them. First, what's the main health goal you'd like help with?",
+      "agent": "Hi, I'm Stellis. I'll ask three quick questions, about your goal, your health and reminders, and take notes you can edit. First, what's the main health goal you'd like help with?",
       "person": "Keeping the weight off. I've lost about eight kilos since April last year, and I'd like my knees to stop hurting on the stairs.",
       "notes": [
         {
@@ -15,80 +15,21 @@
       ]
     },
     {
-      "agent": "Eight kilos is real progress. Which knee is it, and how bad is the pain on the stairs now?",
-      "person": "The right one. Physio got it from a six to about a three out of ten.",
+      "agent": "Eight kilos is real progress. Next, your health: which conditions do you have, and which medicines do you take?",
+      "person": "Type two diabetes and high blood pressure, since the eighties. Metformin five hundred in the morning, lisinopril, and simvastatin at night.",
       "notes": [
         {
           "heading": "Goals",
           "items": [
             "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "Physiotherapy for the right knee"
-          ]
-        }
-      ]
-    },
-    {
-      "agent": "That's a big drop. Next, your conditions. Do you have any ongoing conditions I should know about?",
-      "person": "Type two diabetes and high blood pressure, since the eighties. And I had bypass surgery in ninety seven.",
-      "notes": [
-        {
-          "heading": "Goals",
-          "items": [
-            "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
+            "Less knee pain on stairs"
           ]
         },
         {
           "heading": "Conditions",
           "items": [
             "Type 2 diabetes since the 1980s",
-            "High blood pressure since the 1980s",
-            "Heart bypass surgery in 1997"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "Physiotherapy for the right knee"
-          ]
-        }
-      ]
-    },
-    {
-      "agent": "Thank you. What medicines do you take, with the dose and time of day?",
-      "person": "Metformin five hundred in the morning, lisinopril, and simvastatin at night.",
-      "notes": [
-        {
-          "heading": "Goals",
-          "items": [
-            "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
-          ]
-        },
-        {
-          "heading": "Conditions",
-          "items": [
-            "Type 2 diabetes since the 1980s",
-            "High blood pressure since the 1980s",
-            "Heart bypass surgery in 1997"
+            "High blood pressure since the 1980s"
           ]
         },
         {
@@ -96,18 +37,6 @@
           "items": [
             "Metformin 500 mg in the morning",
             "Simvastatin at night"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "Physiotherapy for the right knee"
           ]
         },
         {
@@ -119,182 +48,28 @@
       ]
     },
     {
-      "agent": "Did you say lisinopril, the blood pressure medicine?",
-      "person": "Yes, lisinopril. They stopped my water pill last year because I got dizzy standing up.",
-      "notes": [
-        {
-          "heading": "Goals",
-          "items": [
-            "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
-          ]
-        },
-        {
-          "heading": "Conditions",
-          "items": [
-            "Type 2 diabetes since the 1980s",
-            "High blood pressure since the 1980s",
-            "Heart bypass surgery in 1997"
-          ]
-        },
-        {
-          "heading": "Medicines",
-          "items": [
-            "Metformin 500 mg in the morning",
-            "Simvastatin at night",
-            "Lisinopril",
-            "Water pill stopped in 2024 after dizziness on standing"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "Physiotherapy for the right knee"
-          ]
-        }
-      ]
-    },
-    {
-      "agent": "Got it. Who do you see for your care?",
-      "person": "My family doctor, Doctor Patel, a dietitian, and a personal trainer.",
-      "notes": [
-        {
-          "heading": "Goals",
-          "items": [
-            "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
-          ]
-        },
-        {
-          "heading": "Conditions",
-          "items": [
-            "Type 2 diabetes since the 1980s",
-            "High blood pressure since the 1980s",
-            "Heart bypass surgery in 1997"
-          ]
-        },
-        {
-          "heading": "Medicines",
-          "items": [
-            "Metformin 500 mg in the morning",
-            "Simvastatin at night",
-            "Lisinopril",
-            "Water pill stopped in 2024 after dizziness on standing"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Dr. Patel, family doctor",
-            "Dietitian",
-            "Personal trainer",
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "Physiotherapy for the right knee"
-          ]
-        }
-      ]
-    },
-    {
-      "agent": "What has helped most with your weight and your knee so far?",
-      "person": "The dietitian's plate method, and walking with my trainer.",
-      "notes": [
-        {
-          "heading": "Goals",
-          "items": [
-            "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
-          ]
-        },
-        {
-          "heading": "Conditions",
-          "items": [
-            "Type 2 diabetes since the 1980s",
-            "High blood pressure since the 1980s",
-            "Heart bypass surgery in 1997"
-          ]
-        },
-        {
-          "heading": "Medicines",
-          "items": [
-            "Metformin 500 mg in the morning",
-            "Simvastatin at night",
-            "Lisinopril",
-            "Water pill stopped in 2024 after dizziness on standing"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Dr. Patel, family doctor",
-            "Dietitian",
-            "Personal trainer",
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "The dietitian's plate method",
-            "Walking with his trainer",
-            "Physiotherapy for the right knee"
-          ]
-        }
-      ]
-    },
-    {
-      "agent": "Last one. Would any reminders help, and when?",
+      "agent": "Thank you. Last one: would any reminders help, and when?",
       "person": "A reminder to weigh in on Monday mornings would help.",
       "notes": [
         {
           "heading": "Goals",
           "items": [
             "Keep the weight off, after losing about 8 kg since April 2024",
-            "Less pain in the right knee on stairs, now about 3 out of 10, down from 6"
+            "Less knee pain on stairs"
           ]
         },
         {
           "heading": "Conditions",
           "items": [
             "Type 2 diabetes since the 1980s",
-            "High blood pressure since the 1980s",
-            "Heart bypass surgery in 1997"
+            "High blood pressure since the 1980s"
           ]
         },
         {
           "heading": "Medicines",
           "items": [
             "Metformin 500 mg in the morning",
-            "Simvastatin at night",
-            "Lisinopril",
-            "Water pill stopped in 2024 after dizziness on standing"
-          ]
-        },
-        {
-          "heading": "Care team",
-          "items": [
-            "Dr. Patel, family doctor",
-            "Dietitian",
-            "Personal trainer",
-            "Physiotherapist"
-          ]
-        },
-        {
-          "heading": "What has helped",
-          "items": [
-            "The dietitian's plate method",
-            "Walking with his trainer",
-            "Physiotherapy for the right knee"
+            "Simvastatin at night"
           ]
         },
         {
@@ -302,16 +77,17 @@
           "items": [
             "Weigh in on Monday mornings"
           ]
+        },
+        {
+          "heading": "To confirm",
+          "items": [
+            "Lisinopril"
+          ]
         }
       ]
     },
     {
-      "agent": "Here is what I heard. You want to keep the weight off and ease your right knee on the stairs. You manage diabetes and blood pressure with metformin, lisinopril and simvastatin. You see Dr. Patel, a dietitian, a physiotherapist and a trainer, and you'd like a Monday weigh-in reminder. I'll suggest notebooks for weight and knees, and for diabetes and heart care. Is anything wrong?",
-      "person": "No, that's right.",
-      "notes": "same"
-    },
-    {
-      "agent": "Thank you, Denver. Your notes are ready to review. [END]",
+      "agent": "Thanks, Denver. You want to keep the weight off and ease your knees, you manage diabetes and blood pressure, and you'd like a Monday weigh-in reminder. You can edit your notes, then press Continue to add your records. [END]",
       "person": null,
       "notes": "same"
     }
