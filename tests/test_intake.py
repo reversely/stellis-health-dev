@@ -36,10 +36,13 @@ class ScriptedModel:
     def __init__(self):
         self.notes_calls = 0
 
-    async def stream_tokens(self, messages):
+    async def stream_tokens(self, messages, tools=None):
         answered = sum(m["role"] == "user" for m in messages)
-        for word in re.findall(r"\S+\s*", SCRIPT["turns"][answered]["agent"]):
+        text = SCRIPT["turns"][answered]["agent"]
+        for word in re.findall(r"\S+\s*", text.replace(" [END]", "")):
             yield word
+        if "[END]" in text:
+            yield {"id": "call_1", "name": "end_call", "arguments": {}}
 
     async def complete_json(self, instructions, context, schema, max_tokens):
         if "notebooks" in instructions:
@@ -118,14 +121,14 @@ class ReplyTest(IntakeTestCase):
         return [piece async for piece in intake.reply(timings)]
 
     def test_a_title_before_a_name_does_not_end_a_sentence(self):
-        async def tokens(messages):
+        async def tokens(messages, tools=None):
             yield "You see Dr. Patel and a dietitian. Is that right?"
         with patch.object(intake, "stream_tokens", tokens):
             pieces = asyncio.run(self._collect())
         self.assertEqual(pieces, ["You see Dr. Patel and a dietitian.", "Is that right?"])
 
     def test_a_long_first_clause_is_split_at_its_comma(self):
-        async def tokens(messages):
+        async def tokens(messages, tools=None):
             for word in "You have been working on this for a while, then. Good.".split(" "):
                 yield word + " "
         with patch.object(intake, "stream_tokens", tokens):
@@ -233,8 +236,28 @@ class PlanTest(IntakeTestCase):
         pieces = asyncio.run(self._reply_without_model("Thank you. Your notes are ready."))
         self.assertEqual(pieces[-1], intake.END_MARK)
 
+    def test_end_call_hangs_up_only_at_the_goodbye_step(self):
+        async def hang_up(messages, tools=None):
+            self.assertEqual(tools, [intake.END_CALL])
+            yield "Thanks. Press Continue to add your records."
+            yield {"id": "call_1", "name": "end_call", "arguments": {}}
+
+        async def pieces():
+            with patch.object(intake, "stream_tokens", hang_up):
+                return [piece async for piece in intake.reply()]
+
+        intake.opening()
+        intake.add_person_turn("I want to walk more.")
+        self.assertNotIn(intake.END_MARK, asyncio.run(pieces()))
+        intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 0)
+        intake.add_person_turn("That's all.")
+        asyncio.run(self._reply_without_model("Here is what I heard. Is anything wrong?"))
+        intake.add_person_turn("No, that's right.")
+        self.assertEqual(asyncio.run(pieces()),
+                         ["Thanks.", "Press Continue to add your records.", intake.END_MARK])
+
     async def _reply_without_model(self, text):
-        async def tokens(messages):
+        async def tokens(messages, tools=None):
             yield text
         with patch.object(intake, "stream_tokens", tokens):
             pieces = [piece async for piece in intake.reply()]

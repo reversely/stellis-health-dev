@@ -519,3 +519,19 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* After the call hangs up, Continue is the next step. */
+.onboarding-page button.primary.is-next {
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 30%, transparent);
+  animation: setup-next 1.6s cubic-bezier(0.22, 1, 0.36, 1) 2;
+}
+@keyframes setup-next {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in oklch, var(--accent) 15%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-page button.primary.is-next {
+    animation: none;
+  }
+}
