@@ -212,7 +212,11 @@ class TrendsPage {
         chartApi.SOURCE_LABELS[latest.source];
     const when = `${chartApi.longDate(latestAt)}, ${origin}`;
     const head = dom.el('div', null, 'trend-card-head');
-    head.append(title, figure, dom.el('p', when, 'trend-when'));
+    const whenLine = dom.el('p', when, 'trend-when');
+    if (latest.source === 'camera') {
+      whenLine.append(' ', dom.accuracyNote('camera'));
+    }
+    head.append(title, figure, whenLine);
     if (measure.status in STATUS_TEXT) {
       const status = dom.el('p', null, `trend-status is-${measure.status}`);
       status.append(

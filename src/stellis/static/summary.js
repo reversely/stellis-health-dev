@@ -36,7 +36,9 @@ class SummaryPage {
     const dom = root.StellisDom;
     this.dom = dom;
     const head = dom.el('div', null, 'summary-head');
-    head.append(dom.el('h2', 'Health summary'));
+    head.append(
+        dom.el('h2', 'Health summary'),
+        dom.accuracyNote('summaries', 'Written by a model'));
     this.meta = dom.el('p', null, 'summary-meta');
     this.update = dom.button('Write summary', 'summary-update');
     this.update.addEventListener('click', () => this.refresh());

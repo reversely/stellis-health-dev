@@ -63,7 +63,7 @@ async def session_gate(request: Request, call_next):
         if path.startswith("/api/"):
             return JSONResponse({"detail": "Login required"}, status_code=401)
         return RedirectResponse("/auth", status_code=303)
-    if (request.method == "GET" and not path.startswith("/api/") and path != "/onboarding"
+    if (request.method == "GET" and not path.startswith("/api/") and path not in {"/onboarding", "/accuracy"}
             and auth.needs_onboarding(account_id)):
         return RedirectResponse("/onboarding", status_code=303)
     return await call_next(request)
@@ -813,6 +813,11 @@ def save_calendar_event_notes(request: EventNotesSave) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/accuracy", include_in_schema=False)
+def accuracy_page():
+    return FileResponse(_STATIC / "accuracy.html")
 
 
 @app.get("/onboarding", include_in_schema=False)

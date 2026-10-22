@@ -1,0 +1,140 @@
+/* The Accuracy page (accuracy.html), and the small accuracy notes that
+   link to it from camera readings, transcripts and summaries. */
+.accuracy-page {
+  margin: 0;
+  background: var(--field);
+  color: var(--ink);
+}
+.accuracy {
+  box-sizing: border-box;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  line-height: 1.55;
+}
+.accuracy h1 {
+  margin: 16px 0 8px;
+  font: 300 40px/1.1 Piazzolla, Georgia, serif;
+  letter-spacing: -0.02em;
+}
+.accuracy h2 {
+  margin: 40px 0 8px;
+  font: 300 28px/1.2 Piazzolla, Georgia, serif;
+  scroll-margin-top: 24px;
+}
+.accuracy h3 {
+  margin: 20px 0 6px;
+  font-size: 16px;
+}
+.accuracy-lead {
+  color: var(--muted);
+  font-size: 17px;
+}
+.accuracy nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.accuracy nav a {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+.accuracy a {
+  color: var(--accent);
+}
+.accuracy-back {
+  font-size: 14px;
+  font-weight: 600;
+}
+.accuracy ul {
+  padding-left: 20px;
+}
+.accuracy li + li {
+  margin-top: 4px;
+}
+.accuracy table {
+  width: 100%;
+  margin: 8px 0 12px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.accuracy caption {
+  margin-bottom: 6px;
+  color: var(--muted);
+  text-align: left;
+}
+.accuracy :is(th, td) {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.accuracy th {
+  background: var(--raised);
+}
+.accuracy td:nth-child(2) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.accuracy-updated {
+  margin-top: 40px;
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .accuracy table,
+  .accuracy tbody,
+  .accuracy tr,
+  .accuracy td {
+    display: block;
+  }
+  .accuracy thead {
+    display: none;
+  }
+  .accuracy tr {
+    margin-bottom: 8px;
+  }
+  .accuracy td {
+    border-top: 0;
+  }
+  .accuracy tr td:first-child {
+    border-top: 1px solid var(--line);
+  }
+  .accuracy td:nth-child(2) {
+    white-space: normal;
+  }
+}
+
+/* The note beside an estimate. */
+.accuracy-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.accuracy-note .icon {
+  width: 14px;
+  height: 14px;
+}
+.accuracy-note:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .accuracy-note:hover {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+}

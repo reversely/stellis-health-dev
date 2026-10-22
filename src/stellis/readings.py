@@ -343,6 +343,16 @@ def status(latest: dict[str, object], usual: dict[str, float] | None) -> str:
     return "usual"
 
 
+def _day_totals(points: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Adds up a counted measure's readings per UTC day, oldest first."""
+    totals: dict[str, float] = {}
+    for point in points:
+        day = str(point["time"])[:10]
+        totals[day] = totals.get(day, 0.0) + float(point["value"])
+    return [{"time": day, "value": value, "value2": None}
+            for day, value in totals.items()]
+
+
 def series() -> list[dict[str, object]]:
     """Lists every measure with its readings, usual range and status.
 
@@ -364,7 +374,9 @@ def series() -> list[dict[str, object]]:
     result = []
     for key, measure in MEASURES.items():
         ordered = sorted(points[key], key=lambda point: str(point["time"]))
-        usual = usual_range(ordered)
+        # A counted measure compares day totals, not single entries.
+        compared = _day_totals(ordered) if measure.daily == "sum" else ordered
+        usual = usual_range(compared)
         result.append({
             "key": key,
             "label": measure.label,
@@ -374,6 +386,6 @@ def series() -> list[dict[str, object]]:
             "daily": measure.daily,
             "points": ordered,
             "usual": usual,
-            "status": status(ordered[-1], usual) if ordered else "unknown",
+            "status": status(compared[-1], usual) if compared else "unknown",
         })
     return result

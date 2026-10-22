@@ -98,7 +98,23 @@ function isPlainClick(event) {
       !event.shiftKey && !event.altKey;
 }
 
+/**
+ * Creates the small note that links an estimate to the Accuracy page.
+ * @param {string} section The page section: camera, speech or summaries.
+ * @param {string=} text
+ * @return {!HTMLAnchorElement}
+ */
+function accuracyNote(section, text = 'Estimate') {
+  const link =
+      /** @type {!HTMLAnchorElement} */ (el('a', null, 'accuracy-note'));
+  link.href = `/accuracy#${section}`;
+  link.append(icon('info-circle'), el('span', text));
+  link.title = 'How accurate this is';
+  return link;
+}
+
 const exported = {
+  accuracyNote,
   el,
   button,
   icon,

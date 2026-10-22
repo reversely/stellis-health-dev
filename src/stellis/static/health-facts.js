@@ -58,7 +58,9 @@ class FactsPanel {
     reviewHead.append(this.suggestedTitle, this.acceptAll);
     this.acceptedTitle = dom.el('h4', 'Accepted');
     const head = dom.el('div', null, 'facts-head');
-    head.append(dom.el('h3', 'Health facts'), this.find);
+    head.append(
+        dom.el('h3', 'Health facts'),
+        dom.accuracyNote('summaries', 'Found by a model'), this.find);
     const section = dom.el('section', null, 'facts');
     section.append(
         head, this.status, reviewHead, this.suggested, this.acceptedTitle,

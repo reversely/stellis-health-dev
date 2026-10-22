@@ -675,9 +675,10 @@ class PulseDialog {
     const start = dom.button('Start', 'pulse-primary');
     start.addEventListener('click', () => this.measure());
     this.setStage('intro');
-    this.body.replaceChildren(
-        tips, start,
-        dom.el('p', 'A home estimate for following your trends', 'pulse-note'));
+    const note =
+        dom.el('p', 'A home estimate for following your trends ', 'pulse-note');
+    note.append(dom.accuracyNote('camera', 'About accuracy'));
+    this.body.replaceChildren(tips, start, note);
     start.focus();
   }
 
@@ -1084,7 +1085,8 @@ class PulseDialog {
           'p', 'Measure again sitting still for a closer reading',
           'pulse-note'));
     }
-    this.body.append(error, buttons);
+    this.body.append(
+        dom.accuracyNote('camera', 'About accuracy'), error, buttons);
     save.focus();
   }
 

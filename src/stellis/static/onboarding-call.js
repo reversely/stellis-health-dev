@@ -95,7 +95,10 @@ function render(scene, kit) {
   const transcript = node('ol', null, 'call-transcript');
   transcript.role = 'tabpanel';
   transcript.hidden = true;
-  pad.append(tabs, notes, transcript);
+  const heard =
+      node('p', 'Speech recognition can mishear words. ', 'call-heard');
+  heard.append(root.StellisDom.accuracyNote('speech', 'About accuracy'));
+  pad.append(tabs, notes, transcript, heard);
 
   const actions = node('div', null, 'setup-actions');
   const next = kit.button('Continue', finish, 'primary');

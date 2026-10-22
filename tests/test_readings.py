@@ -97,6 +97,15 @@ class UsualRangeTest(unittest.TestCase):
         self.assertEqual((usual["low2"], usual["high2"]), (80, 80))
         self.assertEqual(readings.status(points[-1], usual), "above")
 
+    def test_a_counted_measure_compares_day_totals(self):
+        points = [_point(f"2026-03-{day:02d}T0{hour}:00:00+00:00", 1)
+                  for day in range(1, 8) for hour in range(8)]
+
+        totals = readings._day_totals(points)
+
+        self.assertEqual([point["value"] for point in totals], [8.0] * 7)
+        self.assertEqual(readings.usual_range(totals)["low"], 8.0)
+
     def test_too_few_readings_have_no_range(self):
         points = [_point(f"2026-03-{day:02d}", 80) for day in range(1, 6)]
 
@@ -245,6 +254,19 @@ class ReadingsApiTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 400, response.text)
         self.assertEqual(
             self.client.delete("/api/v1/readings/missing").status_code, 404)
+
+
+class AccuracyPageTest(unittest.TestCase):
+
+    def test_the_accuracy_page_states_the_camera_error(self):
+        with tempfile.TemporaryDirectory() as folder, mock.patch.dict(
+                os.environ, {"STELLIS_DATA_DIR": folder}), \
+                testclient.TestClient(server.app) as client:
+            page = client.get("/accuracy")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('id="camera"', page.text)
+        self.assertIn("12.3 beats a minute", page.text)
 
 
 if __name__ == "__main__":
