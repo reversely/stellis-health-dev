@@ -10,7 +10,8 @@
 /**
  * Starts a call.
  * @param {function(!Object)} onEvent Receives the server's messages, plus
- *     {type: 'caption', text}, {type: 'level', person, agent},
+ *     {type: 'caption', text, turn} as each piece starts playing,
+ *     {type: 'level', person, agent},
  *     {type: 'mic', ok}, {type: 'closed'} and, once the goodbye has
  *     played, {type: 'ended'}.
  * @return {!Object} Controls: setMuted, setSpeaker, sendText, end.
@@ -90,7 +91,7 @@ function start(onEvent) {
     };
     const wait = (at - context.currentTime) * 1000;
     later(() => {
-      onEvent({type: 'caption', text: piece.text});
+      onEvent({type: 'caption', text: piece.text, turn: piece.turn});
       if (piece.first) send({type: 'playing', turn: piece.turn});
     }, wait);
   }
@@ -124,7 +125,7 @@ function start(onEvent) {
       if (message.audio) {
         pending = {...message, first};
       } else {
-        onEvent({type: 'caption', text: message.text});
+        onEvent({type: 'caption', text: message.text, turn: message.turn});
       }
     } else if (message.type === 'stop') {
       stopSpeech();
