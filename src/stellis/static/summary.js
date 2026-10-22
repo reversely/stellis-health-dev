@@ -42,8 +42,12 @@ class SummaryPage {
     this.meta = dom.el('p', null, 'summary-meta');
     this.update = dom.button('Write summary', 'summary-update');
     this.update.addEventListener('click', () => this.refresh());
+    this.written = dom.el('p', null, 'summary-meta');
+    this.written.hidden = true;
+    const details = dom.el('div');
+    details.append(this.meta, this.written);
     const actions = dom.el('div', null, 'summary-actions');
-    actions.append(this.meta, this.update);
+    actions.append(details, this.update);
     this.status = dom.el('p', null, 'summary-status');
     this.status.setAttribute('role', 'status');
     this.body = dom.el('div', null, 'summary-body');
@@ -69,14 +73,19 @@ class SummaryPage {
     const dom = this.dom;
     if (!summary) {
       this.meta.textContent = 'No summary yet';
+      this.written.hidden = true;
       this.body.replaceChildren(dom.el(
-          'p', 'Write a summary from every document with text',
+          'p', 'Write a summary from your records',
           'summary-empty'));
       return;
     }
     const when = new Date(summary.created_at).toLocaleDateString();
-    this.meta.textContent = `Written ${when} from ${
-        dom.plural(summary.document_count, 'document')}`;
+    this.meta.textContent = summary.selected_document_count == null ?
+        'Document coverage unavailable' :
+        `Excerpts from ${summary.selected_document_count} of ${
+            dom.plural(summary.document_count, 'document')}`;
+    this.written.textContent = `Written ${when}`;
+    this.written.hidden = false;
     this.update.textContent = 'Write again';
     this.body.replaceChildren(
         ...sections(summary.content, summary.citations).map((section) => {
