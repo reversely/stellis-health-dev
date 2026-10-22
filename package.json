@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "build:notes": "esbuild src/stellis/static/notes-editor.js --bundle --minify --format=esm --target=es2022 --legal-comments=external --outfile=src/stellis/static/notes-editor.bundle.js"
+    "build:notes": "esbuild src/stellis/static/notes-editor.js --bundle --minify --format=esm --target=es2022 --legal-comments=external --outfile=src/stellis/static/notes-editor.bundle.js",
+    "vendor:vitallens": "rm -rf src/stellis/static/vendor/vitallens && mkdir -p src/stellis/static/vendor/vitallens && cp node_modules/vitallens/dist/vitallens.browser.js node_modules/vitallens/LICENSE src/stellis/static/vendor/vitallens/ && cp -r node_modules/vitallens/dist/models src/stellis/static/vendor/vitallens/"
   },
   "dependencies": {
     "@lexical/clipboard": "0.52.0",
@@ -18,7 +19,8 @@
     "@lexical/table": "0.52.0",
     "@lexical/utils": "0.52.0",
     "chrono-node": "2.10.3",
-    "lexical": "0.52.0"
+    "lexical": "0.52.0",
+    "vitallens": "0.4.8"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
