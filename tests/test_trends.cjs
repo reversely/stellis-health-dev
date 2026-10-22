@@ -151,36 +151,71 @@ test('the still check measures the last second of movement', () => {
   assert.equal(pulse.stillCheck(old), '');
 });
 
-test('chips pass before the failing check and wait after it', () => {
+test('progress steps follow the capture stage', () => {
   assert.deepEqual(
-      pulse.checkStates(''),
-      {face: 'pass', light: 'pass', still: 'pass', signal: 'pass'});
+      pulse.stepStates('loading'),
+      {camera: 'active', face: 'wait', measuring: 'wait'});
   assert.deepEqual(
-      pulse.checkStates('backlit'),
-      {face: 'pass', light: 'fail', still: 'wait', signal: 'wait'});
+      pulse.stepStates('face'),
+      {camera: 'done', face: 'active', measuring: 'wait'});
+  assert.deepEqual(
+      pulse.stepStates('measuring'),
+      {camera: 'done', face: 'done', measuring: 'active'});
 });
 
 test('a reading is described against the usual range', () => {
   const usual = {low: 60.2, high: 70.4};
-  assert.equal(pulse.usualText(64, usual), 'About your usual (60 to 70)');
-  assert.equal(pulse.usualText(76, usual), 'Higher than your usual (60 to 70)');
-  assert.equal(pulse.usualText(55, usual), 'Lower than your usual (60 to 70)');
+  assert.equal(
+      pulse.usualText(64, usual), 'Within your usual range of 60 to 70');
+  assert.equal(
+      pulse.usualText(76, usual), 'Above your usual range of 60 to 70');
+  assert.equal(
+      pulse.usualText(55, usual), 'Below your usual range of 60 to 70');
   assert.match(pulse.usualText(64, null), /few more readings/);
 });
 
-test('the summary takes the median of the last 20 s of good signal', () => {
+test('without a waveform the summary takes the median estimate', () => {
   const samples = [];
   for (let t = 0; t <= 30000; t += 100) {
     samples.push({t, bpm: t < 5000 ? 90 : 64 + (t % 3)});
   }
   const result = pulse.summarize(samples);
-  assert.deepEqual([result.ok, result.bpm], [true, 65]);
+  assert.deepEqual([result.bpm, result.sure], [65, true]);
   assert.ok(result.quality > 0.8);
   const jumpy = samples.map((s) => ({...s, bpm: 60 + (s.t % 2000) / 100}));
-  assert.deepEqual(
-      [pulse.summarize(jumpy).ok, pulse.summarize(jumpy).reason],
-      [false, 'steady']);
-  assert.equal(pulse.summarize([]).reason, 'steady');
+  assert.equal(pulse.summarize(jumpy).sure, false);
+  assert.equal(pulse.summarize([]).bpm, null);
+});
+
+/**
+ * Makes a pulse-like waveform with noise.
+ * @param {number} bpm
+ * @param {number} noise Noise amplitude against a pulse of 1.
+ * @param {number} seconds
+ * @return {!Array<{t: number, v: number}>} Samples at an uneven 22 to 30
+ *     per second.
+ */
+function waveform(bpm, noise, seconds) {
+  let seed = 7;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const points = [];
+  for (let t = 0; t < seconds; t += 1 / 22 + random() * (1 / 30 - 1 / 22)) {
+    const v = Math.sin(2 * Math.PI * (bpm / 60) * t) +
+        0.4 * Math.sin(4 * Math.PI * (bpm / 60) * t) +
+        noise * (random() - 0.5);
+    points.push({t, v});
+  }
+  return points;
+}
+
+test('the waveform gives the pulse even when it is noisy', () => {
+  assert.equal(pulse.spectralPulse(waveform(72, 0, 20)).bpm, 72);
+  const noisy = pulse.spectralPulse(waveform(72, 3, 20));
+  assert.equal(noisy.bpm, 72);
+  assert.ok(noisy.share < pulse.spectralPulse(waveform(72, 0, 20)).share);
+  assert.equal(pulse.spectralPulse(waveform(72, 0, 5)), null);
+  const summary = pulse.summarize([], waveform(58, 1, 20));
+  assert.deepEqual([summary.bpm, summary.sure], [58, true]);
 });
 
 /**
@@ -217,11 +252,42 @@ test('the countdown pauses while a check fails and then finishes', () => {
   assert.ok(update.goodMs >= pulse.GOOD_MS);
 });
 
-test('a capture that never gets good light names the light', () => {
-  const update = run(() => ({faceLuma: 40, frameLuma: 45}));
+test('poor light keeps measuring and shows advice after 3 s', () => {
+  const state = new pulse.CaptureState(0);
+  const event = {
+    width: 480,
+    height: 640,
+    box: [160, 140, 320, 450],
+    wave: 1,
+    bpm: 66,
+    faceLuma: 40,
+    frameLuma: 45,
+  };
+  const early = state.update({...event, now: 1000});
+  assert.deepEqual([early.stage, early.hint], ['measuring', '']);
+  const later = state.update({...event, now: 4200});
+  assert.equal(later.hint, 'More light on your face gives a better reading');
+});
+
+test('an attempt with no face found asks for the face', () => {
+  const update = run(() => ({box: null}));
   assert.deepEqual(
       [update.done, update.result.ok, update.result.reason],
-      [true, false, 'light']);
+      [true, false, 'face']);
+});
+
+test('a full ring always gives a reading, marked approximate if unsure', () => {
+  const update = run((now) => ({bpm: 50 + (now % 3000) / 50}));
+  assert.deepEqual(
+      [update.done, update.result.ok, update.result.approximate],
+      [true, true, true]);
+  assert.ok(update.goodMs >= pulse.GOOD_MS);
+});
+
+test('running out of time keeps a reading from 15 s of good signal', () => {
+  const update = run((now) => now % 6000 < 1200 ? {} : {box: null});
+  assert.deepEqual([update.done, update.result.ok], [true, true]);
+  assert.ok(update.goodMs < pulse.GOOD_MS);
 });
 
 test('no waveform for three seconds is a missing signal', () => {

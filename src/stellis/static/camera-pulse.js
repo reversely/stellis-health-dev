@@ -4,9 +4,10 @@
  * detection and the pulse method on the device, brightness is sampled from a
  * small canvas, and only the final number and a quality score are saved.
  *
- * The design is in plans/camera-vitals-capture.md. Four checks (face, light,
- * stillness, signal) must pass for the countdown to run; it pauses, without
- * resetting, while one fails.
+ * The design is in plans/camera-vitals-capture.md. The countdown runs while a
+ * face and a pulse signal are found and pauses, without resetting, when
+ * either is lost. Distance, light and movement only lower the quality and
+ * show advice. The reading is the waveform's strongest rhythm.
  */
 (function(root) {
 'use strict';
@@ -16,72 +17,80 @@ const LIBRARY = '/static/vendor/vitallens/vitallens.browser.js';
 const GOOD_MS = 30000;
 /** The longest attempt before the capture gives up. */
 const MAX_MS = 90000;
-/** The reading comes from estimates in this final stretch of good signal. */
+/** The reading comes from this final stretch of good signal. */
 const WINDOW_MS = 20000;
+/** Good signal that still gives a reading when the attempt runs out. */
+const MIN_GOOD_MS = 15000;
+/** Extra measuring time when the first 30 seconds give an unsure reading. */
+const EXTRA_MS = 15000;
 const MIN_ESTIMATES = 10;
-/** The largest spread (10th to 90th percentile) of a steady reading. */
+/** The largest spread (10th to 90th percentile) of sure estimates. */
 const MAX_SPREAD_BPM = 8;
+/**
+ * The smallest share of the waveform's power within 6 bpm of its peak for a
+ * sure reading. Lower shares still give a reading, marked as approximate.
+ */
+const MIN_PEAK_SHARE = 0.3;
 const BPM_BOUNDS = [40, 180];
 /** The oval guide's centre, as fractions of the frame. */
 const OVAL_CENTRE = [0.5, 0.46];
 const CENTRE_TOLERANCE = 0.15;
 /** Face box height as a fraction of the frame height. */
-const FACE_HEIGHT = [0.3, 0.85];
+const FACE_HEIGHT = [0.2, 0.85];
 const LUMA = {
   dark: 70,
   bright: 215,
   backlit: 45
 };
 /** Largest movement of the face centre over a second, as a frame fraction. */
-const MAX_MOVEMENT = 0.04;
+const MAX_MOVEMENT = 0.06;
 /** Waveform samples must have arrived within this time for a signal. */
 const SIGNAL_MS = 3000;
+/** How long an issue lasts before its advice shows. */
+const HINT_MS = 3000;
 const SAMPLE_MS = 400;
+/** The longest wait for the pulse reader to load. */
+const LOAD_MS = 60000;
+/** The longest wait for the pulse reader's first result after it starts. */
+const FIRST_RESULT_MS = 20000;
+const START_FAILED = 'Try again in Chrome or Safari';
 /** Gaps between events longer than this count as this long. */
 const MAX_STEP_MS = 250;
 const SPEAK_GAP_MS = 3000;
 const SPEAK_KEY = 'stellis-pulse-speak';
 const WAVE_SAMPLES = 150;
 
-/** The instruction for each issue. */
-const ISSUES = {
-  none: 'Move your face into the oval',
-  off: 'Move your face into the oval',
-  far: 'Move closer',
-  close: 'Move back a little',
-  dark: 'Find more light',
-  backlit: 'Turn toward the light',
-  bright: 'Too bright, step out of direct sun',
-  moving: 'Hold still',
-  signal: 'Getting your pulse',
+/**
+ * Advice for each issue that lowers the reading's quality. Measuring goes
+ * on during these; the advice shows once an issue lasts HINT_MS.
+ */
+const HINTS = {
+  off: 'Keeping your face in the oval gives a better reading',
+  far: 'Sitting a little closer gives a better reading',
+  close: 'Sitting a little farther back gives a better reading',
+  dark: 'More light on your face gives a better reading',
+  backlit: 'Facing the light gives a better reading',
+  bright: 'Softer light gives a better reading',
+  moving: 'Staying still gives a better reading',
 };
-/** The check each issue belongs to. */
-const CHECK_OF = {
-  none: 'face',
-  off: 'face',
-  far: 'face',
-  close: 'face',
-  dark: 'light',
-  backlit: 'light',
-  bright: 'light',
-  moving: 'still',
-  signal: 'signal',
+/** The status line for each stage of a capture. */
+const STAGE_TEXT = {
+  camera: 'Turning on the camera',
+  loading: 'Getting ready',
+  face: 'Looking for your face',
+  signal: 'Finding your pulse',
+  measuring: 'Measuring your pulse',
 };
-/** The checks in the order they are fixed. */
-const CHECKS = [
-  ['face', 'Face'],
-  ['light', 'Light'],
-  ['still', 'Still'],
-  ['signal', 'Pulse'],
+/** The progress steps beside the camera. */
+const STEPS = [
+  ['camera', 'Camera on'],
+  ['face', 'Face found'],
+  ['measuring', 'Measuring'],
 ];
+/** Advice when an attempt ends without enough signal. */
 const FAILURE_TEXT = {
-  face: 'Your face kept leaving the oval. Prop the phone up and keep your ' +
-      'face inside the oval.',
-  light: 'The light was not good enough. Face a window or lamp, with no ' +
-      'bright light behind you.',
-  still: 'There was too much movement. Rest your arms and hold still.',
-  signal: 'The camera could not pick up your pulse. Try brighter, even light.',
-  steady: 'The reading kept changing. Sit still for a minute, then try again.',
+  face: 'Sit facing the camera with your face in the oval and try again',
+  signal: 'More light on your face helps the camera find your pulse',
 };
 
 /**
@@ -155,13 +164,66 @@ function stillCheck(centres) {
 }
 
 /**
- * Sums up a capture's estimates into one reading.
+ * Finds the pulse as the strongest rhythm in a stretch of waveform. Uses
+ * each sample's own time, because the frame rate varies while measuring.
+ * @param {!Array<{t: number, v: number}>} points Waveform samples; t is in
+ *     seconds.
+ * @return {?{bpm: number, share: number}} share is the part of the power in
+ *     the pulse range that lies within 6 bpm of the peak; null when the
+ *     stretch is shorter than 10 seconds.
+ */
+function spectralPulse(points) {
+  const n = points.length;
+  if (n < 2 || points[n - 1].t - points[0].t < 10) {
+    return null;
+  }
+  const start = points[0].t;
+  const span = points[n - 1].t - start;
+  const mean = points.reduce((sum, point) => sum + point.v, 0) / n;
+  // A Hann window keeps the stretch's ends from adding false rhythms.
+  const windowed = points.map(
+      (point) => (point.v - mean) *
+          (0.5 - 0.5 * Math.cos((2 * Math.PI * (point.t - start)) / span)));
+  const powers = [];
+  for (let bpm = BPM_BOUNDS[0]; bpm <= BPM_BOUNDS[1]; bpm += 0.5) {
+    const omega = (2 * Math.PI * bpm) / 60;
+    let re = 0;
+    let im = 0;
+    for (let i = 0; i < n; i++) {
+      const phase = omega * (points[i].t - start);
+      re += windowed[i] * Math.cos(phase);
+      im -= windowed[i] * Math.sin(phase);
+    }
+    powers.push({bpm, power: re * re + im * im});
+  }
+  const peak =
+      powers.reduce((best, item) => item.power > best.power ? item : best);
+  const total = powers.reduce((sum, item) => sum + item.power, 0);
+  const near = powers.filter((item) => Math.abs(item.bpm - peak.bpm) <= 6)
+                   .reduce((sum, item) => sum + item.power, 0);
+  return {bpm: Math.round(peak.bpm), share: total ? near / total : 0};
+}
+
+/**
+ * Sums up a capture into one reading. The waveform's strongest rhythm gives
+ * the number; the median of vitallens' own estimates stands in when the
+ * waveform is too short.
  * @param {!Array<{t: number, bpm: ?number}>} samples Estimates taken while
  *     every check passed; t is milliseconds of good signal.
- * @return {{ok: boolean, bpm: ?number, quality: number, reason: string}}
- *     reason is '' or 'steady'.
+ * @param {!Array<{t: number, v: number}>=} wave Waveform samples from the
+ *     last stretch of good signal; t is in seconds.
+ * @return {{bpm: ?number, quality: number, sure: boolean}} bpm is null when
+ *     the capture has too little signal.
  */
-function summarize(samples) {
+function summarize(samples, wave = []) {
+  const rhythm = spectralPulse(wave);
+  if (rhythm) {
+    return {
+      bpm: rhythm.bpm,
+      quality: Math.round(rhythm.share * 100) / 100,
+      sure: rhythm.share >= MIN_PEAK_SHARE,
+    };
+  }
   const end = samples.length ? samples[samples.length - 1].t : 0;
   const recent =
       samples
@@ -169,19 +231,29 @@ function summarize(samples) {
           .map((sample) => sample.bpm)
           .sort((a, b) => a - b);
   if (recent.length < MIN_ESTIMATES) {
-    return {ok: false, bpm: null, quality: 0, reason: 'steady'};
+    return {bpm: null, quality: 0, sure: false};
   }
   const at = (fraction) => recent[Math.round((recent.length - 1) * fraction)];
   const bpm = Math.round(at(0.5));
   const spread = at(0.9) - at(0.1);
   const quality = Math.max(0, Math.min(1, 1 - spread / (MAX_SPREAD_BPM * 2.5)));
-  const ok =
-      spread <= MAX_SPREAD_BPM && bpm >= BPM_BOUNDS[0] && bpm <= BPM_BOUNDS[1];
   return {
-    ok,
-    bpm,
+    bpm: bpm >= BPM_BOUNDS[0] && bpm <= BPM_BOUNDS[1] ? bpm : null,
     quality: Math.round(quality * 100) / 100,
-    reason: ok ? '' : 'steady',
+    sure: spread <= MAX_SPREAD_BPM,
+  };
+}
+
+/**
+ * @param {{bpm: number, quality: number, sure: boolean}} summary
+ * @return {{ok: boolean, bpm: number, quality: number, approximate: boolean}}
+ */
+function reading(summary) {
+  return {
+    ok: true,
+    bpm: summary.bpm,
+    quality: summary.quality,
+    approximate: !summary.sure,
   };
 }
 
@@ -199,18 +271,26 @@ class CaptureState {
     this.centres = [];
     this.waveAt = -Infinity;
     this.samples = [];
-    /** Milliseconds each check spent failing. */
-    this.failing = {face: 0, light: 0, still: 0, signal: 0};
+    /** Waveform samples from good signal, newest last. */
+    this.wave = [];
+    /** Milliseconds without a face, and with a face but no pulse signal. */
+    this.missing = {face: 0, signal: 0};
+    /** The current quality issue and when it began. */
+    this.issue = '';
+    this.issueSince = 0;
   }
 
   /**
    * Takes one vitals event.
    * @param {{now: number, box: ?Array<number>, width: number,
    *     height: number, wave: number, bpm: ?number, faceLuma: ?number,
-   *     frameLuma: ?number}} event wave is how many waveform samples
-   *     arrived with the event.
-   * @return {{issue: string, goodMs: number, done: boolean,
-   *     result: ?Object}} result is set once done.
+   *     frameLuma: ?number, waveData: (!Array<number>|undefined),
+   *     waveTimes: (!Array<number>|undefined)}} event wave is how many
+   *     waveform samples arrived with the event; waveData has the samples
+   *     and waveTimes their times in seconds.
+   * @return {{stage: string, hint: string, goodMs: number, done: boolean,
+   *     result: ?Object}} stage is 'face', 'signal' or 'measuring'; hint is
+   *     advice for an issue that has lasted HINT_MS; result is set once done.
    */
   update(event) {
     const step = Math.min(event.now - this.last, MAX_STEP_MS);
@@ -218,8 +298,11 @@ class CaptureState {
     if (event.wave > 0) {
       this.waveAt = event.now;
     }
-    let issue = faceCheck(event.box, event.width, event.height);
-    if (issue) {
+    const face = faceCheck(event.box, event.width, event.height);
+    let stage = 'measuring';
+    let issue = '';
+    if (face === 'none') {
+      stage = 'face';
       this.centres = [];
     } else {
       const [x0, y0, x1, y1] = event.box;
@@ -230,54 +313,103 @@ class CaptureState {
       });
       this.centres =
           this.centres.filter((centre) => centre.t >= event.now - 1000);
-      issue = lightCheck(event.faceLuma, event.frameLuma) ||
-          stillCheck(this.centres) ||
-          (event.now - this.waveAt > SIGNAL_MS ? 'signal' : '');
+      if (event.now - this.waveAt > SIGNAL_MS) {
+        stage = 'signal';
+      }
+      issue = face || lightCheck(event.faceLuma, event.frameLuma) ||
+          stillCheck(this.centres);
     }
-    if (issue) {
-      this.failing[CHECK_OF[issue]] += step;
-    } else {
+    if (stage === 'measuring') {
       this.goodMs += step;
       this.samples.push({t: this.goodMs, bpm: event.bpm});
+      this.addWave(event.waveData, event.waveTimes);
+    } else {
+      this.missing[stage] += step;
     }
+    if (issue !== this.issue) {
+      this.issue = issue;
+      this.issueSince = event.now;
+    }
+    const hint =
+        issue && event.now - this.issueSince >= HINT_MS ? HINTS[issue] : '';
     if (this.goodMs >= GOOD_MS) {
-      return this.finish(summarize(this.samples));
+      const summary = this.summary();
+      if (summary.bpm != null &&
+          (summary.sure || this.goodMs >= GOOD_MS + EXTRA_MS)) {
+        return this.finish(reading(summary));
+      }
     }
     if (event.now - this.start >= MAX_MS) {
-      const worst =
-          Object.entries(this.failing).sort((a, b) => b[1] - a[1])[0][0];
-      return this.finish({ok: false, bpm: null, quality: 0, reason: worst});
+      return this.finish(this.lastResult());
     }
-    return {issue, goodMs: this.goodMs, done: false, result: null};
+    return {stage, hint, goodMs: this.goodMs, done: false, result: null};
+  }
+
+  /**
+   * Keeps the last WINDOW_MS of good waveform.
+   * @param {!Array<number>|undefined} values
+   * @param {!Array<number>|undefined} times Seconds, one per value.
+   */
+  addWave(values, times) {
+    if (!values || !times || values.length !== times.length) {
+      return;
+    }
+    values.forEach((v, i) => this.wave.push({t: times[i], v}));
+    const from = this.wave[this.wave.length - 1].t - WINDOW_MS / 1000;
+    const first = this.wave.findIndex((point) => point.t >= from);
+    this.wave.splice(0, Math.max(0, first));
+  }
+
+  /** @return {{bpm: ?number, quality: number, sure: boolean}} */
+  summary() {
+    return summarize(this.samples, this.wave);
+  }
+
+  /**
+   * The result when time runs out: a reading from enough good signal,
+   * otherwise the check that failed longest.
+   * @return {!Object}
+   */
+  lastResult() {
+    const summary = this.summary();
+    if (this.goodMs >= MIN_GOOD_MS && summary.bpm != null) {
+      return reading(summary);
+    }
+    return {
+      ok: false,
+      reason: this.missing.face > this.missing.signal ? 'face' : 'signal',
+    };
   }
 
   /**
    * @param {!Object} result
-   * @return {{issue: string, goodMs: number, done: boolean, result: !Object}}
+   * @return {{stage: string, hint: string, goodMs: number, done: boolean,
+   *     result: !Object}}
    */
   finish(result) {
-    return {issue: '', goodMs: this.goodMs, done: true, result};
+    return {
+      stage: 'measuring',
+      hint: '',
+      goodMs: this.goodMs,
+      done: true,
+      result
+    };
   }
 }
 
 /**
- * Gives each check chip its state for an issue: checks before the failing
- * one pass, the failing one fails, later ones wait.
- * @param {string} issue A key of ISSUES, or '' when all pass.
- * @return {!Object<string, string>} 'pass', 'fail' or 'wait' by check.
+ * Marks each progress step for a capture stage.
+ * @param {string} stage A key of STAGE_TEXT.
+ * @return {!Object<string, string>} 'done', 'active' or 'wait' by step.
  */
-function checkStates(issue) {
-  const failing = issue ? CHECK_OF[issue] : '';
+function stepStates(stage) {
+  const order = ['camera', 'face', 'measuring'];
+  const reached = {camera: 0, loading: 0, face: 1, signal: 2, measuring: 2};
+  const at = reached[stage] ?? 0;
   const states = {};
-  let seen = false;
-  for (const [key] of CHECKS) {
-    if (key === failing) {
-      states[key] = 'fail';
-      seen = true;
-    } else {
-      states[key] = seen ? 'wait' : 'pass';
-    }
-  }
+  order.forEach((step, index) => {
+    states[step] = index < at ? 'done' : index === at ? 'active' : 'wait';
+  });
   return states;
 }
 
@@ -289,16 +421,16 @@ function checkStates(issue) {
  */
 function usualText(bpm, usual) {
   if (!usual) {
-    return 'Your usual range appears after a few more readings';
+    return 'Your usual range shows after a few more readings';
   }
   const range = `${Math.round(usual.low)} to ${Math.round(usual.high)}`;
   if (bpm > usual.high) {
-    return `Higher than your usual (${range})`;
+    return `Above your usual range of ${range}`;
   }
   if (bpm < usual.low) {
-    return `Lower than your usual (${range})`;
+    return `Below your usual range of ${range}`;
   }
-  return `About your usual (${range})`;
+  return `Within your usual range of ${range}`;
 }
 
 /**
@@ -309,13 +441,56 @@ function usualText(bpm, usual) {
 function cameraError(error) {
   const name = error && error.name;
   if (name === 'NotAllowedError' || name === 'SecurityError') {
-    return 'Camera access is blocked. Allow the camera for this site, ' +
-        'then try again.';
+    return 'Allow the camera in your browser settings and try again';
   }
   if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-    return 'No camera was found on this device.';
+    return 'Connect a camera to measure your pulse';
   }
-  return 'The camera reading could not start. Try again.';
+  return 'Try again in a moment';
+}
+
+/**
+ * Sets an element's text when it changes, so screen readers hear changes
+ * only.
+ * @param {?Element} element
+ * @param {string} text
+ */
+function setText(element, text) {
+  if (element && element.textContent !== text) {
+    element.textContent = text;
+  }
+}
+
+/**
+ * @param {*} error
+ * @return {string} The error's name and message, for the details line.
+ */
+function describe(error) {
+  if (!error) {
+    return 'unknown error';
+  }
+  return [error.name, error.message].filter(Boolean).join(': ') ||
+      String(error);
+}
+
+/**
+ * Rejects with a TimeoutError when a promise takes too long.
+ * @param {!Promise<T>} promise
+ * @param {number} ms
+ * @param {string} what
+ * @return {!Promise<T>}
+ * @template T
+ */
+function withTimeout(promise, ms, what) {
+  let timer;
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`${what} took longer than ${ms} ms`);
+      error.name = 'TimeoutError';
+      reject(error);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /** @return {?SpeechSynthesisVoice} An on-device English voice, if any. */
@@ -449,10 +624,10 @@ class PulseDialog {
     const dom = this.dom;
     const tips = dom.el('ul', null, 'pulse-tips');
     for (const text
-             of ['Sit down and rest for a minute first',
-                 'Face a window or lamp',
-                 'Keep your face in the oval for about 30 seconds',
-                 'The video stays on this device. Only the number is saved.',
+             of ['Rest for a minute before you start',
+                 'Sit facing a window or lamp',
+                 'Hold still for about 30 seconds',
+                 'The video stays on this device',
     ]) {
       tips.append(dom.el('li', text));
     }
@@ -461,9 +636,7 @@ class PulseDialog {
     this.setStage('intro');
     this.body.replaceChildren(
         tips, start,
-        dom.el(
-            'p', 'A wellness estimate, not a medical measurement.',
-            'pulse-note'));
+        dom.el('p', 'A home estimate for following your trends', 'pulse-note'));
     start.focus();
   }
 
@@ -497,18 +670,18 @@ class PulseDialog {
     this.caption.setAttribute('aria-hidden', 'true');
     stage.append(this.video, svg, this.caption);
 
-    this.status = dom.el('p', 'Starting the camera', 'pulse-status');
+    this.status = dom.el('p', null, 'pulse-status');
     this.status.setAttribute('role', 'status');
-    const checks = dom.el('ul', null, 'pulse-checks');
-    checks.setAttribute('aria-label', 'Checks');
-    this.chips = {};
-    for (const [key, label] of CHECKS) {
-      const chip = dom.el('li', null, 'pulse-check');
-      chip.dataset.state = 'wait';
-      chip.append(
-          dom.el('span', null, 'pulse-check-dot'), dom.el('span', label));
-      this.chips[key] = chip;
-      checks.append(chip);
+    this.hint = dom.el('p', null, 'pulse-hint');
+    const steps = dom.el('ol', null, 'pulse-steps');
+    steps.setAttribute('aria-label', 'Progress');
+    this.steps = {};
+    for (const [key, label] of STEPS) {
+      const step = dom.el('li', null, 'pulse-step');
+      step.append(
+          dom.el('span', null, 'pulse-step-dot'), dom.el('span', label));
+      this.steps[key] = step;
+      steps.append(step);
     }
     this.wave =
         /** @type {!HTMLCanvasElement} */ (
@@ -522,7 +695,7 @@ class PulseDialog {
     cancel.addEventListener('click', () => this.dialog.close());
     buttons.append(cancel);
     const panel = dom.el('div', null, 'pulse-panel');
-    panel.append(this.status, checks, this.wave, buttons);
+    panel.append(steps, this.status, this.hint, this.wave, buttons);
     const layout = dom.el('div', null, 'pulse-live');
     layout.append(stage, panel);
     this.body.replaceChildren(layout);
@@ -564,14 +737,27 @@ class PulseDialog {
     this.live();
     // Safari speaks only after a tap, so the first cue runs inside the Start
     // tap, before anything waits.
-    this.cue('Starting the camera', true);
+    this.cue(STAGE_TEXT.camera, true);
     this.state = null;
     this.box = null;
     this.luma = {face: null, frame: null};
+    this.lensStage = 'camera';
+    this.measuringSaid = false;
     try {
+      this.showStage('camera', 'Choose Allow if your browser asks');
       this.stream = await navigator.mediaDevices.getUserMedia(
           {video: {facingMode: 'user', width: {ideal: 640}}, audio: false});
-      const {VitalLens} = await import(LIBRARY);
+      if (!this.dialog.open) {
+        this.stop();
+        return;
+      }
+      // Show the camera at once, so the person sees it working while the
+      // pulse reader loads.
+      this.video.srcObject = this.stream;
+      this.video.play().catch(() => {});
+      this.showStage('loading');
+      this.lensStage = 'loading';
+      const {VitalLens} = await withTimeout(import(LIBRARY), LOAD_MS, 'load');
       if (!this.dialog.open) {
         this.stop();
         return;
@@ -579,14 +765,69 @@ class PulseDialog {
       // POS runs on the device; the API method would upload video.
       this.lens = new VitalLens({method: 'pos'});
       this.lens.addEventListener('vitals', (result) => this.onVitals(result));
+      this.lens.addEventListener('status', (event) => this.onLensStatus(event));
       await this.lens.setVideoStream(this.stream, this.video);
       this.lens.startVideoStream();
+      this.lensStage = 'starting';
+      this.showStage('face');
       this.state = new CaptureState(performance.now());
       this.sampler = setInterval(() => this.sampleLight(), SAMPLE_MS);
+      this.watchdog = setTimeout(() => this.startTimedOut(), FIRST_RESULT_MS);
     } catch (error) {
       this.stop();
-      this.failed(cameraError(error));
+      if (error && error.name === 'TimeoutError') {
+        this.failed(
+            'Check your internet connection and try again',
+            `load timed out after ${LOAD_MS / 1000} s`);
+      } else if (this.lensStage === 'camera') {
+        this.failed(cameraError(error), describe(error));
+      } else {
+        this.failed(START_FAILED, `${this.lensStage}: ${describe(error)}`);
+      }
     }
+  }
+
+  /**
+   * Shows a capture stage in the status line and the progress steps.
+   * @param {string} stage A key of STAGE_TEXT.
+   * @param {string=} hint Advice under the status line.
+   * @param {string=} text Status text in place of the stage's own.
+   */
+  showStage(stage, hint = '', text = STAGE_TEXT[stage]) {
+    setText(this.status, text);
+    setText(this.hint, hint);
+    const states = stepStates(stage);
+    for (const [key] of STEPS) {
+      this.steps[key].dataset.state = states[key];
+    }
+  }
+
+  /**
+   * Follows the pulse reader's start-up and fails on its errors.
+   * @param {*} event A vitallens status event.
+   */
+  onLensStatus(event) {
+    const stage = event && event.stage;
+    if (!stage || !this.lens) {
+      return;
+    }
+    this.lensStage = stage;
+    if (stage === 'detectorFailed' || stage === 'startFailed') {
+      this.stop();
+      this.failed(START_FAILED, `${stage}: ${event.reason || ''}`);
+    }
+  }
+
+  /** Ends a capture whose pulse reader never sent a result. */
+  startTimedOut() {
+    if (!this.lens || this.gotResult) {
+      return;
+    }
+    const stage = this.lensStage;
+    this.stop();
+    this.failed(
+        START_FAILED,
+        `no result after ${FIRST_RESULT_MS / 1000} s (last stage: ${stage})`);
   }
 
   /** Samples brightness from a small canvas; nothing leaves the device. */
@@ -630,6 +871,7 @@ class PulseDialog {
     if (!this.lens || !this.state) {
       return;
     }
+    this.gotResult = true;
     const coordinates = result?.face?.coordinates;
     this.box = coordinates && coordinates.length ?
         coordinates[coordinates.length - 1] :
@@ -643,6 +885,8 @@ class PulseDialog {
       width: this.video.videoWidth,
       height: this.video.videoHeight,
       wave: samples.length,
+      waveData: samples,
+      waveTimes: Array.isArray(result?.time) ? result.time : undefined,
       bpm: heart && Number.isFinite(heart.value) ? heart.value : null,
       faceLuma: this.luma.face,
       frameLuma: this.luma.frame,
@@ -664,20 +908,20 @@ class PulseDialog {
    * @param {!Array<number>} samples New waveform samples.
    */
   paintLive(update, samples) {
-    const measuring = !update.issue;
-    const left = Math.ceil((GOOD_MS - update.goodMs) / 1000);
-    const text = measuring ? `Hold still · ${left} s` : ISSUES[update.issue];
-    if (this.status.textContent !== text) {
-      this.status.textContent = text;
+    const measuring = update.stage === 'measuring';
+    let text = STAGE_TEXT[update.stage];
+    if (measuring) {
+      const left = Math.ceil((GOOD_MS - update.goodMs) / 1000);
+      text = left > 0 ? `About ${left} seconds left` : 'Almost done';
+      if (!this.measuringSaid) {
+        this.measuringSaid = true;
+        this.cue(STAGE_TEXT.measuring, true);
+      }
     }
-    this.cue(measuring ? 'Hold still' : ISSUES[update.issue]);
+    this.showStage(update.stage, update.hint, text);
     this.dialog.classList.toggle('is-measuring', measuring);
     const progress = Math.min(update.goodMs / GOOD_MS, 1) * 100;
     this.ring.setAttribute('stroke-dasharray', `${progress.toFixed(1)} 100`);
-    const states = checkStates(update.issue);
-    for (const [key] of CHECKS) {
-      this.chips[key].dataset.state = states[key];
-    }
     this.drawWave(samples);
   }
 
@@ -755,7 +999,7 @@ class PulseDialog {
   result(summary) {
     const dom = this.dom;
     this.setStage('done');
-    this.cue(`Done. ${summary.bpm} beats per minute.`, true);
+    this.cue(`Your pulse is ${summary.bpm} beats per minute`, true);
     const figure = dom.el('p', null, 'pulse-figure');
     figure.append(
         dom.el('span', String(summary.bpm), 'pulse-value'),
@@ -788,26 +1032,41 @@ class PulseDialog {
     buttons.append(save, again);
     this.body.replaceChildren(
         dom.el('p', 'Your pulse', 'pulse-label'), figure,
-        dom.el('p', usualText(summary.bpm, this.usual), 'pulse-usual'), error,
-        buttons);
+        dom.el('p', usualText(summary.bpm, this.usual), 'pulse-usual'));
+    if (summary.approximate) {
+      this.body.append(dom.el(
+          'p', 'Measure again sitting still for a closer reading',
+          'pulse-note'));
+    }
+    this.body.append(error, buttons);
     save.focus();
   }
 
   /** @param {string} message */
-  failed(message) {
+  /**
+   * @param {string} message What happened and what to do.
+   * @param {string=} details A technical reason, shown small for bug reports.
+   */
+  failed(message, details = '') {
     const dom = this.dom;
     this.setStage('done');
+    this.gotResult = false;
     const retry = dom.button('Try again', 'pulse-primary');
     retry.addEventListener('click', () => this.measure());
     this.body.replaceChildren(
-        dom.el('p', 'No steady reading', 'pulse-label'),
+        dom.el('p', 'No reading yet', 'pulse-label'),
         dom.el('p', message, 'pulse-message'), retry);
+    if (details) {
+      console.warn('Camera pulse:', details);
+      this.body.append(dom.el('p', `Details: ${details}`, 'pulse-details'));
+    }
     retry.focus();
   }
 
   /** Stops the camera, the light sampler and vitallens. */
   stop() {
     clearInterval(this.sampler);
+    clearTimeout(this.watchdog);
     this.observer?.disconnect();
     if (this.lens) {
       const lens = this.lens;
@@ -844,13 +1103,14 @@ const exported = {
   CaptureState,
   GOOD_MS,
   MAX_MS,
-  checkStates,
+  stepStates,
   faceCheck,
   lightCheck,
   open,
   ovalPath,
   speakChosen,
   stillCheck,
+  spectralPulse,
   summarize,
   supported,
   usualText,
