@@ -109,7 +109,7 @@ html[data-theme='dark'] .home-goals {
 }
 .overview {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
@@ -470,12 +470,10 @@ html[data-theme='dark'] .home-goals {
 
 @media (max-width: 760px) {
   .overview {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
-  .overview-stat:nth-child(3) {
+  .overview-stat + .overview-stat {
     border-left: 0;
-  }
-  .overview-stat:nth-child(n + 3) {
     border-top: 1px solid var(--line-soft);
   }
   .overview-stat {
@@ -561,4 +559,10 @@ html[data-theme='dark'] .home-goals {
 }
 .coach-overview-head .coach-title {
   margin: 0;
+}
+
+.overview-vitals {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
 }

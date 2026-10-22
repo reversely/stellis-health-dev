@@ -1,6 +1,6 @@
 /**
  * @fileoverview Health overview and goals on Home. From top to bottom:
- * reminder banners that are due now, a card of four latest readings with
+ * reminder banners that are due now, grouped latest readings with
  * small trend lines, one card per goal with a 6-week bar chart, and a form
  * that builds a goal from selectors. Every block reloads from GET /goals
  * after each change.
@@ -13,7 +13,7 @@ const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
   'Dec'
 ];
-const OVERVIEW = ['pulse', 'blood_pressure', 'sleep', 'weight'];
+const OVERVIEW = ['blood_pressure', 'sleep', 'weight'];
 const OVERVIEW_LABELS = {
   pulse: 'Resting pulse'
 };
@@ -356,7 +356,7 @@ function create(host) {
       start.addEventListener('click', () => call('call', false));
       head.append(start);
     }
-    parts.push(head, overview());
+    parts.push(head, vitalSigns(), overview());
     const goalsHead = dom.el('div', null, 'coach-section-head');
     goalsHead.append(dom.el('h3', 'Goals'));
     if (data.goals.length && !adding) {
@@ -434,11 +434,25 @@ function create(host) {
     return node;
   }
 
-  /** Four latest readings with trend lines. */
-  function overview() {
+  /** Groups the readings from one camera capture under one action. */
+  function vitalSigns() {
+    const camera = root.StellisCameraPulse;
+    const section = dom.el('section', null, 'overview-vitals');
+    section.setAttribute('aria-labelledby', 'home-vital-signs');
+    const head = dom.el('div', null, 'vital-signs-head');
+    const title = dom.el('h3', 'Vital signs');
+    title.id = 'home-vital-signs';
+    head.append(title);
+    if (camera) head.append(camera.logButton(() => load(), measures, 'coach-button'));
+    section.append(head, overview(camera?.MEASURE_KEYS || []));
+    return section;
+  }
+
+  /** Shows the latest readings and their trend lines. */
+  function overview(keys = OVERVIEW) {
     const card = dom.el('section', null, 'overview');
     card.setAttribute('aria-label', 'Latest readings');
-    for (const key of OVERVIEW) {
+    for (const key of keys) {
       const measure = measures.find((m) => m.key === key);
       if (!measure) continue;
       const stat = dom.el('div', null, 'overview-stat');
@@ -447,13 +461,7 @@ function create(host) {
       const last = measure.points.at(-1);
       if (!last) {
         stat.append(dom.el('span', 'No readings yet', 'overview-empty'));
-        const camera = root.StellisCameraPulse;
-        if (key === 'pulse' && camera?.supported()) {
-          const measureButton = dom.button('Measure with camera', 'coach-link');
-          measureButton.addEventListener(
-              'click', () => camera.open(() => load(), measure));
-          stat.append(measureButton);
-        } else {
+        if (!root.StellisCameraPulse?.MEASURE_KEYS.includes(key)) {
           const link = /** @type {!HTMLAnchorElement} */ (
               dom.el('a', 'Add a reading', 'coach-link'));
           link.href = '/trends';
@@ -524,11 +532,7 @@ function create(host) {
     const [one] = goal.noun;
     if (goal.measure === 'pulse') {
       const camera = root.StellisCameraPulse;
-      const pulse = measures.find((m) => m.key === 'pulse');
-      const button = dom.button('Measure pulse', 'coach-button');
-      button.disabled = !camera?.supported();
-      button.addEventListener('click', () => camera.open(() => load(), pulse));
-      return button;
+      return camera.logButton(() => load(), measures, 'coach-button');
     }
     if (goal.measure && !goal.done_today) {
       const button = dom.button(

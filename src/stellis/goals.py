@@ -67,7 +67,7 @@ ACTIVITIES = {
         Activity("medicine", "Take a medicine", (), "", ("dose", "doses")),
         Activity("blood_pressure", "Check blood pressure", (), "",
                  ("reading", "readings"), "blood_pressure"),
-        Activity("pulse", "Check pulse with camera", (), "",
+        Activity("pulse", "Log vital signs", (), "",
                  ("check", "checks"), "pulse"),
         Activity("sleep", "Sleep", (6, 6.5, 7, 7.5, 8, 8.5, 9), "hours",
                  ("night", "nights"), "sleep"),
@@ -346,7 +346,7 @@ def reminder_question(activity: Activity, amount: float | None,
     if activity.key == "blood_pressure":
         return ["Did you check your blood pressure yet?"]
     if activity.key == "pulse":
-        return ["Did you check your pulse yet?"]
+        return ["Have you logged your vital signs?"]
     return [f"Did you {activity.label.lower()} for", f"{amount:g} {activity.unit}",
             "yet?"]
 
