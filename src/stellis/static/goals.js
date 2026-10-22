@@ -480,6 +480,7 @@ class GoalsPanel {
             dom.el('span', ` ${measure.unit}`, 'reading-unit'));
         tile.append(
             value, dom.el('span', shortDate(last.time), 'reading-date'));
+        if (last.source === 'camera') tile.append(dom.accuracyNote('camera'));
       } else {
         tile.append(dom.el('span', 'No readings yet', 'reading-date'));
       }
