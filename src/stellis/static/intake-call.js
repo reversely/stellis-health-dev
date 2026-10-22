@@ -86,6 +86,7 @@ function start(onEvent) {
     sources.push(source);
     source.onended = () => {
       sources = sources.filter((item) => item !== source);
+      if (!sources.length) send({type: 'played'});
     };
     const wait = (at - context.currentTime) * 1000;
     later(() => {
