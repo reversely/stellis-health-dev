@@ -4,17 +4,17 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from stellis import agent_templates, agents, agent_runtime, auth, collections, notebooks, pages, runtime_profile, runtime_settings, storage
+from stellis import agents, agent_runtime, auth, collections, notebooks, pages, runtime_profile, runtime_settings, storage
 
 _LOCK = threading.Lock()
 USES = [
-    {"id":"meetings", "name":"Meetings", "icon":"microphone", "collection":"Work", "notebook":"Meetings", "agents":["steward"], "description":"Keep recordings, notes and to-dos together."},
-    {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning", "agents":["steward","tutor"], "description":"Learn a topic one step at a time with a tutor."},
-    {"id":"projects", "name":"Projects", "icon":"folder", "collection":"Work", "notebook":"Projects", "agents":["steward","writing"], "description":"Give a project its own notes, sources and agents."},
-    {"id":"home", "name":"Home projects", "icon":"folder-plus", "collection":"Home", "notebook":"Home projects", "agents":["steward"], "description":"Keep plans, decisions and next steps in one place."},
-    {"id":"family", "name":"Family", "icon":"calendar", "collection":"Home", "notebook":"Family", "agents":["steward","schedule"], "description":"Organize shared plans and the details you want to remember."},
-    {"id":"research", "name":"Deep research", "icon":"search", "collection":"Work", "notebook":"Research", "agents":["steward","research"], "description":"Ask an agent to investigate and cite its sources."},
-    {"id":"slides", "name":"Slide decks", "icon":"layout-dashboard", "collection":"Work", "notebook":"Presentations", "agents":["steward","slides"], "description":"Turn notebook sources into a first slide deck."},
+    {"id":"meetings", "name":"Meetings", "icon":"microphone", "collection":"Work", "notebook":"Meetings", "description":"Keep recordings, notes and to-dos together."},
+    {"id":"learning", "name":"Learning", "icon":"notebook", "collection":"Learning", "notebook":"Learning", "description":"Learn a topic one step at a time with a tutor."},
+    {"id":"projects", "name":"Projects", "icon":"folder", "collection":"Work", "notebook":"Projects", "description":"Give a project its own notes, sources and agents."},
+    {"id":"home", "name":"Home projects", "icon":"folder-plus", "collection":"Home", "notebook":"Home projects", "description":"Keep plans, decisions and next steps in one place."},
+    {"id":"family", "name":"Family", "icon":"calendar", "collection":"Home", "notebook":"Family", "description":"Organize shared plans and the details you want to remember."},
+    {"id":"research", "name":"Deep research", "icon":"search", "collection":"Work", "notebook":"Research", "description":"Ask an agent to investigate and cite its sources."},
+    {"id":"slides", "name":"Slide decks", "icon":"layout-dashboard", "collection":"Work", "notebook":"Presentations", "description":"Turn notebook sources into a first slide deck."},
 ]
 
 
@@ -42,7 +42,7 @@ def reopen(account_id):
     with _LOCK:
         state = _read()
         if not auth.needs_onboarding(account_id) and not state.get("editing"):
-            state.update(step="welcome", editing=True, uses=[], agent_choices={}, task_choices={}, scan=None)
+            state.update(step="welcome", editing=True, uses=[], task_choices={}, scan=None)
             _save(state)
             from stellis import intake
             intake.reset()
@@ -63,7 +63,7 @@ def status(account_id):
             "managed":runtime_profile.shared_provider_keys()}
 
 
-def choose(account_id, uses, step, agent_choices=None, task_choices=None):
+def choose(account_id, uses, step, task_choices=None):
     _require(account_id)
     if any(item not in {entry["id"] for entry in USES} for item in uses):
         raise ValueError("Choose a listed use")
@@ -72,19 +72,8 @@ def choose(account_id, uses, step, agent_choices=None, task_choices=None):
                 not isinstance(key, str) or not 1 <= len(key) <= 100 or type(value) is not bool
                 for key, value in task_choices.items()):
             raise ValueError("Choose whether each notebook suggests tasks")
-    if agent_choices is not None:
-        if not isinstance(agent_choices, dict) or len(agent_choices) > 32:
-            raise ValueError("Choose agents for the proposed notebooks")
-        allowed = set(agent_templates.TEMPLATES)
-        for key, values in agent_choices.items():
-            if not isinstance(key, str) or len(key) > 100 or not isinstance(values, list) or len(values) > len(allowed):
-                raise ValueError("Invalid notebook agent selection")
-            if any(not isinstance(value, str) or value not in allowed for value in values):
-                raise ValueError("Choose an available agent template")
     with _LOCK:
         state = _read(); state.update(uses=list(dict.fromkeys(uses)),step=step)
-        if agent_choices is not None:
-            state["agent_choices"] = {key:list(dict.fromkeys(values)) for key,values in agent_choices.items()}
         if task_choices is not None:
             state['task_choices'] = dict(task_choices)
         _save(state)
@@ -114,14 +103,10 @@ def _check_record_groups(record_groups):
     """Checks the reviewed notebooks proposed from the person's records."""
     if len(record_groups) > MAX_RECORD_GROUPS:
         raise ValueError(f"Choose at most {MAX_RECORD_GROUPS} notebooks")
-    allowed = set(agent_templates.TEMPLATES)
-    for group in record_groups:
-        if any(template not in allowed for template in group.get("agents", [])):
-            raise ValueError("Choose an available agent template")
 
 
 def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
-    """Finishes setup: files reviewed record groups and deploys their agents.
+    """Finishes setup: files the reviewed record groups into notebooks.
 
     Args:
         account_id: The account finishing setup.
@@ -129,7 +114,7 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
         group_ids: The calendar groups the person kept.
         record_groups: Notebooks proposed from the intake call and the
             person's records, each with ``notebook_name``, ``notebook_id``,
-            ``items`` ({kind, id}), ``agents`` (template ids),
+            ``items`` ({kind, id}),
             ``suggest_tasks`` and an optional ``goal``, which becomes a to-do
             on the notebook's Goals page.
     """
@@ -147,7 +132,7 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
         imported = onboarding_sources.reviewed(proposal_id, group_ids or [])
         created = []
         chosen = [item for item in USES if item["id"] in state["uses"]]
-        chosen += [{"id":g["id"],"notebook":g["name"],"collection":g["collection"],"agents":["steward", "writing"],"sources":g["sources"]} for g in imported]
+        chosen += [{"id":g["id"],"notebook":g["name"],"collection":g["collection"],"sources":g["sources"]} for g in imported]
         selected_policies = {}
         for item in chosen:
             if item['id'] in state.get('task_choices', {}):
@@ -165,10 +150,9 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
                 collections.assign_notebook(book["id"],collection["id"])
             if item['notebook'].casefold() in selected_policies:
                 notebooks.update(book['id'], todo_list='on' if selected_policies[item['notebook'].casefold()] else 'off')
-            deployed = [agents.deploy(template, book["id"]) for template in state.get("agent_choices", {}).get(item["id"], item["agents"])]
             if item.get("sources"):
                 onboarding_sources.file_sources(book["id"],item["sources"])
-            created.append({"notebook_id":book["id"], "name":book["name"], "agent_ids":[a["id"] for a in deployed]})
+            created.append({"notebook_id":book["id"], "name":book["name"]})
         if record_groups:
             from stellis import sorting
             health = next((c for c in collections.list_collections()
@@ -182,12 +166,10 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
                                     todo_list="on" if group.get("suggest_tasks") else "off")
             if not group.get("notebook_id"):
                 collections.assign_notebook(book["id"], health["id"])
-            deployed = [agents.deploy(template, book["id"])
-                        for template in dict.fromkeys(group.get("agents", []))]
             if group.get("goal", "").strip():
                 pages.create("Goals", book["id"], f"- [ ] {' '.join(group['goal'].split())}\n")
             created.append({"notebook_id": book["id"], "name": book["name"],
-                            "agent_ids": [a["id"] for a in deployed], "filed": filed["moved"]})
+                            "filed": filed["moved"]})
         agents.list_agents()  # Stellis answers in each new notebook.
         state.update(step="complete",created=created,editing=False); _save(state)
         auth.complete_onboarding(account_id)

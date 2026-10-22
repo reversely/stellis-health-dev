@@ -21,14 +21,14 @@ class RuntimeTraceTest(unittest.TestCase):
         self.temp.cleanup()
 
     def test_trace_records_steps_usage_and_outcome_without_content(self):
-        agent = agents.create("Trace agent", "Coordinator")
+        agent = agents.assistant()
         with runtime_trace.span("agent_chat", agent_id=agent["id"]):
             runtime_trace.job("job-one")
             runtime_trace.event("sources_selected", source_count=2, prompt="private text", token="secret")
             runtime_trace.report(model="actual-model", provider="ollama", usage={"input": 3, "output": 4, "secret": 99})
         row = runtime_trace.recent()[0]
         self.assertEqual((row["state"], row["model"], row["model_source"]), ("succeeded", "actual-model", "reported"))
-        self.assertEqual(row["agent_name"], "Trace agent")
+        self.assertEqual(row["agent_name"], "Stellis")
         self.assertEqual(row["job_id"], "job-one")
         self.assertEqual(row["usage"], {"input": 3, "output": 4})
         self.assertGreaterEqual(row["duration_ms"], 0)

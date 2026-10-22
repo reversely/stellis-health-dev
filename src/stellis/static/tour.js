@@ -22,7 +22,7 @@
   function close(){stopWatching();resize.disconnect();panel?.remove();document.documentElement.style.removeProperty('--guide-height');const url=new URL(location.href);url.searchParams.delete('guide');history.replaceState(history.state,'',url);const title=document.querySelector('#page-title');if(title){title.tabIndex=-1;title.focus({preventScroll:true});}}
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('dialog[open]'))close();});
   async function context(){const [books,agents]=await Promise.all([api('/notebooks'),api('/agents')]);const book=books.notebooks[0];return {book,agent:agents.find(a=>a.is_default)||agents[0]};}
-  function route(name,data){if(name==='notebook')return data.book?'/notebook/'+encodeURIComponent(data.book.id):'/';if(['chat','instructions'].includes(name))return data.agent?'/chat/'+encodeURIComponent(data.agent.id):'/chat/settings';if(['models','traces'].includes(name))return '/settings';if(name==='recording')return '/recording';return '/';}
+  function route(name,data){if(name==='notebook')return data.book?'/notebook/'+encodeURIComponent(data.book.id):'/';if(['chat','instructions'].includes(name))return data.agent?'/chat/'+encodeURIComponent(data.agent.id):'/chat';if(['models','traces'].includes(name))return '/settings';if(name==='recording')return '/recording';return '/';}
   async function go(step){
     if(document.querySelector('#stop-recording')?.checkVisibility()&&!document.querySelector('#stop-recording').disabled){notice.textContent='Stop and save your recording before changing guide pages.';return;}
     try{const data=await context();location.assign(route(names[step],data)+'?guide='+names[step]);}catch(error){notice.textContent=error.message;}

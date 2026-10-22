@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -537,25 +537,11 @@ def sync_config() -> dict[str, str | None]:
     return {"origin": value}
 
 
-class AgentCreate(BaseModel):
-    template_id: str | None = None
-    name: str | None = Field(default=None, max_length=80)
-    role: str | None = Field(default=None, max_length=160)
-    instructions: str = Field(default="", max_length=4000)
-    prompt: str | None = Field(default=None, max_length=4000)
-    notebook_id: str | None = None
-    steward: bool = False
-
-
 class AgentUpdate(BaseModel):
     enabled: bool | None = None
     name: str | None = Field(default=None, max_length=80)
     role: str | None = Field(default=None, max_length=160)
     instructions: str | None = Field(default=None, max_length=4000)
-
-
-class AgentAssignment(BaseModel):
-    steward: bool = False
 
 
 class AgentMemory(BaseModel):
@@ -567,7 +553,6 @@ class AgentMemory(BaseModel):
 class AgentQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     notebook_id: str | None = None
-    target_agent_id: str | None = None
 
 
 def _agent_result(action):
@@ -584,26 +569,6 @@ def list_agents() -> list[dict[str, object]]:
     return agents.list_agents()
 
 
-@api.post("/agents")
-def create_agent(request: AgentCreate) -> dict[str, object]:
-    if request.prompt:
-        return _agent_result(lambda: agents.create_from_prompt(request.prompt or "", request.notebook_id))
-    def create():
-        if request.template_id:
-            return agents.deploy(request.template_id, request.notebook_id, request.name, request.instructions)
-        template = None
-        return agents.create(request.name or (template["name"] if template else ""),
-                             request.role or (template["does"] if template else ""),
-                             request.instructions, request.notebook_id,
-                             request.steward or request.template_id == "steward", request.template_id)
-    return _agent_result(create)
-
-
-@api.get("/agents/templates")
-def agent_template_catalog() -> list[dict]:
-    return agent_templates.catalog()
-
-
 @api.get("/agents/runtime")
 def agent_runtime_status() -> dict[str, bool]:
     return {"configured": agent_runtime.configured()}
@@ -618,31 +583,6 @@ def get_agent(agent_id: str) -> dict[str, object]:
 def update_agent(agent_id: str, request: AgentUpdate) -> dict[str, object]:
     return _agent_result(lambda: agents.update(agent_id, name=request.name, role=request.role,
                                                 instructions=request.instructions, enabled=request.enabled))
-
-
-@api.delete("/agents/{agent_id}")
-def delete_agent(agent_id: str) -> dict[str, bool]:
-    _agent_result(lambda: agents.delete(agent_id))
-    return {"deleted": True}
-
-
-@api.put("/agents/{agent_id}/notebooks/{notebook_id}")
-def assign_agent_notebook(agent_id: str, notebook_id: str, request: AgentAssignment) -> dict[str, object]:
-    return _agent_result(lambda: agents.assign(agent_id, notebook_id, request.steward))
-
-
-class AgentNotebookState(BaseModel):
-    enabled: bool
-
-
-@api.patch("/agents/{agent_id}/notebooks/{notebook_id}")
-def toggle_agent_notebook(agent_id: str, notebook_id: str, request: AgentNotebookState) -> dict[str, object]:
-    return _agent_result(lambda: agents.set_notebook_enabled(agent_id, notebook_id, request.enabled))
-
-
-@api.delete("/agents/{agent_id}/notebooks/{notebook_id}")
-def unassign_agent_notebook(agent_id: str, notebook_id: str) -> dict[str, object]:
-    return _agent_result(lambda: agents.unassign(agent_id, notebook_id))
 
 
 @api.get("/agents/{agent_id}/memories")
@@ -720,11 +660,7 @@ async def stop_agent_job(agent_id: str, job_id: str):
 @api.post("/agents/{agent_id}/ask")
 async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
     try:
-        if request.target_agent_id:
-            from stellis import agent_handoffs
-            return await agent_handoffs.ask(agent_id, request.target_agent_id, request.question, request.notebook_id)
-        from stellis import agent_coordination
-        return await agent_coordination.ask(agent_id, request.question, request.notebook_id)
+        return await agent_runtime.ask(agent_id, request.question, request.notebook_id)
     except asyncio.CancelledError as exc:
         raise HTTPException(status_code=409, detail="Reply stopped") from exc
     except LookupError as exc:
@@ -871,7 +807,6 @@ def onboarding_page(request: Request):
 class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
     step: Literal["welcome", "call", "records", "uses", "review"] = "review"
-    agent_choices: dict[str, list[str]] | None = None
     task_choices: dict[str, StrictBool] | None = None
 
 
@@ -885,7 +820,7 @@ def onboarding_state(request: Request):
 def onboarding_choices(choices: OnboardingChoices, request: Request):
     from stellis import onboarding
     try:
-        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.agent_choices, choices.task_choices)
+        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.task_choices)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -914,7 +849,6 @@ class OnboardingRecordGroup(BaseModel):
     notebook_name: str = Field(default="", max_length=80)
     notebook_id: str | None = Field(default=None, max_length=100)
     items: list[OnboardingRecordItem] = Field(default_factory=list, max_length=120)
-    agents: list[str] = Field(default_factory=list, max_length=16)
     suggest_tasks: StrictBool = False
     goal: str = Field(default="", max_length=200)
 

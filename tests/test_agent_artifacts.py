@@ -9,7 +9,7 @@ from stellis import agent_artifacts as drafts, agents, agent_runtime, storage
 class ArtifactTest(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.env=patch.dict(os.environ,{'STELLIS_DATA_DIR':self.temp.name},clear=True);self.env.start()
-        self.agent=agents.create('Writer','Writing');self.message=agents.append_message(self.agent['id'],'agent','Draft ready')
+        self.agent=agents.assistant();self.message=agents.append_message(self.agent['id'],'agent','Draft ready')
         self.draft=drafts.create(self.agent['id'],self.message['id'],None,'Plan','First paragraph.\n\nSecond paragraph.',[])
     def tearDown(self):self.env.stop();self.temp.cleanup()
     def test_edits_preserve_paragraphs_reject_stale_and_discard_keeps_record(self):

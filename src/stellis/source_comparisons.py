@@ -97,9 +97,9 @@ def current_sources(item):
 
 
 async def compare(notebook_id, identifier):
-    from stellis import agent_runtime, agent_handoffs
+    from stellis import agent_runtime
     item=get(notebook_id,identifier)
-    agent_handoffs.validate(item['agent_id'],item['agent_id'],notebook_id)
+    agents.require_enabled(item['agent_id'],notebook_id)
     if item['state'] in {'running','done'}:return item
     if item['state'] not in {'pending','retry'}:raise ValueError('This comparison was dismissed')
     sources=current_sources(item)
@@ -120,7 +120,7 @@ async def compare(notebook_id, identifier):
                 return 'The comparison must cite both selected sources with their original indices.'
             return None
         await agent_runtime.ask(item['agent_id'],question,notebook_id,extra_sources=sources,automatic=False,started_job_id=job_id,only_supplied_sources=True,answer_check=check)
-        agent_handoffs.validate(item['agent_id'],item['agent_id'],notebook_id)
+        agents.require_enabled(item['agent_id'],notebook_id)
         current_sources(item)
         agents.finish_job(job_id,'succeeded')
     except asyncio.CancelledError:

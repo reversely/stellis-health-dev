@@ -8,7 +8,7 @@ class NotebookWorkTest(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.env=patch.dict(os.environ,{'STELLIS_DATA_DIR':self.temp.name},clear=True);self.env.start()
         self.book=notebooks.create('Practice');self.other=notebooks.create('Other')
         notebooks.update(self.book['id'],todo_list='on')
-        self.agent=agents.create('Practice guide','Tutor',notebook_id=self.book['id'])
+        self.agent=agents.assistant()
         self.page=pages.create('Practice notes',notebook_id=self.book['id'],markdown='Practice a constrained sketch.')
     def tearDown(self):self.env.stop();self.temp.cleanup()
     def test_policy_revision_and_scoped_prompt(self):

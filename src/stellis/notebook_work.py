@@ -1,7 +1,7 @@
 """Notebook instructions and activity derived from persisted work, never sample events."""
 from __future__ import annotations
 import json
-from stellis import agents, storage, suggestions, agent_artifacts, notebook_filing, source_comparisons
+from stellis import storage, suggestions, agent_artifacts, notebook_filing, source_comparisons
 from stellis.todos import markdown_inline_text
 
 
@@ -26,7 +26,6 @@ def save_instructions(notebook_id, text, revision):
 
 def activity(notebook_id):
     policy=instructions(notebook_id)
-    team=[agent for agent in agents.list_agents() if any(book['notebook_id']==notebook_id for book in agent['notebooks'])]
     items=[]
     comparisons=source_comparisons.list_for(notebook_id)
     comparison_jobs={c['job_id'] for c in comparisons if c['job_id']}
@@ -77,7 +76,7 @@ def activity(notebook_id):
             items.append({'kind':'job','id':row['id'],'agent_id':row['agent_id'],'author':row['author'],'state':state,'text':text,'detail':{'running':'Working','succeeded':'Reply ready','failed':'Request failed','interrupted':'Stopped or interrupted'}.get(row['state'],row['state']),'created_at':row['finished_at'] or row['created_at'],'target':'/chat/'+row['agent_id']+('#message-'+message['id'] if message else '')})
     items.sort(key=lambda item:item['created_at'],reverse=True)
     counts={state:sum(item['state']==state for item in items) for state in ['needs_you','working','done']}
-    return {'items':items[:150],'counts':counts,'agents':team,**policy}
+    return {'items':items[:150],'counts':counts,**policy}
 
 
 def overview():

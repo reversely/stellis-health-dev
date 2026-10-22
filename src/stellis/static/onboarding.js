@@ -391,7 +391,6 @@
         notebook_name: name.value.trim(),
         notebook_id: renamed ? null : group.notebook_id,
         items: group.items.map((item) => ({kind: item.kind, id: item.id})),
-        agents: [],
         suggest_tasks: taskChoices[key],
         goal: goal.value.trim(),
       };
