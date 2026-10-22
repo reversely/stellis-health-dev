@@ -518,3 +518,36 @@ html[data-theme='dark'] .home-goals {
 :is(.coach-goal-head h4, .coach-title) {
   text-wrap: balance;
 }
+
+/* Goals described in the person's words, filled in by Stellis */
+.coach-describe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.coach-describe .coach-field {
+  flex: 1 1 280px;
+}
+.coach-describe-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+.coach-describe-status:empty {
+  display: none;
+}
+.coach-drafted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+.coach-form.is-drafted {
+  border-style: solid;
+  border-color: var(--accent);
+}

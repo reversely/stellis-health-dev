@@ -1975,6 +1975,10 @@ class GoalDay(BaseModel):
     done: bool
 
 
+class GoalDescription(BaseModel):
+    text: str = Field(max_length=2000)
+
+
 @api.get("/goals")
 def list_goals(today: str = Query(max_length=10), now: str = Query(max_length=5),
                utc_offset: int = 0):
@@ -1984,6 +1988,17 @@ def list_goals(today: str = Query(max_length=10), now: str = Query(max_length=5)
 @api.post("/goals")
 def create_goal(request: GoalIn):
     return _agent_result(lambda: goals.create(request.model_dump()))
+
+
+@api.post("/goals/drafts")
+async def draft_goals(request: GoalDescription):
+    from stellis import coach
+    try:
+        return await coach.draft_goals(request.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except coach.CoachError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @api.put("/goals/{goal_id}")
