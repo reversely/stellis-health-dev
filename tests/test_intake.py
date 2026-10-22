@@ -143,6 +143,23 @@ class ReplyTest(IntakeTestCase):
         self.assertEqual(intake.load()["notes"], intake.clean_notes(script_notes(len(SCRIPT["turns"]) - 1)))
 
 
+class NoteRulesTest(IntakeTestCase):
+    def test_the_note_taker_gets_the_topics_and_drops_off_topic_words(self):
+        seen = {}
+
+        async def notes(instructions, context, schema, max_tokens):
+            seen.update(instructions=instructions, context=context)
+            return {"sections": []}
+        intake.opening()
+        intake.add_person_turn("Feel the end. The chestnut.")
+        with patch.object(intake, "complete_json", notes):
+            asyncio.run(intake.update_notes())
+        self.assertEqual([t["heading"] for t in seen["context"]["topics"]],
+                         [heading for heading, _ in intake.PLAN])
+        self.assertIn("never guess what was meant", seen["instructions"])
+        self.assertIn("didn't catch that", intake.INSTRUCTIONS)
+
+
 class FollowOnTest(IntakeTestCase):
     def test_an_answer_continued_over_the_reply_joins_its_first_part(self):
         intake.opening()
