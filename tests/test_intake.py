@@ -10,6 +10,7 @@ import json
 import os
 import re
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -112,7 +113,8 @@ class ReplyTest(IntakeTestCase):
         intake.add_person_turn("Keeping the weight off, and my knees.")
         pieces = asyncio.run(self._collect())
         self.assertEqual(pieces, ["Eight kilos is real progress.",
-                                  "Which knee is it, and how bad is the pain on the stairs now?"])
+                                  "Next, your health: which conditions do you have, and which "
+                                  "medicines do you take?"])
         timings = {}
         asyncio.run(self._collect(timings))
         self.assertIn("first_token", timings)
@@ -158,9 +160,9 @@ class NoteRulesTest(IntakeTestCase):
         with patch.object(intake, "complete_json", notes):
             asyncio.run(intake.update_notes())
         self.assertEqual([t["heading"] for t in seen["context"]["topics"]],
-                         [heading for heading, _ in intake.PLAN])
+                         [heading for heading, _ in intake.NOTE_TOPICS])
         self.assertIn("never guess what was meant", seen["instructions"])
-        self.assertIn("didn't catch that", intake.INSTRUCTIONS)
+        self.assertIn("didn't catch it", intake.INSTRUCTIONS)
 
 
 class FollowOnTest(IntakeTestCase):
@@ -200,40 +202,66 @@ class BargeInTest(IntakeTestCase):
     def test_the_person_talking_over_the_agent_stops_it(self):
         self.assertEqual(len(self.heard("Wait, I forgot my inhaler")), 1)
 
+    def test_words_heard_over_the_agent_without_a_barge_in_are_not_an_answer(self):
+        self.call.speaking = "What changes do you hope to track?"
+        # Recognition turned 2 seconds of the agent's voice into words.
+        self.assertFalse(self.call._is_answer("Pause an active one, mayhem.", 2.0, 2.0))
+        # Starting as the agent finishes is an answer.
+        self.assertTrue(self.call._is_answer("Appointments and nutrition.", 2.0, 0.3))
+        self.call.barged_in = True
+        self.assertTrue(self.call._is_answer("Wait, appointments too.", 2.0, 2.0))
+
+    def test_text_too_fast_to_be_speech_is_not_an_answer(self):
+        self.assertFalse(self.call._is_answer("one two three four five six seven", 0.6, 0.0))
+        self.assertTrue(self.call._is_answer("one two three four five six seven", 2.5, 0.0))
+
+    def test_speech_while_the_agent_is_still_thinking_joins_the_last_answer(self):
+        self.call.engine = type("Engine", (), {"transcribe": staticmethod(lambda segment: "Can you hear me?")})()
+        self.call.speaking_until = 0.0
+        intake.opening()
+        intake.add_person_turn("Appointments and nutrition.")
+
+        async def run():
+            self.call.turn = 1
+            self.call.speaking_turn = 0  # The agent has not spoken in turn 1.
+            self.call.answer_ended = time.perf_counter() - 5
+            self.call.replying = asyncio.create_task(asyncio.sleep(30))
+            await self.call._answer_audio(np.zeros(16000, dtype=np.float32), time.perf_counter())
+            self.call.replying.cancel()
+
+        with patch.object(intake_voice.debug_data, "save_answer_audio"):
+            asyncio.run(run())
+        turns = intake.load()["turns"]
+        self.assertEqual([t["role"] for t in turns], ["agent", "person"])
+        self.assertEqual(turns[-1]["text"], "Appointments and nutrition. Can you hear me?")
+
 
 class PlanTest(IntakeTestCase):
-    def test_the_plan_starts_with_the_goal_and_moves_on_as_notes_fill(self):
-        self.assertEqual(intake.plan(intake.load())["next_topic"], "Goals")
-        intake.save_notes([{"heading": "Goals", "items": ["Keep the weight off"]},
-                           {"heading": "Medicines", "items": ["Metformin"]}], 0)
-        state = intake.load()
-        self.assertEqual(intake.plan(state)["next_topic"], "Conditions")
-        self.assertIn('"next_topic": "Conditions"', intake.conversation(state)[0]["content"])
-        intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 1)
-        self.assertEqual(intake.plan(intake.load())["next_topic"], intake.READ_BACK)
-
-    def test_a_topic_with_no_answer_is_dropped_after_two_answers(self):
+    def test_each_topic_gets_one_question_and_no_follow_up(self):
         intake.opening()
-        intake.add_person_turn("I want to lose weight.")
-        intake.save_notes([{"heading": "Goals", "items": ["Lose weight"]}], 0)
-        for answer in ("I don't know.", "No."):
-            self.assertEqual(intake.plan(intake.load())["next_topic"], "Conditions")
-            asyncio.run(self._reply_without_model("Any conditions?"))
+        self.assertIn("Never ask a follow-up question", intake.INSTRUCTIONS)
+        for topic, answer in (("Goals", "I don't know."), ("Health", "Nothing really."),
+                              ("Reminders", "Maybe.")):
+            self.assertEqual(intake.plan(intake.load())["next_topic"], topic)
             intake.add_person_turn(answer)
-        self.assertEqual(intake.plan(intake.load())["next_topic"], "Medicines")
-
-    def test_the_call_ends_one_exchange_after_the_goodbye_step_starts(self):
-        intake.opening()
-        intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 0)
-        intake.add_person_turn("That's all.")
-        pieces = asyncio.run(self._reply_without_model("Here is what I heard. Is anything wrong?"))
-        self.assertNotIn(intake.END_MARK, pieces)
-        intake.add_person_turn("No, that's right.")
+            if topic != "Reminders":
+                asyncio.run(self._reply_without_model("Thanks. Next question?"))
         self.assertEqual(intake.plan(intake.load())["next_topic"], intake.GOODBYE)
-        pieces = asyncio.run(self._reply_without_model("Should I add a reminder?"))
-        self.assertNotIn(intake.END_MARK, pieces)
-        intake.add_person_turn("Maybe.")
-        pieces = asyncio.run(self._reply_without_model("Thank you. Your notes are ready."))
+
+    def test_a_topic_the_notes_already_cover_is_skipped(self):
+        intake.opening()
+        intake.save_notes([{"heading": "Conditions", "items": ["Asthma"]},
+                           {"heading": "Medicines", "items": ["Salbutamol"]}], 0)
+        intake.add_person_turn("Breathe easier on runs. I have asthma and use salbutamol.")
+        state = intake.load()
+        self.assertEqual(intake.plan(state)["next_topic"], "Reminders")
+        self.assertIn('"next_topic": "Reminders"', intake.conversation(state)[0]["content"])
+
+    def test_the_goodbye_ends_the_call_without_end_call(self):
+        intake.opening()
+        for answer in ("Walk more.", "None.", "No."):
+            intake.add_person_turn(answer)
+            pieces = asyncio.run(self._reply_without_model("Thanks. Press Continue."))
         self.assertEqual(pieces[-1], intake.END_MARK)
 
     def test_end_call_hangs_up_only_at_the_goodbye_step(self):
@@ -249,10 +277,9 @@ class PlanTest(IntakeTestCase):
         intake.opening()
         intake.add_person_turn("I want to walk more.")
         self.assertNotIn(intake.END_MARK, asyncio.run(pieces()))
-        intake.save_notes([{"heading": heading, "items": ["x"]} for heading, _ in intake.PLAN], 0)
-        intake.add_person_turn("That's all.")
-        asyncio.run(self._reply_without_model("Here is what I heard. Is anything wrong?"))
-        intake.add_person_turn("No, that's right.")
+        intake.add_person_turn("No conditions.")
+        asyncio.run(self._reply_without_model("Would reminders help?"))
+        intake.add_person_turn("No, that's all.")
         self.assertEqual(asyncio.run(pieces()),
                          ["Thanks.", "Press Continue to add your records.", intake.END_MARK])
 
@@ -265,7 +292,7 @@ class PlanTest(IntakeTestCase):
         return pieces
 
     def test_the_opening_states_the_purpose_and_asks_for_the_goal(self):
-        self.assertIn("five minutes", intake.OPENING)
+        self.assertIn("three quick questions", intake.OPENING)
         self.assertTrue(intake.OPENING.endswith("what's the main health goal you'd like help with?"))
 
 
@@ -450,9 +477,8 @@ class VoiceCallTest(IntakeTestCase):
                     break
             while messages[-1]["type"] != "ended":
                 messages.append(socket.receive_json())
-            # The plan's goodbye step can end the call at the script's read-back.
             said = " ".join(m["text"] for m in replies if m["type"] == "say")
-            self.assertTrue(said.endswith("anything wrong?") or said.endswith("ready to review."), said)
+            self.assertTrue(said.endswith("add your records."), said)
         answered = len(overlaps)
         # Medicine names and spoken numbers miss most often.
         self.assertGreaterEqual(sum(overlaps) / len(overlaps), 0.75, overlaps)

@@ -43,13 +43,12 @@ Steps 2 and 3 can run in either order. A person who drops files first gets quest
 
 ### How the intake agent behaves
 
-Proposed instructions for the intake agent:
+Instructions for the intake agent:
 
-- **Caring.** Opens by asking what brought the person here and acknowledges what they say before moving on.
-- **Direct.** Asks one question at a time, in plain words, and says why it is asking when the reason is not obvious.
-- **Curious.** Follows up on vague answers ("You said your knee is bad. What can't you do now that you could a year ago?").
-- **Covers, in the person's order:** current concerns, conditions and medicines, the clinicians they see, what they want to change, what has worked or failed before, and how they want reminders.
-- **Ends** by reading back what it heard in five lines or fewer and naming the notebooks and check-ins it will propose. The person corrects anything before step 4.
+- **Caring.** Acknowledges what the person says in a few words before moving on.
+- **Direct.** Asks three questions, one each about the goal, conditions and medicines, and reminders, in plain words.
+- **No follow-ups.** Any answer, however short, completes its topic. The agent never asks for more detail, a dose or a date, and never asks the person to confirm a misheard word: the notepad lists names to check under To confirm.
+- **Ends** after the third answer: it sums up in one sentence, asks the person to press Continue, and hangs up. The person corrects anything in the notepad.
 - **Safety.** Runs the S-01 emergency check on every turn. It never diagnoses and never suggests a medicine change.
 - **Length.** Aims for 5 to 10 minutes. The person can stop at any point and keep what was said.
 
@@ -94,9 +93,11 @@ The build differs from the ticket in three places:
 - **A WebSocket replaces WebRTC.** Fly's HTTP proxy forwards TCP only, and WebRTC audio needs UDP. The browser streams 16 kHz audio over a WebSocket that the account gateway relays to the account's own process.
 - **Moonshine replaces Whisper for the call.** Whisper small takes seconds per answer on this machine. Moonshine misheard "lisinopril" in 4 of 4 synthetic tests, so the agent asks to confirm medicine names, and unconfirmed names go under "To confirm".
 
-Each turn logs, without content, the time from the end of speech to speech-to-text done, model first token, first audio ready, and audio playing. In the simulated Denver call with a scripted model, first audio was ready 1.2 to 1.5 s after Denver stopped speaking. An answer that Denver continued after a pause took 2.6 s, because the agent dropped its first reply and started again. Speech that starts within 1.5 s of an answer ending, including while the agent's reply is still playing, joins that answer.
+Each turn logs, without content, the time from the end of speech to speech-to-text done, model first token, first audio ready, and audio playing. In the simulated Denver call with a scripted model, first audio was ready 1.2 to 1.5 s after Denver stopped speaking. An answer that Denver continued after a pause took 2.6 s, because the agent dropped its first reply and started again. Speech that starts within 1.5 s of an answer ending, or before the agent's reply starts playing, joins that answer, so the agent replies once.
 
-The agent follows a call plan: it states the call's purpose, asks for the person's main goal, then covers conditions, medicines, care team, what has helped and reminders. Each topic fills the notepad heading of the same name, and the next uncovered topic goes into the agent's context on every turn.
+Recognition turns noise and the agent's own voice from the speakers into words, such as "Pause an active one, mayhem." The call drops recognised text in two cases: text faster than 6 words a second, and speech that overlapped the agent's audio for 1.2 s without a barge-in check finding the person's words in it. The microphone worklet low-pass filters at 7.2 kHz before converting to 16 kHz. In a test with background noise at 10 dB, the filter lowered Moonshine's word errors from 15.3% to 12.8% from 44.1 kHz input, and from 14.8% to 12.8% from 48 kHz input.
+
+The agent follows a call plan: it states the call's purpose, then asks one question each about the goal, conditions and medicines, and reminders. A topic is covered after one answer, or when the notes already have lines under its headings. The next uncovered topic goes into the agent's context on every turn.
 
 During a call the speech models add about 440 MB of memory to the account's process.
 
@@ -121,13 +122,13 @@ Home opens with a health overview and goals (`goals.py`, `goals.js`), as #82 des
 - **Readings count:** a blood pressure reading, a camera pulse reading or a night of sleep at or above the goal counts toward the matching goal on its local day.
 - **Steps:** Stellis tracks no steps until it reads them from a device or an export.
 - **Goals filled in by Stellis:** a person describes goals in their own words, or names them on a call. The model calls `fill_goal`, the server checks each value against the selectors, and Home fills in Add a goal for the person to confirm (`coach.py`).
-- **Coach calls:** each morning from 5 am to noon, Home shows an incoming call card. The check-in opens with today's appointments and reminders, written from the person's data, then asks how they are doing. Call Stellis starts a call at any time. Both run in a panel docked over the page. The model can fill in a goal, log a goal for today, or hang up after the person says they have nothing else (`coach_call.py`, `coach-call.js`).
+- **Coach calls:** each morning from 5 am to noon, Home shows an incoming call card. The check-in opens with today's appointments and reminders, written from the person's data, then asks how they are doing. Call Stellis starts a call at any time. Both run in a panel docked over the page. The model can fill in a goal, log a goal for today, or hang up after the person says they have nothing else. Stellis asks no follow-up questions; its only question after a request is whether there is anything else, and it wraps up after 6 answers (`coach_call.py`, `coach-call.js`).
 
 ### Onboarding call and tour: status, 22 Oct 2026
 
 - **Onboarding call:** the intake model hangs up with an `end_call` tool at the goodbye step, after asking the person to press Continue.
 - **Tour:** finishing setup opens Home with an offer of a two-minute tour. The tour runs on a call docked over the app. Each of its seven steps opens a page, highlights one control and speaks one pre-written line: health overview, goals, a sample notebook, a sample record, the summary, the timeline and recording. The person says "next" or presses Next, or asks a question, which the model answers from the step. The tour closes by naming the features and the goals from the onboarding call (`tour.py`).
-- **Notebook names:** the model names each notebook after one subject of one kind: a condition, a treatment, a goal the person stated, a symptom under investigation, or a recovery. A suspected diagnosis becomes a symptom or an investigation. `intake.name_problem` rejects catch-alls ("Medical issues"), record types ("Lab results") and joined subjects ("Weight and knees"), and sends a rejected name back to the model once. A name the person typed is kept as typed.
+- **Notebook names:** the model names each notebook after one subject of one kind: a condition, a treatment, a goal the person stated, a symptom under investigation, or a recovery. A suspected diagnosis becomes a symptom or an investigation. The person's word wins when it is accurate and specific ("Blood sugar"); the medical term replaces a vague word ("Diabetes" for "sugar problems"). Two conditions share a notebook only when the person described them as one subject. When the model cannot name a subject without inventing a diagnosis or a link, its records stay in Not filed and the model asks about them in one sentence. A revision keeps every name and placement the request does not mention. `intake.name_problem` rejects catch-alls ("Medical issues"), record types ("Lab results") and joined subjects ("Weight and knees"), and sends a rejected name back to the model once. A name the person typed is kept as typed.
 - **Review loop:** Review your notebooks lays the notebooks out as folders with their records. The person renames, unticks or adds a notebook, moves a record with its select, or types a change in Ask for changes, such as "Rename Diabetes to Blood sugar". Stellis revises the layout, says what it changed, and offers Undo. Nothing is filed until the person presses Set up.
 - **Sample notebook:** the tour adds four of Denver Lang's records to a notebook named "Sample: Denver Lang", which the person can delete.
 

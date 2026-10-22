@@ -51,6 +51,9 @@ PRE_ROLL_S = 0.3
 HISTORY_S = 30
 # Speech this long while the agent talks interrupts it.
 BARGE_IN_S = 0.6
+# Speech that overlapped the agent's audio this long without stopping it is
+# not an answer: two barge-in checks found none of the person's words in it.
+MAX_OVERLAP_S = 2 * BARGE_IN_S
 # Speech that starts this soon after an answer ends continues that answer.
 FOLLOW_ON_S = 1.5
 # Kitten's voices: 0 to 7 alternate male and female.
@@ -60,6 +63,9 @@ THREADS = 2
 MAX_FRAME_BYTES = 64_000
 # An answer that repeats this share of the agent's words is its own echo.
 ECHO_OVERLAP = 0.6
+# Speech recognition invents words for noise and for the agent's voice from
+# the speakers. Text faster than this, in words a second, is invented.
+MAX_WORDS_PER_S = 6
 
 _STATE = {"state": "idle", "error": None}
 _STATE_LOCK = threading.Lock()
@@ -249,6 +255,12 @@ class Call:
         self.checking: asyncio.Task | None = None
         self.answer_ended: float | None = None
         self.speaking_until = 0.0
+        # When the agent's audio last stopped, and whether the person stopped
+        # it by talking over it.
+        self.played_until = 0.0
+        self.barged_in = False
+        # Seconds of the current speech heard while the agent's audio played.
+        self.overlap_s = 0.0
         self.discard_reply = False
         self.speech_started: float | None = None
         self.turn = 0
@@ -281,7 +293,8 @@ class Call:
                 self.vad.pop()
                 self.speech_started = self.speech_sample = None
                 ended_at = time.perf_counter() - END_SILENCE_S
-                await self._answer_audio(segment, ended_at)
+                overlap, self.overlap_s = self.overlap_s, 0.0
+                await self._answer_audio(segment, ended_at, overlap)
 
     def _remember(self, window: np.ndarray) -> None:
         self.history = np.concatenate([self.history, window])
@@ -305,6 +318,8 @@ class Call:
             self.speech_started = self.speech_sample = None
             return
         now = time.perf_counter()
+        if now < self.played_until:
+            self.overlap_s += VAD_WINDOW / SAMPLE_RATE
         self.speech_started = self.speech_started or now
         heard_until = self.history_start + len(self.history)
         if self.speech_sample is None:
@@ -318,7 +333,8 @@ class Call:
 
     async def _confirm_barge_in(self, segment: np.ndarray) -> None:
         text = await asyncio.to_thread(self.engine.transcribe, segment)
-        if len(text.split()) >= 2 and not is_echo(text, self.speaking):
+        if len(text.split()) >= 2 and not is_echo(text, self.speaking) and self._busy():
+            self.barged_in = True
             await self._interrupt()
 
     def _busy(self) -> bool:
@@ -336,19 +352,37 @@ class Call:
             except asyncio.CancelledError:
                 pass
         self.speaking_until = 0.0
+        self.played_until = min(self.played_until, time.perf_counter())
         await self.send_json({"type": "stop"})
 
-    async def _answer_audio(self, segment: np.ndarray, ended_at: float) -> None:
-        started_at = ended_at - len(segment) / SAMPLE_RATE
+    async def _answer_audio(self, segment: np.ndarray, ended_at: float, overlap: float = 0.0) -> None:
+        seconds = len(segment) / SAMPLE_RATE
+        started_at = ended_at - seconds
         text = await asyncio.to_thread(self.engine.transcribe, segment)
         stt_done = time.perf_counter()
         await asyncio.to_thread(debug_data.save_answer_audio, segment, SAMPLE_RATE, text)
-        if len(text) < 2 or is_echo(text, self.speaking):
+        if not self._is_answer(text, seconds, overlap):
             return
+        # An answer that starts before the agent speaks again, or soon after
+        # the last one ends, is the rest of the last one: the agent drops the
+        # reply it started and replies to the whole answer once.
         follow_on = (self.answer_ended is not None and self._busy()
-                     and started_at - self.answer_ended < FOLLOW_ON_S)
+                     and (started_at - self.answer_ended < FOLLOW_ON_S
+                          or self.speaking_turn != self.turn))
         self.answer_ended = ended_at
         await self._answer(text, {"speech_end": ended_at, "stt_done": stt_done}, follow_on)
+
+    def _is_answer(self, text: str, seconds: float, overlap: float) -> bool:
+        """Whether recognised speech is the person's answer.
+
+        Drops the agent's own echo, text too fast to be speech, and speech
+        that overlapped the agent's audio for MAX_OVERLAP_S without stopping
+        it: recognition turned noise or the agent's voice into those words.
+        """
+        words = len(text.split())
+        if len(text) < 2 or is_echo(text, self.speaking) or words / max(seconds, 0.1) > MAX_WORDS_PER_S:
+            return False
+        return self.barged_in or overlap < MAX_OVERLAP_S
 
     async def text(self, text: str) -> None:
         """A typed answer, handled like a spoken one."""
@@ -379,6 +413,7 @@ class Call:
         self.turn = turn
         self.timings[turn] = timings
         self.discard_reply = False
+        self.barged_in = False
         await self.send_json({"type": "heard", "text": text, "turn": turn})
         self._refresh_notes()
         self.replying = asyncio.create_task(self._reply(turn))
@@ -440,7 +475,7 @@ class Call:
             # The browser plays pieces back to back; this is when the last ends.
             seconds = len(audio) / 2 / rate
             start = max(time.perf_counter(), self.speaking_until)
-            self.speaking_until = start + seconds
+            self.speaking_until = self.played_until = start + seconds
         return start
 
     def playing(self, turn: int) -> None:
@@ -490,6 +525,7 @@ class Call:
             # The browser finished the queued speech, which can be sooner
             # than estimated, for example after a stall.
             self.speaking_until = 0.0
+            self.played_until = min(self.played_until, time.perf_counter())
         elif kind == "interrupt":
             await self._interrupt()
 
