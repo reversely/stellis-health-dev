@@ -121,7 +121,7 @@ Home now opens with Today: one card per goal (`goals.py`, `goals.js`). Each goal
 | Value to reach | Weight down to 85 kg | Share of the way from the starting reading |
 | Days a week | Exercise 3 days a week | This week's days and a streak in weeks |
 | Timer | Fasting 14 hours | Start and Stop, then a streak of days that reached the target |
-| Days without | Smoking | Days since the last slip |
+| Days without | Smoking | Days since the count last started; Reset starts it again |
 
 - **New measures:** readings gained steps, active minutes, sleep, water, alcoholic drinks, blood sugar and pain. Counted measures add up per day, and Trends charts one total per day.
 - **Preset goals:** 11 presets suggest how often to log something, with everyday defaults such as 7,000 steps and 8 glasses. Clinical targets, such as a weight or a blood pressure, are left for the person to enter.

@@ -2,7 +2,7 @@
  * @fileoverview Today on Home: the person's goals with their trackers, and
  * the latest reading of each measure a goal uses. Each tracker shows its
  * progress for today, a 7-day row of dots and its streak, and logs in place:
- * a reading, a habit done today, a timer, or a slip.
+ * a reading, a habit done today, a timer, or a reset count.
  */
 (function(root) {
 'use strict';
@@ -352,7 +352,7 @@ class GoalsPanel {
                     () => dom.api(`/trackers/${id}/timer`, {method: 'POST'})))];
       case 'without':
         return [make(
-            'Log a slip', null, () => this.confirmSlip(row, tracker),
+            'Reset', null, () => this.confirmReset(row, tracker),
             'is-quiet')];
       default:
         if (!measure) return [];
@@ -366,12 +366,12 @@ class GoalsPanel {
     }
   }
 
-  /** Asks before logging a slip, which resets the count. */
-  confirmSlip(row, tracker) {
+  /** Asks before starting a "days without" count again from today. */
+  confirmReset(row, tracker) {
     const dom = this.dom;
     const confirm = dom.el('div', null, 'goal-form');
-    confirm.append(dom.el('span', 'Log a slip today? The count restarts.'));
-    const yes = dom.button('Log slip', 'goal-action is-primary');
+    confirm.append(dom.el('span', 'Start the count again from today?'));
+    const yes = dom.button('Reset count', 'goal-action is-primary');
     const no = dom.button('Cancel', 'goal-action is-quiet');
     yes.addEventListener(
         'click',
