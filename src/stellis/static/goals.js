@@ -26,6 +26,8 @@ const STATUS = {
   below: 'Lower than your usual range',
 };
 const REFRESH_MS = 60000;
+// Non-breaking spaces keep "this week's goal!" on one line.
+const TO_GOAL = 'to reach this\u00a0week\'s\u00a0goal!';
 
 /** Local date as YYYY-MM-DD. */
 function localDay(date = new Date()) {
@@ -77,25 +79,22 @@ function frequencyText(times) {
 }
 
 /**
- * One sentence of encouragement for a goal's week.
+ * One sentence of encouragement for a goal's week, as words and values
+ * alternating; Home shows each value (odd index) in a pill.
  * @param {!Object} goal A goal from GET /goals.
  * @param {number} daysLeft Days left in a week, today included.
- * @return {string}
+ * @return {!Array<string>}
  */
 function encouragement(goal, daysLeft) {
   const left = goal.times_per_week - goal.this_week;
-  if (left <= 0) return 'Goal reached for this week. Well done.';
+  if (left <= 0) return ['Goal reached for this\u00a0week. Well\u00a0done!'];
   const [one, many] = goal.noun;
-  const count = left === 1 ? `One more ${one} reaches` :
-                             `${WORDS[left] || left} more ${many} reach`;
-  const sentence = `${count} this week's goal.`;
-  if (goal.done_today) return `Logged today. ${sentence}`;
   if (left > daysLeft) {
-    if (!goal.this_week) return `Start this week with a ${one} today.`;
-    return `${WORDS[goal.this_week] || goal.this_week} so far this week. ` +
-        'Every one counts.';
+    if (!goal.this_week) return ['Start your week with a', one, 'today!'];
+    return ['', String(goal.this_week), 'logged so far this week. Keep going!'];
   }
-  return sentence;
+  const ask = [String(left), 'more', left === 1 ? one : many, TO_GOAL];
+  return goal.done_today ? ['Logged today. Log', ...ask] : ['Log', ...ask];
 }
 
 /** Overview context line for a measure. */
@@ -339,7 +338,8 @@ function create(host) {
   function sentence(parts, tag) {
     const node = dom.el(tag, null, 'coach-sentence');
     parts.forEach((part, i) => {
-      if (i) node.append(' ');
+      if (!part) return;
+      if (node.childNodes.length) node.append(' ');
       node.append(i % 2 ? dom.el('span', part, 'coach-pill') : part);
     });
     return node;
@@ -461,9 +461,13 @@ function create(host) {
     const daysLeft = 7 - ((today.getDay() + 6) % 7);
     const status = dom.el('p', null, 'coach-error');
     status.setAttribute('role', 'status');
-    card.append(
-        head, body, dom.el('p', encouragement(goal, daysLeft), 'coach-note'),
-        logControl(goal, card, status), status);
+    const note = sentence(encouragement(goal, daysLeft), 'p');
+    note.classList.add('coach-note');
+    // Log and any error share one row, so every card has four rows that
+    // line up with its neighbour's.
+    const actions = dom.el('div', null, 'coach-goal-actions');
+    actions.append(logControl(goal, card, status), status);
+    card.append(head, body, note, actions);
     return card;
   }
 

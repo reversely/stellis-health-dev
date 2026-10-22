@@ -47,8 +47,8 @@ html[data-theme='dark'] .home-goals {
   display: inline-block;
   padding: 1px 10px;
   border-radius: 999px;
-  background: var(--ink);
-  color: var(--surface);
+  background: var(--accent);
+  color: var(--accent-ink);
   font-size: 0.9em;
   font-weight: 600;
   line-height: 1.5;
@@ -114,8 +114,12 @@ html[data-theme='dark'] .home-goals {
   border-radius: 14px;
   background: var(--surface);
 }
+/* Each stat spans five rows of the card and shares them with its
+   neighbours, so labels, numbers, trend lines and sentences line up. */
 .overview-stat {
   display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
   align-content: start;
   justify-items: start;
   gap: 4px;
@@ -206,9 +210,12 @@ html[data-theme='dark'] .home-goals {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+/* Each card spans four rows of the grid and shares them with the card
+   beside it, so titles, charts, sentences and buttons line up. */
 .coach-goal {
   display: grid;
-  align-content: start;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
   gap: 10px;
   min-width: 0;
   padding: 16px 18px;
@@ -297,6 +304,7 @@ html[data-theme='dark'] .home-goals {
   font-size: 10px;
 }
 .coach-note {
+  align-self: start;
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -355,6 +363,12 @@ html[data-theme='dark'] .home-goals {
     background: var(--raised);
   }
 }
+.coach-goal-actions {
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  gap: 6px;
+}
 .coach-error {
   margin: 0;
   color: var(--failure);
@@ -395,6 +409,8 @@ html[data-theme='dark'] .home-goals {
   background: var(--surface);
 }
 .coach-goals .coach-form {
+  grid-row: span 4;
+  align-content: start;
   margin-top: 0;
   border-style: solid;
 }
@@ -493,4 +509,12 @@ html[data-theme='dark'] .home-goals {
   .coach-button {
     transition: none;
   }
+}
+
+/* Wrap sentences without leaving one word alone on a line. */
+:is(.coach-note, .coach-sentence, .overview-context, .coach-reminder-text) {
+  text-wrap: pretty;
+}
+:is(.coach-goal-head h4, .coach-title) {
+  text-wrap: balance;
 }

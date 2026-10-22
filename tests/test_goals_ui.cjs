@@ -4,16 +4,19 @@ const assert = require('node:assert/strict');
 const goals = require('../src/stellis/static/goals.js');
 const trends = require('../src/stellis/static/trends.js');
 
+const TO_GOAL = 'to reach this\u00a0week\'s\u00a0goal!';
 const walk = {times_per_week: 4, this_week: 2, done_today: false, noun: ['walk', 'walks']};
 
-test('encouragement names what reaches a weekly goal', () => {
-  assert.equal(goals.encouragement(walk, 4), "Two more walks reach this week's goal.");
-  assert.equal(goals.encouragement({...walk, this_week: 3}, 4), "One more walk reaches this week's goal.");
-  assert.equal(goals.encouragement({...walk, this_week: 3, done_today: true}, 4),
-               "Logged today. One more walk reaches this week's goal.");
-  assert.equal(goals.encouragement({...walk, this_week: 4}, 4), 'Goal reached for this week. Well done.');
-  assert.equal(goals.encouragement({...walk, this_week: 1}, 2), 'One so far this week. Every one counts.');
-  assert.equal(goals.encouragement({...walk, this_week: 0}, 2), 'Start this week with a walk today.');
+test('encouragement asks for the logs that reach a weekly goal', () => {
+  assert.deepEqual(goals.encouragement(walk, 4),
+                   ['Log', '2', 'more', 'walks', TO_GOAL]);
+  assert.deepEqual(goals.encouragement({...walk, this_week: 3}, 4),
+                   ['Log', '1', 'more', 'walk', TO_GOAL]);
+  assert.deepEqual(goals.encouragement({...walk, this_week: 3, done_today: true}, 4),
+                   ['Logged today. Log', '1', 'more', 'walk', TO_GOAL]);
+  assert.deepEqual(goals.encouragement({...walk, this_week: 4}, 4), ['Goal reached for this\u00a0week. Well\u00a0done!']);
+  assert.deepEqual(goals.encouragement({...walk, this_week: 1}, 2), ['', '1', 'logged so far this week. Keep going!']);
+  assert.deepEqual(goals.encouragement({...walk, this_week: 0}, 2), ['Start your week with a', 'walk', 'today!']);
 });
 
 test('frequency, reminder times and overview context read as plain sentences', () => {

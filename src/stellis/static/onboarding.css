@@ -9,7 +9,7 @@
 .onboarding-page p{line-height:1.6}
 .onboarding-page button,.onboarding-page select,.onboarding-page input{font:inherit;min-height:44px;max-width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 16px;color:var(--ink);background:var(--input)}
 .onboarding-page button{cursor:pointer;font-weight:550}
-.onboarding-page button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.onboarding-page button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .onboarding-page button.quiet{background:transparent}
 .onboarding-page button:disabled{opacity:.55;cursor:wait}
 .onboarding-page :is(button,a,input,select):focus-visible{outline:3px solid var(--focus);outline-offset:3px}
@@ -61,7 +61,7 @@
 .setup-welcome .welcome-copy{max-width:510px}.welcome-copy>strong{display:block;margin-bottom:20px}
 .setup-columns{grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:32px}
 .setup-uses{grid-template-columns:repeat(4,minmax(0,1fr))}
-.setup-uses button[aria-pressed=true]::after{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--surface);font-size:12px}
+.setup-uses button[aria-pressed=true]::after{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px}
 .setup-guide{position:sticky;top:24px;gap:16px}.setup-guide-identity{display:grid;justify-items:center;gap:8px;font-size:12px;flex:none}
 .setup-guide-bubble{padding:18px;border-radius:12px;background:var(--raised);border:1px solid var(--line-soft);box-shadow:0 8px 24px color-mix(in srgb,var(--ink) 8%,transparent)}
 .setup-runtime{margin-top:24px}.setup-runtime h2{font-size:22px;margin-bottom:8px}.setup-runtime-details{margin-top:12px}.setup-runtime-details summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
