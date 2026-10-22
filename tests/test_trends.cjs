@@ -232,3 +232,25 @@ test('no waveform for three seconds is a missing signal', () => {
 test('the oval path starts at the top of the oval', () => {
   assert.equal(pulse.ovalPath(300, 400), 'M150 40A96 144 0 1 1 149.99 40Z');
 });
+
+test('spoken guidance is on until the person turns it off', () => {
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const stored = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {getItem: (key) => stored.get(key) ?? null},
+  });
+  try {
+    assert.equal(pulse.speakChosen(), true);
+    stored.set('stellis-pulse-speak', 'off');
+    assert.equal(pulse.speakChosen(), false);
+    stored.set('stellis-pulse-speak', 'on');
+    assert.equal(pulse.speakChosen(), true);
+  } finally {
+    if (saved) {
+      Object.defineProperty(globalThis, 'localStorage', saved);
+    } else {
+      delete globalThis.localStorage;
+    }
+  }
+});

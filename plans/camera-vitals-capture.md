@@ -56,13 +56,15 @@ The fix shown is the first failing check in the order Face, Light, Still, Signal
 | Result | The number, his usual range, one sentence | Same | "64 bpm" · "About your usual (60 to 70)" |
 | No reading | Reason and Try again | Same | "The light kept changing. Face a window or lamp and try again." |
 
-## Spoken guidance (proposal)
+## Spoken guidance and captions
 
-Denver looks at the camera, not the screen. Short spoken cues, such as "Move closer", "Hold still" and "Done, 64 beats per minute", would let him follow along without reading.
+Denver looks at the camera, not the screen. Short spoken cues, such as "Move closer", "Hold still" and "Done, 64 beats per minute", let him follow along without reading.
 
-- **Voices:** the browser's speech synthesis, using only voices marked as local to the device, so no text leaves the device. A browser with no local voice shows the toggle disabled.
-- **Default:** off. A speaker toggle in the capture screen turns it on, and the choice is remembered on the device.
+- **Voices:** the browser's speech synthesis, using only voices marked as local to the device, so no text leaves the device. A browser with no local voice shows the Voice toggle disabled. Chrome lists its voices after the page first asks, so the toggle repaints when the list arrives.
+- **Default:** on. The Voice toggle turns it off, and the choice is remembered on the device.
+- **First cue:** "Starting the camera" plays inside the Start tap, because Safari speaks only after a tap.
 - **Pace:** one cue at a time, at most one every 3 seconds, so the speech does not chatter.
+- **Captions:** on desktop, each cue also appears as a caption at the bottom of the video, next to the camera he is looking at. Captions show even with the voice off. Phones show no caption, because the status line sits directly under the video.
 
 ## Instructions for assistant text about readings (proposal)
 
@@ -99,3 +101,14 @@ These are counted for each attempt, with no video and no reading stored. They gu
 | Seconds from the first face to measuring | How long setup takes |
 | Time each check failed | Which instruction people need most |
 | Outcome: saved, retaken or abandoned | Whether the flow works |
+
+## Testing on the deployment
+
+The capture needs HTTPS, which Fly provides. Before a test session:
+
+1. Deploy main with `fly deploy -a stellis-health`.
+2. On a phone and a laptop, open Trends, choose Measure with camera, and allow the camera.
+3. Check that the voice speaks "Starting the camera" and then one cue at a time, and that desktop shows the same cue as a caption.
+4. Compare the reading with a pulse oximeter or a cuff taken at the same time, and note the device, browser, lighting and the difference in bpm.
+
+Verified in this repo's Docker image, with Chromium and a recorded sample video as the camera: the capture read 75 bpm (ECG 75 to 87), saved a camera reading, and made no requests outside the app. Not yet verified: Safari on iPhone, Firefox, low-end Android phones, and real voices (headless Chromium has none).
