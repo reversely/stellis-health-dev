@@ -23,11 +23,16 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def active() -> bool:
+    """Returns whether this request already has an execution trace."""
+    return _ACTIVE.get() is not None
+
+
 def event(name: str, **details) -> None:
     trace_id = _ACTIVE.get()
     if not trace_id:
         return
-    allowed = {"attempt", "source_count", "citation_count", "error_type", "error_code", "reads", "step_count", "exit_code", "output_limit", "invalid_meta", "timed_out", "abandoned", "provider_error"}
+    allowed = {"attempt", "source_count", "citation_count", "error_type", "error_code", "reads", "step_count", "exit_code", "output_limit", "invalid_meta", "timed_out", "abandoned", "provider_error", "page_number", "character_count", "elapsed_ms"}
     safe = {key: value for key, value in details.items() if key in allowed
             and isinstance(value, (int, str))}
     with storage.connect() as conn:
@@ -69,11 +74,12 @@ def report(model=None, provider=None, usage=None) -> None:
 
 
 @contextmanager
-def span(kind: str, agent_id=None, model=None, provider=None):
+def span(kind: str, agent_id=None, model=None, provider=None, execution=None):
     trace_id = str(uuid.uuid4())
     start = time.monotonic()
-    execution = ("Token Factory" if runtime_profile.direct() else "Nebius Cloud" if runtime_profile.cloud() else "GN100") if kind in {
-        "agent_chat", "agent_plan", "agent_review"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
+    if execution is None:
+        execution = ("Token Factory" if runtime_profile.direct() else "Nebius Cloud" if runtime_profile.cloud() else "GN100") if kind in {
+            "agent_request", "agent_chat", "agent_plan", "agent_review"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
     with _GUARD:
         if _SWITCHING:
             raise RuntimeError("A model change is running. Try again when it finishes.")

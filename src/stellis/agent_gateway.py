@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from contextlib import nullcontext
 from urllib.parse import urlsplit
 
 import httpx
@@ -73,6 +74,16 @@ def _reply(payload: object) -> str:
 
 
 async def turn(prompt: str, session_id: str) -> tuple[str, str]:
+    """Records execution timing for a turn without copying its content."""
+    context = nullcontext() if runtime_trace.active() else runtime_trace.span("agent_request")
+    with context:
+        runtime_trace.event("model_requested")
+        result = await _turn(prompt, session_id)
+        runtime_trace.event("model_replied")
+        return result
+
+
+async def _turn(prompt: str, session_id: str) -> tuple[str, str]:
     """Run one isolated job via OpenClaw's documented Responses endpoint.
 
     Closing this request cancels the gateway run, including on task cancellation.

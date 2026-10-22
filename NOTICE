@@ -13,6 +13,14 @@ Speech models, downloaded on first start
   sherpa-onnx. Licensed under Creative Commons Attribution 4.0 International
   (CC BY 4.0). https://creativecommons.org/licenses/by/4.0/
 
+OCR tools, installed in the hosted image
+- Tesseract OCR and English language data (Apache License 2.0).
+  https://github.com/tesseract-ocr/tesseract
+  https://github.com/tesseract-ocr/tessdata_fast
+- Leptonica image processing library (BSD 2-Clause).
+  https://github.com/DanBloomberg/leptonica
+  The image retains package copyright files in /usr/share/doc.
+
 Native tools, installed by uv as Python packages
 - FFmpeg, from the imageio-ffmpeg package (BSD 2-Clause wrapper). The FFmpeg
   executable it carries is built with GPL components and is licensed under the

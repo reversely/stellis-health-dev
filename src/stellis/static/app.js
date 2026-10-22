@@ -4627,8 +4627,8 @@ async function showDocument(id) {
       (await json(await fetch(`${API}/notebooks`))).notebooks;
   const book = books.find((item) => item.id === record.notebook_id);
   const back = document.querySelector('#document-back');
-  back.href = book ? `/notebook/${encodeURIComponent(book.id)}` : '/';
-  back.textContent = `← ${book ? book.name : 'All conversations'}`;
+  back.href = book ? `/notebook/${encodeURIComponent(book.id)}` : '/records';
+  back.textContent = book ? book.name : 'Records';
   const status = document.querySelector('#document-status');
   status.textContent = '';
   const page = Number(new URLSearchParams(location.search).get('page')) || null;
@@ -4649,6 +4649,8 @@ async function showDocument(id) {
           status.textContent = error.message;
           button.disabled = false;
         }
+      }, async () => {
+        if (request === documentRequest) await showDocument(id);
       });
   document.querySelector('#document-view').hidden = false;
   await window.StellisHealthFacts.mount(slot, record);
@@ -4892,8 +4894,8 @@ async function showSettings() {
   if (operator) {
     await loadNebiusKey().catch(error => { document.querySelector('#nebius-key-status').textContent = error.message; });
     await loadTavilyKey().catch(error => { document.querySelector('#tavily-key-status').textContent = error.message; });
-    import("/static/runtime-settings.js").then(module => module.load());
   }
+  import("/static/runtime-settings.js").then(module => module.load());
   captureControls();
   if (focusKeyInput() && operator) {
     document.querySelector('#settings-ai-title').scrollIntoView({block: 'start'});

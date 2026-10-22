@@ -38,9 +38,11 @@ function describe(record) {
  * Renders the document's image, if any, and one section per page.
  * @param {!Element} host
  * @param {!Object} record A document with its pages.
+ * @param {?function(!Object): !Promise<void>=} onChanged Refreshes the page after a save.
+ * @param {boolean=} editable Enables recognition and text corrections.
  * @return {!Map<number, !Element>} The page sections by page number.
  */
-function renderPages(host, record) {
+function renderPages(host, record, onChanged = null, editable = false) {
   const dom = root.StellisDom;
   const isPdf = record.media_type === PDF;
   const pages = dom.el('div', null, 'document-pages');
@@ -61,15 +63,96 @@ function renderPages(host, record) {
     if (page.text) {
       section.append(dom.el('p', page.text, 'document-text'));
     } else {
-      const empty = isPdf ? 'This page has no text yet' :
-                            'Text from images is not read yet';
+      const empty = page.ocr_status === 'failed' ? 'Read this page again' :
+          page.ocr_status === 'empty' ? 'No text found on this page' :
+          'Read text from this page';
       section.append(dom.el('p', empty, 'document-empty'));
     }
+    if (editable) pageControls(section, host, record, page, onChanged);
     sections.set(page.number, section);
     pages.append(section);
   }
   host.replaceChildren(pages);
   return sections;
+}
+
+/** Adds recognition and revision-checked text editing to one page. */
+function pageControls(section, host, record, page, onChanged) {
+  const dom = root.StellisDom;
+  const actions = dom.el('div', null, 'document-actions');
+  const status = dom.el('p', null, 'document-empty');
+  status.setAttribute('role', 'status');
+  const path = `/documents/${encodeURIComponent(record.id)}/pages/${page.number}`;
+  const refresh = async (updated) => {
+    Object.assign(record, updated);
+    if (onChanged) {
+      await onChanged(updated);
+    } else {
+      renderPages(host, record, null, true);
+    }
+  };
+  if (!page.text) {
+    const read = dom.button('Read text');
+    read.addEventListener('click', async () => {
+      read.disabled = true;
+      status.textContent = 'Reading this page';
+      try {
+        await refresh(await dom.api(path + '/read', {method: 'POST'}));
+      } catch (error) {
+        status.textContent = error.message;
+        read.disabled = false;
+      }
+    });
+    actions.append(read);
+  }
+  if (page.text_source === 'ocr' || page.text_source === 'manual' || !page.text) {
+    const edit = dom.button('Edit text');
+    edit.addEventListener('click', () => {
+      edit.disabled = true;
+      const form = dom.el('div', null, 'document-text-editor');
+      const label = dom.el('label', 'Page text');
+      const input = dom.el('textarea');
+      input.id = `document-edit-${record.id}-${page.number}`;
+      label.htmlFor = input.id;
+      input.value = page.text;
+      input.maxLength = 100000;
+      input.rows = 10;
+      const save = dom.button('Save text');
+      const cancel = dom.button('Cancel');
+      const buttons = dom.el('div', null, 'document-actions');
+      buttons.append(save, cancel);
+      form.append(label, input,
+          dom.el('p', 'Saving text clears facts from this page', 'document-empty'),
+          buttons);
+      section.append(form);
+      input.focus();
+      cancel.addEventListener('click', () => {
+        form.remove();
+        edit.disabled = false;
+        edit.focus();
+      });
+      save.addEventListener('click', async () => {
+        save.disabled = true;
+        cancel.disabled = true;
+        try {
+          await refresh(await dom.api(path, {
+            method: 'PATCH', json: {text: input.value, revision: page.revision},
+          }));
+        } catch (error) {
+          status.textContent = error.message;
+          save.disabled = false;
+          cancel.disabled = false;
+        }
+      });
+    });
+    actions.append(edit);
+  }
+  if (page.text_source === 'ocr') {
+    section.append(dom.el('p', 'Machine-read text', 'document-empty'));
+  } else if (page.text_source === 'manual') {
+    section.append(dom.el('p', 'Edited text', 'document-empty'));
+  }
+  if (actions.childElementCount) section.append(actions, status);
 }
 
 /**
@@ -78,9 +161,10 @@ function renderPages(host, record) {
  * @param {!Object} record A document with its pages.
  * @param {?number} page
  * @param {function(!Object, !HTMLButtonElement)} onDelete
+ * @param {?function(!Object): !Promise<void>=} onChanged Refreshes the saved document.
  * @return {!Element} An empty slot between the header and the pages.
  */
-function render(host, record, page, onDelete) {
+function render(host, record, page, onDelete, onChanged = null) {
   const dom = root.StellisDom;
   const head = dom.el('div', null, 'document-head');
   const meta = dom.el('p', null, 'document-meta');
@@ -101,7 +185,7 @@ function render(host, record, page, onDelete) {
 
   const slot = dom.el('div', null, 'document-slot');
   const body = dom.el('div');
-  const sections = renderPages(body, record);
+  const sections = renderPages(body, record, onChanged, true);
   host.replaceChildren(head, slot, body);
   const target = page ? sections.get(page) : null;
   if (target && record.page_count > 1) {

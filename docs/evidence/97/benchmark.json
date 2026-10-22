@@ -1,0 +1,44 @@
+[
+  {
+    "fixture": "printed.png",
+    "runs": 3,
+    "median_ms": 255,
+    "max_ms": 265,
+    "word_error_rate": 0.0
+  },
+  {
+    "fixture": "scanned.pdf",
+    "runs": 3,
+    "median_ms": 368,
+    "max_ms": 376,
+    "word_error_rate": 0.0
+  },
+  {
+    "fixture": "mixed.pdf",
+    "runs": 3,
+    "median_ms": 364,
+    "max_ms": 382,
+    "word_error_rate": 0.0
+  },
+  {
+    "fixture": "2024-04-12-food-diary-photo.png",
+    "runs": 3,
+    "median_ms": 347,
+    "max_ms": 367,
+    "word_error_rate": 0.0
+  },
+  {
+    "fixture": "2026-03-22-questions-for-annual-exam-photo.png",
+    "runs": 3,
+    "median_ms": 295,
+    "max_ms": 311,
+    "word_error_rate": 0.0102
+  },
+  {
+    "fixture": "2025-03-23-lab-results-photo.png",
+    "runs": 3,
+    "median_ms": 622,
+    "max_ms": 636,
+    "word_error_rate": null
+  }
+]
