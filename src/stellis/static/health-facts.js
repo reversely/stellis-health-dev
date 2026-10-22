@@ -8,6 +8,7 @@
 const KIND_LABELS = {
   medication: 'Medication',
   lab_result: 'Lab result',
+  vital_sign: 'Vital sign',
   condition: 'Condition',
   allergy: 'Allergy',
 };
@@ -51,13 +52,17 @@ class FactsPanel {
     this.suggested = dom.el('ul', null, 'facts-list');
     this.accepted = dom.el('ul', null, 'facts-list');
     this.suggestedTitle = dom.el('h4', 'To review');
+    this.acceptAll = dom.button('Accept all', 'facts-accept-all');
+    this.acceptAll.addEventListener('click', () => this.acceptEvery());
+    const reviewHead = dom.el('div', null, 'facts-review-head');
+    reviewHead.append(this.suggestedTitle, this.acceptAll);
     this.acceptedTitle = dom.el('h4', 'Accepted');
     const head = dom.el('div', null, 'facts-head');
     head.append(dom.el('h3', 'Health facts'), this.find);
     const section = dom.el('section', null, 'facts');
     section.append(
-        head, this.status, this.suggestedTitle, this.suggested,
-        this.acceptedTitle, this.accepted);
+        head, this.status, reviewHead, this.suggested, this.acceptedTitle,
+        this.accepted);
     host.replaceChildren(section);
     if (record.status !== 'ready') {
       this.find.hidden = true;
@@ -70,6 +75,7 @@ class FactsPanel {
     this.suggested.replaceChildren(...suggested.map((fact) => this.row(fact)));
     this.accepted.replaceChildren(...accepted.map((fact) => this.row(fact)));
     this.suggestedTitle.hidden = !suggested.length;
+    this.acceptAll.hidden = suggested.length < 2;
     this.acceptedTitle.hidden = !accepted.length;
     this.find.textContent =
         this.facts.length ? 'Find health facts again' : 'Find health facts';
@@ -110,6 +116,27 @@ class FactsPanel {
     actions.append(accept, reject);
     item.append(actions);
     return item;
+  }
+
+  /** Accepts every suggestion of the document at once. */
+  async acceptEvery() {
+    this.acceptAll.disabled = true;
+    try {
+      const result = await this.dom.api(
+          `/documents/${encodeURIComponent(this.record.id)}/facts/accept`,
+          {method: 'POST'});
+      this.facts = this.facts.map(
+          (fact) => fact.status === 'suggested' ?
+              {...fact, status: 'accepted'} :
+              fact);
+      this.status.textContent =
+          `${this.dom.plural(result.accepted, 'fact')} accepted`;
+      this.paint();
+    } catch (error) {
+      this.status.textContent = error.message;
+    } finally {
+      this.acceptAll.disabled = false;
+    }
   }
 
   /**

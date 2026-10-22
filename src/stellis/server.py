@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
+from stellis import notebook_work, agent_artifacts, agent_runtime, agent_templates, agents, ai, auth, calendar, categorization, clean, collections, documents, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -989,6 +989,7 @@ def person_page(person_id: str | None = None, page_id: str | None = None, docume
 @app.get("/timeline", include_in_schema=False)
 @app.get("/records", include_in_schema=False)
 @app.get("/summary", include_in_schema=False)
+@app.get("/trends", include_in_schema=False)
 @app.get("/chat", include_in_schema=False)
 @app.get("/chat/{agent_id}", include_in_schema=False)
 @app.get("/notebook/{notebook_id}", include_in_schema=False)
@@ -1835,9 +1836,43 @@ def health_timeline(notebook_id: str | None = None, kinds: str | None = None):
     })
 
 
+class ReadingIn(BaseModel):
+    measure: str = Field(max_length=40)
+    value: float
+    value2: float | None = None
+    taken_at: str | None = Field(default=None, max_length=40)
+    source: str = Field(default="self", max_length=10)
+    quality: float | None = None
+    note: str = Field(default="", max_length=readings.MAX_NOTE)
+
+
+@api.get("/readings")
+def list_readings():
+    return {"measures": readings.series()}
+
+
+@api.post("/readings")
+def add_reading(request: ReadingIn):
+    return _agent_result(lambda: readings.add(
+        request.measure, request.value, request.value2, request.taken_at,
+        request.source, request.quality, request.note))
+
+
+@api.delete("/readings/{reading_id}")
+def delete_reading(reading_id: str) -> dict[str, bool]:
+    _agent_result(lambda: readings.delete(reading_id))
+    return {"deleted": True}
+
+
 @api.get("/facts")
 def accepted_facts():
     return {"facts": health_facts.accepted()}
+
+
+@api.post("/documents/{document_id}/facts/accept")
+def accept_document_facts(document_id: str):
+    _agent_result(lambda: documents.get(document_id))
+    return {"accepted": health_facts.accept_all(document_id)}
 
 
 @api.post("/facts/{fact_id}/accept")

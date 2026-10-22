@@ -55,6 +55,31 @@ LAB_PANELS = frozenset({
     "Comprehensive metabolic 2000 panel - Serum or Plasma",
     "CBC panel - Blood by Automated count",
 })
+# Synthea holds an adult's weight constant, at 86.1 kg for Denver from 2017
+# on. These weights follow his outside records instead: about 87 kg in 2019,
+# an 8 kg gain to 95 kg by early 2024, then dietitian-led loss to 86 kg.
+# Keyed by visit date; other visits keep Synthea's value.
+WEIGHT_KG = {
+    "2017-02-02": 86.4,
+    "2018-02-08": 86.8,
+    "2018-08-23": 86.9,
+    "2019-02-14": 87.0,
+    "2020-02-20": 88.9,
+    "2021-02-25": 90.8,
+    "2022-03-03": 92.4,
+    "2023-03-09": 93.9,
+    "2024-03-14": 95.2,
+    "2025-03-20": 88.1,
+    "2026-03-26": 86.3,
+}
+# Vital sign observations shown in visit notes, in display order.
+VITAL_LABELS = {
+    "Body Weight": "Weight",
+    "Body mass index (BMI) [Ratio]": "BMI",
+    "Blood pressure panel with all children optional": "Blood pressure",
+    "Heart rate": "Pulse",
+    "Respiratory rate": "Respiratory rate",
+}
 # Synthea appends digits to generated names, such as "Denver542".
 _NAME_DIGITS = re.compile(r"\b([A-Z][a-z]+)\d+\b")
 
@@ -65,6 +90,7 @@ class Visit:
     date: str
     title: str
     note: str
+    vitals: tuple[str, ...] = ()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -84,6 +110,37 @@ def _readable(text: str) -> str:
     return _NAME_DIGITS.sub(r"\1", text)
 
 
+def _vital_lines(observations: list[dict], date: str) -> tuple[str, ...]:
+    """Formats an encounter's vital signs, one "Label: value unit" each."""
+    values: dict[str, str] = {}
+    height_m = None
+    for observation in observations:
+        name = observation["code"]["text"]
+        if name == "Body Height":
+            height_m = observation["valueQuantity"]["value"] / 100
+        if name not in VITAL_LABELS:
+            continue
+        if "component" in observation:
+            parts = {
+                item["code"]["text"]: item["valueQuantity"]["value"]
+                for item in observation["component"]
+            }
+            values[name] = (f"{parts['Systolic Blood Pressure']:.0f}/"
+                            f"{parts['Diastolic Blood Pressure']:.0f} mmHg")
+        else:
+            quantity = observation["valueQuantity"]
+            values[name] = f"{quantity['value']:g} {quantity['unit']}"
+    if date in WEIGHT_KG and "Body Weight" in values:
+        values["Body Weight"] = f"{WEIGHT_KG[date]:g} kg"
+        if height_m:
+            bmi = WEIGHT_KG[date] / height_m**2
+            values["Body mass index (BMI) [Ratio]"] = f"{bmi:.1f} kg/m2"
+    return tuple(
+        f"{VITAL_LABELS[name]}: {values[name]}".replace("/min", " per minute")
+        for name in VITAL_LABELS
+        if name in values)
+
+
 def select_visits(resources: list[dict]) -> list[Visit]:
     """Picks the visit notes for the sample record.
 
@@ -99,6 +156,11 @@ def select_visits(resources: list[dict]) -> list[Visit]:
         for item in resources
         if item["resourceType"] == "Encounter"
     }
+    vitals_by_encounter: dict[str, list[dict]] = collections.defaultdict(list)
+    for item in resources:
+        if item["resourceType"] == "Observation" and "encounter" in item:
+            vitals_by_encounter[_resource_id(
+                item["encounter"]["reference"])].append(item)
     visits: list[Visit] = []
     routine_years: set[str] = set()
     notes = sorted((item for item in resources
@@ -118,7 +180,10 @@ def select_visits(resources: list[dict]) -> list[Visit]:
                 continue
             routine_years.add(date[:4])
         text = base64.b64decode(note["content"][0]["attachment"]["data"])
-        visits.append(Visit(date, title, _readable(text.decode()).strip()))
+        vitals = _vital_lines(vitals_by_encounter[encounter["id"]], date)
+        visits.append(
+            Visit(date, title,
+                  _readable(text.decode()).strip(), vitals))
     return visits
 
 
@@ -199,6 +264,16 @@ def _note_blocks(note: str) -> list:
     return blocks
 
 
+def _vital_blocks(vitals: tuple[str, ...]) -> list:
+    """Renders a visit's vital signs as a heading and one line each."""
+    if not vitals:
+        return []
+    sheet = styles.getSampleStyleSheet()
+    return [platypus.Paragraph("Vital Signs", sheet["Heading3"])] + [
+        platypus.Paragraph(_escape(line), sheet["BodyText"]) for line in vitals
+    ]
+
+
 def _lab_lines(results: list[LabResult]) -> list[str]:
     lines = []
     panel = None
@@ -238,7 +313,7 @@ def main(bundle_path: str) -> None:
         slug = visit.title.lower().replace(" ", "-").replace("_", "-")
         filename = f"{visit.date}-{slug}.pdf"
         _write_pdf(OUT / filename, f"{visit.title} {visit.date}",
-                   _note_blocks(visit.note))
+                   _vital_blocks(visit.vitals) + _note_blocks(visit.note))
         records.append({
             "file": filename,
             "title": visit.title,
