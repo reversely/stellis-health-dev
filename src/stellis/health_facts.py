@@ -74,6 +74,7 @@ def _now() -> str:
 
 
 def _create_table(conn) -> None:
+    documents._create_tables(conn)  # Facts join their documents.
     conn.execute("""
         CREATE TABLE IF NOT EXISTS health_facts (
             id TEXT PRIMARY KEY,

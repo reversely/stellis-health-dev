@@ -941,6 +941,7 @@ async function showList() {
   // Tag cards wait for the first conversation; an empty account sees none.
   document.querySelector('#list-view [data-widget="tags"]')?.toggleAttribute('hidden', !libraryConversations.length);
   window.StellisHealthPillars?.home(document.querySelector('#home-pillars'));
+  window.StellisGoals?.home(document.querySelector('#home-goals'));
   watchSetup();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));

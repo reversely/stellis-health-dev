@@ -99,6 +99,30 @@ function localInputValue(date) {
   return shifted.toISOString().slice(0, 16);
 }
 
+/**
+ * Charts a counted measure, such as steps, as one total per local day; its
+ * table keeps each entry in ``entries`` so entries can be deleted.
+ * @param {!Object} measure
+ * @return {!Object}
+ */
+function dailyTotals(measure) {
+  if (measure.daily !== 'sum') return measure;
+  const days = new Map();
+  for (const point of measure.points) {
+    const at =
+        new Date(point.time.length <= 10 ? `${point.time}T12:00` : point.time);
+    const key = at.toDateString();
+    const total = days.get(key);
+    if (total) {
+      total.value += point.value;
+    } else {
+      at.setHours(12, 0, 0, 0);
+      days.set(key, {...point, id: null, time: at.toISOString()});
+    }
+  }
+  return {...measure, entries: measure.points, points: [...days.values()]};
+}
+
 /** The Trends page. */
 class TrendsPage {
   /** @param {!Element} host */
@@ -133,7 +157,8 @@ class TrendsPage {
 
   async load() {
     try {
-      this.measures = (await this.dom.api('/readings')).measures;
+      this.measures =
+          (await this.dom.api('/readings')).measures.map(dailyTotals);
       this.paint();
     } catch (error) {
       this.status.textContent = error.message;
@@ -391,7 +416,7 @@ class TrendsPage {
     const thead = dom.el('thead');
     thead.append(head);
     const body = dom.el('tbody');
-    for (const point of [...measure.points].reverse()) {
+    for (const point of [...(measure.entries || measure.points)].reverse()) {
       const row = dom.el('tr');
       const source = dom.el('td');
       if (point.target) {
@@ -508,6 +533,7 @@ function mount(host) {
 
 const exported = {
   RANGES,
+  dailyTotals,
   summaryText,
   localInputValue,
   mount,

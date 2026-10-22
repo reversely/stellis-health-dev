@@ -1,9 +1,10 @@
 /**
- * @fileoverview The three goals of Stellis Health on Home and in each
- * notebook: records and appointments, questions, and goals with check-ins.
- * Each card draws the person's own data: a dated strip of records, questions
- * from the intake call's notes, and a ring of finished check-ins beside the
- * latest reading. The drawings animate when their data arrives.
+ * @fileoverview The pillars of Stellis Health as cards. Home shows records
+ * and appointments, and questions; goals have their own section there
+ * (goals.js). Each notebook also shows its check-ins. Each card draws the
+ * person's own data: a dated strip of records, questions from the intake
+ * call's notes, and a ring of finished check-ins. The drawings animate when
+ * their data arrives.
  */
 (function(root) {
 'use strict';
@@ -127,41 +128,6 @@ function ring(done, total) {
 }
 
 /**
- * A line through a measure's readings that draws itself in.
- * @param {!Array<{value: number}>} points Oldest first.
- * @return {!SVGElement}
- */
-function spark(points) {
-  const values =
-      points.map((p) => Number(p.value)).filter(Number.isFinite).slice(-24);
-  const graphic = svg(
-      'svg',
-      {class: 'pillar-spark', viewBox: '0 0 120 36', 'aria-hidden': 'true'});
-  if (values.length < 2) return graphic;
-  const low = Math.min(...values);
-  const high = Math.max(...values);
-  const range = high - low || 1;
-  const coords = values.map(
-      (v, i) =>
-          [4 + (112 * i) / (values.length - 1), 32 - (28 * (v - low)) / range]);
-  const line = svg('path', {
-    d: 'M' +
-        coords.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L'),
-    pathLength: 1,
-    class: 'pillar-spark-line'
-  });
-  const [x, y] = coords[coords.length - 1];
-  graphic.append(line, svg('circle', {
-                   cx: x.toFixed(1),
-                   cy: y.toFixed(1),
-                   r: 3,
-                   class: 'pillar-spark-end'
-                 }));
-  settle(() => graphic.classList.add('is-drawn'));
-  return graphic;
-}
-
-/**
  * Lowercases a note line's first letter unless it starts a name like "HbA1c".
  */
 function topic(line) {
@@ -231,30 +197,17 @@ function openItems(groups) {
               group.items.map((item) => ({...item, source: group.source})));
 }
 
-/** The newest measure with at least two readings, for the goals card. */
-function latestMeasure(measures) {
-  const usable = (measures || []).filter((m) => m.points.length >= 2);
-  usable.sort(
-      (a, b) => String(b.points.at(-1).time)
-                    .localeCompare(String(a.points.at(-1).time)));
-  return usable[0] || null;
-}
-
 /**
- * Fills Home's three cards.
+ * Fills Home's records and questions cards.
  * @param {!Element} host
  */
 async function home(host) {
-  const [documents, conversations, readings, open, done, intake, books] =
-      await Promise.all([
-        get('/documents'),
-        get('/conversations'),
-        get('/readings'),
-        get('/todos?status=open'),
-        get('/todos?status=done'),
-        get('/intake'),
-        get('/notebooks'),
-      ]);
+  const [documents, conversations, intake, books] = await Promise.all([
+    get('/documents'),
+    get('/conversations'),
+    get('/intake'),
+    get('/notebooks'),
+  ]);
   const records = [
     ...(documents || []).map((d) => ({title: d.title, date: recordDate(d)})),
     ...(conversations || [])
@@ -289,32 +242,8 @@ async function home(host) {
         el('span', 'Ask about your records in any notebook', 'pillar-detail'));
   }
 
-  const openList = openItems(open?.groups);
-  const doneCount = openItems(done?.groups).length;
-  const goalCard =
-      card('pillar-goals', 'target', 'Goals and check-ins', '/todos');
-  const goal =
-      openList.find((item) => item.source?.title === 'Goals') || openList[0];
-  goalCard.figure.append(ring(doneCount, doneCount + openList.length));
-  const measure = latestMeasure(readings?.measures);
-  if (measure) {
-    const last = measure.points.at(-1);
-    const reading = el('div', null, 'pillar-reading');
-    reading.append(
-        spark(measure.points),
-        el('span',
-           `${measure.label} ${Number(last.value).toFixed(measure.decimals)} ${
-               measure.unit}`));
-    goalCard.figure.append(reading);
-  }
-  goalCard.body.append(
-      el('span',
-         goal          ? goal.text.replace(/\s\^\w+$/, '') :
-             doneCount ? 'Every check-in is done' :
-                         'Goals from your call appear here',
-         'pillar-detail'));
-
-  host.replaceChildren(recordCard.node, questionCard.node, goalCard.node);
+  // Goals have their own section, Today (goals.js).
+  host.replaceChildren(recordCard.node, questionCard.node);
   host.classList.add('is-ready');
 }
 
@@ -382,8 +311,7 @@ root.StellisHealthPillars = {
   notebook,
   questions,
   strip,
-  ring,
-  spark
+  ring
 };
 if (typeof module !== 'undefined') module.exports = root.StellisHealthPillars;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -40,6 +40,8 @@ class Measure:
         bounds: The lowest and highest plausible values.
         names: Fact names, case-folded, that map to this measure.
         paired: Whether a reading has two values (systolic over diastolic).
+        daily: How a day's readings combine for goals: "last" keeps the
+            latest, "sum" adds them up (steps, glasses of water).
     """
     key: str
     label: str
@@ -48,6 +50,7 @@ class Measure:
     bounds: tuple[float, float]
     names: tuple[str, ...]
     paired: bool = False
+    daily: str = "last"
 
 
 MEASURES = {
@@ -68,6 +71,21 @@ MEASURES = {
         Measure("hba1c", "HbA1c", "%", 1, (
             3, 20), ("hba1c", "a1c", "hemoglobin a1c", "haemoglobin a1c",
                      "hemoglobin a1c/hemoglobin.total in blood")),
+        Measure("blood_glucose", "Blood sugar", "mg/dL", 0, (20, 600), (
+            "glucose", "blood glucose", "blood sugar", "fasting glucose")),
+        Measure("steps", "Steps", "steps", 0, (1, 100_000), ("steps",),
+                daily="sum"),
+        Measure("active_minutes", "Active minutes", "min", 0, (1, 1440),
+                ("active minutes", "exercise minutes"), daily="sum"),
+        Measure("sleep", "Sleep", "hours", 1, (0.5, 24), ("sleep",
+                                                         "sleep duration"),
+                daily="sum"),
+        Measure("water", "Water", "glasses", 0, (1, 30), ("water",),
+                daily="sum"),
+        Measure("drinks", "Alcoholic drinks", "drinks", 0, (0, 40),
+                ("alcoholic drinks",), daily="sum"),
+        Measure("pain", "Pain", "of 10", 0, (0, 10), ("pain score",
+                                                       "pain")),
     )
 }
 
@@ -330,7 +348,7 @@ def series() -> list[dict[str, object]]:
 
     Returns:
         One dict per measure in ``MEASURES`` order, with ``key``, ``label``,
-        ``unit``, ``decimals``, ``paired``, ``points`` (oldest first),
+        ``unit``, ``decimals``, ``paired``, ``daily``, ``points`` (oldest first),
         ``usual`` and ``status``.
     """
     points: dict[str, list[dict[str, object]]] = {key: [] for key in MEASURES}
@@ -353,6 +371,7 @@ def series() -> list[dict[str, object]]:
             "unit": measure.unit,
             "decimals": measure.decimals,
             "paired": measure.paired,
+            "daily": measure.daily,
             "points": ordered,
             "usual": usual,
             "status": status(ordered[-1], usual) if ordered else "unknown",

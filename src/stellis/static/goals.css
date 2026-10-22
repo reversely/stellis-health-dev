@@ -1,0 +1,502 @@
+/* Today on Home (goals.js): goal cards with their trackers, and the latest
+   readings. Progress uses the goals pillar's amber; met days and streaks
+   use the confirmation colour, so reaching a target reads as done. */
+.home-goals {
+  --goal-hue: oklch(0.7 0.13 70);
+  --goal-met: var(--success);
+  --goal-track: var(--line-soft);
+  margin: 8px 0 28px;
+}
+.home-goals:empty {
+  display: none;
+}
+.goals-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.goals-head :is(h2, h3) {
+  margin: 0;
+}
+.goals-head h2 {
+  color: var(--ink);
+  font: 300 30px/1.15 Piazzolla, Georgia, serif;
+  letter-spacing: -0.02em;
+}
+.goals-head > a {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.goals-date {
+  color: var(--muted);
+  font-size: 14px;
+}
+.goals-head > a,
+.goals-add {
+  margin-left: auto;
+}
+.goals-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+.goals-empty {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+.goals-empty p {
+  margin: 0;
+}
+.goal-card {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 18px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.goal-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.goal-card-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.goal-remove {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--quiet);
+  cursor: pointer;
+}
+.goal-tracker {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'figure text actions'
+    'figure days days'
+    'form form form';
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.goal-tracker:first-of-type {
+  border-top: 0;
+}
+.goal-ring,
+.goal-count {
+  grid-area: figure;
+  align-self: start;
+  width: 48px;
+  height: 48px;
+}
+.goal-ring-track,
+.goal-ring-fill {
+  fill: none;
+  stroke-width: 4;
+}
+.goal-ring-track {
+  stroke: var(--goal-track);
+}
+.goal-ring-fill {
+  stroke: var(--goal-hue);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 22px 22px;
+  transition: stroke-dasharray 300ms var(--ease-enter);
+}
+.goal-tracker.is-met .goal-ring-fill {
+  stroke: var(--goal-met);
+}
+.goal-ring-label {
+  fill: var(--ink);
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+.goal-count {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--goal-met) 14%, transparent);
+  color: var(--ink);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.goal-text {
+  grid-area: text;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.goal-label {
+  font-weight: 600;
+}
+.goal-summary,
+.goal-detail {
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.goal-detail {
+  font-size: 13px;
+}
+.goal-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--goal-met);
+  font-size: 13px;
+  font-weight: 600;
+}
+.goal-streak .icon {
+  width: 15px;
+  height: 15px;
+}
+.goal-clock {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.goal-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 6px;
+}
+.goal-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    scale 120ms var(--ease-enter);
+}
+.goal-action .icon {
+  width: 16px;
+  height: 16px;
+}
+.goal-action.is-primary,
+.goal-action[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.goal-action.is-quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+.goal-action:active {
+  scale: 0.97;
+}
+@media (hover: hover) and (pointer: fine) {
+  .goal-action:not(.is-primary, [aria-pressed='true']):hover {
+    background: var(--raised);
+  }
+}
+.goal-days {
+  grid-area: days;
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.goal-day {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 22px;
+}
+.goal-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+}
+.goal-day.is-met .goal-dot {
+  border-color: var(--goal-met);
+  background: var(--goal-met);
+}
+.goal-day.is-untracked .goal-dot {
+  border-style: dashed;
+  opacity: 0.6;
+}
+.goal-weekday {
+  color: var(--quiet);
+  font-size: 11px;
+}
+.goal-form {
+  grid-area: form;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.goal-form input {
+  width: 96px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--ink);
+  font: inherit;
+}
+.goal-unit,
+.goal-form-status {
+  color: var(--muted);
+}
+.goal-form-status:empty {
+  display: none;
+}
+.goal-form-status {
+  flex-basis: 100%;
+  color: var(--failure);
+}
+.goal-add-tracker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  min-height: 36px;
+  margin: 8px 0 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Latest readings. */
+.goal-readings {
+  margin-top: 20px;
+}
+.goal-readings .goals-head {
+  margin-bottom: 8px;
+}
+.goal-readings h3 {
+  font-size: 17px;
+}
+.reading-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.reading-tile {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.reading-label,
+.reading-date {
+  color: var(--muted);
+  font-size: 13px;
+}
+.reading-value {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.reading-unit {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* The Add goal dialog. */
+.goal-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.goal-dialog::backdrop {
+  background: color-mix(in oklch, var(--ink) 35%, transparent);
+}
+.goal-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.goal-dialog-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.goal-dialog-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.goal-templates {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+}
+.goal-template {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.goal-template span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.goal-template.is-custom {
+  border-style: dashed;
+}
+@media (hover: hover) and (pointer: fine) {
+  .goal-template:hover {
+    background: var(--raised);
+  }
+}
+.goal-form-wide {
+  display: grid;
+  gap: 12px;
+}
+.goal-field {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.goal-field[hidden] {
+  display: none;
+}
+.goal-field :is(input, select) {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--input);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.goal-field-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.goal-dialog-status {
+  margin: 0;
+  color: var(--failure);
+  font-size: 14px;
+}
+.goal-dialog-status:empty {
+  display: none;
+}
+.goal-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+:is(.goal-action, .goal-remove, .goal-template, .goals-add,
+    .goal-dialog-close, .goal-add-tracker):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .goal-tracker {
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas:
+      'figure text'
+      'figure actions'
+      'days days'
+      'form form';
+  }
+  .goal-ring,
+  .goal-count {
+    width: 44px;
+    height: 44px;
+  }
+  .goal-form input,
+  .goal-field :is(input, select) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-ring-fill,
+  .goal-action {
+    transition: none;
+  }
+}
