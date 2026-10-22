@@ -268,7 +268,8 @@ class TrendsPage {
   actions(measure, card) {
     const dom = this.dom;
     const row = dom.el('div', null, 'trend-actions');
-    const add = dom.button('Add a reading', 'trend-add');
+    const camera = this.cameraButton(measure);
+    const add = dom.button('Add a reading', camera ? '' : 'trend-add');
     const tableButton = dom.button('Show table');
     tableButton.setAttribute('aria-expanded', 'false');
     const table = this.table(measure);
@@ -290,6 +291,9 @@ class TrendsPage {
     });
     if (!measure.points.length) {
       tableButton.hidden = true;
+    }
+    if (camera) {
+      row.append(camera);
     }
     row.append(add, tableButton);
     card.append(row, table);
@@ -435,6 +439,23 @@ class TrendsPage {
   }
 
   /**
+   * Offers a camera reading for measures the camera can take.
+   * @param {!Object} measure
+   * @return {?Element} Null for other measures or without a camera API.
+   */
+  cameraButton(measure) {
+    const camera = root.StellisCameraPulse;
+    if (measure.key !== 'pulse' || !camera || !camera.supported()) {
+      return null;
+    }
+    const button = this.dom.button(null, 'trend-add trend-camera');
+    button.append(
+        this.dom.icon('camera'), this.dom.el('span', 'Measure with camera'));
+    button.addEventListener('click', () => camera.open(() => this.load()));
+    return button;
+  }
+
+  /**
    * Offers logging for measures with no readings yet.
    * @param {!Array<!Object>} measures
    * @return {!Element}
@@ -449,7 +470,8 @@ class TrendsPage {
     for (const measure of measures) {
       const row = dom.el('div', null, 'trend-start-row');
       row.append(dom.el('span', measure.label, 'trend-start-name'));
-      const add = dom.button('Add a reading', 'trend-add');
+      const camera = this.cameraButton(measure);
+      const add = dom.button('Add a reading', camera ? '' : 'trend-add');
       add.setAttribute(
           'aria-label', `Add a ${measure.label.toLowerCase()} reading`);
       add.addEventListener('click', () => {
@@ -462,7 +484,12 @@ class TrendsPage {
         row.after(form);
         form.querySelector('input').focus();
       });
-      row.append(add);
+      const buttons = dom.el('div', null, 'trend-start-buttons');
+      if (camera) {
+        buttons.append(camera);
+      }
+      buttons.append(add);
+      row.append(buttons);
       card.append(row);
     }
     return card;

@@ -30,11 +30,13 @@ def _inline_script_hashes() -> list[str]:
 
 CONTENT_SECURITY_POLICY = "; ".join((
     "default-src 'self'",
-    "script-src 'self' " + " ".join(_inline_script_hashes()),
+    # WebAssembly compilation for in-browser camera vitals (vitallens).
+    "script-src 'self' 'wasm-unsafe-eval' " + " ".join(_inline_script_hashes()),
     "style-src 'self'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob:",
-    "connect-src 'self'",
+    # data: lets vitallens load its embedded WebAssembly; it reaches no host.
+    "connect-src 'self' data:",
     "font-src 'self'",
     f"frame-src {_FRAME_HOSTS}",
     "worker-src 'self' blob:",
@@ -56,6 +58,6 @@ def apply(headers, https: bool) -> None:
     headers.setdefault("X-Content-Type-Options", "nosniff")
     headers.setdefault("Referrer-Policy", "same-origin")
     headers.setdefault("Permissions-Policy",
-                       "microphone=(self), camera=(), geolocation=()")
+                       "microphone=(self), camera=(self), geolocation=()")
     if https:
         headers.setdefault("Strict-Transport-Security", "max-age=31536000")

@@ -414,6 +414,21 @@ p.trend-status:not([class*='is-']) {
 .trend-start-name {
   color: var(--ink);
 }
+.trend-start-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.trend-card .trend-camera {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.trend-camera .icon {
+  width: 18px;
+  height: 18px;
+}
 @media (max-width: 600px) {
   .trend-card {
     padding: 16px;

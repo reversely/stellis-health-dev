@@ -120,3 +120,36 @@ test('a date becomes a datetime-local value in local time', () => {
   const value = localInputValue(new Date(2026, 9, 22, 7, 5));
   assert.equal(value, '2026-10-22T07:05');
 });
+
+const {summarize} = require('../src/stellis/static/camera-pulse.js');
+
+/**
+ * Builds a capture of steady estimates, one every 100 ms.
+ * @param {function(number): ?number} bpmAt
+ * @param {function(number): boolean=} faceAt
+ * @return {!Array<!Object>}
+ */
+function capture(bpmAt, faceAt = () => true) {
+  const samples = [];
+  for (let t = 0; t <= 45000; t += 100) {
+    samples.push({t, bpm: bpmAt(t), face: faceAt(t)});
+  }
+  return samples;
+}
+
+test('a steady capture gives the median of its last 20 seconds', () => {
+  const result = summarize(capture((t) => t < 25000 ? 90 : 64 + (t % 3)));
+  assert.equal(result.ok, true);
+  assert.equal(result.bpm, 65);
+  assert.ok(result.quality > 0.8 && result.quality <= 1);
+});
+
+test('unsteady, faceless or short captures are refused', () => {
+  const jumpy = summarize(capture((t) => 60 + (t % 2000) / 100));
+  assert.deepEqual([jumpy.ok, jumpy.reason], [false, 'steady']);
+  const away = summarize(capture(() => 66, (t) => t % 1000 < 700));
+  assert.deepEqual([away.ok, away.reason], [false, 'face']);
+  const empty = summarize(capture(() => null));
+  assert.deepEqual([empty.ok, empty.reason], [false, 'short']);
+  assert.equal(summarize([]).reason, 'short');
+});

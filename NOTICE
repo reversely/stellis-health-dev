@@ -28,6 +28,11 @@ Libraries
   package.json, and package-lock.json, under their own licences.
 - Inter and Piazzolla fonts (SIL Open Font License 1.1), bundled with their
   licence files in src/stellis/static/fonts.
+- vitallens 0.4.8 by Rouast Labs (MIT), vendored with its licence and face
+  detection model in src/stellis/static/vendor/vitallens. Its browser build
+  bundles TensorFlow.js (Apache License 2.0). Stellis Health runs only its
+  local POS and CHROM methods, in the browser, and never calls the VitalLens
+  API.
 
 Test fixture
 - tests/fixtures/jfk.wav is the speech sample distributed with whisper.cpp (MIT).
