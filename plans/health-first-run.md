@@ -80,7 +80,7 @@ Today is the third pillar's home and the first page after onboarding. It shows:
 
 | Block | What it does | Example for Denver |
 | --- | --- | --- |
-| Plan | A goal with targets and a routine. The agent drafts it from the intake and the records, and the person approves or edits it. | "Keep weight between 85 and 88 kg. About 1,800 kcal and 100 g protein a day. Walk 30 minutes, 5 days a week." Drafted from his dietitian review of 17 Nov 2025. |
+| Plan | A goal with targets and a routine. The agent drafts it from the intake and the records, and the person approves or edits it. | From his dietitian review of 17 Nov 2025: "Plate method, protein 90 g a day, beer up to 3 evenings a week, weigh weekly. If weight rises above 89 kg, book a visit." |
 | Check-in | A repeating prompt with a schedule, one of: medicine dose, measurement, meal, photo or video, habit, symptom score | "Metformin 500 mg, 8 am daily." "Weigh in, Monday 7 am." "Knee pain 0 to 10, Friday." |
 | Log | Each answer to a check-in, with its time and source (typed, photo, scale, import) | 86.6 kg from the scale on 17 Nov 2025 |
 | Reminder | Delivery of a due check-in | A phone notification at 8 am, a second one at 9 am if not answered, with a quiet period at night |
@@ -95,6 +95,7 @@ Each rule type below is a proposal.
 | Pattern in the logs | Proposed response |
 | --- | --- |
 | A habit missed 3 times in a row | A suggestion to change the time or the target |
+| A threshold the clinician wrote into the plan, for example Denver's weight above 89 kg | A suggestion to book the visit the plan asks for, citing the dietitian's note |
 | Weight outside the plan's range for 2 weeks | A summary of food and activity logs for those weeks, plus a question |
 | A dose missed | A note to follow the label or the pharmacist's instructions. The agent never suggests a double dose. |
 | Readings that S-01 marks as a risk, for example Denver's systolic pressure below 90 with dizziness | Advice to contact his clinician, with the readings attached. The plan stays unchanged. |
@@ -103,13 +104,91 @@ Each rule type below is a proposal.
 
 | Feature | Proposed design | Feasibility and limits |
 | --- | --- | --- |
-| Food photos | The person photographs a meal. A vision model names each food and estimates the portion in grams. Calories and macronutrients come from USDA FoodData Central for those foods and grams, not from the model's guess. The person confirms or fixes the items in two taps. | Published studies put photo-based calorie estimates at roughly 15 to 40% error, and macronutrients higher. The interface shows a range and weekly trends rather than one exact number per meal. Token Factory's current vision models need checking in the console, because the public list found is from an older post (Qwen2-VL). |
-| Calorie apps | Import of CSV exports from MyFitnessPal or Cronometer | Cronometer has no public API, and no official MyFitnessPal API was found. Import of exports works today. |
-| Diet plan | The agent drafts targets from the person's records and goals. When a dietitian's plan exists in the records, the draft follows that plan and cites it. Meals are logged against the targets. | Diabetes medicines plus a calorie cut can cause low blood sugar with some drugs. The plan screen tells the person to confirm a new plan with their clinician when the records list such a medicine. |
-| Daily vitals by camera (rPPG) | See the rPPG section below. | See the rPPG section below. |
+| Food photos | See "Food photos" below. | See below. |
+| Diet plan | See "Diet plans" below. | See below. |
+| Daily vitals by camera (rPPG) | See "Daily vitals by camera" below. | See below. |
 | Smart scale | Withings first: OAuth connection, then each new weigh-in arrives as a log | The Withings public API needs no contract. The legacy Fitbit API switches off on 30 Oct 2026, and its replacement, the Google Health API, takes no new projects. Apple Health needs a native app, which the brief defers, so an Apple Health export file import covers it for now. |
 | Medicines | The medicine list comes from accepted record facts (R-02) and from a photo of the bottle label. Each medicine gets a dose check-in and a refill reminder computed from quantity and dose. | Interaction checks wait for validated references (A-02, openFDA), as the brief requires. |
 | Reminders | In-app on Today first. Phone notifications through web push. Email once H-04 adds an email provider. | On iPhone, web push works only after the person adds the app to the home screen (iOS 16.4 or later). Onboarding needs a step that shows how. |
+
+## Food photos
+
+### Open-source work and benchmarks
+
+| Project | What it is | Licence | Published result |
+| --- | --- | --- | --- |
+| Nutrition5k (Google) | 5,000 real cafeteria dishes with weighed ingredients, photos and depth video, plus baseline models | Data CC BY 4.0 | Photo only: calorie error 26.1% (70.6 kcal), macronutrients 31.9%. With depth: 18.8%. With volume: 16.5%. |
+| FoodSAM | Food segmentation built on Segment Anything, which outlines each food on the plate | Apache-2.0 | 46.4 mIoU on FoodSeg103 (third-party leaderboard) |
+| OpenNutriTracker | Flutter calorie tracker with barcode lookup against Open Food Facts and USDA FoodData Central | GPL-3.0 | No photo recognition |
+| ai-calorie-tracker (tahaygun) | Self-hosted web app that sends meal photos to an OpenAI model | No licence file found | None published |
+| Student ResNet-50 on Nutrition5k (Hashim-sawan) | Fine-tuned image model predicting calories and macros from one overhead photo | Not checked | 56.6 kcal error on a trimmed test set, so not comparable with the paper |
+| Open Food Facts | Open database of packaged foods with barcodes | Open data | Exact label values for packaged foods |
+
+Large multimodal models on meal photos, from published studies:
+
+| Study | Result |
+| --- | --- |
+| 52 standardised photos, ChatGPT and Claude (2025) | About 35.8% calorie error for each |
+| Mu, Sun and He, ACM BCB 2025: seven models including open-weight Llama, on Nutrition5k and phone photos | With the true food weight supplied, error fell to 20.2% (Gemini 2.5 Flash) and 26.8% (GPT-4.1). The Llama figures are in the open-access paper and not yet extracted. |
+| Open-KNEAD (2026) | Matching each food to a USDA FNDDS code, versus asking the model directly. It reports that a current model's direct estimate matches or beats the retrieval pipeline. |
+| Macronutrients across studies | Errors are higher than for calories, roughly 40% to over 100% in secondary summaries |
+
+### What the evidence says for the design
+
+1. **Portion weight causes most of the error.** Supplying the weight cut error to about 20 to 27%. The person's quick portion answer ("about a cup of rice") is worth more than a better model.
+2. **Packaged food should not be estimated from photos.** A barcode lookup in Open Food Facts gives the label's exact values.
+3. **Repeated meals should be logged once.** Denver cooks fish twice a week. A saved "usual meal" makes the next log a single tap with known values.
+4. **The open-weight model needs measuring before launch.** Token Factory's vision models have no published food benchmark.
+
+### Proposed pipeline
+
+| Step | Proposed design |
+| --- | --- |
+| 1. Capture | Photo from above, or a barcode scan, or a saved usual meal |
+| 2. Identify | An open-weight vision model on Token Factory lists the foods and suggests portion sizes in household units |
+| 3. Confirm | The person adjusts portions with a slider or chooses "about right". This step targets the largest error source. |
+| 4. Nutrients | Values come from USDA FoodData Central, or Open Food Facts for barcodes, using the confirmed foods and grams. The model does no arithmetic. |
+| 5. Show | Calories as a range, and the plan's own measures first. For Denver: protein toward 90 g, the plate method share of vegetables, beer evenings this week. |
+
+### Proposed evaluation (T-07a)
+
+Run each Token Factory vision model on the Nutrition5k test split (CC BY 4.0), with and without the true weight, and record calorie and macronutrient error. Pick the model on that result. Publish the table in `docs/validation/`.
+
+## Diet plans
+
+### Order of sources
+
+| Order | Source | Example for Denver |
+| --- | --- | --- |
+| 1 | A clinician's plan in the person's records. The app tracks against it and cites it, and changes it only when the person says the clinician changed it. | Dietitian review, 17 Nov 2025: plate method, protein 90 g a day, beer up to 3 evenings a week, weigh weekly, book a visit above 89 kg |
+| 2 | Established general guidance, labelled as general, when no clinician plan exists | See the methods below |
+| 3 | The person's own preferences and goals from the intake | "Walk 45 minutes with the grandchildren" (his physiotherapy goal) |
+
+### Established methods for the general plan
+
+| Measure | Method | Evidence and limits |
+| --- | --- | --- |
+| Resting energy | Mifflin-St Jeor equation from weight, height, age and sex | The most accurate of the common equations in comparison studies, including older people. It underestimates older men by about 5%, has little evidence past age 85, and does worse in obesity. |
+| Daily energy (TDEE) | Resting energy times an activity factor, 1.2 to 1.725 | Overstated activity is the largest error source, so the app starts from the low end |
+| Personal TDEE | After 2 to 3 weeks, the app recalculates from the person's own logged intake and scale trend, using about 7,700 kcal per kg of weight change | Replaces the equation with the person's own measurement. Needs regular weigh-ins and food logs. |
+| Weight loss target | 5 to 7% of body weight, the ADA's figure for people at high risk of type 2 diabetes, at about 0.5 kg a week | Denver's dietitian used 0.5 kg a week, and he lost 8.8% |
+| Protein | 1.0 to 1.2 g per kg a day for people over 65, and 1.2 g or more when exercising (PROT-AGE, ESPEN) | People with severe kidney disease (eGFR below 30) may need less. The app defers to the clinician when the records show this. |
+| Eating pattern | Dietary Guidelines for Americans 2025 to 2030: whole foods, protein by body weight, fewer ultra-processed foods and added sugars. For diabetes, the ADA 2026 Standards list Mediterranean-style and low-carbohydrate patterns. | Meal plans follow one named pattern and say which |
+
+Denver's numbers as a check: in April 2024 (95.0 kg, 176.8 cm, age 76), Mifflin-St Jeor gives 1,680 kcal at rest and 2,016 kcal at a sedentary activity factor. His dietitian estimated his need at 2,000 kcal. At maintenance in November 2025 (86.6 kg, age 78), the equation gives 2,181 kcal at a light activity factor.
+
+### Proposed meal plans
+
+1. A solver chooses foods and portions from USDA FoodData Central to meet the plan's targets. Open-source examples use linear programming: usda-mcp, aedobbyn/menu-builder, and tommyod's OR-Tools planner. Their licences need checking before reuse.
+2. The model turns the solver's choices into meals the person would cook, using their stated likes, such as Denver's fish twice a week.
+3. The app recomputes each meal's numbers from FoodData Central and rejects any plan that misses a target.
+
+### Safety rules (proposed)
+
+- **Floors:** no calorie target below 1,500 kcal a day for men or 1,200 for women without a clinician's plan.
+- **Low blood sugar risk:** when the records list insulin or a sulfonylurea, a new calorie target asks the person to confirm it with their clinician first. Metformin alone, as in Denver's records, has a low risk of low blood sugar.
+- **Older adults losing weight:** protein and strength exercise stay in every plan to protect muscle.
+- **Low body weight:** no weight loss plan when BMI is under 18.5, or under 22 for people over 65.
 
 ## Daily vitals by camera (rPPG)
 
@@ -123,6 +202,37 @@ Remote photoplethysmography (rPPG) reads the pulse from small colour changes in 
 | How | The person sits still, faces a window or lamp, and holds the phone at arm's length. An outline shows where the face goes. A countdown of about 45 seconds runs while the browser measures. |
 | Quality gate | The browser scores the signal. Movement, low light or a lost face produces "Let's try that again" and stores nothing. |
 | Result | Today shows the reading against the person's own 14-day baseline, for example "Resting pulse 64, about your usual." A trend line sits on the Timeline. |
+
+### Open-source work and benchmarks
+
+| Project | What it is | Licence | Published result |
+| --- | --- | --- | --- |
+| rPPG-Toolbox (UW ubicomplab, NeurIPS 2023) | Training and evaluation for supervised models (DeepPhys, TS-CAN, PhysNet, EfficientPhys, PhysFormer) and unsupervised methods (CHROM, POS) on 7 datasets | Responsible AI Source Code License 1.1 | Benchmarks on UBFC-rPPG, PURE, UBFC-Phys and MMPD |
+| pyVHR | Python framework of classic and deep rPPG methods | GPL-3.0 | Method comparisons in the PeerJ paper |
+| MMPD (dataset) | 11 hours of phone video from 33 people, with 4 skin tones, 4 motion and 4 lighting conditions | Research licence (check) | The hardest public benchmark for phone use |
+| Google PHRM (research, no code found) | Smartphone model validated on 205 people | None | Under 10% error against ECG for each skin-tone group |
+| VitalLens (Rouast) | Commercial API with a published report | Proprietary API | Vendor report: 0.71 bpm pulse and 0.76 breaths per minute error on its own data set |
+
+Error in beats per minute on public benchmarks, trained and tested on the same dataset (arXiv 2507.07795):
+
+| Model | PURE | UBFC-rPPG | MMPD (phone video) |
+| --- | --- | --- | --- |
+| PhysNet | 2.10 | 2.95 | 4.80 |
+| PhysFormer | 1.10 | 0.50 | 11.99 |
+| EfficientPhys | not reported | 1.14 | 13.47 |
+| TS-CAN | not reported | not reported | 9.71 |
+
+Models also degrade when tested on a different dataset from their training data. PhysNet trained on synthetic SCAMPS video scores 13.30 bpm on PURE, against 0.98 when trained on PURE.
+
+### What the benchmarks mean for the design
+
+1. **Phone video is the hard case.** Errors on MMPD are several times those on the lab datasets. The T-09 validation has to use phones in homes, not a lab camera.
+2. **A resting, still, well-lit capture reduces the gap.** Every design step in "Proposed capture" targets the motion and lighting conditions where MMPD shows the largest errors.
+3. **The licences shape the build.**
+   - **rPPG-Toolbox:** its licence forbids diagnosing a medical condition without human oversight, and inferring health conditions in its surveillance clause. A wellness pulse trend may fall outside both, but counsel should confirm before the toolbox's models or code are used.
+   - **pyVHR:** GPL-3.0 would require releasing linked code under the same licence.
+   - **Proposed route:** implement the published POS and CHROM methods directly in browser JavaScript.
+   - **Patents:** the authors of both methods were at Philips Research, so a patent search comes first.
 
 ### What it measures
 
@@ -139,7 +249,7 @@ The alpha shows only the readings that published validation supports.
 
 The video is processed in the browser and never uploaded. Only the numbers and a quality score reach the server.
 
-This matches the brief's direction of keeping raw personal data under the person's control. It also removes the need for a vision model call per video. Face detection uses a browser face-landmark model. The pulse comes from a published signal method (POS or CHROM) in JavaScript, or later from a small model run in the browser. The licences of rPPG-Toolbox, pyVHR and the browser demos need checking before any code is reused.
+This matches the brief's direction of keeping raw personal data under the person's control. It also removes the need for a vision model call per video. Face detection uses a browser face-landmark model. The pulse comes from a published signal method (POS or CHROM) written in JavaScript, or later from a small model run in the browser. The licence findings are in "What the benchmarks mean for the design".
 
 ### Why it matters for Denver
 
@@ -185,8 +295,10 @@ The 8-step tour leaves first run and stays available in Settings.
 | T-04 | Suggestions from logs that drift from a plan, under S-01 | T-03, S-01 |
 | T-05 | Medicines: list, dose check-ins, label photo, refills | T-01, R-02 |
 | T-06 | Measurements: Withings, Apple Health export, CSV | T-01 |
-| T-07 | Food log: photo, FoodData Central nutrients, CSV import | T-01, vision model check |
-| T-08 | Daily vitals by camera (rPPG), processed in the browser | T-01, T-09 |
+| T-07a | Vision model evaluation on Nutrition5k | Console access to Token Factory |
+| T-07 | Food log: photo, barcode, usual meals, FoodData Central nutrients, CSV import | T-01, T-07a |
+| T-10 | Diet plans: clinician plan first, general targets, solver meal plans | T-03, T-07 |
+| T-08 | Daily vitals by camera (rPPG), processed in the browser with POS or CHROM | T-01, T-09, patent search |
 | T-09 | rPPG validation against a pulse oximeter across skin tones and lighting | |
 
 ## Open questions for the owner
