@@ -73,17 +73,9 @@ MEASURES = {
                      "hemoglobin a1c/hemoglobin.total in blood")),
         Measure("blood_glucose", "Blood sugar", "mg/dL", 0, (20, 600), (
             "glucose", "blood glucose", "blood sugar", "fasting glucose")),
-        Measure("steps", "Steps", "steps", 0, (1, 100_000), ("steps",),
-                daily="sum"),
-        Measure("active_minutes", "Active minutes", "min", 0, (1, 1440),
-                ("active minutes", "exercise minutes"), daily="sum"),
         Measure("sleep", "Sleep", "hours", 1, (0.5, 24), ("sleep",
                                                          "sleep duration"),
                 daily="sum"),
-        Measure("water", "Water", "glasses", 0, (1, 30), ("water",),
-                daily="sum"),
-        Measure("drinks", "Alcoholic drinks", "drinks", 0, (0, 40),
-                ("alcoholic drinks",), daily="sum"),
         Measure("pain", "Pain", "of 10", 0, (0, 10), ("pain score",
                                                        "pain")),
     )

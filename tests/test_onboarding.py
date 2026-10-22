@@ -124,18 +124,6 @@ class RecordSetupTest(unittest.TestCase):
         book = next(b for b in notebooks.list_notebooks() if b['name'] == 'Diabetes care')
         self.assertTrue(book['todo_enabled'])
 
-    def test_a_goal_from_the_call_becomes_a_goal_with_suggested_trackers(self):
-        from stellis import goals
-        onboarding.choose(self.account, [], 'review')
-        onboarding.complete(self.account, record_groups=[
-            {'notebook_name': 'Weight and knees', 'items': [], 'goal': 'Walk without knee pain'},
-            {'notebook_name': 'Scans', 'items': [], 'goal': 'Understand my scan results'},
-        ])
-        listed = goals.overview('2026-10-22', 0)['goals']
-        self.assertEqual([(g['title'], g['template']) for g in listed],
-                         [('Walk without knee pain', 'move'), ('Understand my scan results', None)])
-        self.assertEqual([t['label'] for t in listed[0]['trackers']], ['Steps', 'Exercise'])
-
     def test_record_groups_are_checked_before_anything_is_created(self):
         onboarding.choose(self.account, [], 'review')
         with self.assertRaises(ValueError):

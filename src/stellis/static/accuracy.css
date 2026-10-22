@@ -116,6 +116,7 @@
 /* The note beside an estimate. */
 .accuracy-note {
   display: inline-flex;
+  min-height: 24px;
   align-items: center;
   gap: 4px;
   color: var(--muted);

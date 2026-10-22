@@ -1,739 +1,668 @@
 /**
- * @fileoverview Today on Home: the person's goals with their trackers, and
- * the latest reading of each measure a goal uses. Each tracker shows its
- * progress for today, a 7-day row of dots and its streak, and logs in place:
- * a reading, a habit done today, a timer, or a slip.
+ * @fileoverview Health overview and goals on Home. From top to bottom:
+ * reminder banners that are due now, a card of four latest readings with
+ * small trend lines, one card per goal with a 6-week bar chart, and a form
+ * that builds a goal from selectors. Every block reloads from GET /goals
+ * after each change.
  */
 (function(root) {
 'use strict';
 
 const SVG = 'http://www.w3.org/2000/svg';
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
   'Dec'
 ];
-const KINDS = [
-  ['daily', 'Daily target'],
-  ['target', 'Value to reach'],
-  ['weekly', 'Days a week'],
-  ['timer', 'Timer'],
-  ['without', 'Days without'],
-];
-/** Measures logged one at a time get a +1 button instead of a form. */
-const STEP_UNITS = new Set(['glasses', 'drinks']);
-const MAX_TILES = 6;
+const OVERVIEW = ['pulse', 'blood_pressure', 'sleep', 'weight'];
+const OVERVIEW_LABELS = {
+  pulse: 'Resting pulse'
+};
+const SPARK_POINTS = 12;
+const USUAL_MIN = 6;
+const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
+const STATUS = {
+  usual: 'Within your usual range',
+  above: 'Higher than your usual range',
+  below: 'Lower than your usual range',
+};
+const REFRESH_MS = 60000;
 
-/** The person's local date as YYYY-MM-DD. */
+/** Local date as YYYY-MM-DD. */
 function localDay(date = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${
       pad(date.getDate())}`;
 }
 
-/** Formats 2026-10-22 as "Oct 22". */
-function shortDate(day) {
-  const [, m, d] = String(day).slice(0, 10).split('-').map(Number);
-  return m && d ? `${MONTHS[m - 1]} ${d}` : '';
-}
-
-/**
- * Formats a number for a tracker line.
- * @param {?number} value
- * @param {number=} decimals
- * @return {string}
- */
-function number(value, decimals = 0) {
-  return Number(value || 0).toLocaleString('en-US', {
-    maximumFractionDigits: decimals,
-  });
-}
-
-/** Formats minutes as "9 h 20 min", "45 min" or "14 h". */
-function duration(minutes) {
-  const total = Math.round(minutes || 0);
-  const hours = Math.floor(total / 60);
-  const rest = total % 60;
-  if (!hours) return `${rest} min`;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
-}
-
-/** Formats elapsed milliseconds as a clock, such as "3:12:05". */
-function clock(ms) {
-  const seconds = Math.max(0, Math.floor(ms / 1000));
+/** Local time as HH:MM. */
+function localTime(date = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
-  return `${Math.floor(seconds / 3600)}:${pad(Math.floor(seconds / 60) % 60)}:${
-      pad(seconds % 60)}`;
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Formats "20:00" as "8:00 pm". */
+function clockText(time) {
+  const [h, m] = String(time).split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${
+      h < 12 ? 'am' : 'pm'}`;
+}
+
+/** Formats a date as "Oct 12". */
+function shortDate(date) {
+  return `${MONTHS[date.getMonth()]} ${date.getDate()}`;
+}
+
+/** Names a reading's day relative to today: "today", "yesterday", "Oct 12". */
+function dayText(time) {
+  const text = String(time);
+  const day = new Date(text.length <= 10 ? `${text}T12:00` : text);
+  const start = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((start(new Date()) - start(day)) / 864e5);
+  return days === 0 ? 'today' : days === 1 ? 'yesterday' : shortDate(day);
+}
+
+/** Formats a reading's value. */
+function valueText(measure, point) {
+  const format = (v) => Number(v).toLocaleString('en-US', {
+    maximumFractionDigits: measure.decimals,
+  });
+  return measure.paired ? `${format(point.value)}/${format(point.value2)}` :
+                          format(point.value);
+}
+
+/** "Every day", "Once a week" or "4 times a week". */
+function frequencyText(times) {
+  if (times === 7) return 'Every day';
+  return times === 1 ? 'Once a week' : `${times} times a week`;
 }
 
 /**
- * The one-line progress of a tracker.
- * @param {!Object} tracker A tracker from GET /goals.
+ * One sentence of encouragement for a goal's week.
+ * @param {!Object} goal A goal from GET /goals.
+ * @param {number} daysLeft Days left in a week, today included.
  * @return {string}
  */
-function summary(tracker) {
-  const unit = tracker.unit;
-  switch (tracker.kind) {
-    case 'daily': {
-      const today = number(tracker.today, tracker.decimals);
-      const target = number(tracker.target, tracker.decimals);
-      return tracker.direction === 'at_most' ?
-          `${today} today, at most ${target} ${unit}` :
-          `${today} of ${target} ${unit} today`;
-    }
-    case 'weekly':
-      return `${tracker.this_week} of ${number(tracker.target)} ${
-          tracker.target === 1 ? 'day' : 'days'} this week`;
-    case 'timer':
-      return `${duration(tracker.today)} of ${duration(tracker.target)} today`;
-    case 'without':
-      return `${tracker.streak} ${tracker.streak === 1 ? 'day' : 'days'} ` +
-          `without ${tracker.label.toLowerCase()}`;
-    case 'target':
-      if (tracker.latest == null) return `Log a reading to start`;
-      return `${number(tracker.latest, tracker.decimals)} ${unit} now, ` +
-          `target ${number(tracker.target, tracker.decimals)} ${unit}`;
+function encouragement(goal, daysLeft) {
+  const left = goal.times_per_week - goal.this_week;
+  if (left <= 0) return 'Goal reached for this week. Well done.';
+  const [one, many] = goal.noun;
+  const count = left === 1 ? `One more ${one} reaches` :
+                             `${WORDS[left] || left} more ${many} reach`;
+  const sentence = `${count} this week's goal.`;
+  if (goal.done_today) return `Logged today. ${sentence}`;
+  if (left > daysLeft) {
+    if (!goal.this_week) return `Start this week with a ${one} today.`;
+    return `${WORDS[goal.this_week] || goal.this_week} so far this week. ` +
+        'Every one counts.';
   }
-  return '';
+  return sentence;
 }
 
-/** The streak label, or '' with no streak. */
-function streakText(tracker) {
-  if (tracker.kind === 'without' || !tracker.streak) return '';
-  return `${tracker.streak}-${tracker.streak_unit} streak`;
-}
-
-/** The share of today's target reached, from 0 to 1. */
-function fraction(tracker) {
-  if (tracker.kind === 'target') return tracker.fraction || 0;
-  if (tracker.kind === 'weekly') return tracker.this_week / tracker.target;
-  if (tracker.kind === 'daily' && tracker.direction === 'at_most')
-    return tracker.met_today ? 1 : 0;
-  return Math.min(1, (tracker.today || 0) / tracker.target);
-}
-
-/** A ring that fills to a fraction. */
-function ring(share, label) {
-  const node = document.createElementNS(SVG, 'svg');
-  node.setAttribute('viewBox', '0 0 44 44');
-  node.setAttribute('class', 'goal-ring');
-  node.setAttribute('aria-hidden', 'true');
-  const radius = 18;
-  const length = 2 * Math.PI * radius;
-  for (const [cls, dash] of [
-           ['goal-ring-track', length],
-           ['goal-ring-fill', length * Math.min(1, share)]]) {
-    const circle = document.createElementNS(SVG, 'circle');
-    circle.setAttribute('cx', '22');
-    circle.setAttribute('cy', '22');
-    circle.setAttribute('r', String(radius));
-    circle.setAttribute('class', cls);
-    circle.style.strokeDasharray = `${dash} ${length}`;
-    node.append(circle);
+/** Overview context line for a measure. */
+function contextText(measure) {
+  if (measure.status in STATUS) return STATUS[measure.status];
+  const more = USUAL_MIN - measure.points.length;
+  if (more > 0) {
+    return `${WORDS[more] || more} more ${
+        more === 1 ? 'reading shows' : 'readings show'} your usual range`;
   }
-  const text = document.createElementNS(SVG, 'text');
-  text.setAttribute('x', '22');
-  text.setAttribute('y', '22');
-  text.setAttribute('class', 'goal-ring-label');
-  text.textContent = label;
-  node.append(text);
+  return 'Your usual range appears with more recent readings';
+}
+
+/** Overview source line for a reading. */
+function sourceText(point) {
+  const when = dayText(point.time);
+  if (point.source === 'camera') return `Camera estimate, ${when}`;
+  if (point.source === 'record') return `From ${point.title}, ${when}`;
+  return `You logged, ${when}`;
+}
+
+/** Creates an SVG element with attributes. */
+function svg(tag, attrs = {}) {
+  const node = document.createElementNS(SVG, tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    node.setAttribute(key, String(value));
+  }
   return node;
 }
 
-/** A row of day dots, each with its weekday initial. */
-function dots(days, dom) {
-  const list = dom.el('ol', null, 'goal-days');
-  for (const day of days) {
-    const [y, m, d] = day.date.split('-').map(Number);
-    const weekday = new Date(y, m - 1, d).getDay();
-    const item = dom.el('li', null, 'goal-day');
-    item.classList.toggle('is-met', day.met);
-    item.classList.toggle('is-untracked', !day.tracked || !!day.future);
-    item.title = `${shortDate(day.date)}: ${day.met ? 'met' : 'not met'}`;
-    item.append(
-        dom.el('span', null, 'goal-dot'),
-        dom.el('span', WEEKDAYS[weekday], 'goal-weekday'));
-    list.append(item);
+/**
+ * A small trend line of recent readings, with a usual-range band.
+ * @param {!Object} measure
+ * @return {!SVGElement}
+ */
+function sparkline(measure) {
+  const points = measure.points.slice(-SPARK_POINTS);
+  const w = 120;
+  const h = 32;
+  const chart = svg('svg', {
+    class: 'overview-spark',
+    viewBox: `0 0 ${w} ${h}`,
+    preserveAspectRatio: 'none',
+    'aria-hidden': 'true'
+  });
+  const values = points.map((p) => Number(p.value));
+  const usual = measure.usual;
+  const all = usual ? [...values, usual.low, usual.high] : values;
+  let lo = Math.min(...all);
+  let hi = Math.max(...all);
+  if (hi - lo < 1e-9) {
+    lo -= 1;
+    hi += 1;
   }
-  list.setAttribute(
-      'aria-label',
-      `${days.filter((d) => d.met).length} of ${days.length} days met`);
-  return list;
+  const y = (v) => h - 4 - (v - lo) / (hi - lo) * (h - 8);
+  const x = (i) => points.length === 1 ? w : i * w / (points.length - 1);
+  if (usual) {
+    chart.append(svg('rect', {
+      class: 'overview-band',
+      x: 0,
+      y: y(usual.high),
+      width: w,
+      height: y(usual.low) - y(usual.high)
+    }));
+  }
+  if (points.length > 1) {
+    chart.append(svg('polyline', {
+      points: values.map((v, i) => `${x(i)},${y(v)}`).join(' '),
+    }));
+  }
+  chart.append(
+      svg('circle',
+          {cx: x(points.length - 1), cy: y(values[values.length - 1]), r: 3}));
+  return chart;
 }
 
-/** Today on Home. */
-class GoalsPanel {
-  /** @param {!Element} host */
-  constructor(host) {
-    this.dom = root.StellisDom;
-    this.host = host;
-    this.goals = [];
-    this.measures = [];
-    this.ticker = 0;
-    this.dialog = null;
-  }
-
-  /** Loads goals and readings, then paints. */
-  async load() {
-    const dom = this.dom;
-    const params = new URLSearchParams({
-      today: localDay(),
-      utc_offset: String(-new Date().getTimezoneOffset()),
+/**
+ * Bars of logged days per week, with a dashed line at a goal.
+ * @param {!Object} goal
+ * @param {!Date} today
+ * @return {!SVGElement}
+ */
+function weekChart(goal, today) {
+  const w = 240;
+  const h = 96;
+  const top = 14;
+  const base = h - 18;
+  const bar = 28;
+  const gap = 12;
+  // Scaled to a goal or a busier week, so a 3-a-week goal fills its chart.
+  const max = Math.max(goal.times_per_week, ...goal.weeks);
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const chart =
+      svg('svg', {class: 'goal-weeks', viewBox: `0 0 ${w} ${h}`, role: 'img'});
+  const label = goal.weeks.map((count, i) => {
+    const start = new Date(monday);
+    start.setDate(monday.getDate() - 7 * (goal.weeks.length - 1 - i));
+    return {count, start, now: i === goal.weeks.length - 1};
+  });
+  chart.setAttribute(
+      'aria-label',
+      `Days logged per week: ${
+          label
+              .map(
+                  (week) => `${
+                      week.now ?
+                          'this week' :
+                          'week of ' + shortDate(week.start)} ${week.count}`)
+              .join(', ')}. Goal ${goal.times_per_week}.`);
+  const yGoal = base - goal.times_per_week / max * (base - top);
+  chart.append(
+      svg('line', {class: 'goal-line', x1: 0, x2: w, y1: yGoal, y2: yGoal}));
+  const goalText =
+      svg('text',
+          {class: 'goal-line-label', x: w, y: yGoal - 4, 'text-anchor': 'end'});
+  goalText.textContent = `Goal ${goal.times_per_week}`;
+  chart.append(goalText);
+  label.forEach((week, i) => {
+    const x = 8 + i * (bar + gap);
+    const height = Math.max(week.count / max * (base - top), 2);
+    const radius = Math.min(4, height / 2);
+    const path = svg('path', {
+      class: week.now ? 'goal-bar is-now' : 'goal-bar',
+      d: `M${x},${base} v${- (height - radius)} q0,${- radius} ${radius},${
+          - radius} h${bar - 2 * radius} q${radius},0 ${radius},${radius} v${
+          height - radius} z`,
     });
+    const tip = svg('title');
+    tip.textContent =
+        `${week.now ? 'This week' : 'Week of ' + shortDate(week.start)}: ${
+            week.count} of ${goal.times_per_week}`;
+    path.append(tip);
+    chart.append(path);
+    const axis = svg('text', {
+      class: 'goal-axis',
+      x: x + bar / 2,
+      y: h - 4,
+      'text-anchor': 'middle'
+    });
+    axis.textContent = week.now ? 'This wk' : shortDate(week.start);
+    chart.append(axis);
+  });
+  return chart;
+}
+
+/**
+ * Builds Home's health overview and goals inside a host element.
+ * @param {!Element} host
+ * @return {{load: function(): !Promise}}
+ */
+function create(host) {
+  const dom = root.StellisDom;
+  let data = {goals: [], reminders: [], activities: []};
+  let measures = [];
+  let editing = null;
+  let adding = false;
+  let timer = 0;
+
+  const query = () => new URLSearchParams({
+    today: localDay(),
+    now: localTime(),
+    utc_offset: String(-new Date().getTimezoneOffset()),
+  });
+
+  async function load() {
     try {
       const [goals, readings] = await Promise.all([
-        dom.api(`/goals?${params}`),
+        dom.api(`/goals?${query()}`),
         dom.api('/readings'),
       ]);
-      this.goals = goals.goals;
-      this.measures = readings.measures;
-      this.paint();
+      data = goals;
+      measures = readings.measures;
+      paint();
     } catch (error) {
-      this.host.replaceChildren(dom.el('p', error.message, 'goals-status'));
+      host.replaceChildren(dom.el('p', error.message, 'goals-status'));
+    }
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (host.isConnected && !document.hidden && !editing && !adding)
+        load();
+      else if (host.isConnected)
+        timer = setTimeout(load, REFRESH_MS);
+    }, REFRESH_MS);
+  }
+
+  /** Runs a change, then reloads; reports a failure in place. */
+  async function act(change, status) {
+    try {
+      await change();
+      editing = null;
+      adding = false;
+      await load();
+    } catch (error) {
+      if (status) status.textContent = error.message;
     }
   }
 
-  paint() {
-    const dom = this.dom;
-    clearInterval(this.ticker);
-    const head = dom.el('div', null, 'goals-head');
-    const title = dom.el('h2', 'Today');
+  const goalPath = (goal) => `/goals/${encodeURIComponent(goal.id)}`;
+  const markToday = (goal, done) => dom.api(
+      `${goalPath(goal)}/days/${localDay()}`, {method: 'PUT', json: {done}});
+
+  function paint() {
+    const parts = [];
+    for (const reminder of data.reminders) parts.push(banner(reminder));
+    const title = dom.el('h2', null, 'coach-title');
     title.id = 'goals-title';
-    const now = new Date();
-    const date = dom.el(
-        'span',
-        now.toLocaleDateString(
-            'en-US', {weekday: 'long', month: 'short', day: 'numeric'}),
-        'goals-date');
-    const add = dom.button(null, 'goals-add');
-    add.append(dom.icon('plus'), dom.el('span', 'Add goal'));
-    add.addEventListener('click', () => this.openDialog());
-    head.append(title, date, add);
-
-    const grid = dom.el('div', null, 'goals-grid');
-    for (const goal of this.goals) grid.append(this.goalCard(goal));
-    if (!this.goals.length) {
-      const empty = dom.el('div', null, 'goals-empty');
-      empty.append(
-          dom.el('p', 'Set a goal to track steps, sleep, habits and more'));
-      grid.append(empty);
+    title.append(
+        'Health overview ',
+        dom.el(
+            'span',
+            new Date().toLocaleDateString(
+                'en-US', {weekday: 'long', month: 'short', day: 'numeric'})));
+    parts.push(title, overview());
+    const head = dom.el('div', null, 'coach-section-head');
+    head.append(dom.el('h3', 'Goals'));
+    if (data.goals.length && !adding) {
+      const add = dom.button('Add a goal', 'coach-link');
+      add.addEventListener('click', () => {
+        adding = true;
+        paint();
+      });
+      head.append(add);
     }
-    this.host.replaceChildren(head, grid);
-    const tiles = this.readingTiles();
-    if (tiles) this.host.append(tiles);
-    if (this.goals.some((g) => g.trackers.some((t) => t.running_since))) {
-      this.ticker = setInterval(() => this.tick(), 1000);
+    parts.push(head);
+    const grid = dom.el('div', null, 'coach-goals');
+    for (const goal of data.goals) {
+      grid.append(editing === goal.id ? form(goal) : goalCard(goal));
     }
+    if (data.goals.length) parts.push(grid);
+    if (!data.goals.length || adding) parts.push(form(null));
+    host.replaceChildren(...parts);
   }
 
-  /** Updates every running timer's clock. */
-  tick() {
-    for (const node of this.host.querySelectorAll('[data-running-since]')) {
-      node.textContent =
-          clock(Date.now() - Date.parse(node.dataset.runningSince));
+  /** A due reminder: a question with Yes and Not yet, or a pending banner. */
+  function banner(reminder) {
+    const goal = data.goals.find((g) => g.id === reminder.goal_id);
+    const node = dom.el('section', null, `coach-reminder is-${reminder.state}`);
+    node.setAttribute('aria-label', 'Reminder');
+    node.setAttribute('role', 'status');
+    const status = dom.el('span', null, 'coach-reminder-error');
+    const yes = dom.button(
+        reminder.state === 'ask' ? 'Yes' : 'Done', 'coach-button is-primary');
+    yes.addEventListener(
+        'click', () => act(() => markToday(goal, true), status));
+    const text = dom.el('div', null, 'coach-reminder-text');
+    const actions = dom.el('div', null, 'coach-reminder-actions');
+    if (reminder.state === 'ask') {
+      text.append(
+          dom.el(
+              'span', `${clockText(reminder.reminder)} reminder`,
+              'coach-reminder-when'),
+          dom.el('strong', reminder.question));
+      const later = dom.button('Not yet', 'coach-button');
+      later.addEventListener(
+          'click',
+          () =>
+              act(() => dom.api(
+                      `${goalPath(goal)}/days/${localDay()}/not-yet`,
+                      {method: 'POST'}),
+                  status));
+      actions.append(yes, later);
+    } else {
+      text.append(
+          dom.el('strong', reminder.title),
+          dom.el('span', ` is due from ${clockText(reminder.reminder)}`));
+      actions.append(yes);
     }
+    node.append(text, actions, status);
+    return node;
   }
 
-  /** @param {!Object} goal */
-  goalCard(goal) {
-    const dom = this.dom;
-    const card = dom.el('article', null, 'goal-card');
-    const head = dom.el('div', null, 'goal-card-head');
-    const title = dom.el('h3', goal.title);
-    const remove = dom.button(null, 'goal-remove');
-    remove.append(dom.icon('trash'));
-    remove.setAttribute('aria-label', `Delete ${goal.title}`);
-    remove.title = 'Delete goal';
-    remove.addEventListener('click', async () => {
-      if (!root.confirm(`Delete "${goal.title}"? Its readings stay.`)) return;
-      await this.act(() => dom.api(`/goals/${encodeURIComponent(goal.id)}`, {
-        method: 'DELETE',
-      }));
-    });
-    head.append(title, remove);
-    card.append(head);
-    for (const tracker of goal.trackers) card.append(this.trackerRow(tracker));
-    if (!goal.trackers.length) {
-      const add = dom.button(null, 'goal-add-tracker');
-      add.append(dom.icon('plus'), dom.el('span', 'Add a tracker'));
-      add.addEventListener('click', () => this.openDialog(goal));
-      card.append(add);
+  /** Four latest readings with trend lines. */
+  function overview() {
+    const card = dom.el('section', null, 'overview');
+    card.setAttribute('aria-label', 'Latest readings');
+    for (const key of OVERVIEW) {
+      const measure = measures.find((m) => m.key === key);
+      if (!measure) continue;
+      const stat = dom.el('div', null, 'overview-stat');
+      stat.append(dom.el(
+          'span', OVERVIEW_LABELS[key] || measure.label, 'overview-label'));
+      const last = measure.points.at(-1);
+      if (!last) {
+        stat.append(dom.el('span', 'No readings yet', 'overview-empty'));
+        const camera = root.StellisCameraPulse;
+        if (key === 'pulse' && camera?.supported()) {
+          const measureButton = dom.button('Measure with camera', 'coach-link');
+          measureButton.addEventListener(
+              'click', () => camera.open(() => load(), measure));
+          stat.append(measureButton);
+        } else {
+          const link = /** @type {!HTMLAnchorElement} */ (
+              dom.el('a', 'Add a reading', 'coach-link'));
+          link.href = '/trends';
+          stat.append(link);
+        }
+        card.append(stat);
+        continue;
+      }
+      const value = dom.el('span', valueText(measure, last), 'overview-value');
+      value.append(dom.el('span', measure.unit, 'overview-unit'));
+      const meta = dom.el('span', sourceText(last), 'overview-meta');
+      if (last.source === 'camera') {
+        meta.append(' ', dom.accuracyNote('camera', 'How accurate'));
+      }
+      stat.append(
+          value, sparkline(measure),
+          dom.el('span', contextText(measure), 'overview-context'), meta);
+      card.append(stat);
     }
     return card;
   }
 
-  /** @param {!Object} tracker */
-  trackerRow(tracker) {
-    const dom = this.dom;
-    const row = dom.el('section', null, `goal-tracker is-${tracker.kind}`);
-    // A habit or a value to reach is met for the week or for good, not
-    // only today.
-    row.classList.toggle(
-        'is-met',
-        ['weekly', 'target'].includes(tracker.kind) ? fraction(tracker) >= 1 :
-                                                      !!tracker.met_today);
-    row.setAttribute('aria-label', tracker.label);
-    const share = fraction(tracker);
-    const figure = tracker.kind === 'without' ?
-        dom.el('strong', String(tracker.streak), 'goal-count') :
-        ring(share, `${Math.round(share * 100)}%`);
-    const text = dom.el('div', null, 'goal-text');
-    text.append(
-        dom.el('span', tracker.label, 'goal-label'),
-        dom.el('span', summary(tracker), 'goal-summary'));
-    const streak = streakText(tracker);
-    if (streak) {
-      const badge = dom.el('span', null, 'goal-streak');
-      badge.append(dom.icon('flame'), dom.el('span', streak));
-      text.append(badge);
+  /** One goal: this week's count, a 6-week chart, encouragement and Log. */
+  function goalCard(goal) {
+    const today = new Date();
+    const card = dom.el('article', null, 'coach-goal');
+    const head = dom.el('div', null, 'coach-goal-head');
+    const name = dom.el('h4', goal.title);
+    const edit = dom.button(null, 'coach-icon');
+    edit.append(dom.icon('pencil'));
+    edit.setAttribute('aria-label', `Edit ${goal.title}`);
+    edit.title = 'Edit goal';
+    edit.addEventListener('click', () => {
+      editing = goal.id;
+      paint();
+    });
+    const chips = dom.el('div', null, 'coach-chips');
+    chips.append(
+        dom.el('span', frequencyText(goal.times_per_week), 'coach-chip'));
+    if (goal.reminder) {
+      chips.append(
+          dom.el('span', `Reminder ${clockText(goal.reminder)}`, 'coach-chip'));
     }
-    if (tracker.kind === 'timer' && tracker.running_since) {
-      const running = dom.el(
-          'span', clock(Date.now() - Date.parse(tracker.running_since)),
-          'goal-clock');
-      running.dataset.runningSince = tracker.running_since;
-      running.setAttribute('role', 'timer');
-      text.append(running);
-    }
-    if (tracker.kind === 'target' && tracker.baseline != null) {
-      text.append(dom.el(
-          'span',
-          `Started at ${number(tracker.baseline, tracker.decimals)} ${
-              tracker.unit} on ${shortDate(tracker.baseline_date)}`,
-          'goal-detail'));
-    }
-    const actions = dom.el('div', null, 'goal-actions');
-    actions.append(...this.trackerActions(tracker, row));
-    row.append(figure, text, actions);
-    if (tracker.days) row.append(dots(tracker.days, dom));
-    return row;
+    head.append(name, edit, chips);
+    const body = dom.el('div', null, 'coach-goal-body');
+    const count = dom.el('div', null, 'coach-count');
+    count.append(
+        dom.el(
+            'span', `${goal.this_week} of ${goal.times_per_week}`,
+            'coach-count-value'),
+        dom.el('span', 'this week', 'coach-count-label'));
+    body.append(count, weekChart(goal, today));
+    const daysLeft = 7 - ((today.getDay() + 6) % 7);
+    const status = dom.el('p', null, 'coach-error');
+    status.setAttribute('role', 'status');
+    card.append(
+        head, body, dom.el('p', encouragement(goal, daysLeft), 'coach-note'),
+        logControl(goal, card, status), status);
+    return card;
   }
 
-  /** The buttons that log a tracker. */
-  trackerActions(tracker, row) {
-    const dom = this.dom;
-    const today = localDay();
-    const id = encodeURIComponent(tracker.id);
-    const make = (label, glyph, action, cls = '') => {
-      const node = dom.button(null, `goal-action ${cls}`);
-      if (glyph) node.append(dom.icon(glyph));
-      node.append(dom.el('span', label));
-      node.addEventListener('click', action);
-      return node;
-    };
-    const measure = this.measures.find((m) => m.key === tracker.measure);
-    switch (tracker.kind) {
-      case 'weekly': {
-        if (tracker.from_readings && measure) {
-          return [make('Log', 'plus', () => this.logForm(row, measure))];
-        }
-        const done = make(
-            'Done today', 'check',
-            () => this.act(() => dom.api(`/trackers/${id}/days`, {
-              method: 'PUT',
-              json: {day: today, done: !tracker.met_today},
-            })));
-        done.setAttribute('aria-pressed', String(!!tracker.met_today));
-        return [done];
-      }
-      case 'timer':
-        return tracker.running_since ?
-            [make(
-                'Stop', 'player-stop',
-                () => this.act(
-                    () => dom.api(
-                        `/trackers/${id}/timer?utc_offset=${
-                            - new Date().getTimezoneOffset()}`,
-                        {method: 'DELETE'})),
-                'is-primary')] :
-            [make(
-                'Start', 'player-play',
-                () => this.act(
-                    () => dom.api(`/trackers/${id}/timer`, {method: 'POST'})))];
-      case 'without':
-        return [make(
-            'Log a slip', null, () => this.confirmSlip(row, tracker),
-            'is-quiet')];
-      default:
-        if (!measure) return [];
-        if (STEP_UNITS.has(measure.unit)) {
-          return [make('1', 'plus', () => this.act(() => dom.api('/readings', {
-            method: 'POST',
-            json: {measure: measure.key, value: 1},
-          })))];
-        }
-        return [make('Log', 'plus', () => this.logForm(row, measure))];
+  /** A button that logs a goal for today, or a reading form for it. */
+  function logControl(goal, card, status) {
+    const [one] = goal.noun;
+    if (goal.measure === 'pulse') {
+      const camera = root.StellisCameraPulse;
+      const pulse = measures.find((m) => m.key === 'pulse');
+      const button = dom.button('Measure pulse', 'coach-button');
+      button.disabled = !camera?.supported();
+      button.addEventListener('click', () => camera.open(() => load(), pulse));
+      return button;
     }
+    if (goal.measure && !goal.done_today) {
+      const button = dom.button(
+          goal.measure === 'sleep' ? 'Log sleep' : 'Log a reading',
+          'coach-button');
+      button.addEventListener(
+          'click', () => button.replaceWith(readingForm(goal, status)));
+      return button;
+    }
+    const label = goal.done_today    ? 'Logged today' :
+        goal.activity === 'medicine' ? 'Log a dose' :
+                                       `Log a ${one}`;
+    const button = dom.button(null, 'coach-button');
+    if (goal.done_today) button.append(dom.icon('check'));
+    button.append(dom.el('span', label));
+    button.setAttribute('aria-pressed', String(goal.done_today));
+    button.addEventListener(
+        'click', () => act(() => markToday(goal, !goal.done_today), status));
+    return button;
   }
 
-  /** Asks before logging a slip, which resets the count. */
-  confirmSlip(row, tracker) {
-    const dom = this.dom;
-    const confirm = dom.el('div', null, 'goal-form');
-    confirm.append(dom.el('span', 'Log a slip today? The count restarts.'));
-    const yes = dom.button('Log slip', 'goal-action is-primary');
-    const no = dom.button('Cancel', 'goal-action is-quiet');
-    yes.addEventListener(
-        'click',
-        () => this.act(
-            () => dom.api(
-                `/trackers/${encodeURIComponent(tracker.id)}/days`,
-                {method: 'PUT', json: {day: localDay(), done: true}})));
-    no.addEventListener('click', () => confirm.remove());
-    confirm.append(yes, no);
-    row.querySelector('.goal-form')?.remove();
-    row.append(confirm);
-    yes.focus();
-  }
-
-  /** An inline form that logs one reading of a measure. */
-  logForm(row, measure) {
-    const dom = this.dom;
-    row.querySelector('.goal-form')?.remove();
-    const form = dom.el('form', null, 'goal-form');
+  /** An inline form that logs a blood pressure or sleep reading. */
+  function readingForm(goal, status) {
+    const measure = measures.find((m) => m.key === goal.measure);
+    const node = dom.el('form', null, 'coach-reading');
     const field = (label) => {
       const input = /** @type {!HTMLInputElement} */ (dom.el('input'));
       input.type = 'number';
-      input.inputMode = 'decimal';
       input.step = 'any';
+      input.inputMode = 'decimal';
       input.required = true;
       input.setAttribute('aria-label', label);
       return input;
     };
-    const first = field(
-        measure.paired ? 'Systolic' : `${measure.label} in ${measure.unit}`);
-    form.append(first);
+    const first = field(measure.paired ? 'Systolic' : 'Hours of sleep');
+    node.append(first);
     let second = null;
     if (measure.paired) {
       second = field('Diastolic');
-      form.append(dom.el('span', '/', 'goal-unit'), second);
+      node.append(dom.el('span', '/'), second);
     }
-    const status = dom.el('span', null, 'goal-form-status');
-    status.setAttribute('role', 'status');
-    const save = dom.button('Save', 'goal-action is-primary');
+    const save = dom.button('Save', 'coach-button is-primary');
     save.type = 'submit';
-    const cancel = dom.button('Cancel', 'goal-action is-quiet');
-    cancel.addEventListener('click', () => form.remove());
-    form.append(
-        dom.el('span', measure.unit, 'goal-unit'), save, cancel, status);
-    form.addEventListener('submit', async (event) => {
+    node.append(dom.el('span', measure.unit, 'coach-unit'), save);
+    node.addEventListener('submit', (event) => {
       event.preventDefault();
-      try {
-        await dom.api('/readings', {
-          method: 'POST',
-          json: {
-            measure: measure.key,
-            value: Number(first.value),
-            value2: second ? Number(second.value) : null,
-          },
-        });
-        await this.load();
-      } catch (error) {
-        status.textContent = error.message;
-      }
+      act(() => dom.api('/readings', {
+        method: 'POST',
+        json: {
+          measure: measure.key,
+          value: Number(first.value),
+          value2: second ? Number(second.value) : null,
+        }
+      }),
+          status);
     });
-    row.append(form);
-    first.focus();
+    setTimeout(() => first.focus());
+    return node;
   }
 
-  /** Runs a change, then reloads; shows a failure in place. */
-  async act(change) {
-    try {
-      await change();
-      await this.load();
-    } catch (error) {
-      root.alert(error.message);
-    }
-  }
-
-  /** Tiles for the latest single-value readings that goals use. */
-  readingTiles() {
-    const dom = this.dom;
-    const used = new Set(this.goals.flatMap(
-        (g) => g.trackers.map((t) => t.measure).filter(Boolean)));
-    const shown =
-        this.measures
-            .filter(
-                (m) =>
-                    m.daily === 'last' && (used.has(m.key) || m.points.length))
-            .sort((a, b) => Number(used.has(b.key)) - Number(used.has(a.key)))
-            .slice(0, MAX_TILES);
-    if (!shown.length) return null;
-    const section = dom.el('section', null, 'goal-readings');
-    section.setAttribute('aria-labelledby', 'goal-readings-title');
-    const head = dom.el('div', null, 'goals-head');
-    const title = dom.el('h3', 'Latest readings');
-    title.id = 'goal-readings-title';
-    const link = /** @type {!HTMLAnchorElement} */ (dom.el('a', 'Trends'));
-    link.href = '/trends';
-    head.append(title, link);
-    const tiles = dom.el('div', null, 'reading-tiles');
-    for (const measure of shown) {
-      const tile = dom.el('article', null, 'reading-tile');
-      const last = measure.points.at(-1);
-      tile.append(dom.el('span', measure.label, 'reading-label'));
-      if (last) {
-        const value = dom.el('strong', null, 'reading-value');
-        value.append(
-            measure.paired ? `${number(last.value)}/${number(last.value2)}` :
-                             number(last.value, measure.decimals),
-            dom.el('span', ` ${measure.unit}`, 'reading-unit'));
-        tile.append(
-            value, dom.el('span', shortDate(last.time), 'reading-date'));
-        if (last.source === 'camera') tile.append(dom.accuracyNote('camera'));
-      } else {
-        tile.append(dom.el('span', 'No readings yet', 'reading-date'));
+  /** Selectors that add a goal, or edit one when given. */
+  function form(goal) {
+    const node = dom.el('form', null, 'coach-form');
+    node.setAttribute('aria-labelledby', 'coach-form-title');
+    const heading = dom.el('h3', goal ? `Edit ${goal.title}` : 'Add a goal');
+    heading.id = 'coach-form-title';
+    const select = (label, options, value) => {
+      const field = dom.el('label', null, 'coach-field');
+      const control = /** @type {!HTMLSelectElement} */ (dom.el('select'));
+      for (const [optionValue, text] of options) {
+        control.append(new Option(text, String(optionValue)));
       }
-      tile.dataset.source = last?.source || '';
-      tiles.append(tile);
-    }
-    section.append(head, tiles);
-    return section;
-  }
+      if (value != null) control.value = String(value);
+      field.append(dom.el('span', label), control);
+      return {field, control};
+    };
+    const text = (label, value, max) => {
+      const field = dom.el('label', null, 'coach-field');
+      const control = /** @type {!HTMLInputElement} */ (dom.el('input'));
+      control.value = value || '';
+      control.maxLength = max;
+      field.append(dom.el('span', label), control);
+      return {field, control};
+    };
+    const activity = select(
+        'Activity', data.activities.map((a) => [a.key, a.label]),
+        goal?.activity);
+    const amount = select('Amount', [], null);
+    const medicine = text('Medicine', goal?.medicine, 40);
+    const dose = text('Dose', goal?.dose, 30);
+    medicine.control.placeholder = 'Metformin';
+    dose.control.placeholder = '500 mg';
+    const often = select(
+        'How often', [7, 6, 5, 4, 3, 2, 1].map((n) => [n, frequencyText(n)]),
+        goal?.times_per_week ?? 4);
+    const remind = dom.el('div', null, 'coach-field coach-remind');
+    const toggle = /** @type {!HTMLInputElement} */ (dom.el('input'));
+    toggle.type = 'checkbox';
+    toggle.checked = !!goal?.reminder;
+    toggle.id = 'coach-remind-toggle';
+    const toggleLabel = dom.el('label', 'Remind me at');
+    toggleLabel.htmlFor = toggle.id;
+    const time = /** @type {!HTMLInputElement} */ (dom.el('input'));
+    time.type = 'time';
+    time.step = '900';
+    time.value = goal?.reminder || '08:00';
+    time.setAttribute('aria-label', 'Reminder time');
+    const row = dom.el('span', null, 'coach-remind-row');
+    row.append(toggle, toggleLabel, time);
+    remind.append(dom.el('span', 'Reminder'), row);
 
-  /**
-   * Opens the Add goal dialog, or adds a tracker to an existing goal.
-   * @param {?Object=} goal
-   */
-  async openDialog(goal = null) {
-    const dom = this.dom;
-    if (!this.dialog) {
-      this.dialog = /** @type {!HTMLDialogElement} */ (
-          dom.el('dialog', null, 'goal-dialog'));
-      this.dialog.setAttribute('aria-labelledby', 'goal-dialog-title');
-      document.body.append(this.dialog);
-    }
-    const dialog = this.dialog;
-    const {templates} = await dom.api('/goals/templates');
-    const title = dom.el('h2', goal ? `Track "${goal.title}"` : 'Add goal');
-    title.id = 'goal-dialog-title';
-    const close = dom.button(null, 'goal-dialog-close');
-    close.append(dom.icon('x'));
-    close.setAttribute('aria-label', 'Close');
-    close.addEventListener('click', () => dialog.close());
-    const head = dom.el('div', null, 'goal-dialog-head');
-    head.append(title, close);
-    const body = dom.el('div', null, 'goal-dialog-body');
-    dialog.replaceChildren(head, body);
-
-    const showList = () => {
-      const list = dom.el('div', null, 'goal-templates');
-      for (const template of templates) {
-        const option = dom.button(null, 'goal-template');
-        option.append(
-            dom.el('strong', template.title),
-            dom.el('span', template.trackers.map((t) => t.label).join(', ')));
-        option.addEventListener('click', () => showTemplate(template));
-        list.append(option);
+    let chosenKey = null;
+    const sync = () => {
+      const chosen =
+          data.activities.find((a) => a.key === activity.control.value);
+      if (chosen.key !== chosenKey) {
+        chosenKey = chosen.key;
+        const saved = goal?.activity === chosen.key ? goal.amount : null;
+        amount.control.replaceChildren(...chosen.amounts.map(
+            (n) => new Option(`${n} ${chosen.unit}`, String(n))));
+        const middle = chosen.amounts[Math.floor(chosen.amounts.length / 2)];
+        amount.control.value =
+            String(chosen.amounts.includes(saved) ? saved : middle);
       }
-      const custom = dom.button(null, 'goal-template is-custom');
-      custom.append(
-          dom.el('strong', 'Your own goal'),
-          dom.el('span', 'Choose what to track'));
-      custom.addEventListener('click', showCustom);
-      list.append(custom);
-      body.replaceChildren(list);
+      amount.field.hidden = !chosen.amounts.length;
+      medicine.field.hidden = dose.field.hidden = chosen.key !== 'medicine';
+      medicine.control.required = chosen.key === 'medicine';
+      time.disabled = !toggle.checked;
     };
+    activity.control.addEventListener('change', sync);
+    toggle.addEventListener('change', sync);
+    sync();
 
-    const status = () => {
-      const node = dom.el('p', null, 'goal-dialog-status');
-      node.setAttribute('role', 'status');
-      return node;
-    };
-    const labelled = (text, control) => {
-      const label = dom.el('label', null, 'goal-field');
-      label.append(dom.el('span', text), control);
-      return label;
-    };
-    const input = (value = '', type = 'text') => {
-      const node = /** @type {!HTMLInputElement} */ (dom.el('input'));
-      node.type = type;
-      node.value = value;
-      if (type === 'number') node.step = 'any';
-      return node;
-    };
-    const actions = (back, submit) => {
-      const row = dom.el('div', null, 'goal-dialog-actions');
-      const backButton = dom.button('Back', 'goal-action is-quiet');
-      backButton.addEventListener('click', back);
-      const submitButton = dom.button(submit, 'goal-action is-primary');
-      submitButton.type = 'submit';
-      row.append(backButton, submitButton);
-      return row;
-    };
-
-    const showTemplate = (template) => {
-      const form = dom.el('form', null, 'goal-form-wide');
-      const name = input(goal ? goal.title : template.title);
-      name.maxLength = 80;
-      name.required = true;
-      form.append(labelled('Goal', name));
-      const targets = template.trackers.map((tracker) => {
-        if (tracker.kind === 'without') {
-          form.append(dom.el(
-              'p', `Counts days without ${tracker.label.toLowerCase()}`,
-              'goal-field-note'));
-          return null;
-        }
-        const field = input(tracker.target ?? '', 'number');
-        field.placeholder = tracker.target == null ? 'Optional' : '';
-        const unit = tracker.kind === 'timer' ? 'minutes' : tracker.unit;
-        form.append(labelled(`${tracker.label} target (${unit})`, field));
-        return field;
+    const status = dom.el('p', null, 'coach-error');
+    status.setAttribute('role', 'status');
+    const buttons = dom.el('div', null, 'coach-form-actions');
+    const save =
+        dom.button(goal ? 'Save goal' : 'Add goal', 'coach-button is-primary');
+    save.type = 'submit';
+    buttons.append(save);
+    if (goal || data.goals.length) {
+      const cancel = dom.button('Cancel', 'coach-button is-quiet');
+      cancel.addEventListener('click', () => {
+        editing = null;
+        adding = false;
+        paint();
       });
-      const note = status();
-      form.append(note, actions(showList, goal ? 'Add trackers' : 'Add goal'));
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        try {
-          if (goal) {
-            for (const [index, tracker] of template.trackers.entries()) {
-              const field = targets[index];
-              if (field && field.value === '') continue;
-              await dom.api(
-                  `/goals/${encodeURIComponent(goal.id)}/trackers?today=${
-                      localDay()}`,
-                  {
-                    method: 'POST',
-                    json: {
-                      ...tracker,
-                      target: field ? Number(field.value) : null
-                    },
-                  });
-            }
-          } else {
-            // A blank field keeps the template's target, or skips a
-            // tracker that has none.
-            const values = {};
-            targets.forEach((field, index) => {
-              if (field && field.value !== '')
-                values[index] = Number(field.value);
-            });
-            await dom.api('/goals', {
-              method: 'POST',
-              json: {
-                template: template.key,
-                title: name.value,
-                targets: values,
-                today: localDay(),
-              },
-            });
-          }
-          dialog.close();
-          await this.load();
-        } catch (error) {
-          note.textContent = error.message;
+      buttons.append(cancel);
+    }
+    if (goal) {
+      const remove = dom.button('Delete goal', 'coach-button is-danger');
+      remove.addEventListener('click', () => {
+        if (root.confirm(`Delete "${goal.title}"? Readings stay.`)) {
+          act(() => dom.api(goalPath(goal), {method: 'DELETE'}), status);
         }
       });
-      body.replaceChildren(form);
-      name.focus();
-    };
-
-    const showCustom = () => {
-      const form = dom.el('form', null, 'goal-form-wide');
-      const name = input(goal ? goal.title : '');
-      name.maxLength = 80;
-      name.required = true;
-      const kind = /** @type {!HTMLSelectElement} */ (dom.el('select'));
-      for (const [value, text] of KINDS) {
-        kind.append(new Option(text, value));
-      }
-      const measure = /** @type {!HTMLSelectElement} */ (dom.el('select'));
-      for (const item of this.measures.filter((m) => !m.paired)) {
-        measure.append(new Option(`${item.label} (${item.unit})`, item.key));
-      }
-      const direction = /** @type {!HTMLSelectElement} */ (dom.el('select'));
-      direction.append(
-          new Option('At least', 'at_least'), new Option('At most', 'at_most'));
-      const label = input();
-      label.maxLength = 40;
-      const target = input('', 'number');
-      const fields = {
-        measure: labelled('Measure', measure),
-        direction: labelled('Each day', direction),
-        label: labelled('Name', label),
-        target: labelled('Target', target),
+      buttons.append(remove);
+    }
+    const fields = dom.el('div', null, 'coach-form-fields');
+    fields.append(
+        activity.field, amount.field, medicine.field, dose.field, often.field,
+        remind);
+    node.append(heading, fields, buttons, status);
+    node.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const values = {
+        activity: activity.control.value,
+        amount: amount.field.hidden ? null : Number(amount.control.value),
+        medicine: medicine.control.value,
+        dose: dose.control.value,
+        times_per_week: Number(often.control.value),
+        reminder: toggle.checked ? time.value : null,
       };
-      const sync = () => {
-        const value = kind.value;
-        fields.measure.hidden = !['daily', 'target'].includes(value);
-        fields.direction.hidden = value !== 'daily';
-        fields.label.hidden = ['daily', 'target'].includes(value);
-        fields.target.hidden = value === 'without';
-        const unit = value === 'weekly' ?
-            'days a week' :
-            value === 'timer' ?
-            'minutes' :
-            this.measures.find((m) => m.key === measure.value)?.unit;
-        fields.target.firstChild.textContent = `Target (${unit})`;
-        label.required = !fields.label.hidden;
-        target.required = !fields.target.hidden;
-      };
-      kind.addEventListener('change', sync);
-      measure.addEventListener('change', sync);
-      sync();
-      const note = status();
-      if (!goal) form.append(labelled('Goal', name));
-      form.append(
-          labelled('Track', kind), fields.measure, fields.direction,
-          fields.label, fields.target, note,
-          actions(showList, goal ? 'Add tracker' : 'Add goal'));
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const tracker = {
-          kind: kind.value,
-          measure: fields.measure.hidden ? null : measure.value,
-          direction: fields.direction.hidden ? 'at_least' : direction.value,
-          label: fields.label.hidden ? '' : label.value,
-          target: fields.target.hidden ? null : Number(target.value),
-        };
-        try {
-          if (goal) {
-            await dom.api(
-                `/goals/${encodeURIComponent(goal.id)}/trackers?today=${
-                    localDay()}`,
-                {method: 'POST', json: tracker});
-          } else {
-            await dom.api('/goals', {
-              method: 'POST',
-              json: {title: name.value, trackers: [tracker], today: localDay()},
-            });
-          }
-          dialog.close();
-          await this.load();
-        } catch (error) {
-          note.textContent = error.message;
-        }
-      });
-      body.replaceChildren(form);
-      (goal ? kind : name).focus();
-    };
-
-    showList();
-    if (!dialog.open) dialog.showModal();
+      act(() => goal ? dom.api(goalPath(goal), {method: 'PUT', json: values}) :
+                       dom.api('/goals', {method: 'POST', json: values}),
+          status);
+    });
+    return node;
   }
+
+  return {load};
 }
 
-/** The panel on Home, built once and reloaded on each visit. */
-let panel = null;
+let mounted = null;
 
 /**
- * Fills Today on Home.
+ * Fills Home's health overview and goals.
  * @param {?Element} host
+ * @return {(!Promise|undefined)}
  */
 function home(host) {
   if (!host) return;
-  if (!panel || panel.host !== host) panel = new GoalsPanel(host);
-  return panel.load();
+  if (!mounted || mounted.host !== host) {
+    mounted = {host, view: create(host)};
+  }
+  return mounted.view.load();
 }
 
 const exported = {
   home,
-  summary,
-  streakText,
-  fraction,
-  duration,
-  clock
+  encouragement,
+  frequencyText,
+  clockText,
+  contextText
 };
 root.StellisGoals = exported;
 if (typeof module !== 'undefined') module.exports = exported;

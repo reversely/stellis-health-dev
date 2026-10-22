@@ -1961,91 +1961,52 @@ def delete_reading(reading_id: str) -> dict[str, bool]:
     return {"deleted": True}
 
 
-class TrackerIn(BaseModel):
-    kind: str = Field(max_length=20)
-    label: str = Field(default="", max_length=goals.MAX_LABEL)
-    measure: str | None = Field(default=None, max_length=40)
-    target: float | None = None
-    direction: str = Field(default="at_least", max_length=20)
-
-
 class GoalIn(BaseModel):
-    title: str = Field(default="", max_length=goals.MAX_TITLE)
-    template: str | None = Field(default=None, max_length=40)
-    notebook_id: str | None = Field(default=None, max_length=80)
-    targets: dict[int, float] = Field(default_factory=dict)
-    trackers: list[TrackerIn] = Field(default_factory=list, max_length=goals.MAX_TRACKERS)
-    today: str | None = Field(default=None, max_length=10)
+    activity: str = Field(max_length=40)
+    amount: float | None = None
+    medicine: str = Field(default="", max_length=goals.MAX_NAME)
+    dose: str = Field(default="", max_length=goals.MAX_DOSE)
+    times_per_week: int
+    reminder: str | None = Field(default=None, max_length=5)
 
 
-class TrackerTarget(BaseModel):
-    target: float
-
-
-class TrackerMark(BaseModel):
-    day: str = Field(max_length=10)
+class GoalDay(BaseModel):
     done: bool
 
 
 @api.get("/goals")
-def list_goals(today: str = Query(max_length=10), utc_offset: int = 0):
-    return _agent_result(lambda: goals.overview(today, utc_offset))
-
-
-@api.get("/goals/templates")
-def goal_templates():
-    return {"templates": goals.templates()}
+def list_goals(today: str = Query(max_length=10), now: str = Query(max_length=5),
+               utc_offset: int = 0):
+    return _agent_result(lambda: goals.overview(today, utc_offset, now))
 
 
 @api.post("/goals")
 def create_goal(request: GoalIn):
-    if request.template:
-        return _agent_result(lambda: goals.from_template(
-            request.template, request.title or None, request.targets,
-            request.notebook_id, request.today))
-    return _agent_result(lambda: goals.create(
-        request.title, request.notebook_id, None,
-        [item.model_dump() for item in request.trackers], request.today))
+    return _agent_result(lambda: goals.create(request.model_dump()))
+
+
+@api.put("/goals/{goal_id}")
+def update_goal(goal_id: str, request: GoalIn) -> dict[str, bool]:
+    _agent_result(lambda: goals.update(goal_id, request.model_dump()))
+    return {"updated": True}
 
 
 @api.delete("/goals/{goal_id}")
 def delete_goal(goal_id: str) -> dict[str, bool]:
-    _agent_result(lambda: goals.delete_goal(goal_id))
+    _agent_result(lambda: goals.delete(goal_id))
     return {"deleted": True}
 
 
-@api.post("/goals/{goal_id}/trackers")
-def add_goal_tracker(goal_id: str, request: TrackerIn, today: str | None = Query(default=None, max_length=10)):
-    return _agent_result(lambda: goals.add_tracker(goal_id, request.model_dump(), today))
-
-
-@api.patch("/trackers/{tracker_id}")
-def update_tracker(tracker_id: str, request: TrackerTarget) -> dict[str, bool]:
-    _agent_result(lambda: goals.update_tracker(tracker_id, request.target))
-    return {"updated": True}
-
-
-@api.delete("/trackers/{tracker_id}")
-def delete_tracker(tracker_id: str) -> dict[str, bool]:
-    _agent_result(lambda: goals.delete_tracker(tracker_id))
-    return {"deleted": True}
-
-
-@api.put("/trackers/{tracker_id}/days")
-def mark_tracker_day(tracker_id: str, request: TrackerMark) -> dict[str, bool]:
-    _agent_result(lambda: goals.mark(tracker_id, request.day, request.done))
+@api.put("/goals/{goal_id}/days/{day}")
+def mark_goal_day(goal_id: str, day: str, request: GoalDay) -> dict[str, bool]:
+    _agent_result(lambda: goals.mark(goal_id, day, request.done))
     return {"saved": True}
 
 
-@api.post("/trackers/{tracker_id}/timer")
-def start_tracker_timer(tracker_id: str) -> dict[str, bool]:
-    _agent_result(lambda: goals.start_timer(tracker_id))
-    return {"running": True}
-
-
-@api.delete("/trackers/{tracker_id}/timer")
-def stop_tracker_timer(tracker_id: str, utc_offset: int = 0):
-    return _agent_result(lambda: goals.stop_timer(tracker_id, utc_offset))
+@api.post("/goals/{goal_id}/days/{day}/not-yet")
+def goal_not_yet(goal_id: str, day: str) -> dict[str, bool]:
+    _agent_result(lambda: goals.not_yet(goal_id, day))
+    return {"saved": True}
 
 
 @api.get("/facts")
