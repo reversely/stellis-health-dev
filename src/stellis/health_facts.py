@@ -169,6 +169,33 @@ def parse_facts(reply: str, page_texts: dict[int, str],
     return kept, len(proposals) - len(kept)
 
 
+def _measured_evidence(value: str, unit: str, quote: str) -> bool:
+    """Requires a measured value and its unit together in the source quote.
+
+    Whitespace and case may differ. Numeric boundaries prevent 3 from
+    matching 3.4 or 13. This is a literal evidence check, not a clinical
+    interpretation or a unit conversion.
+    """
+    value = re.sub(r"\s*/\s*", "/", _flatten(value))
+    unit = _flatten(unit)
+    quote = re.sub(r"\s*/\s*", "/", _flatten(quote))
+    evidence = value if not unit or value.endswith(unit) else value + " " + unit
+    pattern = r"\s*".join(re.escape(part) for part in evidence.split())
+    return re.search(r"(?<![\w.])" + pattern + r"(?!\w|\.\d)",
+                     quote) is not None
+
+
+def _valid_date(value: str) -> bool:
+    """Checks the exact date format and the actual calendar date."""
+    if not _DATE.fullmatch(value):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _check(item: object, flattened: dict[int, str],
            default_date: str) -> Fact | None:
     """Returns a proposal as a Fact, or None when its page does not back it."""
@@ -187,9 +214,14 @@ def _check(item: object, flattened: dict[int, str],
             not _QUOTE_LENGTH[0] <= len(quote) <= _QUOTE_LENGTH[1] or
             _flatten(quote) not in flattened[page]):
         return None
-    date = item.get("date") if isinstance(item.get("date"), str) else ""
-    if not _DATE.fullmatch(date):
+    if item["kind"] in MEASURED and not _measured_evidence(
+            fields["value"], fields["unit"], quote):
+        return None
+    date = item.get("date", "")
+    if not date:
         date = default_date
+    if not isinstance(date, str) or not _valid_date(date):
+        return None
     return Fact(item["kind"], fields["name"], fields["value"], fields["unit"],
                 date, page, quote)
 
