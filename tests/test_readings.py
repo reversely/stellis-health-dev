@@ -54,6 +54,12 @@ class FactPointTest(unittest.TestCase):
         self.assertEqual(pounds["value"], 95.3)
         self.assertEqual((a1c["measure"], a1c["value"]), ("hba1c", 5.4))
 
+    def test_legacy_impossible_dates_do_not_reach_charts(self):
+        for date in ("2026-99-99", "2026-02-29", "", "2026-04-31"):
+            with self.subTest(date=date):
+                self.assertIsNone(readings.fact_point(_fact(date=date)))
+        self.assertIsNotNone(readings.fact_point(_fact(date="2024-02-29")))
+
     def test_ignores_facts_that_are_not_readings(self):
         for fact in (
                 _fact(kind="medication"),

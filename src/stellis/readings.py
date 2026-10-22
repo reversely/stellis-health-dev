@@ -232,6 +232,12 @@ def fact_point(fact: dict[str, object]) -> dict[str, object] | None:
     """
     if fact["kind"] not in health_facts.MEASURED:
         return None
+    try:
+        datetime.date.fromisoformat(str(fact["date"]))
+    except ValueError:
+        # Earlier extraction versions allowed impossible calendar dates.
+        # Keep the fact available for review without breaking every chart.
+        return None
     measure = match_measure(str(fact["name"]))
     if measure is None:
         return None

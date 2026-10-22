@@ -81,6 +81,43 @@ class ParseFactsTest(unittest.TestCase):
         self.assertEqual(len(facts), 1)
         self.assertEqual(dropped, len(proposals) - 1)
 
+    def test_measured_value_and_unit_must_appear_together_in_quote(self):
+        for changes in (
+                {"value": "9.9"},
+                {"value": "3"},
+                {"value": "4"},
+                {"unit": "mmol/L"},
+                {"value": "10", "unit": "mg/dL"},
+        ):
+            with self.subTest(changes=changes):
+                facts, dropped = health_facts.parse_facts(
+                    _reply(_fact(**changes)), PAGES, "2026-01-01")
+                self.assertEqual((facts, dropped), ([], 1))
+
+        pages = {1: "Blood pressure 120 / 80 mmHg. Weight 80kg."}
+        facts, dropped = health_facts.parse_facts(_reply(
+            _fact(kind="vital_sign", name="Blood pressure", value="120/80",
+                  unit="mmHg", quote="Blood pressure 120 / 80 mmHg"),
+            _fact(kind="vital_sign", name="Weight", value="80", unit="kg",
+                  quote="Weight 80kg.")), pages, "2026-01-01")
+        self.assertEqual((len(facts), dropped), (2, 0))
+
+    def test_dates_are_real_calendar_dates_and_missing_dates_use_fallback(self):
+        for date in ("2026-99-99", "2026-02-29", "2026-04-31", "nonsense", 123):
+            with self.subTest(date=date):
+                facts, dropped = health_facts.parse_facts(
+                    _reply(_fact(date=date)), PAGES, "2026-01-01")
+                self.assertEqual((facts, dropped), ([], 1))
+        facts, dropped = health_facts.parse_facts(
+            _reply(_fact(date="2024-02-29"), _fact(date="")), PAGES,
+            "2026-01-01")
+        self.assertEqual([fact.date for fact in facts],
+                         ["2024-02-29", "2026-01-01"])
+        self.assertEqual(dropped, 0)
+        facts, dropped = health_facts.parse_facts(
+            _reply(_fact(date="")), PAGES, "2026-99-99")
+        self.assertEqual((facts, dropped), ([], 1))
+
     def test_unreadable_reply_is_an_error(self):
         for reply in ("not json", "[]", '{"facts": "none"}'):
             with self.subTest(reply=reply):
@@ -169,6 +206,18 @@ class HealthFactsApiTest(unittest.TestCase):
             len(
                 self.client.get(f"/api/v1/documents/{self.document['id']}/facts"
                                ).json()["facts"]), 1)
+
+    def test_rejected_measurements_and_dates_never_become_accepted_facts(self):
+        response, _ = self.extract(_reply(
+            _fact(value="9.9"), _fact(date="2026-99-99"), _fact()))
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["dropped"], 2)
+        self.assertEqual(len(response.json()["facts"]), 1)
+        self.client.post(
+            f"/api/v1/documents/{self.document['id']}/facts/accept")
+        accepted = self.client.get("/api/v1/facts").json()["facts"]
+        self.assertEqual([(fact["value"], fact["date"]) for fact in accepted],
+                         [("3.4", "2026-04-02")])
 
     def test_accept_all_accepts_every_suggestion_of_the_document(self):
         response, _ = self.extract(
