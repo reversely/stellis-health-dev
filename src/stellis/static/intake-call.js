@@ -14,12 +14,15 @@
  *     {type: 'level', person, agent},
  *     {type: 'mic', ok}, {type: 'closed'} and, once the goodbye has
  *     played, {type: 'ended'}.
+ * @param {{path: (string|undefined), listen: (boolean|undefined)}=} options
+ *     The call's WebSocket path, by default the intake call's, and whether
+ *     to ask for the microphone; a call by text alone never asks.
  * @return {!Object} Controls: setMuted, setSpeaker, sendText, end.
  */
-function start(onEvent) {
+function start(
+    onEvent, {path = '/api/v1/intake/call', listen: useMic = true} = {}) {
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  const socket =
-      new WebSocket(`${scheme}://${location.host}/api/v1/intake/call`);
+  const socket = new WebSocket(`${scheme}://${location.host}${path}`);
   socket.binaryType = 'arraybuffer';
   const context = new AudioContext();
   const output = context.createGain();
@@ -136,7 +139,9 @@ function start(onEvent) {
     }
     onEvent(message);
   };
-  socket.onopen = () => listen();
+  socket.onopen = () => {
+    if (useMic) listen();
+  };
   socket.onclose = () => {
     if (!closed) onEvent({type: 'closed'});
   };

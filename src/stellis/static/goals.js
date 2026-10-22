@@ -250,6 +250,7 @@ function create(host) {
   const dom = root.StellisDom;
   let data = {goals: [], reminders: [], activities: []};
   let measures = [];
+  let morningDue = false;
   let editing = null;
   let adding = false;
   // Goals Stellis filled in from the person's words, waiting for Add goal.
@@ -264,12 +265,14 @@ function create(host) {
 
   async function load() {
     try {
-      const [goals, readings] = await Promise.all([
+      const [goals, readings, coach] = await Promise.all([
         dom.api(`/goals?${query()}`),
         dom.api('/readings'),
+        dom.api(`/coach?${query()}`).catch(() => ({morning_due: false})),
       ]);
       data = goals;
       measures = readings.measures;
+      morningDue = coach.morning_due;
       paint();
     } catch (error) {
       host.replaceChildren(dom.el('p', error.message, 'goals-status'));
@@ -299,9 +302,45 @@ function create(host) {
   const markToday = (goal, done) => dom.api(
       `${goalPath(goal)}/days/${localDay()}`, {method: 'PUT', json: {done}});
 
+  /**
+   * Opens a coach call; actions Stellis takes fill in this page.
+   * @param {string} kind "morning" or "call".
+   * @param {boolean} chat Whether the call runs by text.
+   */
+  function call(kind, chat) {
+    if (kind === 'morning') {
+      morningDue = false;
+      paint();
+    }
+    root.StellisCoachCall.open({
+      kind,
+      chat,
+      onAction(message) {
+        if (message.action === 'fill_goal') fill([message.values]);
+        if (message.action === 'logged') load();
+      },
+    });
+  }
+
   function paint() {
     const parts = [];
+    if (morningDue && root.StellisCoachCall) {
+      parts.push(root.StellisCoachCall.incoming({
+        answer: () => call('morning', false),
+        chat: () => call('morning', true),
+        decline: () => {
+          morningDue = false;
+          paint();
+          dom.api('/coach/morning', {
+               method: 'POST',
+               json: {day: localDay(), answer: 'declined'},
+             })
+              .catch(() => {});
+        },
+      }));
+    }
     for (const reminder of data.reminders) parts.push(banner(reminder));
+    const head = dom.el('div', null, 'coach-overview-head');
     const title = dom.el('h2', null, 'coach-title');
     title.id = 'goals-title';
     title.append(
@@ -310,18 +349,25 @@ function create(host) {
             'span',
             new Date().toLocaleDateString(
                 'en-US', {weekday: 'long', month: 'short', day: 'numeric'})));
-    parts.push(title, overview());
-    const head = dom.el('div', null, 'coach-section-head');
-    head.append(dom.el('h3', 'Goals'));
+    head.append(title);
+    if (root.StellisCoachCall) {
+      const start = dom.button(null, 'coach-button coach-call-start');
+      start.append(dom.icon('phone'), dom.el('span', 'Call Stellis'));
+      start.addEventListener('click', () => call('call', false));
+      head.append(start);
+    }
+    parts.push(head, overview());
+    const goalsHead = dom.el('div', null, 'coach-section-head');
+    goalsHead.append(dom.el('h3', 'Goals'));
     if (data.goals.length && !adding) {
       const add = dom.button('Add a goal', 'coach-link');
       add.addEventListener('click', () => {
         adding = true;
         paint();
       });
-      head.append(add);
+      goalsHead.append(add);
     }
-    parts.push(head);
+    parts.push(goalsHead);
     const grid = dom.el('div', null, 'coach-goals');
     for (const goal of data.goals) {
       grid.append(editing === goal.id ? form(goal) : goalCard(goal));

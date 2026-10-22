@@ -1,0 +1,303 @@
+/* Coach calls: the morning check-in's incoming call card on Home, and the
+   call panel docked over the page (coach-call.js). */
+
+.coach-incoming {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px 28px;
+  margin-bottom: 28px;
+  padding: 28px 32px;
+  border-radius: 22px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow);
+  animation: coach-arrive 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.coach-incoming-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+}
+.coach-incoming-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent-ink);
+  border-radius: 50%;
+  opacity: 0;
+  animation: coach-ring 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.coach-incoming-text {
+  display: grid;
+  gap: 4px;
+}
+.coach-incoming-kind {
+  margin: 0;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.coach-incoming h2 {
+  margin: 0;
+  font: 300 36px/1.1 Piazzolla, Georgia, serif;
+  letter-spacing: -0.02em;
+}
+.coach-incoming-hint {
+  margin: 0;
+  color: inherit;
+  font-size: 16px;
+  opacity: 0.85;
+  text-wrap: pretty;
+}
+.coach-incoming-actions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 2;
+  gap: 8px;
+}
+.coach-incoming .coach-button {
+  border-color: color-mix(in oklch, var(--accent-ink) 50%, transparent);
+  background: transparent;
+  color: var(--accent-ink);
+}
+.coach-incoming .coach-button.is-primary {
+  border-color: var(--accent-ink);
+  background: var(--accent-ink);
+  color: var(--accent);
+}
+.coach-incoming .coach-button.is-quiet {
+  border-color: transparent;
+  color: var(--accent-ink);
+  opacity: 0.85;
+}
+@keyframes coach-ring {
+  0% {
+    opacity: 0.7;
+    scale: 0.7;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+@keyframes coach-arrive {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+
+.coach-call-start {
+  margin-left: auto;
+}
+
+/* The docked call */
+.coach-call {
+  position: fixed;
+  z-index: 40;
+  right: 20px;
+  bottom: 20px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 40px));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  animation: coach-arrive 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.coach-call-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.coach-call-face {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 200ms;
+}
+.coach-call[data-state='speaking'] .coach-call-face {
+  outline-color: var(--accent);
+}
+.coach-call-who {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.coach-call-who strong {
+  font-size: 15px;
+}
+.coach-call-line {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.coach-call-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.coach-call-icon .icon {
+  width: 18px;
+  height: 18px;
+}
+.coach-call-icon[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.coach-call-icon.is-end {
+  border-color: var(--failure);
+  background: var(--failure);
+  color: #fff;
+}
+.coach-call-icon[hidden] {
+  display: none;
+}
+.coach-call-log {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 120px;
+  margin: 0;
+  padding: 14px 16px;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+.coach-call-log li {
+  display: grid;
+  gap: 2px;
+  max-width: 85%;
+}
+.coach-call-log li.is-person {
+  justify-self: end;
+  text-align: right;
+}
+.coach-call-log p {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--raised);
+  font-size: 15px;
+  line-height: 1.45;
+  text-align: left;
+  text-wrap: pretty;
+}
+.coach-call-log li.is-person p {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.coach-call-said {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.coach-call-log li.is-action {
+  justify-self: center;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.coach-call-foot,
+.coach-call-ended {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+.coach-call-foot[hidden],
+.coach-call-ended[hidden] {
+  display: none;
+}
+.coach-call-foot input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--input);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+.coach-call-heard {
+  margin: 0;
+  padding: 0 16px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.coach-call.is-minimised .coach-call-log,
+.coach-call.is-minimised .coach-call-heard {
+  display: none;
+}
+:is(.coach-call-icon, .coach-call-foot input):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .coach-call-icon:not([aria-pressed='true'], .is-end):hover {
+    background: var(--raised);
+  }
+}
+
+@media (max-width: 760px) {
+  .coach-incoming {
+    gap: 16px;
+    padding: 20px;
+  }
+  .coach-incoming-face {
+    width: 80px;
+    height: 80px;
+  }
+  .coach-incoming h2 {
+    font-size: 28px;
+  }
+  .coach-incoming-actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+  .coach-incoming-actions .coach-button {
+    flex: 1 1 auto;
+  }
+  .coach-call {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-height: 70vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach-incoming,
+  .coach-call {
+    animation: none;
+  }
+  .coach-incoming-ring {
+    animation: none;
+    opacity: 0.4;
+  }
+}
