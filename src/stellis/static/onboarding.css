@@ -478,3 +478,37 @@
     }
   }
 }
+
+/* Welcome: the goals and agents arrive one after another, then drift. */
+.setup-orbit {
+  animation:
+    setup-orbit-in 480ms var(--ease-enter, ease-out) both,
+    setup-orbit-drift 7s ease-in-out infinite alternate;
+  animation-delay:
+    calc(var(--orbit-index) * 70ms + (var(--orbit-side, 0) * 35ms)),
+    calc(var(--orbit-index) * -1.3s);
+}
+.setup-orbit[data-side='right'] {
+  --orbit-side: 1;
+}
+@keyframes setup-orbit-in {
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+}
+@keyframes setup-orbit-drift {
+  to {
+    translate: 0 -6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .setup-orbit {
+    animation: setup-orbit-fade 300ms both;
+  }
+  @keyframes setup-orbit-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
