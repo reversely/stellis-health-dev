@@ -1,80 +1,153 @@
-# Proposal: health first run and gradual reveal
+# Proposal: health first run and the three pillars
 
-Status: proposal for owner review. It covers U-04 (health onboarding) and replaces the workspace tour. It uses the approved U-01 term list.
+Status: proposal for owner review. It replaces the onboarding tiles, U-04's scope and T-01's scope. It uses the approved U-01 term list.
 
-## The current first run
+## The three pillars
 
-The current flow comes from the meeting app.
+The brief names three pillars. This proposal gives each one a home in the interface.
 
-| Step | What the person sees |
-| --- | --- |
-| Welcome | An orbit of 14 icons (Meetings, Chief of Staff, Slide Deck Designer, Tutor and others) and "a private AI team for your entire life" |
-| Uses | Seven tiles (Meetings, Learning, Projects, Home projects, Family, Deep research, Slide decks), a Google Calendar row that reports "not available on the web app yet", Tavily and Token Factory key fields, and a Cloud AI check |
-| Review | Starter notebooks inside a "Work" collection, agent checkboxes per notebook, and "Suggest tasks" |
-| Home and tour | Every feature at once: daily brief, agents, a 500 MB speech model download, to-dos, notebooks, five meeting tags. The tour then walks 8 steps through workspace, notebook, chat, instructions, agents, models, traces and recording. |
-
-A person who signs up to understand their health sees no health content until they find the Records page on their own. The tour explains model routing and request traces before it explains their records.
-
-## Proposed principle
-
-The person sees their own health records within the first two minutes. Each other feature appears when the person's records or actions give it something to show, with a one-line card that says what it does with their data.
-
-## Proposed onboarding
-
-Four screens, inside the U-04 limit of five.
-
-| Screen | Proposed content | Replaces |
+| Pillar | Where the person meets it | State today |
 | --- | --- | --- |
-| 1. Welcome | "Keep your health records in one place and ask about them." The orbit shows things people already have: a lab result, a letter from a physio, a food diary, a scale reading, a prescription, a recording of a visit. One line on privacy that states only verified facts (see open questions). | The orbit of meeting and agent icons |
-| 2. What's going on | "What would you like help with?" Tiles in everyday words: Managing a long-term condition, Losing weight or getting fitter, Pain or recovery, Understanding test results, Getting ready for appointments, Keeping my records together. Each tile proposes a starter notebook. The guide explains each tile in one sentence, for example "Your dietitian notes, food diary and scale readings stay together, so you can see how far you've come." | The seven work tiles, the Calendar row, the key fields and the Cloud AI check. Owner settings move to Settings. |
-| 3. Your records | A drop area for files, as on the Records page. As each file uploads it appears on a small dated strip, so the person sees their history take shape. "Try it with sample records" loads Denver's 50 files for people who have none to hand. "Add later" continues. | New |
-| 4. Here's what we found | Notebooks proposed from the uploaded records, merged with the notebooks from screen 2, each listing its records. The person renames, unticks or skips each one, then chooses "Set up". Agents stay on by default and appear as one line per notebook ("An agent keeps this notebook tidy"), with the choice under "Change". | The Review screen with agent checkboxes per notebook |
+| Records and appointments | Records, Timeline, notebooks, summary, recorded conversations | Built: upload, sorting, citations, facts, timeline, summary |
+| Research and education | Ask, with answers from the person's records and public medical sources | Partly built: notebook chat with citations. Public sources are A-02. |
+| Goals, habits and reminders | Today: check-ins, logs, plans and the agent's suggestions | Not built for the person. Check-ins have a due date and time only. |
 
-Consent (S-03) goes between screens 1 and 2 when counsel approves the text. Until then the alpha shows the current account terms.
+The third pillar gets most of the new work below, because the existing workflow offers the person almost nothing for it.
 
-## Proposed first Home
+## Onboarding
 
-After setup, Home shows three things:
+### The current flow
 
-1. **Your health so far.** A short summary in plain second person (see the summary section below).
-2. **Your records.** The count, the five newest records, and "Add records".
-3. **Ask.** One question box that answers from the person's records, with sources.
+The meeting app's flow has four parts:
+- **Welcome:** an orbit of meeting and agent icons.
+- **Use tiles:** seven work tiles (Meetings, Learning, Projects and so on).
+- **Review:** starter notebooks with agent checkboxes.
+- **Workspace:** an 8-step tour of models and request traces.
 
-The rail shows Home, Records and Ask. The daily brief is off by default (owner decision, U-01).
+The flow has two inputs: a demo (sample meetings) and a sync (a Google mail and calendar scan).
 
-## Proposed reveal order
+### Proposed flow
 
-Each feature appears when its trigger first happens. A card on Home introduces it once, and the person can dismiss the card. The rail entry stays after that.
+The demo becomes a recorded intake conversation about the person's health. The sync becomes dropping medical files. The tiles go.
 
-| Feature | Trigger | Introduction card |
-| --- | --- | --- |
-| Timeline | 10 or more records, or records that span more than a year | "Timeline: your 50 records in date order, from 1997 to 2026." |
-| Notebooks | The first notebook is set up | Shown as part of Home from then on |
-| Check-ins | The person sets a goal, or a record mentions a follow-up date | "Check-ins: your dietitian review on 17 Nov 2025 asks you to weigh in weekly. Want a check-in?" |
-| Conversations and meeting notes | A record or question mentions an upcoming appointment, or the person chooses "Record a visit" | "Record your next appointment and get notes you can read afterwards." The speech model download starts here, not at sign-up. |
-| People | Records name the same clinician or service at least twice | "People: your physiotherapist appears in 4 records." |
-| Agents | After the person's third question, or on request | "Agents keep notebooks tidy and answer from your records. You have 2." |
-| Terms | After the first recording | "Terms: add drug or place names so recordings spell them right." |
-| Collections | 4 or more notebooks | "Collections group notebooks, for example everything about your heart." |
-
-The 8-step tour is retired from first run and stays available in Settings.
-
-## Proposed summary for the person
-
-The current summary uses chart headings (Conditions, Medications, Care team) and reads like a note for a clinician. The proposed version answers the questions a person asks about themselves.
-
-| Section | What it says, in Denver's case |
+| Step | Proposed content |
 | --- | --- |
-| How you're doing | "Your blood sugar has stayed in a healthy range for three years. You've lost about 8 kg since April 2024." |
-| What's changed | "Your doctor stopped one blood pressure tablet in September 2024 after you felt dizzy standing up." |
-| What your numbers mean | One line per recent test: what it measures and how it compares with the person's own earlier results. |
-| Worth asking about | Questions for the next appointment, built from the records (A-03), for example "You asked whether you still need lisinopril. Your home readings are 88 to 95." |
+| 1. Welcome | One sentence on what the app does: "Talk through your health, add your records, and get help with the goals you set." One line on privacy (see open question 4). Consent (S-03) goes here once counsel approves the text. |
+| 2. Intake conversation | The agent talks with the person about their health, like a phone consult. The conversation is recorded and saved as the person's first conversation, with a transcript. |
+| 3. Your files | The person drops medical files. Each file appears on a dated strip as it uploads. "Add later" continues. |
+| 4. Your notebooks | The agent proposes up to 5 notebooks from the conversation and the files, each prefilled with its documents and with any goal the person named. The person renames, unticks or skips each one, then chooses "Set up". |
 
-Sources stay attached to each sentence, shown by record name and date ("Dietitian review, 17 Nov 2025") rather than a number. The page opens with the first two sections and keeps the others behind "More".
+Steps 2 and 3 can run in either order. A person who drops files first gets questions that refer to them, such as "I see a dietitian review from November. How is the weight goal going?"
+
+### How the intake agent behaves
+
+Proposed instructions for the intake agent:
+
+- **Caring.** Opens by asking what brought the person here and acknowledges what they say before moving on.
+- **Direct.** Asks one question at a time, in plain words, and says why it is asking when the reason is not obvious.
+- **Curious.** Follows up on vague answers ("You said your knee is bad. What can't you do now that you could a year ago?").
+- **Covers, in the person's order:** current concerns, conditions and medicines, the clinicians they see, what they want to change, what has worked or failed before, and how they want reminders.
+- **Ends** by reading back what it heard in five lines or fewer and naming the notebooks and check-ins it will propose. The person corrects anything before step 4.
+- **Safety.** Runs the S-01 emergency check on every turn. It never diagnoses and never suggests a medicine change.
+- **Length.** Aims for 5 to 10 minutes. The person can stop at any point and keep what was said.
+
+Example opening for Denver:
+
+> Agent: Hi Denver. What would you most like help with right now?
+> Denver: Keeping the weight off, and my knees.
+> Agent: You've been working on your weight for a while, then. How much have you lost, and what's helped most?
+
+### Voice options
+
+The intake is meant to feel like a call. Three ways to build it, as a proposal:
+
+| Option | How it works | Cost |
+| --- | --- | --- |
+| A. Push to talk | The person taps to speak, the existing transcription turns speech into text, and the agent replies in text on screen | Uses existing parts. On the hosted app, transcription waits for the 500 MB speech model download. |
+| B. Full voice call | The agent speaks its replies aloud and listens continuously | Restores the voice call removed in C-03 and adds text-to-speech. Largest build. |
+| C. Typed chat with an optional microphone | Typing by default, with speaking as an option | Smallest build. Feels least like a call. |
+
+Recommendation: A for the alpha, with B as a later ticket.
+
+## Today: goals, habits and reminders
+
+Today is the third pillar's home and the first page after onboarding. It shows:
+- the check-ins due now,
+- the latest readings against the person's plan,
+- the agent's suggestions waiting for a yes or no.
+
+### Proposed building blocks
+
+| Block | What it does | Example for Denver |
+| --- | --- | --- |
+| Plan | A goal with targets and a routine. The agent drafts it from the intake and the records, and the person approves or edits it. | "Keep weight between 85 and 88 kg. About 1,800 kcal and 100 g protein a day. Walk 30 minutes, 5 days a week." Drafted from his dietitian review of 17 Nov 2025. |
+| Check-in | A repeating prompt with a schedule, one of: medicine dose, measurement, meal, photo or video, habit, symptom score | "Metformin 500 mg, 8 am daily." "Weigh in, Monday 7 am." "Knee pain 0 to 10, Friday." |
+| Log | Each answer to a check-in, with its time and source (typed, photo, scale, import) | 86.6 kg from the scale on 17 Nov 2025 |
+| Reminder | Delivery of a due check-in | A phone notification at 8 am, a second one at 9 am if not answered, with a quiet period at night |
+| Suggestion | A proposed change, built from logs drifting from the plan, that waits for the person's answer | "You've walked twice in two weeks. Want to move walks to the morning, when you logged most of them?" |
+
+### Interventions and safety
+
+The agent proposes and the person decides. The existing suggestions mechanism already works this way for tasks.
+
+Each rule type below is a proposal.
+
+| Pattern in the logs | Proposed response |
+| --- | --- |
+| A habit missed 3 times in a row | A suggestion to change the time or the target |
+| Weight outside the plan's range for 2 weeks | A summary of food and activity logs for those weeks, plus a question |
+| A dose missed | A note to follow the label or the pharmacist's instructions. The agent never suggests a double dose. |
+| Readings that S-01 marks as a risk, for example Denver's systolic pressure below 90 with dizziness | Advice to contact his clinician, with the readings attached. The plan stays unchanged. |
+
+## Tracking features in depth
+
+| Feature | Proposed design | Feasibility and limits |
+| --- | --- | --- |
+| Food photos | The person photographs a meal. A vision model names each food and estimates the portion in grams. Calories and macronutrients come from USDA FoodData Central for those foods and grams, not from the model's guess. The person confirms or fixes the items in two taps. | Published studies put photo-based calorie estimates at roughly 15 to 40% error, and macronutrients higher. The interface shows a range and weekly trends rather than one exact number per meal. Token Factory's current vision models need checking in the console, because the public list found is from an older post (Qwen2-VL). |
+| Calorie apps | Import of CSV exports from MyFitnessPal or Cronometer | Cronometer has no public API, and no official MyFitnessPal API was found. Import of exports works today. |
+| Diet plan | The agent drafts targets from the person's records and goals. When a dietitian's plan exists in the records, the draft follows that plan and cites it. Meals are logged against the targets. | Diabetes medicines plus a calorie cut can cause low blood sugar with some drugs. The plan screen tells the person to confirm a new plan with their clinician when the records list such a medicine. |
+| Photo a day or video a day | A short guided capture at the same framing each day, such as a front photo for body change, a photo of a wound or skin spot, or a 10-step walking video for knee gait. The agent describes changes against earlier captures in neutral words. | Describing change, not diagnosing, keeps it a journal. Diagnosis from images would raise the regulatory question in the brief's open decisions. Daily images are the most sensitive data in the app, so they need their own consent and retention setting. |
+| Smart scale | Withings first: OAuth connection, then each new weigh-in arrives as a log | The Withings public API needs no contract. The legacy Fitbit API switches off on 30 Oct 2026, and its replacement, the Google Health API, takes no new projects. Apple Health needs a native app, which the brief defers, so an Apple Health export file import covers it for now. |
+| Medicines | The medicine list comes from accepted record facts (R-02) and from a photo of the bottle label. Each medicine gets a dose check-in and a refill reminder computed from quantity and dose. | Interaction checks wait for validated references (A-02, openFDA), as the brief requires. |
+| Reminders | In-app on Today first. Phone notifications through web push. Email once H-04 adds an email provider. | On iPhone, web push works only after the person adds the app to the home screen (iOS 16.4 or later). Onboarding needs a step that shows how. |
+
+## Reveal order after onboarding
+
+Home opens on Today. The rail starts with Today, Records and Ask. Each other feature appears when its trigger first happens, with a one-time card that names the person's own data.
+
+| Feature | Trigger |
+| --- | --- |
+| Timeline | 10 or more records, or records that span more than a year |
+| Food log | A plan with food targets, or the person mentions eating in Ask or the intake |
+| Photo or video check-ins | The person names a goal that a daily capture can track |
+| Smart scale connection | Three typed weigh-ins, or the person mentions a scale |
+| Conversations and meeting notes | An upcoming appointment appears in a record or a question. The speech model download starts then. |
+| People | The same clinician or service appears in 2 or more records |
+| Agents | After the third question, or on request |
+| Collections | 4 or more notebooks |
+| Terms | After the first recording |
+
+The 8-step tour leaves first run and stays available in Settings.
+
+## Proposed tickets
+
+| ID | Ticket | Depends on |
+| --- | --- | --- |
+| O-01 | Intake conversation (option A), saved as the first conversation | S-01 |
+| O-02 | Up to 5 notebooks from the intake and files, prefilled | O-01, sorting |
+| T-01 | Check-ins with schedules and logs, and the Today page | |
+| T-02 | Reminders: in-app and web push, with the home-screen install step | T-01 |
+| T-03 | Plans drafted from records and intake, approved by the person | T-01 |
+| T-04 | Suggestions from logs that drift from a plan, under S-01 | T-03, S-01 |
+| T-05 | Medicines: list, dose check-ins, label photo, refills | T-01, R-02 |
+| T-06 | Measurements: Withings, Apple Health export, CSV | T-01 |
+| T-07 | Food log: photo, FoodData Central nutrients, CSV import | T-01, vision model check |
+| T-08 | Photo or video a day, with its own consent and retention setting | T-01, S-03 |
 
 ## Open questions for the owner
 
-1. Are the six tiles on screen 2 the right starting set?
-2. Should a reveal happen on its own, or should the card offer it ("Show Timeline") first?
-3. Should onboarding offer Denver's sample records to new accounts, or keep them for demos only?
-4. The privacy line on screen 1 can state that Nebius Token Factory runs the model. The brief's zero data retention and client-side encryption are not verified or built in the alpha, so the line leaves them out until they are. Is that wording acceptable?
+1. Intake voice: option A (push to talk) for the alpha, or B (full voice call) now?
+2. Order of tracking work after T-01 and T-02: medicines, food, scale, or daily photos first?
+3. Reminder channels: web push only for the alpha, or also email (which needs H-04 first)?
+4. Privacy line: the alpha server can read stored data, and zero data retention is not yet verified. Is "Your records are not used to train models" plus the Token Factory name acceptable until encryption ships?
+5. Should daily photos and videos stay out of model calls unless the person asks for a comparison?
