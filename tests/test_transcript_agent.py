@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from stellis import ai, enhanced_notes, notebooks, storage, suggestions, todos, transcript_agent
+from stellis import ai, enhanced_notes, note_rules, notebooks, storage, suggestions, todos, transcript_agent
 from stellis.server import app
 from test_import import mp3_bytes
 
@@ -71,6 +71,25 @@ class TranscriptAgentTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()[0]
 
+    def test_summary_and_to_dos_see_the_notebook_goals(self) -> None:
+        notebook_id, self.conversation_id, _ = self.setup_meeting()
+        self.client.post(f"{API}/pages", json={"notebook_id": notebook_id, "title": "Goals",
+                                                "markdown": "- [ ] Bring my A1C under 7"})
+        self.assertIn("Bring my A1C under 7", note_rules.goals(notebook_id))
+        with patch.object(ai, "_key", return_value="test-key"), patch.object(enhanced_notes.threading, "Thread"):
+            summary = enhanced_notes.request(self.conversation_id, force=True)
+        with patch.object(ai, "_key", return_value="test-key"), \
+                patch.object(ai, "_request", return_value=SUMMARY) as request, \
+                patch.object(transcript_agent.threading, "Thread") as thread:
+            enhanced_notes._run(summary["id"])
+        summary_messages = request.call_args.args[0]
+        self.assertIn("never guess what was meant", summary_messages[0]["content"])
+        self.assertIn("Bring my A1C under 7", summary_messages[-1]["content"])
+        with patch.object(ai, "_key", return_value="test-key"), \
+                patch.object(ai, "_request", return_value={"adds": [], "closes": []}) as request:
+            transcript_agent._run(thread.call_args.kwargs["args"][0])
+        self.assertIn("Bring my A1C under 7", request.call_args.args[0][-1]["content"])
+
     def test_adds_skip_duplicates_and_rerun_supersedes(self) -> None:
         _, self.conversation_id, open_todos = self.setup_meeting()
         payload = {"adds": [
@@ -79,7 +98,7 @@ class TranscriptAgentTest(unittest.TestCase):
             {"item": 3, "text": "Check with legal", "existing_todo_id": open_todos["Email legal"]}], "closes": []}
         run_id = self.summarize(self.conversation_id)
         run = self.agent(run_id, payload)
-        self.assertEqual((run["state"], run["stage"], run["prompt_version"]), ("succeeded", "complete", "transcript-agent-v1"))
+        self.assertEqual((run["state"], run["stage"], run["prompt_version"]), ("succeeded", "complete", transcript_agent.PROMPT_VERSION))
         self.assertEqual(run["result"], {"added": 1, "closed": 0})
         pending = suggestions.list_pending("conversation", self.conversation_id)
         self.assertEqual([item["values"]["text"] for item in pending], ["Send the CubeSat draft to Avery"])
