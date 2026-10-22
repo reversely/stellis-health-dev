@@ -38,7 +38,7 @@ class OnboardingTest(unittest.TestCase):
         with self.assertRaises(ValueError):onboarding.choose(account,['invented'],'review')
         onboarding.choose(account,[],'review');onboarding.complete(account)
         self.assertEqual(notebooks.list_notebooks(),[])
-        self.assertEqual(agents.list_agents()[0]['name'],'Chief of Staff')
+        self.assertEqual(agents.list_agents()[0]['name'],'Stellis')
     def test_preexisting_accounts_are_not_sent_back_to_setup(self):
         path=Path(self.tmp.name)/'auth.sqlite3'
         with sqlite3.connect(path) as conn:

@@ -11,7 +11,7 @@
   function render(data){
     const running=data.state==='running';refresh.disabled=running||pending;stop.hidden=!running;
     refresh.textContent=data.brief?'Refresh':'Prepare brief';
-    status.textContent=actionError||(running?'Preparing your brief…':data.error||(!data.brief?'Your Chief of Staff can review tasks, notebook activity and upcoming events.':'Updated '+new Date(data.brief.created_at).toLocaleString()));
+    status.textContent=actionError||(running?'Preparing your brief…':data.error||(!data.brief?'Stellis can review your check-ins, notebooks and upcoming appointments.':'Updated '+new Date(data.brief.created_at).toLocaleString()));
     const next=JSON.stringify(data.brief);
     if(next!==signature){signature=next;content.replaceChildren();if(data.brief)content.append(window.StellisAgentChat.messageBody(data.brief.content));}
     thread.hidden=!data.brief;if(data.brief)thread.href='/chat/'+data.brief.agent_id+'#message-'+data.brief.id;

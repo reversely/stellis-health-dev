@@ -181,7 +181,7 @@ details[open] > .more-menu-items {
   }
 }
 /* Notebook and home cards lift toward the pointer. */
-:is(.notebook-card, .notebook-new, .home-agent) {
+:is(.notebook-card, .notebook-new) {
   transition:
     translate 150ms var(--ease-enter),
     box-shadow 150ms var(--ease-enter),

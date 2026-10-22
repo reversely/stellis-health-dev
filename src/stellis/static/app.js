@@ -937,7 +937,6 @@ async function showList() {
   const [categories] = await Promise.all([fetch(`${API}/categories`).then(json), loadLibrary()]);
   libraryCategories = categories;
   renderNotebooks();
-  renderHomeAgents();
   renderCategoryGroups();
   // Tag cards wait for the first conversation; an empty account sees none.
   document.querySelector('#list-view [data-widget="tags"]')?.toggleAttribute('hidden', !libraryConversations.length);
@@ -976,7 +975,7 @@ async function loadLibrary() {
 }
 async function reloadLibrary() {
   await loadLibrary();
-  renderNotebooks(); renderHomeAgents(); renderCategoryGroups(); renderRailTags(); renderConversationList();
+  renderNotebooks(); renderCategoryGroups(); renderRailTags(); renderConversationList();
   homeTodos?.refresh();
 }
 function renderConversationList() {
@@ -4103,30 +4102,6 @@ function renderCategoryGroups() {
     grid.append(empty);
   }
 }
-function renderHomeAgents() {
-  // Agents group like the notebooks (shared/agent-groups.js); each chip opens that agent's Chat thread.
-  const avatars = window.StellisAgentAvatar;
-  const chip = ({agent, books}) => {
-    const link = document.createElement('a'); link.className = 'home-agent'; link.href = `/chat/${encodeURIComponent(agent.id)}`;
-    const text = document.createElement('span'); text.className = 'home-agent-text';
-    const name = document.createElement('strong'); name.textContent = agent.name; text.append(name);
-    if (books.length) { const where = document.createElement('small'); where.textContent = books.map(book => book.notebook_name).join(', '); text.append(where); }
-    link.append(avatars.avatarElement(document, {seed: agent.id, coordinator: avatars.isCoordinator(agent), size: 36}), text);
-    if (!agent.enabled || books.length && books.every(book => book.enabled === false)) { const off=document.createElement('span');off.className='home-agent-tag';off.textContent='Off';link.append(off); }
-    if (books.some(book => book.is_steward)) { const tag = document.createElement('span'); tag.className = 'home-agent-tag'; tag.textContent = 'Steward'; link.append(tag); }
-    return link;
-  };
-  const sections = window.StellisAgentGroups.groupAgents(libraryAgents, libraryCollections).map(group => {
-    const node = document.createElement('div'); node.className = 'notebook-group';
-    const head = document.createElement('h3'); head.className = 'notebook-group-head';
-    const glyph = icon(group.kind); if (group.color) glyph.style.setProperty('--tint', group.color);
-    const label = document.createElement('span'); label.textContent = group.name; head.append(glyph, label);
-    const row = document.createElement('div'); row.className = 'home-agent-row'; row.append(...group.items.map(chip));
-    node.append(head, row); return node;
-  });
-  document.querySelector('#home-agent-groups').replaceChildren(...sections);
-  document.querySelector('#home-agents').hidden = !sections.length;
-}
 function renderNotebooks() {
   // Cards group under their collection; notebooks outside any collection follow. A card takes meetings and notes dropped on it.
   const root = document.querySelector('#notebook-groups');
@@ -5005,7 +4980,7 @@ document.querySelector('#nebius-key-remove').addEventListener('click', async () 
 
 // Edit widgets: choose which Home widgets show. The choice is kept per browser.
 const WIDGETS_KEY = 'stellis-home-widgets';
-const HOME_WIDGETS = [['brief', 'Daily brief', 'sparkles'], ['agents', 'Agents', 'users'], ['todos', 'Check-ins', 'circle-check'], ['coming-up', 'Coming up', 'calendar'], ['notebooks', 'Notebooks', 'notebook'],
+const HOME_WIDGETS = [['brief', 'Daily brief', 'sparkles'], ['todos', 'Check-ins', 'circle-check'], ['coming-up', 'Coming up', 'calendar'], ['notebooks', 'Notebooks', 'notebook'],
   ['recent', 'Recent conversations', 'clock'], ['tags', 'Tags', 'tag']];
 // The daily brief is off until the person turns it on.
 const hiddenWidgets = new Set((() => { try { return JSON.parse(localStorage.getItem(WIDGETS_KEY)) || ['brief']; } catch { return ['brief']; } })());

@@ -306,8 +306,10 @@
     input.placeholder = `Message ${agent.name}`; input.setAttribute('aria-label', `Message ${agent.name}`); form.append(input);
     let mention;
     const remember = () => writeDraft(agent.id, {question:input.value, notebook:select.value, mention:mention?.selected||null});
-    mention=window.StellisAgentMentions.attach(input,{initial:draft.mention||null,onChange:remember,
-      candidates:()=>select.value?agents.filter(a=>a.enabled&&(a.is_default||a.notebooks.some(b=>b.notebook_id===select.value&&b.enabled!==false))):[]});
+    // Mentions hand a question to another agent; with Stellis alone there is no one to mention.
+    mention=agents.length>1?window.StellisAgentMentions.attach(input,{initial:draft.mention||null,onChange:remember,
+      candidates:()=>select.value?agents.filter(a=>a.enabled&&(a.is_default||a.notebooks.some(b=>b.notebook_id===select.value&&b.enabled!==false))):[]}):
+      {selected:null,resolve:()=>null};
     input.addEventListener('input', remember); select.addEventListener('change', remember);
     const actions = el('div', 'agent-composer-actions');
     const state = el('span', 'agent-composer-state'); state.role = 'status';
@@ -397,7 +399,7 @@
       workspaceTab=name;
       for (const [key,panel] of Object.entries(panels)) {panel.hidden=key!==name;tabs.querySelector(`[data-tab="${key}"]`).setAttribute('aria-selected',String(key===name));}
       try {
-        if(name==='setup'&&!setupLoaded){setupLoaded=true;setupPanel.append(behaviorCard(agent),agentControls(agent),identityForm(agent),notebookSection(agent),await memorySection(agent));}
+        if(name==='setup'&&!setupLoaded){setupLoaded=true;setupPanel.append(behaviorCard(agent),agentControls(agent),identityForm(agent));if(!agent.is_default)setupPanel.append(notebookSection(agent));setupPanel.append(await memorySection(agent));}
       } catch(error) {setupLoaded=false;status(error.message);}
     }
     for(const [name,label] of [['thread','Thread'],['setup','Setup']]) {

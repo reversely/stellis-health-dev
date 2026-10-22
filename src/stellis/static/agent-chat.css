@@ -1,6 +1,7 @@
 .agent-chat-page .heading-actions{display:none}
 .agent-chat-view{max-width:1120px;margin:0 auto;padding:24px 0 80px}
 .agent-chat-view[hidden],.agent-new-form[hidden]{display:none}
+.agent-chat-heading[hidden]{display:none}
 .agent-chat-heading{display:flex;align-items:center;justify-content:flex-end;gap:16px;margin:0 0 8px}
 .agent-chat-heading button,.agent-new-form button[type=submit],.agent-identity-form button[type=submit],.agent-memory-add button{min-height:44px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:var(--surface);padding:8px 16px;font-weight:650;cursor:pointer}
 .agent-chat-view button:hover{filter:brightness(1.08)}

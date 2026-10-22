@@ -21,14 +21,39 @@ def _value(value: str, label: str, limit: int) -> str:
     return cleaned
 
 
+DEFAULT_NAME = "Stellis"
+DEFAULT_ROLE = "Your health assistant"
+DEFAULT_INSTRUCTIONS = (
+    "Help the person with their own health. Answer from their records and cite them. Research public "
+    "medical sources when they ask, draft letters and questions for appointments when they ask, and "
+    "suggest check-ins for them to approve. Never diagnose, and never suggest starting, stopping or "
+    "changing a medicine; suggest bringing those questions to their clinician.")
+# Earlier releases named the default agent General, then Chief of Staff.
+_EARLIER_DEFAULTS = ("general", "chief of staff")
+
+
 def _default(conn: sqlite3.Connection) -> None:
-    if conn.execute("SELECT 1 FROM agents WHERE is_default = 1").fetchone():
-        return
-    now = _now()
-    conn.execute("""INSERT INTO agents
-        (id, name, name_key, role, instructions, slug, is_default, created_at, updated_at)
-        VALUES (?, 'General', 'general', 'General assistant', '', 'general', 1, ?, ?)""",
-        (str(uuid.uuid4()), now, now))
+    """Ensures Stellis, the one assistant, exists and answers in every notebook."""
+    row = conn.execute("SELECT id, name_key, instructions FROM agents WHERE is_default = 1").fetchone()
+    if row is None:
+        now = _now()
+        taken = conn.execute("SELECT 1 FROM agents WHERE slug = 'stellis'").fetchone()
+        agent_id = str(uuid.uuid4())
+        conn.execute("""INSERT INTO agents
+            (id, name, name_key, role, instructions, slug, is_default, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (agent_id, DEFAULT_NAME, DEFAULT_NAME.casefold(), DEFAULT_ROLE, DEFAULT_INSTRUCTIONS,
+             "stellis-assistant" if taken else "stellis", now, now))
+    else:
+        agent_id = str(row["id"])
+        named = conn.execute("SELECT 1 FROM agents WHERE name_key = ? AND id != ?",
+                             (DEFAULT_NAME.casefold(), agent_id)).fetchone()
+        if row["name_key"] in _EARLIER_DEFAULTS and not named:
+            conn.execute("""UPDATE agents SET name = ?, name_key = ?, role = ?, instructions = ?, updated_at = ?
+                WHERE id = ?""", (DEFAULT_NAME, DEFAULT_NAME.casefold(), DEFAULT_ROLE,
+                                  row["instructions"] or DEFAULT_INSTRUCTIONS, _now(), agent_id))
+    conn.execute("""INSERT OR IGNORE INTO agent_notebooks (agent_id, notebook_id)
+        SELECT ?, id FROM notebooks""", (agent_id,))
 
 
 def _record(conn: sqlite3.Connection, agent_id: str) -> dict[str, object]:
@@ -177,7 +202,7 @@ def unassign(agent_id: str, notebook_id: str) -> dict[str, object]:
 
 
 def resolved_agent(notebook_id: str | None = None, explicit_id: str | None = None) -> dict[str, object]:
-    """Select the visible agent from the Chat thread, notebook steward, or General."""
+    """Select the visible agent from the Chat thread, notebook steward, or Stellis."""
     with storage.connect() as conn:
         _default(conn)
         if explicit_id:

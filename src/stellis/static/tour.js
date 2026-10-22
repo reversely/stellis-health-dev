@@ -1,7 +1,7 @@
 // The workspace guide uses live account objects. Retired spotlight progress is ignored.
 (() => {
   const query = new URLSearchParams(location.search);
-  const names = ['workspace','notebook','chat','instructions','agents','models','traces','recording'];
+  const names = ['workspace','notebook','chat','instructions','models','traces','recording'];
   const node = (tag, text, cls) => { const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n; };
   let panel, observer, target, timeout;
   async function api(path, method='GET') {
@@ -21,8 +21,8 @@
   function stopWatching(){observer?.disconnect();clearTimeout(timeout);target?.classList.remove('guide-target');}
   function close(){stopWatching();resize.disconnect();panel?.remove();document.documentElement.style.removeProperty('--guide-height');const url=new URL(location.href);url.searchParams.delete('guide');history.replaceState(history.state,'',url);const title=document.querySelector('#page-title');if(title){title.tabIndex=-1;title.focus({preventScroll:true});}}
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('dialog[open]'))close();});
-  async function context(){const [books,agents]=await Promise.all([api('/notebooks'),api('/agents')]);const book=books.notebooks[0];return {book,agent:agents.find(a=>!a.is_default&&a.notebooks.some(n=>n.notebook_id===book?.id))||agents[0]};}
-  function route(name,data){if(name==='notebook')return data.book?'/notebook/'+encodeURIComponent(data.book.id):'/';if(['chat','instructions'].includes(name))return data.agent?'/chat/'+encodeURIComponent(data.agent.id):'/chat/settings';if(name==='agents')return '/chat/settings';if(['models','traces'].includes(name))return '/settings';if(name==='recording')return '/recording';return '/';}
+  async function context(){const [books,agents]=await Promise.all([api('/notebooks'),api('/agents')]);const book=books.notebooks[0];return {book,agent:agents.find(a=>a.is_default)||agents[0]};}
+  function route(name,data){if(name==='notebook')return data.book?'/notebook/'+encodeURIComponent(data.book.id):'/';if(['chat','instructions'].includes(name))return data.agent?'/chat/'+encodeURIComponent(data.agent.id):'/chat/settings';if(['models','traces'].includes(name))return '/settings';if(name==='recording')return '/recording';return '/';}
   async function go(step){
     if(document.querySelector('#stop-recording')?.checkVisibility()&&!document.querySelector('#stop-recording').disabled){notice.textContent='Stop and save your recording before changing guide pages.';return;}
     try{const data=await context();location.assign(route(names[step],data)+'?guide='+names[step]);}catch(error){notice.textContent=error.message;}
@@ -51,11 +51,10 @@
     const steps={
       workspace:['Your workspace','Collections group your notebooks. Use search to find notes, meetings and sources across them.','#notebooks-section'],
       notebook:['Inside a notebook',data.book?`“${data.book.name}” holds its notes, meetings and tasks. Add a note or record here to keep new material in context.`:'You have no notebooks yet. Create one here, or use Set up workspace to choose uses and connect sources.',data.book?'#notebook-hero':'#new-notebook'],
-      chat:['Ask an agent',data.agent?'Choose a notebook in the composer, then ask a question. Replies and draft actions stay in this thread.':'Add an agent to start a conversation. You can choose its role and notebook. ',data.agent?'.agent-composer':'#agent-new-toggle'],
-      instructions:['Give the agent instructions',data.agent?'Use Setup to edit its instructions, notebook access and memory. Changes apply to this agent.':'Add an agent before setting its instructions.',data.agent?'#agent-panel-setup':'#agent-new-toggle'],
-      agents:['Manage your team','Select an agent chip to see what it does, where it runs and what needs approval. Turn a notebook assignment off or add another agent.','.agent-management-view .deployment-layout'],
+      chat:['Ask Stellis','Choose a notebook in the composer, then ask a question. Replies and drafts stay in this thread.','.agent-composer'],
+      instructions:['Give Stellis instructions','Use Setup to edit what Stellis should know and how it answers.','#agent-panel-setup'],
       models:['Choose your models','Check connections to load installed models. Each role has its own model selection and Save action. Your active inference mode is shown here.','#inference-routes'],
-      traces:['Inspect an agent request','Recent requests show execution steps, model routing and reported token counts. Run an agent request, then refresh to inspect it. Prompts and reply text are not stored here.','#inference-traces'],
+      traces:['Inspect a request','Recent requests show execution steps, model routing and reported token counts. Ask Stellis something, then refresh to inspect it. Prompts and reply text are not stored here.','#inference-traces'],
       recording:['Record in context','Choose your microphone and notebook, then start when ready. Notes and live transcript stay alongside the recording. Stop saves it for review.','#start-recording']
     };
     const [title,copy,selector]=steps[names[index]];heading.textContent=title;description.textContent=copy;
