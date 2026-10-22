@@ -1,4 +1,4 @@
-"""Agent identity, notebook stewardship, memory, and durable thread checks."""
+"""Stellis: identity, notebook access, memory, and durable thread checks."""
 
 import asyncio
 import os
@@ -25,26 +25,6 @@ class AgentTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def test_prompt_creates_steward_and_persists(self):
-        book = notebooks.create("Water Treatment")
-        response = self.client.post("/api/v1/agents", json={
-            "prompt": "Make Mira my project coordinator; she should keep the Water Treatment notebook current"})
-        self.assertEqual(response.status_code, 200, response.text)
-        mira = response.json()
-        self.assertEqual((mira["name"], mira["role"], mira["slug"]),
-                         ("Mira", "project coordinator", "mira"))
-        self.assertEqual(mira["notebooks"][0]["notebook_id"], book["id"])
-        self.assertTrue(mira["notebooks"][0]["is_steward"])
-        self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], mira["id"])
-        fallback = agents.resolved_agent()
-        self.assertEqual((fallback["agent"]["name"], fallback["reason"]), ("Stellis", "general_default"))
-        self.assertEqual(agents.resolved_agent(explicit_id=mira["id"])["agent"]["id"], mira["id"])
-        self.assertEqual(agents.resolved_agent(book["id"], mira["id"])["reason"], "explicit")
-        self.client.close()
-        self.client = TestClient(app)
-        self.assertEqual(self.client.get(f"/api/v1/agents/{mira['id']}").json()["name"], "Mira")
-        self.assertEqual(len(self.client.get("/api/v1/agents").json()), 2)  # Stellis and Mira
-
     def test_stellis_is_the_one_assistant_in_every_notebook(self):
         stellis = agents.list_agents()[0]
         self.assertEqual((stellis["name"], stellis["is_default"]), ("Stellis", True))
@@ -59,29 +39,31 @@ class AgentTest(unittest.TestCase):
         renamed = agents.get(default["id"])
         self.assertEqual((renamed["name"], renamed["role"]), ("Stellis", agents.DEFAULT_ROLE))
 
-    def test_legacy_agent_column_migrates_and_general_is_fallback(self):
-        mira = agents.create("Mira", "Coordinator")
+    def test_legacy_agent_column_migrates_and_stellis_is_fallback(self):
+        agents.assistant()
         book = notebooks.create("Unassigned")
         with sqlite3.connect(storage.data_dir() / "stellis.sqlite3") as conn:
             conn.execute("ALTER TABLE agents RENAME COLUMN slug TO openclaw_id")
             conn.execute("UPDATE agents SET openclaw_id = 'main' WHERE is_default = 1")
         restored = {item["name"]: item for item in agents.list_agents()}
         self.assertEqual(restored["Stellis"]["slug"], "main")  # Preserve existing identifiers.
-        self.assertEqual(restored["Mira"]["slug"], mira["slug"])
         self.assertEqual(agents.resolved_agent(book["id"])["agent"]["id"], restored["Stellis"]["id"])
 
-    def test_steward_reassignment_keeps_other_assignment(self):
-        first = notebooks.create("First")
-        second = notebooks.create("Second")
-        mira = agents.create("Mira", "Coordinator", notebook_id=first["id"], steward=True)
-        ivo = agents.create("Ivo", "Designer", notebook_id=second["id"], steward=True)
-        agents.assign(ivo["id"], first["id"], True)
-        self.assertEqual(agents.resolved_agent(first["id"])["agent"]["id"], ivo["id"])
-        self.assertFalse(agents.get(mira["id"])["notebooks"][0]["is_steward"])
-        self.assertEqual(agents.resolved_agent(second["id"])["agent"]["id"], ivo["id"])
+    def test_agents_from_the_earlier_team_move_into_stellis(self):
+        stellis = agents.assistant()
+        with storage.connect() as conn:
+            conn.execute("""INSERT INTO agents (id, name, name_key, role, instructions, slug, is_default,
+                created_at, updated_at) VALUES ('mira', 'Mira', 'mira', 'Coordinator', '', 'mira', 0, 'now', 'now')""")
+            conn.execute("""INSERT INTO agent_memories (id, agent_id, kind, fact, created_at, updated_at)
+                VALUES ('m1', 'mira', 'general', 'Use WT-04 subjects', 'now', 'now')""")
+            conn.execute("""INSERT INTO agent_messages (id, agent_id, role, content, created_at)
+                VALUES ('t1', 'mira', 'user', 'Review the plan', 'now')""")
+        self.assertEqual([a["name"] for a in agents.list_agents()], ["Stellis"])
+        self.assertEqual([m["fact"] for m in agents.memories(stellis["id"])], ["Use WT-04 subjects"])
+        self.assertEqual([m["content"] for m in agents.messages(stellis["id"])], ["Review the plan"])
 
     def test_memory_is_correctable_and_not_a_source_citation(self):
-        agent = agents.create("Mira", "Coordinator")
+        agent = agents.assistant()
         saved = self.client.post(f"/api/v1/agents/{agent['id']}/memories", json={
             "fact": "RFI subjects begin WT-04", "source_id": "note:one"})
         self.assertEqual(saved.status_code, 200)
@@ -96,7 +78,7 @@ class AgentTest(unittest.TestCase):
     def test_one_agent_thread_holds_messages_from_multiple_notebooks(self):
         first = notebooks.create("First")
         second = notebooks.create("Second")
-        agent = agents.create("Mira", "Coordinator")
+        agent = agents.assistant()
         agents.append_message(agent["id"], "user", "Review the first project", first["id"])
         agents.append_message(agent["id"], "agent", "First project reviewed", first["id"], "job-1")
         agents.append_message(agent["id"], "user", "Review the second project", second["id"])
@@ -107,8 +89,7 @@ class AgentTest(unittest.TestCase):
     def test_chat_request_runs_selected_agent_and_saves_reply(self):
         book = notebooks.create("Water Treatment")
         other = notebooks.create("Other Project")
-        mira = agents.create("Mira", "Coordinator", "Keep the project current", book["id"], True)
-        agents.assign(mira["id"], other["id"])
+        mira = agents.update(agents.assistant()["id"], instructions="Keep the project current")
         agents.save_memory(mira["id"], "Use WT-04 subjects")
         agents.save_memory(mira["id"], "Other project secret", notebook_id=other["id"])
         source = pages.create("Pump plan", book["id"], "Pump calibration target is 17 psi.")
@@ -150,7 +131,7 @@ class AgentTest(unittest.TestCase):
                          "succeeded")
 
     def test_failed_reply_and_restart_keep_job_result_in_thread(self):
-        mira = agents.create("Mira", "Coordinator")
+        mira = agents.assistant()
         process = type("Process", (), {"returncode": 1,
                                        "communicate": AsyncMock(return_value=(b"", b""))})()
         with patch.dict(os.environ, {"STELLIS_NEMOCLAW_SANDBOX": "stellis-agent"}), \
@@ -187,7 +168,7 @@ class AgentTest(unittest.TestCase):
 
     def test_uncited_source_answer_fails_closed(self):
         book = notebooks.create("Water Treatment")
-        mira = agents.create("Mira", "Coordinator", notebook_id=book["id"])
+        mira = agents.assistant()
         pages.create("Pump target", book["id"], "The pump calibration target is 17 psi.")
         process = type("Process", (), {"returncode": 0,
                                        "communicate": AsyncMock(return_value=(
@@ -203,7 +184,7 @@ class AgentTest(unittest.TestCase):
 
     def test_uncited_first_reply_is_retried_with_source_marker(self):
         book = notebooks.create("Water Treatment")
-        mira = agents.create("Mira", "Coordinator", notebook_id=book["id"])
+        mira = agents.assistant()
         page = pages.create("Pump target", book["id"], "The pump calibration target is 17 psi.")
         def process(answer):
             return type("Process", (), {"returncode": 0,
@@ -236,7 +217,7 @@ class AgentTest(unittest.TestCase):
             agent_runtime._trusted_citations("Facts [[source:0]]", sources)
 
     def test_unavailable_source_marker_does_not_save_agent_reply(self):
-        mira = agents.create("Mira", "Coordinator")
+        mira = agents.assistant()
         process = type("Process", (), {"returncode": 0,
                                        "communicate": AsyncMock(return_value=(
                                            b'{"status":"ok","result":{"payloads":[{"text":"Claim [[source:1]]"}],"meta":{}}}',
@@ -252,7 +233,7 @@ class AgentTest(unittest.TestCase):
         self.assertEqual([message["role"] for message in agents.messages(mira["id"])], ["user"])
 
     def test_unavailable_source_marker_retries_without_citation(self):
-        mira = agents.create("Mira", "Coordinator")
+        mira = agents.assistant()
         def process(answer):
             return type("Process", (), {"returncode": 0,
                                         "communicate": AsyncMock(return_value=(
@@ -270,7 +251,7 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(launch.await_count, 2)
 
     def test_cancellation_terminates_managed_wrapper_and_marks_job_interrupted(self):
-        mira = agents.create("Mira", "Coordinator")
+        mira = agents.assistant()
 
         async def check():
             entered = asyncio.Event()

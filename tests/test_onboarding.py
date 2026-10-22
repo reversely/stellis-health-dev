@@ -28,11 +28,9 @@ class OnboardingTest(unittest.TestCase):
         self.assertEqual(len(collections.list_collections()),2)
         book=next(b for b in notebooks.list_notebooks() if b['name']=='Learning')
         self.assertEqual(pages.list_pages(book['id']), [])
-        tutor=next(a for a in agents.list_agents() if a.get('template_id')=='tutor')
-        self.assertEqual(tutor['notebooks'][0]['notebook_id'],book['id'])
-        agents.update(tutor['id'],name='My tutor')
+        self.assertEqual([a['name'] for a in agents.list_agents()],['Stellis'])
+        self.assertIn(book['id'],[n['notebook_id'] for n in agents.assistant()['notebooks']])
         self.assertEqual(onboarding.complete(account),first)
-        self.assertEqual(agents.get(tutor['id'])['name'],'My tutor')
     def test_empty_setup_and_invalid_choices(self):
         account=self.account()
         with self.assertRaises(ValueError):onboarding.choose(account,['invented'],'review')
@@ -47,36 +45,18 @@ class OnboardingTest(unittest.TestCase):
         self.assertFalse(auth.needs_onboarding(1))
         self.assertTrue(auth.needs_onboarding(self.account()))
 
-    def test_agent_plan_survives_back_and_applies_exact_selection(self):
-        account=self.account()
-        onboarding.choose(account,['learning','family'],'review',{'learning':['writing'],'family':[]})
-        onboarding.choose(account,['learning','family'],'uses')
-        state=onboarding.choose(account,['learning','family'],'review')
-        self.assertEqual(state['agent_choices'],{'learning':['writing'],'family':[]})
-        result=onboarding.complete(account)
-        learning=next(b for b in result['created'] if b['name']=='Learning')
-        family=next(b for b in result['created'] if b['name']=='Family')
-        self.assertEqual([agents.get(i)['template_id'] for i in learning['agent_ids']],['writing'])
-        self.assertEqual(family['agent_ids'],[])
-        self.assertEqual(onboarding.complete(account),result)
-
     def test_reopen_is_additive_and_repeated_completion_is_idempotent(self):
         account=self.account();onboarding.choose(account,['learning'],'review');first=onboarding.complete(account)
         old_id=first['created'][0]['notebook_id']
         state=onboarding.reopen(account)
         self.assertTrue(state['required']);self.assertFalse(auth.needs_onboarding(account))
         self.assertEqual(state['uses'],[])
-        onboarding.choose(account,['family','slides'],'review',{'family':['schedule'],'slides':['slides']})
+        onboarding.choose(account,['family','slides'],'review')
         second=onboarding.complete(account)
         self.assertEqual(len(notebooks.list_notebooks()),3)
         self.assertTrue(any(book['id']==old_id for book in notebooks.list_notebooks()))
         self.assertFalse(onboarding.status(account)['required'])
         self.assertEqual(onboarding.complete(account),second)
-
-    def test_invalid_agent_plan_does_not_mutate_setup(self):
-        account=self.account();before=onboarding.status(account)
-        with self.assertRaises(ValueError):onboarding.choose(account,['learning'],'review',{'learning':['invented']})
-        self.assertEqual(onboarding.status(account)['step'],before['step'])
 
     def test_task_choices_survive_back_and_preserve_existing_policy(self):
         account=self.account()
@@ -117,7 +97,7 @@ class OnboardingTest(unittest.TestCase):
 
 
 class RecordSetupTest(unittest.TestCase):
-    """Setup files reviewed record groups and deploys each notebook's agents."""
+    """Setup files reviewed record groups into notebooks where Stellis answers."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -131,23 +111,21 @@ class RecordSetupTest(unittest.TestCase):
         self.env.stop()
         self.tmp.cleanup()
 
-    def test_record_groups_become_notebooks_with_their_agents(self):
+    def test_record_groups_become_notebooks_where_stellis_answers(self):
         onboarding.choose(self.account, [], 'review')
         result = onboarding.complete(self.account, record_groups=[
-            {'notebook_name': 'Diabetes care', 'items': [], 'agents': ['steward', 'research'], 'suggest_tasks': True},
-            {'notebook_name': 'Physiotherapy', 'items': [], 'agents': [], 'suggest_tasks': False},
+            {'notebook_name': 'Diabetes care', 'items': [], 'suggest_tasks': True},
+            {'notebook_name': 'Physiotherapy', 'items': [], 'suggest_tasks': False},
         ])
         self.assertFalse(auth.needs_onboarding(self.account))
         diabetes = next(b for b in result['created'] if b['name'] == 'Diabetes care')
-        self.assertEqual([agents.get(i)['template_id'] for i in diabetes['agent_ids']], ['steward', 'research'])
+        self.assertIn(diabetes['notebook_id'], [n['notebook_id'] for n in agents.assistant()['notebooks']])
         self.assertIn('Health', [c['name'] for c in collections.list_collections()])
         book = next(b for b in notebooks.list_notebooks() if b['name'] == 'Diabetes care')
         self.assertTrue(book['todo_enabled'])
 
     def test_record_groups_are_checked_before_anything_is_created(self):
         onboarding.choose(self.account, [], 'review')
-        with self.assertRaises(ValueError):
-            onboarding.complete(self.account, record_groups=[{'notebook_name': 'A', 'agents': ['invented']}])
         with self.assertRaises(ValueError):
             onboarding.complete(self.account, record_groups=[{'notebook_name': str(i)} for i in range(6)])
         self.assertEqual(notebooks.list_notebooks(), [])

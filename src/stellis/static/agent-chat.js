@@ -4,10 +4,8 @@
   window.addEventListener('beforeunload', () => { leavingPage = true; });
   window.addEventListener('pageshow', () => { leavingPage = false; });
   let agents = [];
-  let templates = [];
   let notebooks = [];
   let collections = [];
-  let view = 'thread';
   let accountScope = '';
   let workspaceTab = 'thread';
   let threadTimer = null;
@@ -15,7 +13,6 @@
   function draftKey(id) { return `stellis-compose:${accountScope}:${id}`; }
   function readDraft(id) { try { return JSON.parse(sessionStorage.getItem(draftKey(id))) || {}; } catch { return {}; } }
   function writeDraft(id, value) { try { sessionStorage.setItem(draftKey(id), JSON.stringify(value)); } catch {} }
-  let managementSelection = null;
   let selectedId = null;
   let runtimeConfigured = false;
   let detailRevision = 0;
@@ -59,64 +56,11 @@
     label.append(input);
     return label;
   }
-  function agentButton(agent) {
-    const button = el('button', 'agent-list-item');
-    button.type = 'button';
-    const text = el('span', 'agent-list-text');
-    text.append(el('strong', '', agent.name), el('small', '', agent.role));
-    button.append(agentAvatar(agent, 32), text);
-    if (agent.id === selectedId) button.setAttribute('aria-current', 'page');
-    button.addEventListener('click', () => select(agent.id, true).catch(error => status(error.message)));
-    return button;
-  }
-  function renderList() {
-    document.querySelector('#agent-list').replaceChildren(...agents.map(agentButton));
-    let picker=document.querySelector('#agent-picker');
-    if(!picker){picker=el('select','agent-picker');picker.id='agent-picker';picker.setAttribute('aria-label','Choose agent');picker.addEventListener('change',()=>select(picker.value,true).catch(error=>status(error.message)));document.querySelector('.agent-chat-heading').prepend(picker);}
-    picker.replaceChildren(...agents.map(agent=>{const option=el('option','',agent.name);option.value=agent.id;return option;}));picker.value=selectedId||agents[0]?.id||'';
-  }
   // Settings sections pass their agent; thread actions reload the selected one.
   async function reloadAgent(id = selectedId) {
     const agent = await request(`/agents/${encodeURIComponent(id)}`);
     agents = agents.map(item => item.id === agent.id ? agent : item);
-    renderList();
-    if (view === 'settings') await renderSettings(); else await renderDetail(agent);
-  }
-  function notebookSection(agent) {
-    const section = el('section', 'agent-detail-section');
-    section.append(el('h3', '', 'Notebooks'));
-    if (!notebooks.length) {
-      section.append(el('p', 'agent-empty', 'Create a notebook to assign this agent.'));
-      return section;
-    }
-    const assigned = new Map(agent.notebooks.map(item => [item.notebook_id, item]));
-    for (const notebook of notebooks) {
-      const row = el('div', 'agent-notebook-row');
-      const label = el('label');
-      const input = el('input'); input.type = 'checkbox'; input.checked = assigned.has(notebook.id);
-      label.append(input, el('span', '', notebook.name));
-      const steward = el('button', 'agent-quiet', assigned.get(notebook.id)?.is_steward ? 'Steward' : 'Make steward');
-      steward.type = 'button'; steward.disabled = !input.checked;
-      if (assigned.get(notebook.id)?.is_steward) steward.setAttribute('aria-pressed', 'true');
-      input.addEventListener('change', async () => {
-        try {
-          const path = `/agents/${encodeURIComponent(agent.id)}/notebooks/${encodeURIComponent(notebook.id)}`;
-          await request(path, input.checked ? {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({steward:false})} : {method:'DELETE'});
-          status('Notebook assignment saved'); await reloadAgent(agent.id);
-        } catch (error) { input.checked = !input.checked; status(error.message); }
-      });
-      steward.addEventListener('click', async () => {
-        try {
-          await request(`/agents/${encodeURIComponent(agent.id)}/notebooks/${encodeURIComponent(notebook.id)}`,
-            {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({steward:true})});
-          status('Steward saved'); await reloadAgent(agent.id);
-        } catch (error) { status(error.message); }
-      });
-      row.append(label);
-      if (!agent.template_id || agent.template_id === 'steward') row.append(steward);
-      section.append(row);
-    }
-    return section;
+    await renderDetail(agent);
   }
   async function memorySection(agent) {
     const section = el('section', 'agent-detail-section');
@@ -304,12 +248,7 @@
     select.value = draft.notebook || ''; context.append(glyph('notebook'), select); form.append(context);
     const input = el('textarea'); input.name = 'question'; input.maxLength = 2000; input.required = true; input.value = draft.question || '';
     input.placeholder = `Message ${agent.name}`; input.setAttribute('aria-label', `Message ${agent.name}`); form.append(input);
-    let mention;
-    const remember = () => writeDraft(agent.id, {question:input.value, notebook:select.value, mention:mention?.selected||null});
-    // Mentions hand a question to another agent; with Stellis alone there is no one to mention.
-    mention=agents.length>1?window.StellisAgentMentions.attach(input,{initial:draft.mention||null,onChange:remember,
-      candidates:()=>select.value?agents.filter(a=>a.enabled&&(a.is_default||a.notebooks.some(b=>b.notebook_id===select.value&&b.enabled!==false))):[]}):
-      {selected:null,resolve:()=>null};
+    const remember = () => writeDraft(agent.id, {question:input.value, notebook:select.value});
     input.addEventListener('input', remember); select.addEventListener('change', remember);
     const actions = el('div', 'agent-composer-actions');
     const state = el('span', 'agent-composer-state'); state.role = 'status';
@@ -321,18 +260,17 @@
     input.addEventListener('keydown', event => { if (!event.defaultPrevented && (event.metaKey || event.ctrlKey) && event.key === 'Enter' && !send.disabled) {event.preventDefault(); form.requestSubmit();} });
     form.addEventListener('submit', async event => {
       event.preventDefault(); if (send.disabled || !input.value.trim()) return;
-      let target;try{target=mention.resolve();}catch(error){state.textContent=error.message;return;}
-      const submitted = {question:input.value.trim(), notebook:select.value, mention:mention.selected, target, started:new Date().toISOString()};
+      const submitted = {question:input.value.trim(), notebook:select.value, started:new Date().toISOString()};
       pendingTurns.set(agent.id, submitted); send.disabled = true; input.value = ''; remember(); state.textContent = 'Working…';
       const optimistic = el('article', 'agent-message agent-message-user'); optimistic.append(el('strong', 'agent-message-author', 'You'), messageBody(submitted.question), el('small', 'agent-job-state', 'Submitting…')); feed.querySelector('.agent-empty')?.remove(); feed.append(optimistic); feed.scrollTop = feed.scrollHeight;
       clearTimeout(threadTimer); threadTimer = setTimeout(() => refreshThread(section, agent).catch(error => status(error.message)), 700);
       try {
-        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null,target_agent_id:submitted.target})});
+        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null})});
         state.textContent = '';
       } catch (error) {
         state.textContent = error.message;
         if (!leavingPage && !readDraft(agent.id).question) {
-          writeDraft(agent.id, {question:submitted.question, notebook:submitted.notebook,mention:submitted.mention});
+          writeDraft(agent.id, {question:submitted.question, notebook:submitted.notebook});
           const current = selectedId === agent.id ? document.querySelector('.agent-composer textarea') : null;
           if (current && !current.value) current.value = submitted.question;
         }
@@ -370,17 +308,7 @@
     const memory = group('Memory');
     if (!memories.length) memory.append(el('p', '', 'No saved memory yet.'));
     for (const item of memories.slice(-4)) memory.append(el('p', '', item.fact));
-    if (!agent.template_id || agent.template_id === 'steward') return panel;
-    const copies = group('Named copies');
-    const related = agents.filter(item => item.id !== agent.id && item.template_id && item.template_id === agent.template_id);
-    for (const copy of related) {const link=el('a', 'agent-copy-link', copy.name);link.href=`/chat/${encodeURIComponent(copy.id)}`;copies.append(link);}
-    if (!related.length) copies.append(el('p', '', 'Give a specific use its own instructions and memory.'));
-    const create = el('button', 'agent-quiet', 'Name a copy'); create.type='button';
-    create.addEventListener('click', () => {
-      openCreate();const form=document.querySelector('#agent-new-form'),template=form.elements.template_id;
-      if (agent.template_id) {template.value=agent.template_id;template.dispatchEvent(new Event('change'));}
-      form.querySelector('input[type=checkbox]').click();form.scrollIntoView({block:'nearest'});
-    });copies.append(create);return panel;
+    return panel;
   }
   async function renderDetail(agent) {
     const revision = ++detailRevision;
@@ -390,7 +318,7 @@
     text.append(el('h3', '', agent.name), el('p', '', agent.behavior?.does || agent.role));identity.append(agentAvatar(agent,44),text);head.append(identity);
     const tabs=el('div','agent-workspace-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Agent workspace');
     const thread=await threadSection(agent);
-    if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
+    if (selectedId !== agent.id || revision !== detailRevision) return;
     const shell=el('div','agent-workspace'),center=el('div','agent-workspace-center');
     const threadPanel=el('div','agent-workspace-panel'),setupPanel=el('div','agent-workspace-panel');
     const panels={thread:threadPanel,setup:setupPanel}; let setupLoaded=false;
@@ -399,7 +327,7 @@
       workspaceTab=name;
       for (const [key,panel] of Object.entries(panels)) {panel.hidden=key!==name;tabs.querySelector(`[data-tab="${key}"]`).setAttribute('aria-selected',String(key===name));}
       try {
-        if(name==='setup'&&!setupLoaded){setupLoaded=true;setupPanel.append(behaviorCard(agent),agentControls(agent),identityForm(agent));if(!agent.is_default)setupPanel.append(notebookSection(agent));setupPanel.append(await memorySection(agent));}
+        if(name==='setup'&&!setupLoaded){setupLoaded=true;setupPanel.append(behaviorCard(agent),identityForm(agent),await memorySection(agent));}
       } catch(error) {setupLoaded=false;status(error.message);}
     }
     for(const [name,label] of [['thread','Thread'],['setup','Setup']]) {
@@ -408,7 +336,7 @@
       button.addEventListener('click',()=>activate(name));button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const buttons=[...tabs.children],index=buttons.indexOf(button),next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;buttons[next].focus();buttons[next].click();});tabs.append(button);
     }
     center.append(tabs,threadPanel,setupPanel);shell.append(center,await contextPanel(agent));
-    if (selectedId !== agent.id || view !== 'thread' || revision !== detailRevision) return;
+    if (selectedId !== agent.id || revision !== detailRevision) return;
     target.replaceChildren(head,shell);await activate(workspaceTab);
     if (location.hash.startsWith('#message-')) document.getElementById(location.hash.slice(1))?.scrollIntoView();
     else thread.querySelector('.agent-thread-feed').scrollTop=thread.querySelector('.agent-thread-feed').scrollHeight;
@@ -419,94 +347,19 @@
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', `#i-${name}`);
     svg.append(use); return svg;
   }
-  function managementChip(agent, bookId) {
-    const button=el('button','deployment-chip');button.type='button';button.dataset.agentId=agent.id;
-    const assignment=agent.notebooks.find(item=>item.notebook_id===bookId);
-    button.append(agentAvatar(agent,24),el('span','',assignment?.is_steward?'Steward':agent.name));
-    if(!agent.enabled || assignment?.enabled===false)button.append(el('small','deployment-off','Off'));
-    button.setAttribute('aria-pressed',String(managementSelection?.agentId===agent.id && managementSelection?.bookId===bookId));
-    button.addEventListener('click',()=>{managementSelection={agentId:agent.id,bookId};renderSettings(true).catch(error=>status(error.message));});
-    return button;
-  }
-  function managementAdd(bookId, templateId) {
-    managementSelection={bookId};openCreate();
-    const form=document.querySelector('#agent-new-form');form.elements.notebook_id.value=bookId;
-    if(templateId){form.elements.template_id.value=templateId;form.elements.template_id.dispatchEvent(new Event('change'));}
-    form.scrollIntoView({block:'nearest'});
-  }
-  async function managementPanel(selection) {
-    const panel=el('aside','deployment-detail');panel.setAttribute('aria-label','Selected agent');panel.tabIndex=-1;
-    const agent=agents.find(item=>item.id===selection?.agentId),book=notebooks.find(item=>item.id===selection?.bookId);
-    if(!agent){panel.append(el('h4','','Choose an agent'),el('p','agent-empty','Select an agent to manage its work and memory.'));return panel;}
-    const identity=el('div','deployment-identity'),text=el('div');text.append(el('h4','',agent.name),el('p','',book?.name || (agent.is_default?'All notebooks':'No notebook assigned')));identity.append(agentAvatar(agent,38),text);panel.append(identity);
-    const assignment=agent.notebooks.find(item=>item.notebook_id===book?.id);
-    const toggleLabel=el('label','deployment-toggle'),toggle=el('input');toggle.type='checkbox';toggle.setAttribute('role','switch');toggle.checked=agent.enabled && assignment?.enabled!==false;toggle.disabled=agent.is_default;
-    toggleLabel.append(toggle,el('span','',book?'On in this notebook':'On'));panel.append(toggleLabel);
-    if(assignment && !agent.enabled)panel.append(el('p','agent-empty','This agent is off everywhere. Turning it on also enables this notebook.'));
-    toggle.addEventListener('change',async()=>{toggle.disabled=true;try{
-      if(assignment){
-        if(toggle.checked&&!agent.enabled)await request(`/agents/${agent.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true})});
-        await request(`/agents/${agent.id}/notebooks/${book.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:toggle.checked})});
-      }else await request(`/agents/${agent.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:toggle.checked})});
-      await reloadAgent(agent.id);status(toggle.checked?'Agent turned on':'Agent turned off in this notebook');
-    }catch(error){toggle.checked=!toggle.checked;toggle.disabled=false;status(error.message);}});
-    const facts=el('dl','deployment-facts');for(const [key,label] of [['does','Does'],['runs','Runs'],['asks_first','Asks first']])facts.append(el('dt','',label),el('dd','',agent.behavior?.[key]||'Not specified'));
-    const memories=await request(`/agents/${agent.id}/memories`);facts.append(el('dt','','Remembers'));
-    const remembered=memories.filter(item=>!book || !item.notebook_id || item.notebook_id===book.id);
-    facts.append(el('dd','',remembered.length?remembered.map(item=>item.fact).join('\n'):'No saved memory yet.'));panel.append(facts);
-    const actions=el('div','deployment-actions'),chat=el('a','agent-link-button','Chat');chat.href=`/chat/${agent.id}`;actions.append(chat);
-    if(book){chat.addEventListener('click',()=>writeDraft(agent.id,{...readDraft(agent.id),notebook:book.id}));}
-    const edit=el('button','agent-quiet','Rename');edit.type='button';actions.append(edit);
-    const editor=el('div','deployment-editor');editor.hidden=true;editor.append(identityForm(agent));
-    edit.addEventListener('click',()=>{editor.hidden=!editor.hidden;if(!editor.hidden)editor.querySelector('input').focus();});
-    if(assignment){const remove=el('button','agent-quiet','Remove');remove.type='button';actions.append(remove);remove.addEventListener('click',async()=>{
-      remove.disabled=true;try{await request(`/agents/${agent.id}/notebooks/${book.id}`,{method:'DELETE'});managementSelection={bookId:book.id};await reloadAgent(agent.id);status('Removed from '+book.name+'. Chat and memory kept.');}catch(error){remove.disabled=false;status(error.message);}
-    });}
-    panel.append(actions,editor);
-    const customize=el('details','deployment-customize');customize.append(el('summary','','Instructions and memory'),el('p','agent-template-text',templates.find(item=>item.id===agent.template_id)?.instructions||agent.role),await memorySection(agent));
-    const instructions=identityForm(agent);instructions.querySelector('input[name=name]').closest('label').hidden=true;instructions.querySelector('input[name=role]').closest('label').hidden=true;customize.append(instructions);panel.append(customize);
-    if(book){const suggestions=el('section','deployment-suggestions');suggestions.append(el('h4','','Add to '+book.name));
-      for(const template of templates.filter(item=>!agents.some(a=>a.template_id===item.id&&a.notebooks.some(n=>n.notebook_id===book.id)))){const add=el('button','agent-quiet',template.name);add.type='button';add.addEventListener('click',()=>managementAdd(book.id,template.id));suggestions.append(add);}panel.append(suggestions);}
-    return panel;
-  }
-  async function renderSettings(focus=false) {
-    const revision=++detailRevision;clearTimeout(threadTimer);
-    const head=el('div','agent-detail-head');head.append(el('h3','','Agents'));
-    const layout=el('div','deployment-layout'),list=el('div','deployment-list');
-    function group(name,books){if(!books.length)return;const section=el('section','deployment-group');section.append(el('h4','notebook-group-head',name));
-      for(const book of books){const row=el('div','deployment-row');row.dataset.notebookId=book.id;const title=el('a','deployment-book',book.name);title.href=`/notebook/${book.id}`;row.append(title);const chips=el('div','deployment-chips');for(const agent of agents.filter(item=>item.notebooks.some(n=>n.notebook_id===book.id)))chips.append(managementChip(agent,book.id));
-        const add=el('button','deployment-add','+ Add');add.type='button';add.setAttribute('aria-label','Add agent to '+book.name);add.addEventListener('click',()=>managementAdd(book.id));chips.append(add);row.append(chips);section.append(row);}list.append(section);}
-    const everywhere=el('section','deployment-group');everywhere.append(el('h4','notebook-group-head','Everywhere'));const globalRow=el('div','deployment-row');globalRow.append(el('span','deployment-book','All notebooks'));const defaults=el('div','deployment-chips');for(const agent of agents.filter(item=>item.is_default))defaults.append(managementChip(agent,null));globalRow.append(defaults);everywhere.append(globalRow);list.append(everywhere);
-    for(const collection of collections)group(collection.name,notebooks.filter(book=>collection.notebook_ids.includes(book.id)));
-    group('Notebooks',notebooks.filter(book=>!collections.some(group=>group.notebook_ids.includes(book.id))));
-    const unassigned=agents.filter(agent=>!agent.is_default&&!agent.notebooks.length);if(unassigned.length){const section=el('section','deployment-group');section.append(el('h4','notebook-group-head','Not assigned'));const chips=el('div','deployment-chips');for(const agent of unassigned)chips.append(managementChip(agent,null));section.append(chips);list.append(section);}
-    if(!managementSelection) {const agent=agents.find(item=>!item.is_default&&item.notebooks.length)||agents[0];if(agent)managementSelection={agentId:agent.id,bookId:agent.notebooks[0]?.notebook_id||null};}
-    const panel=await managementPanel(managementSelection);layout.append(list,panel);
-    if(view==='settings'&&revision===detailRevision){document.querySelector('#agent-detail').replaceChildren(head,layout);if(focus){panel.focus({preventScroll:true});if(innerWidth<1100)panel.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}}
-  }
-  function setView(next) {
-    view = next;
-    document.querySelector('#agent-chat-view').classList.toggle('agent-management-view',next==='settings');
-    const link = document.querySelector('#agent-settings-link');
-    if (next === 'settings') link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
-  }
   async function select(id, navigate) {
     clearTimeout(threadTimer);
-    setView('thread');
     if (selectedId !== id) workspaceTab = 'thread';
     selectedId = id;
-    renderList();
     if (navigate) history.pushState({}, '', `/chat/${encodeURIComponent(id)}`);
     const agent = agents.find(item => item.id === id);
     if (agent) await renderDetail(agent);
   }
   async function show(requestedId) {
     status('');
-    const [items, books, groups, runtime, catalog] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime'), request('/agents/templates')]);
+    const [items, books, groups, runtime] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime')]);
     accountScope = (await request('/auth/status')).username || 'local';
-    templates = catalog;
     agents = items; notebooks = books.notebooks || []; collections = groups.collections || []; runtimeConfigured = runtime.configured;
-    if (requestedId === 'settings') { setView('settings'); selectedId = null; renderList(); await renderSettings(); return; }
     const id = agents.some(agent => agent.id === requestedId) ? requestedId : agents[0]?.id;
     if (id) await select(id, false);
   }
@@ -518,79 +371,5 @@
     }
     return card;
   }
-  function agentControls(agent) {
-    const controls = el('div', 'agent-controls');
-    const label = el('label', 'agent-enabled');
-    const toggle = el('input'); toggle.type = 'checkbox'; toggle.checked = agent.enabled; toggle.disabled = agent.is_default;
-    label.append(toggle, el('span', '', 'On in assigned notebooks'));
-    toggle.addEventListener('change', async () => {
-      toggle.disabled = true;
-      try {
-        await request(`/agents/${encodeURIComponent(agent.id)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:toggle.checked})});
-        await reloadAgent(agent.id); status(toggle.checked ? 'Agent turned on' : 'Agent turned off');
-      } catch (error) { toggle.checked = !toggle.checked; toggle.disabled = false; status(error.message); }
-    });
-    controls.append(label);
-    const template = templates.find(item => item.id === agent.template_id);
-    if (template) {
-      const baseline = el('details', 'agent-template-instructions');
-      baseline.append(el('summary', '', template.name + ' instructions'), el('p', '', template.instructions));
-      controls.append(baseline);
-    }
-    if (!agent.is_default) {
-      const remove = el('button', 'agent-quiet', 'Delete agent'); remove.type = 'button';
-      remove.addEventListener('click', async () => {
-        if (!window.confirm(`Delete ${agent.name}, its chat and saved memory?`)) return;
-        remove.disabled = true;
-        try { await request(`/agents/${encodeURIComponent(agent.id)}`, {method:'DELETE'}); await show('settings'); status('Agent deleted'); }
-        catch (error) { remove.disabled = false; status(error.message); }
-      });
-      controls.append(remove);
-    }
-    return controls;
-  }
-  function openCreate() {
-    status('');
-    const form = document.querySelector('#agent-new-form'); form.replaceChildren(); form.hidden = false;
-    const templateLabel = el('label', '', 'Agent template');
-    const select = el('select'); select.name = 'template_id'; select.required = true;
-    for (const item of templates) { const option = el('option', '', item.name); option.value = item.id; select.append(option); }
-    templateLabel.append(select);
-    const preview = el('div', 'agent-template-preview');
-    const notebookLabel = el('label', '', 'Notebook');
-    const notebook = el('select'); notebook.name = 'notebook_id'; notebook.required = true;
-    const empty = el('option', '', 'Choose notebook'); empty.value = ''; notebook.append(empty);
-    for (const item of notebooks) { const option = el('option', '', item.name); option.value = item.id; notebook.append(option); }
-    notebookLabel.append(notebook);
-    const copyLabel = el('label', 'agent-enabled'); const copy = el('input'); copy.type = 'checkbox';
-    copyLabel.append(copy, el('span', '', 'Create a copy with separate memory'));
-    const name = field('Copy name', '', 'name'); name.hidden = true; name.querySelector('input').disabled = true;
-    copy.addEventListener('change', () => { name.hidden = !copy.checked; name.querySelector('input').disabled = !copy.checked; if (copy.checked) name.querySelector('input').focus(); });
-    const instructions = field('Instructions for this agent', '', 'instructions', true);
-    const actions = el('div', 'agent-form-actions'); const add = el('button', '', 'Add agent'); add.type = 'submit';
-    const cancel = el('button', 'agent-quiet', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', () => {form.hidden = true;document.querySelector('#agent-new-toggle').focus();});
-    actions.append(add, cancel);
-    function update() {
-      const template = templates.find(item => item.id === select.value);
-      preview.replaceChildren(behaviorCard({behavior:template}));
-      const steward = select.value === 'steward'; copyLabel.hidden = steward;
-      if (steward) {copy.checked = false; name.hidden = true; name.querySelector('input').disabled = true;}
-    }
-    select.addEventListener('change', update);
-    form.append(templateLabel, preview, notebookLabel, copyLabel, name, instructions, actions);
-    if (!notebooks.length) { add.disabled = true; form.append(el('p', 'agent-empty', 'Create a notebook in the Library first.')); }
-    update(); select.focus();
-  }
-  document.querySelector('#agent-new-toggle').addEventListener('click', openCreate);
-  document.querySelector('#agent-new-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const form = event.currentTarget; const button = form.querySelector('button[type="submit"]'); button.disabled = true;
-    try {
-      const created = await request('/agents', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.fromEntries(new FormData(form)))});
-      form.hidden = true; managementSelection={agentId:created.id,bookId:form.elements.notebook_id.value};await show('settings'); history.replaceState({}, '', '/chat/settings');
-      status(created.name + ' added');
-    } catch (error) { status(error.message); }
-    finally { button.disabled = false; }
-  });
   window.StellisAgentChat = {show, artifactCard, suggestionCard, messageBody};
 })();

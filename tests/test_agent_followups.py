@@ -11,7 +11,7 @@ class FollowupTest(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.env=patch.dict(os.environ,{'STELLIS_DATA_DIR':self.temp.name},clear=True);self.env.start()
         self.book=notebooks.create('Project');notebooks.update(self.book['id'],todo_list='on')
-        self.agent=agents.create('Writer','Write',notebook_id=self.book['id'])
+        self.agent=agents.assistant()
         self.page=pages.create('Evidence',self.book['id'],'A signed approval record is still missing.')
         self.source={'source_id':self.page['id'],'title':'Evidence','excerpt':self.page['markdown'],'target':'/page/'+self.page['id']}
         self.candidate=agent_followups.validate({'text':'Obtain the signed approval record','source_index':1,'quote':self.page['markdown']},[self.source])
@@ -41,8 +41,6 @@ class FollowupTest(unittest.TestCase):
     def test_failed_and_off_policy_work_publish_no_proposal(self):
         failed,_=self.artifact();agents.finish_job(failed,'failed')
         stopped,_=self.artifact();agents.finish_job(stopped,'interrupted')
-        off_agent,_=self.artifact();agents.set_notebook_enabled(self.agent['id'],self.book['id'],False);agents.finish_job(off_agent,'succeeded')
-        agents.set_notebook_enabled(self.agent['id'],self.book['id'],True)
         disabled,_=self.artifact();notebooks.update(self.book['id'],todo_list='off');agents.finish_job(disabled,'succeeded')
         self.assertEqual(suggestions.list_pending(notebook_id=self.book['id']),[])
         self.assertEqual(len(pages.list_pages(self.book['id'])),1)

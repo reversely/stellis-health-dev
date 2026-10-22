@@ -3839,7 +3839,6 @@ function hideAppPages() {
   const rail = document.querySelector('#home-rail');
   rail.querySelectorAll('.rail-pin').forEach(link => {if(link.id === 'rail-meetings')link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   if (rail.parentElement !== listView) {
-    document.querySelector('.agent-chat-layout').prepend(document.querySelector('#agent-list'));
     listView.prepend(rail);
   }
   document.querySelector('#page-view').hidden = true;
@@ -4777,7 +4776,6 @@ async function showAgentChat() {
   document.querySelector('#agent-chat-view').hidden = false;
   const rail = document.querySelector('#home-rail');
   document.querySelector('main').prepend(rail);
-  rail.querySelector('.home-rail-head').before(document.querySelector('#agent-list'));
   rail.querySelectorAll('.rail-pin').forEach(link => {if(link.id === 'rail-chat')link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   await reloadLibrary();
   await window.StellisAgentChat.show(location.pathname.split('/')[2] || null);

@@ -11,7 +11,7 @@ class ComparisonTest(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.env=patch.dict(os.environ,{'STELLIS_DATA_DIR':self.tmp.name},clear=True)
         self.env.start();self.addCleanup(self.tmp.cleanup);self.addCleanup(self.env.stop)
-        self.book=notebooks.create('Review')['id'];self.agent=agents.deploy('steward',self.book)
+        self.book=notebooks.create('Review')['id'];self.agent=agents.assistant()
         self.first=pages.create('Option A',self.book,'The first option costs 100 units and takes two weeks.')
         self.second=pages.create('Option B',self.book,'The second option costs 120 units and takes three weeks.')
         self.sources=[{'source_id':d[1],'title':d[3],'excerpt':d[4],'target':d[5]} for d in source_search._documents() if d[2]==self.book]
@@ -46,10 +46,8 @@ class ComparisonTest(unittest.TestCase):
         with self.assertRaises(ValueError):source_comparisons.current_sources(item)
         with self.assertRaises(ValueError):asyncio.run(source_comparisons.compare(self.book,item['id']))
 
-    def test_off_agent_and_moved_source_cannot_run(self):
+    def test_moved_source_cannot_run(self):
         job,_=self.proposal();agents.finish_job(job,'succeeded');item=source_comparisons.list_for(self.book)[0]
-        agents.update(self.agent['id'],enabled=False)
-        with self.assertRaises(ValueError):asyncio.run(source_comparisons.compare(self.book,item['id']))
         pages.assign_notebook(self.first['id'],None)
         with self.assertRaises(ValueError):source_comparisons.current_sources(item)
 

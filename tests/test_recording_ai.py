@@ -21,7 +21,7 @@ class RecordingChatWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"STELLIS_DATA_DIR": directory}):
             client = TestClient(app)
             book = notebooks.create("Water Treatment")
-            agent = agents.create("Mira", "Coordinator", notebook_id=book["id"], steward=True)
+            agent = agents.assistant()
             session = client.post("/api/v1/recordings", json={"title":"Live chat", "media_type":"audio/webm",
                                                               "notebook_id":book["id"]}).json()
             base = f"/api/v1/recordings/{session['id']}"
