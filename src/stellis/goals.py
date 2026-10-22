@@ -21,7 +21,14 @@ from stellis import storage
 
 MAX_GOALS = 12
 MAX_NAME = 40
-MAX_DOSE = 30
+MAX_DOSE = 10_000
+# Dose units, singular and plural.
+DOSE_UNITS = {
+    "mg": ("mg", "mg"), "mcg": ("mcg", "mcg"), "g": ("g", "g"),
+    "ml": ("ml", "ml"), "units": ("unit", "units"),
+    "tablets": ("tablet", "tablets"), "capsules": ("capsule", "capsules"),
+    "drops": ("drop", "drops"), "puffs": ("puff", "puffs"),
+}
 WEEK_DAYS = 7
 HISTORY_WEEKS = 6
 _TIME = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
@@ -37,8 +44,6 @@ class Activity:
         amounts: Amount choices, in ``unit``; empty when an activity has none.
         unit: Unit of each amount: "minutes" or "hours".
         noun: Singular and plural name of one logged day, such as "walk".
-        action: Words after "Did you" in a reminder, such as "go for your
-            walk".
         measure: Readings measure whose readings also count, or None.
     """
     key: str
@@ -46,29 +51,26 @@ class Activity:
     amounts: tuple[float, ...]
     unit: str
     noun: tuple[str, str]
-    action: str
     measure: str | None = None
 
 
 ACTIVITIES = {
     activity.key: activity for activity in (
         Activity("walk", "Walk", (10, 15, 20, 30, 45, 60), "minutes",
-                 ("walk", "walks"), "go for your walk"),
+                 ("walk", "walks")),
         Activity("exercise", "Exercise", (15, 20, 30, 45, 60), "minutes",
-                 ("workout", "workouts"), "exercise"),
+                 ("workout", "workouts")),
         Activity("stretch", "Stretch", (5, 10, 15, 20), "minutes",
-                 ("stretch", "stretches"), "stretch"),
+                 ("stretch", "stretches")),
         Activity("meditate", "Meditate", (5, 10, 15, 20), "minutes",
-                 ("session", "sessions"), "meditate"),
-        Activity("medicine", "Take a medicine", (), "", ("dose", "doses"),
-                 "take"),
+                 ("session", "sessions")),
+        Activity("medicine", "Take a medicine", (), "", ("dose", "doses")),
         Activity("blood_pressure", "Check blood pressure", (), "",
-                 ("reading", "readings"), "check your blood pressure",
-                 "blood_pressure"),
+                 ("reading", "readings"), "blood_pressure"),
         Activity("pulse", "Check pulse with camera", (), "",
-                 ("check", "checks"), "check your pulse", "pulse"),
+                 ("check", "checks"), "pulse"),
         Activity("sleep", "Sleep", (6, 6.5, 7, 7.5, 8, 8.5, 9), "hours",
-                 ("night", "nights"), "log last night's sleep", "sleep"),
+                 ("night", "nights"), "sleep"),
     )
 }
 
@@ -80,10 +82,16 @@ def _create_tables(conn) -> None:
             activity TEXT NOT NULL,
             amount REAL,
             medicine TEXT NOT NULL DEFAULT '',
-            dose TEXT NOT NULL DEFAULT '',
+            dose_amount REAL,
+            dose_unit TEXT NOT NULL DEFAULT '',
             times_per_week INTEGER NOT NULL,
             reminder TEXT,
             created_at TEXT NOT NULL)""")
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(coach_goals)")}
+    if "dose_amount" not in columns:  # Tables made before doses had units.
+        conn.execute("ALTER TABLE coach_goals ADD COLUMN dose_amount REAL")
+        conn.execute("ALTER TABLE coach_goals ADD COLUMN dose_unit TEXT "
+                     "NOT NULL DEFAULT ''")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS coach_goal_days (
             goal_id TEXT NOT NULL REFERENCES coach_goals(id) ON DELETE CASCADE,
@@ -107,11 +115,17 @@ def options() -> list[dict[str, object]]:
             for a in ACTIVITIES.values()]
 
 
+def dose_units() -> list[str]:
+    """Lists dose units for the dose unit selector."""
+    return list(DOSE_UNITS)
+
+
 def _clean(fields: dict[str, object]) -> tuple:
     """Checks a goal's selector values.
 
     Returns:
-        Activity key, amount, medicine, dose, days a week and reminder.
+        Activity key, amount, medicine, dose amount, dose unit, days a
+        week and reminder.
 
     Raises:
         ValueError: A value is outside its selector's choices.
@@ -127,30 +141,39 @@ def _clean(fields: dict[str, object]) -> tuple:
     else:
         amount = None
     medicine = " ".join(str(fields.get("medicine") or "").split())
-    dose = " ".join(str(fields.get("dose") or "").split())
+    dose = fields.get("dose_amount")
+    unit = str(fields.get("dose_unit") or "")
     if activity.key == "medicine":
         if not medicine:
             raise ValueError("Enter a medicine name")
-        if len(medicine) > MAX_NAME or len(dose) > MAX_DOSE:
-            raise ValueError(f"Keep a medicine name under {MAX_NAME} characters "
-                             f"and a dose under {MAX_DOSE}")
+        if len(medicine) > MAX_NAME:
+            raise ValueError(f"Keep a medicine name under {MAX_NAME} characters")
+        if dose is not None:
+            dose = float(dose)
+            if not 0 < dose <= MAX_DOSE:
+                raise ValueError("Enter a dose above 0")
+            if unit not in DOSE_UNITS:
+                raise ValueError("Choose a dose unit")
+        else:
+            unit = ""
     else:
-        medicine = dose = ""
+        medicine, dose, unit = "", None, ""
     times = fields.get("times_per_week")
     if not isinstance(times, int) or not 1 <= times <= WEEK_DAYS:
         raise ValueError("Choose 1 to 7 times a week")
     reminder = fields.get("reminder") or None
     if reminder is not None and not _TIME.match(str(reminder)):
         raise ValueError("Choose a reminder time")
-    return activity.key, amount, medicine, dose, times, reminder
+    return activity.key, amount, medicine, dose, unit, times, reminder
 
 
 def create(fields: dict[str, object]) -> dict[str, str]:
     """Adds a goal from selector values.
 
     Args:
-        fields: ``activity``, ``amount``, ``medicine``, ``dose``,
-            ``times_per_week`` and ``reminder`` ("HH:MM" or None).
+        fields: ``activity``, ``amount``, ``medicine``, ``dose_amount``,
+            ``dose_unit``, ``times_per_week`` and ``reminder`` ("HH:MM" or
+            None).
 
     Returns:
         New goal's ``id``.
@@ -165,8 +188,11 @@ def create(fields: dict[str, object]) -> dict[str, str]:
         count = conn.execute("SELECT COUNT(*) FROM coach_goals").fetchone()[0]
         if count >= MAX_GOALS:
             raise ValueError(f"Keep at most {MAX_GOALS} goals")
-        conn.execute("INSERT INTO coach_goals VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                     (goal_id, *values, _now().isoformat(timespec="seconds")))
+        conn.execute(
+            "INSERT INTO coach_goals (id, activity, amount, medicine, "
+            "dose_amount, dose_unit, times_per_week, reminder, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (goal_id, *values, _now().isoformat(timespec="seconds")))
     return {"id": goal_id}
 
 
@@ -182,7 +208,8 @@ def update(goal_id: str, fields: dict[str, object]) -> None:
         _create_tables(conn)
         changed = conn.execute(
             "UPDATE coach_goals SET activity = ?, amount = ?, medicine = ?, "
-            "dose = ?, times_per_week = ?, reminder = ? WHERE id = ?",
+            "dose_amount = ?, dose_unit = ?, times_per_week = ?, reminder = ? "
+            "WHERE id = ?",
             (*values, goal_id)).rowcount
     if not changed:
         raise LookupError("Goal not found")
@@ -259,16 +286,51 @@ def _local_day(time: str, offset: datetime.timedelta) -> datetime.date:
     return (moment.astimezone(datetime.timezone.utc) + offset).date()
 
 
-def title(activity: Activity, amount: float | None, medicine: str,
-          dose: str) -> str:
-    """Names a goal from its selectors, such as "Walk 30 minutes"."""
+def dose_text(amount: float | None, unit: str) -> str:
+    """Formats a dose, such as "500 mg" or "1 tablet"; '' for none."""
+    if amount is None or unit not in DOSE_UNITS:
+        return ""
+    one, many = DOSE_UNITS[unit]
+    return f"{amount:g} {one if amount == 1 else many}"
+
+
+def title_parts(activity: Activity, amount: float | None, medicine: str,
+                dose: str) -> list[str]:
+    """Splits a goal's name into words and values, alternating.
+
+    Even indexes hold words and odd indexes hold values, which Home shows
+    as pills: ["Take", "500 mg", "of", "metformin"] or ["Walk", "30
+    minutes"].
+    """
     if activity.key == "medicine":
-        return " ".join(part for part in ("Take", medicine, dose) if part)
+        return ["Take", dose, "of", medicine] if dose else ["Take", medicine]
     if activity.key == "sleep":
-        return f"Sleep at least {amount:g} hours"
+        return ["Sleep at least", f"{amount:g} hours"]
     if amount is not None:
-        return f"{activity.label} {amount:g} {activity.unit}"
-    return activity.label
+        return [activity.label, f"{amount:g} {activity.unit}"]
+    return [activity.label]
+
+
+def reminder_question(activity: Activity, amount: float | None,
+                      medicine: str, dose: str) -> list[str]:
+    """Splits a reminder's question into words and values, alternating.
+
+    Returns:
+        Parts as ``title_parts`` alternates them, such as ["Did you take",
+        "500 mg", "of", "metformin", "yet?"].
+    """
+    if activity.key == "medicine":
+        if dose:
+            return ["Did you take", dose, "of", medicine, "yet?"]
+        return ["Did you take", medicine, "yet?"]
+    if activity.key == "sleep":
+        return ["Did you log last night's sleep yet?"]
+    if activity.key == "blood_pressure":
+        return ["Did you check your blood pressure yet?"]
+    if activity.key == "pulse":
+        return ["Did you check your pulse yet?"]
+    return [f"Did you {activity.label.lower()} for", f"{amount:g} {activity.unit}",
+            "yet?"]
 
 
 def overview(today: str, utc_offset: int, now: str) -> dict[str, object]:
@@ -281,11 +343,13 @@ def overview(today: str, utc_offset: int, now: str) -> dict[str, object]:
 
     Returns:
         ``goals``, oldest first, each with its selector values, ``title``,
-        ``noun``, ``this_week`` (days logged since Monday), ``done_today``
+        ``title_parts`` (see ``title_parts``), ``noun``, ``this_week`` (days logged since Monday), ``done_today``
         and ``weeks`` (logged days in each of HISTORY_WEEKS weeks, oldest
         first, ending this week); ``reminders`` due now, each with
-        ``goal_id``, ``question``, ``reminder`` and ``state`` ("ask" before
-        an answer, "pending" after "Not yet"); and ``activities``.
+        ``goal_id``, ``ask`` (see ``reminder_question``), ``question``,
+        ``title``, ``reminder`` and ``state`` ("ask" before
+        an answer, "pending" after "Not yet"); ``activities``; and
+        ``dose_units``.
     """
     day = datetime.date.fromisoformat(today)
     if abs(utc_offset) > 14 * 60:
@@ -321,10 +385,13 @@ def overview(today: str, utc_offset: int, now: str) -> dict[str, object]:
             days=n) in done) for start in (
                 first + datetime.timedelta(weeks=w)
                 for w in range(HISTORY_WEEKS))]
-        name = title(activity, row["amount"], row["medicine"], row["dose"])
+        dose = dose_text(row["dose_amount"], row["dose_unit"])
+        parts = title_parts(activity, row["amount"], row["medicine"], dose)
+        name = " ".join(parts)
         goal = {
             "id": row["id"], "activity": activity.key, "amount": row["amount"],
-            "medicine": row["medicine"], "dose": row["dose"],
+            "medicine": row["medicine"], "dose_amount": row["dose_amount"],
+            "dose_unit": row["dose_unit"], "title_parts": parts,
             "times_per_week": row["times_per_week"],
             "reminder": row["reminder"], "title": name,
             "noun": list(activity.noun), "measure": activity.measure,
@@ -336,11 +403,12 @@ def overview(today: str, utc_offset: int, now: str) -> dict[str, object]:
                and not goal["done_today"]
                and goal["this_week"] < row["times_per_week"])
         if due:
-            action = (f"take {row['medicine']} {row['dose']}".strip()
-                      if activity.key == "medicine" else activity.action)
+            ask = reminder_question(activity, row["amount"],
+                                    row["medicine"], dose)
             reminders.append({
-                "goal_id": row["id"], "question": f"Did you {action} yet?",
+                "goal_id": row["id"], "ask": ask, "question": " ".join(ask),
                 "title": name, "reminder": row["reminder"],
                 "state": "pending" if (row["id"], day.isoformat()) in pending
                          else "ask"})
-    return {"goals": goals, "reminders": reminders, "activities": options()}
+    return {"goals": goals, "reminders": reminders, "activities": options(),
+            "dose_units": dose_units()}

@@ -39,10 +39,35 @@ html[data-theme='dark'] .home-goals {
   gap: 2px;
 }
 .coach-reminder.is-pending .coach-reminder-text {
-  display: block;
+  justify-items: start;
+  gap: 4px;
 }
-.coach-reminder.is-ask strong {
+/* A goal's name inside a sentence, set apart as an inverted pill. */
+.coach-pill {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.9em;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.coach-reminder.is-ask .coach-pill {
+  background: var(--accent-ink);
+  color: var(--accent);
+}
+.coach-sentence {
+  font-size: 16px;
+  line-height: 1.7;
+}
+.coach-reminder.is-ask .coach-sentence {
   font-size: 17px;
+}
+.coach-reminder-time {
+  color: var(--muted);
+  font-size: 13px;
 }
 .coach-reminder-when {
   font-size: 13px;

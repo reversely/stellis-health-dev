@@ -15,7 +15,8 @@ from stellis import server
 TODAY = "2026-10-22"  # A Thursday; its week starts on Monday, Oct 19.
 WALK = {"activity": "walk", "amount": 30, "times_per_week": 4,
         "reminder": None}
-METFORMIN = {"activity": "medicine", "medicine": "metformin", "dose": "500 mg",
+METFORMIN = {"activity": "medicine", "medicine": "metformin",
+             "dose_amount": 500, "dose_unit": "mg",
              "times_per_week": 7, "reminder": "20:00"}
 
 
@@ -41,7 +42,7 @@ class GoalsTest(unittest.TestCase):
 
         titles = [goal["title"] for goal in self.overview()["goals"]]
 
-        self.assertEqual(titles, ["Walk 30 minutes", "Take metformin 500 mg",
+        self.assertEqual(titles, ["Walk 30 minutes", "Take 500 mg of metformin",
                                   "Sleep at least 7 hours",
                                   "Check blood pressure"])
 
@@ -94,8 +95,9 @@ class GoalsTest(unittest.TestCase):
 
         self.assertEqual(self.overview("19:59")["reminders"], [])
         reminder = self.overview("20:00")["reminders"][0]
-        self.assertEqual(reminder["question"],
-                         "Did you take metformin 500 mg yet?")
+        self.assertEqual(reminder["ask"],
+                         ["Did you take", "500 mg", "of", "metformin", "yet?"])
+        self.assertEqual(reminder["title"], "Take 500 mg of metformin")
         self.assertEqual(reminder["state"], "ask")
 
         goals.not_yet(goal_id, TODAY)
@@ -107,6 +109,31 @@ class GoalsTest(unittest.TestCase):
         # A new day asks again.
         tomorrow = self.overview("20:30", "2026-10-23")["reminders"][0]
         self.assertEqual(tomorrow["state"], "ask")
+
+    def test_a_reminder_question_names_its_goal(self):
+        goals.create({**WALK, "reminder": "08:00"})
+        goals.create({"activity": "sleep", "amount": 7, "times_per_week": 5,
+                      "reminder": "08:00"})
+
+        asks = [r["ask"] for r in self.overview("09:00")["reminders"]]
+
+        self.assertEqual(asks, [["Did you walk for", "30 minutes", "yet?"],
+                                ["Did you log last night's sleep yet?"]])
+
+    def test_a_dose_keeps_its_amount_and_unit_apart(self):
+        goals.create({**METFORMIN, "dose_amount": 1, "dose_unit": "tablets"})
+        goals.create({**METFORMIN, "medicine": "lactulose", "dose_amount": 15,
+                      "dose_unit": "ml"})
+        goals.create({**METFORMIN, "medicine": "vitamin D",
+                      "dose_amount": None})
+
+        parts = [g["title_parts"] for g in self.overview()["goals"]]
+
+        self.assertEqual(parts, [["Take", "1 tablet", "of", "metformin"],
+                                 ["Take", "15 ml", "of", "lactulose"],
+                                 ["Take", "vitamin D"]])
+        with self.assertRaisesRegex(ValueError, "dose unit"):
+            goals.create({**METFORMIN, "dose_unit": "spoons"})
 
     def test_a_met_weekly_goal_stops_its_reminders_for_the_week(self):
         goal_id = goals.create({**WALK, "times_per_week": 2,
@@ -158,10 +185,10 @@ class GoalsApiTest(unittest.TestCase):
         self.assertEqual(self.listed()["reminders"], [])
 
         edited = self.client.put(f"/api/v1/goals/{goal_id}",
-                                 json={**METFORMIN, "dose": "1000 mg"})
+                                 json={**METFORMIN, "dose_amount": 1000})
         self.assertEqual(edited.status_code, 200)
         self.assertEqual(self.listed()["goals"][0]["title"],
-                         "Take metformin 1000 mg")
+                         "Take 1000 mg of metformin")
         self.assertIn("walk", [a["key"] for a in self.listed()["activities"]])
 
         self.assertEqual(self.client.delete(f"/api/v1/goals/{goal_id}")
