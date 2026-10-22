@@ -119,7 +119,8 @@ body.document-page .heading {
   border-radius: 12px;
   background: var(--raised);
 }
-.facts-head {
+.facts-head,
+.facts-review-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

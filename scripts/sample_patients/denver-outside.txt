@@ -17,7 +17,7 @@
 # "format:" lines (pdf or photo), then a "---" line and the text.
 
 === file: 2024-03-20-referral-dietitian-physiotherapy.pdf
-title: Referrals to dietitian and physiotherapy 2024-03-20
+title: Referrals to dietitian and physiotherapy
 date: 2024-03-20
 format: pdf
 ---
@@ -70,7 +70,7 @@ Sincerely,
 ___, MD
 
 === file: 2024-04-08-dietitian-initial-assessment.pdf
-title: Dietitian initial assessment 2024-04-08
+title: Dietitian initial assessment
 date: 2024-04-08
 format: pdf
 ---
@@ -122,7 +122,7 @@ target 90 kg by September 2024. Follow-up in 8 weeks.
 ___, RD, LDN
 
 === file: 2024-04-12-food-diary-photo.png
-title: Food diary 2024-04-12
+title: Food diary
 date: 2024-04-12
 format: photo
 ---
@@ -144,7 +144,7 @@ Sat Apr 13
 Notes: knee sore after walk to the store Saturday.
 
 === file: 2024-04-15-physiotherapy-initial-assessment.pdf
-title: Physiotherapy initial assessment 2024-04-15
+title: Physiotherapy initial assessment
 date: 2024-04-15
 format: pdf
 ---
@@ -193,7 +193,7 @@ strength work.
 ___, PT, DPT
 
 === file: 2024-05-02-gym-readiness-questionnaire.pdf
-title: Gym readiness questionnaire 2024-05-02
+title: Gym readiness questionnaire
 date: 2024-05-02
 format: pdf
 ---
@@ -234,7 +234,7 @@ Member signature: Denver Lang
 Trainer signature: ___
 
 === file: 2024-05-06-exercise-clearance-letter.pdf
-title: Exercise clearance letter 2024-05-06
+title: Exercise clearance letter
 date: 2024-05-06
 format: pdf
 ---
@@ -269,7 +269,7 @@ Recommendations:
 ___, MD
 
 === file: 2024-05-13-personal-training-program.pdf
-title: Personal training program 2024-05-13
+title: Personal training program
 date: 2024-05-13
 format: pdf
 ---
@@ -310,7 +310,7 @@ Rules from clearance letter: no breath holding, stand slowly after
 floor work, check feet after each session.
 
 === file: 2024-06-10-dietitian-follow-up.pdf
-title: Dietitian follow-up 2024-06-10
+title: Dietitian follow-up
 date: 2024-06-10
 format: pdf
 ---
@@ -344,7 +344,7 @@ On track at 0.3 kg per week. Next visit in 3 months.
 ___, RD, LDN
 
 === file: 2024-06-24-physiotherapy-progress-report.pdf
-title: Physiotherapy progress report 2024-06-24
+title: Physiotherapy progress report
 date: 2024-06-24
 format: pdf
 ---
@@ -419,7 +419,7 @@ Note entered by user: "Lightheaded when I stand up fast, mostly
 mornings and after long walks. No chest pain."
 
 === file: 2024-09-16-dietitian-follow-up.pdf
-title: Dietitian follow-up 2024-09-16
+title: Dietitian follow-up
 date: 2024-09-16
 format: pdf
 ---
@@ -457,7 +457,7 @@ Weight goal 86 kg. Next visit in 4 months.
 ___, RD, LDN
 
 === file: 2024-09-19-telephone-encounter-dizziness.pdf
-title: Telephone encounter 2024-09-19
+title: Telephone encounter
 date: 2024-09-19
 format: pdf
 ---
@@ -497,7 +497,7 @@ Patient agreed with plan.
 ___, MD
 
 === file: 2024-11-04-personal-training-progress.pdf
-title: Personal training progress report 2024-11-04
+title: Personal training progress report
 date: 2024-11-04
 format: pdf
 ---
@@ -527,7 +527,7 @@ seated cable press. Reassess in February.
 ___ (CPT)
 
 === file: 2024-12-09-dental-visit.pdf
-title: Dental visit 2024-12-09
+title: Dental visit
 date: 2024-12-09
 format: pdf
 ---
@@ -559,7 +559,7 @@ Plan:
 ___, DMD
 
 === file: 2025-01-14-walk-in-clinic-wrist-sprain.pdf
-title: Walk-in clinic visit 2025-01-14
+title: Walk-in clinic visit
 date: 2025-01-14
 format: pdf
 ---
@@ -599,7 +599,7 @@ Plan:
 ___, PA-C
 
 === file: 2025-02-10-dietitian-follow-up.pdf
-title: Dietitian follow-up 2025-02-10
+title: Dietitian follow-up
 date: 2025-02-10
 format: pdf
 ---
@@ -630,7 +630,7 @@ Goal 86 kg by summer 2025. Next visit in 4 months.
 ___, RD, LDN
 
 === file: 2025-06-02-physiotherapy-shoulder-assessment.pdf
-title: Physiotherapy shoulder assessment 2025-06-02
+title: Physiotherapy shoulder assessment
 date: 2025-06-02
 format: pdf
 ---
@@ -665,7 +665,7 @@ consent.
 ___, PT, DPT
 
 === file: 2025-09-08-personal-training-progress.pdf
-title: Personal training progress report 2025-09-08
+title: Personal training progress report
 date: 2025-09-08
 format: pdf
 ---
@@ -691,7 +691,7 @@ sessions plus independent gym work from October.
 ___ (CPT)
 
 === file: 2025-11-17-dietitian-review.pdf
-title: Dietitian review 2025-11-17
+title: Dietitian review
 date: 2025-11-17
 format: pdf
 ---
@@ -721,7 +721,7 @@ Discharged from regular follow-up. Summary sent to ___, MD.
 ___, RD, LDN
 
 === file: 2026-03-22-questions-for-annual-exam-photo.png
-title: Questions for my annual exam 2026-03-22
+title: Questions for my annual exam
 date: 2026-03-22
 format: photo
 ---

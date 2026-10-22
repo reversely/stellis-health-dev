@@ -222,12 +222,13 @@ class SampleRecordsTest(unittest.TestCase):
         dates = [item["record_date"] for item in loaded]
         self.assertEqual(dates, sorted(dates, reverse=True))
         self.assertEqual((dates[-1], dates[0]), ("1997-12-04", "2026-04-02"))
-        needs_text = sorted(
-            item["title"] for item in loaded if item["status"] == "needs_text")
-        self.assertEqual(needs_text, [
-            "Food diary 2024-04-12", "Lab results 2025-03-23",
-            "Questions for my annual exam 2026-03-22"
-        ])
+        needs_text = sorted((item["title"], item["record_date"])
+                            for item in loaded
+                            if item["status"] == "needs_text")
+        self.assertEqual(needs_text,
+                         [("Food diary", "2024-04-12"),
+                          ("Lab results", "2025-03-23"),
+                          ("Questions for my annual exam", "2026-03-22")])
 
     def test_loads_into_one_notebook_on_request(self):
         result = sample_records.load("Denver")

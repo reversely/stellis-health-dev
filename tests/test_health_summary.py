@@ -52,10 +52,13 @@ class HealthSummaryTest(unittest.TestCase):
         context = json.loads(turn.await_args.args[0].split("\n\n", 1)[1])
         titles = [source["title"] for source in context["sources"]]
         self.assertLessEqual(len(titles), health_summary.MAX_PASSAGES)
-        self.assertIn("Lab results 2026-04-02", titles)
+        self.assertIn("2026-04-02",
+                      [source["date"] for source in context["sources"]])
         self.assertTrue(any("Telephone encounter" in title for title in titles))
         self.assertTrue(all(source["date"] for source in context["sources"]))
-        stored = self.client.get("/api/v1/summary").json()["summary"]
+        current = self.client.get("/api/v1/summary").json()
+        self.assertEqual(current["document_count"], 47)
+        stored = current["summary"]
         self.assertEqual(
             stored["content"],
             REPLY.replace("[[source:1]]",

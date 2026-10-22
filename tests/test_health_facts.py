@@ -66,6 +66,7 @@ class ParseFactsTest(unittest.TestCase):
             _fact(page=7),
             _fact(kind="surgery"),
             _fact(value=""),
+            _fact(kind="vital_sign", value=""),
             _fact(name=""),
             _fact(quote="mg"),
             _fact(name=["Creatinine"]),
@@ -168,6 +169,27 @@ class HealthFactsApiTest(unittest.TestCase):
             len(
                 self.client.get(f"/api/v1/documents/{self.document['id']}/facts"
                                ).json()["facts"]), 1)
+
+    def test_accept_all_accepts_every_suggestion_of_the_document(self):
+        response, _ = self.extract(
+            _reply(
+                _fact(),
+                _fact(name="Glucose",
+                      value="83.5",
+                      quote="Glucose [Mass/volume] in Blood: 83.5 mg/dL")))
+        self.assertEqual(len(response.json()["facts"]), 2)
+
+        accepted = self.client.post(
+            f"/api/v1/documents/{self.document['id']}/facts/accept")
+        again = self.client.post(
+            f"/api/v1/documents/{self.document['id']}/facts/accept")
+        missing = self.client.post("/api/v1/documents/missing/facts/accept")
+
+        self.assertEqual(accepted.json(), {"accepted": 2})
+        self.assertEqual(again.json(), {"accepted": 0})
+        self.assertEqual(missing.status_code, 404)
+        self.assertEqual(len(self.client.get("/api/v1/facts").json()["facts"]),
+                         2)
 
     def test_extracting_again_keeps_accepted_facts(self):
         first, _ = self.extract(_reply(_fact()))
