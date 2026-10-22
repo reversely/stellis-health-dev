@@ -106,10 +106,54 @@ Each rule type below is a proposal.
 | Food photos | The person photographs a meal. A vision model names each food and estimates the portion in grams. Calories and macronutrients come from USDA FoodData Central for those foods and grams, not from the model's guess. The person confirms or fixes the items in two taps. | Published studies put photo-based calorie estimates at roughly 15 to 40% error, and macronutrients higher. The interface shows a range and weekly trends rather than one exact number per meal. Token Factory's current vision models need checking in the console, because the public list found is from an older post (Qwen2-VL). |
 | Calorie apps | Import of CSV exports from MyFitnessPal or Cronometer | Cronometer has no public API, and no official MyFitnessPal API was found. Import of exports works today. |
 | Diet plan | The agent drafts targets from the person's records and goals. When a dietitian's plan exists in the records, the draft follows that plan and cites it. Meals are logged against the targets. | Diabetes medicines plus a calorie cut can cause low blood sugar with some drugs. The plan screen tells the person to confirm a new plan with their clinician when the records list such a medicine. |
-| Photo a day or video a day | A short guided capture at the same framing each day, such as a front photo for body change, a photo of a wound or skin spot, or a 10-step walking video for knee gait. The agent describes changes against earlier captures in neutral words. | Describing change, not diagnosing, keeps it a journal. Diagnosis from images would raise the regulatory question in the brief's open decisions. Daily images are the most sensitive data in the app, so they need their own consent and retention setting. |
+| Daily vitals by camera (rPPG) | See the rPPG section below. | See the rPPG section below. |
 | Smart scale | Withings first: OAuth connection, then each new weigh-in arrives as a log | The Withings public API needs no contract. The legacy Fitbit API switches off on 30 Oct 2026, and its replacement, the Google Health API, takes no new projects. Apple Health needs a native app, which the brief defers, so an Apple Health export file import covers it for now. |
 | Medicines | The medicine list comes from accepted record facts (R-02) and from a photo of the bottle label. Each medicine gets a dose check-in and a refill reminder computed from quantity and dose. | Interaction checks wait for validated references (A-02, openFDA), as the brief requires. |
 | Reminders | In-app on Today first. Phone notifications through web push. Email once H-04 adds an email provider. | On iPhone, web push works only after the person adds the app to the home screen (iOS 16.4 or later). Onboarding needs a step that shows how. |
+
+## Daily vitals by camera (rPPG)
+
+Remote photoplethysmography (rPPG) reads the pulse from small colour changes in facial skin on video. A daily 45-second front-camera video gives a passive health reading with no device beyond the phone.
+
+### Proposed capture
+
+| Step | Proposed design |
+| --- | --- |
+| When | Once a day, at a time the person picks, ideally soon after waking and before coffee. A reminder comes from T-02. |
+| How | The person sits still, faces a window or lamp, and holds the phone at arm's length. An outline shows where the face goes. A countdown of about 45 seconds runs while the browser measures. |
+| Quality gate | The browser scores the signal. Movement, low light or a lost face produces "Let's try that again" and stores nothing. |
+| Result | Today shows the reading against the person's own 14-day baseline, for example "Resting pulse 64, about your usual." A trend line sits on the Timeline. |
+
+### What it measures
+
+The alpha shows only the readings that published validation supports.
+
+| Reading | Alpha | Evidence found |
+| --- | --- | --- |
+| Pulse (resting heart rate) | Shown | Google's study of 205 people kept error under 10% against ECG across light, medium and dark skin tones, and daily resting pulse within 5 bpm of a wearable. The same paper says many other rPPG methods lose accuracy on the darkest skin. |
+| Breathing rate | Shown after T-09 validation | One assessment reports error below 3 breaths per minute, with lower signal quality than contact sensors. |
+| Heart rate variability | Hidden | Support comes from small, older studies. |
+| Blood pressure | Not offered | No validated camera method was found. Denver's records already have cuff readings. |
+
+### Privacy design
+
+The video is processed in the browser and never uploaded. Only the numbers and a quality score reach the server.
+
+This matches the brief's direction of keeping raw personal data under the person's control. It also removes the need for a vision model call per video. Face detection uses a browser face-landmark model. The pulse comes from a published signal method (POS or CHROM) in JavaScript, or later from a small model run in the browser. The licences of rPPG-Toolbox, pyVHR and the browser demos need checking before any code is reused.
+
+### Why it matters for Denver
+
+His resting pulse should fall as his fitness improves, and it gives his trainer and doctor a trend between visits. His records show low blood pressure with dizziness in September 2024. A pulse change on a dizzy day is something he can bring to his doctor, with the readings attached.
+
+### Safety and regulation
+
+- **Claims:** the app presents readings as a wellness trend, not a diagnosis. Companies that make medical claims for camera pulse and breathing readings have FDA 510(k) clearance (FaceHeart, PanopticAI), so any medical claim waits for the regulatory review listed in the brief's open decisions.
+- **Out-of-range readings:** a reading far from the person's baseline first prompts a retake. A repeated high or low reading plus a symptom the person reports goes through S-01 and suggests contacting a clinician.
+- **Medicines:** the app never suggests a medicine change from a camera reading.
+
+### Validation before showing numbers (proposed T-09)
+
+Run the browser method against a finger pulse oximeter on a small group that spans skin tones and lighting, and publish the error by group. If any group's error exceeds 10%, that group sees a trend arrow instead of a number until the method improves.
 
 ## Reveal order after onboarding
 
@@ -119,7 +163,7 @@ Home opens on Today. The rail starts with Today, Records and Ask. Each other fea
 | --- | --- |
 | Timeline | 10 or more records, or records that span more than a year |
 | Food log | A plan with food targets, or the person mentions eating in Ask or the intake |
-| Photo or video check-ins | The person names a goal that a daily capture can track |
+| Daily vitals by camera | The person names a fitness, heart or blood pressure goal, or asks about pulse |
 | Smart scale connection | Three typed weigh-ins, or the person mentions a scale |
 | Conversations and meeting notes | An upcoming appointment appears in a record or a question. The speech model download starts then. |
 | People | The same clinician or service appears in 2 or more records |
@@ -142,12 +186,14 @@ The 8-step tour leaves first run and stays available in Settings.
 | T-05 | Medicines: list, dose check-ins, label photo, refills | T-01, R-02 |
 | T-06 | Measurements: Withings, Apple Health export, CSV | T-01 |
 | T-07 | Food log: photo, FoodData Central nutrients, CSV import | T-01, vision model check |
-| T-08 | Photo or video a day, with its own consent and retention setting | T-01, S-03 |
+| T-08 | Daily vitals by camera (rPPG), processed in the browser | T-01, T-09 |
+| T-09 | rPPG validation against a pulse oximeter across skin tones and lighting | |
 
 ## Open questions for the owner
 
 1. Intake voice: option A (push to talk) for the alpha, or B (full voice call) now?
-2. Order of tracking work after T-01 and T-02: medicines, food, scale, or daily photos first?
+2. Order of tracking work after T-01 and T-02: medicines, food, scale, or rPPG first?
 3. Reminder channels: web push only for the alpha, or also email (which needs H-04 first)?
 4. Privacy line: the alpha server can read stored data, and zero data retention is not yet verified. Is "Your records are not used to train models" plus the Token Factory name acceptable until encryption ships?
-5. Should daily photos and videos stay out of model calls unless the person asks for a comparison?
+5. rPPG in the alpha: pulse only, or pulse and breathing rate once T-09 passes?
+6. Should progress photos (body or skin) stay in scope as a separate feature, or does rPPG replace the photo-a-day idea?
