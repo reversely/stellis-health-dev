@@ -109,7 +109,7 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first[0]["action"], "fill_goal")
         self.assertEqual(first[0]["values"]["title"], "Stretch 10 minutes")
         self.assertEqual(second, [{"action": "logged", "goal_id": walk},
-                                  "Nice work on that walk.", "Anything else?"])
+                                  "Nice work on that walk.", coach_call.ANYTHING_ELSE])
         self.assertTrue(goals.overview(TODAY, 0, "09:00")["goals"][0]["done_today"])
         # The second round, after a reply of only tool calls, reads their results.
         messages, tools = model.sent[-1]
@@ -137,7 +137,7 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
 
         pieces = await self.turn("Log my steps", model)
 
-        self.assertEqual(pieces, ["Sorry, I couldn't do that."])
+        self.assertEqual(pieces, ["Sorry, I couldn't do that.", coach_call.ANYTHING_ELSE])
         results = [m["content"] for m in model.sent[-1][0] if m["role"] == "tool"]
         self.assertTrue(all(result.startswith("Not") for result in results), results)
 

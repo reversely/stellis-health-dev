@@ -43,8 +43,10 @@ MODELS = (
 )
 SAMPLE_RATE = 16000
 VAD_WINDOW = 512
-# Silence that ends an answer. Shorter splits answers at a breath.
-END_SILENCE_S = 0.7
+# Silence that ends an answer. At 0.7 s, a pause to think ended the answer
+# and Stellis spoke over the rest of it; 1.2 s waits through such pauses and
+# adds 0.5 s before each reply.
+END_SILENCE_S = 1.2
 # Audio kept before detected speech: the detector starts late, and without
 # it the first word is clipped ("Type 2 diabetes" heard as "2 diabetes").
 PRE_ROLL_S = 0.3

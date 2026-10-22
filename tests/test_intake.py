@@ -123,19 +123,56 @@ class ReplyTest(IntakeTestCase):
         return [piece async for piece in intake.reply(timings)]
 
     def test_a_title_before_a_name_does_not_end_a_sentence(self):
-        async def tokens(messages, tools=None):
-            yield "You see Dr. Patel and a dietitian. Is that right?"
-        with patch.object(intake, "stream_tokens", tokens):
-            pieces = asyncio.run(self._collect())
+        pieces = self._pieces(intake.speakable, ["You see Dr. Patel and a dietitian. Is that right?"])
         self.assertEqual(pieces, ["You see Dr. Patel and a dietitian.", "Is that right?"])
 
     def test_a_long_first_clause_is_split_at_its_comma(self):
+        words = [word + " " for word in "You have been working on this for a while, then. Good.".split(" ")]
+        self.assertEqual(self._pieces(intake.speakable, words),
+                         ["You have been working on this for a while,", "then.", "Good."])
+
+    def test_the_models_questions_are_never_spoken(self):
+        words = [word + " " for word in
+                 "Great progress. How much weight? Which knee hurts? Keep it up. More.".split(" ")]
+        statements = lambda tokens: intake.statements(tokens, 2)
+        self.assertEqual(self._pieces(statements, words), ["Great progress.", "Keep it up."])
+
+    def test_the_call_asks_its_own_question_whatever_the_model_writes(self):
         async def tokens(messages, tools=None):
-            for word in "You have been working on this for a while, then. Good.".split(" "):
-                yield word + " "
+            yield "Nice. Which knee is it, and how bad is the pain? Tell me more."
+        intake.opening()
+        intake.add_person_turn("My knees.")
         with patch.object(intake, "stream_tokens", tokens):
             pieces = asyncio.run(self._collect())
-        self.assertEqual(pieces, ["You have been working on this for a while,", "then.", "Good."])
+        self.assertEqual(pieces, ["Nice.", intake.QUESTIONS["Health"]])
+
+    def test_the_call_goes_on_when_the_model_is_unavailable(self):
+        async def tokens(messages, tools=None):
+            raise intake.IntakeError("down")
+            yield ""
+        intake.opening()
+        intake.add_person_turn("Walk more.")
+        with patch.object(intake, "stream_tokens", tokens):
+            self.assertEqual(asyncio.run(self._collect()), [intake.QUESTIONS["Health"]])
+
+    def test_an_emergency_ends_the_call(self):
+        async def tokens(messages, tools=None):
+            yield "I'm sorry you're in pain."
+            yield {"id": "call_1", "name": "emergency", "arguments": {}}
+        intake.opening()
+        intake.add_person_turn("I have crushing chest pain right now.")
+        with patch.object(intake, "stream_tokens", tokens):
+            pieces = asyncio.run(self._collect())
+        self.assertEqual(pieces, ["I'm sorry you're in pain.", intake.EMERGENCY_LINE, intake.END_MARK])
+
+    def _pieces(self, split, tokens):
+        async def source():
+            for token in tokens:
+                yield token
+
+        async def run():
+            return [piece async for piece in split(source())]
+        return asyncio.run(run())
 
     def test_a_typed_call_follows_the_script_and_ends(self):
         intake.opening()
@@ -239,7 +276,6 @@ class BargeInTest(IntakeTestCase):
 class PlanTest(IntakeTestCase):
     def test_each_topic_gets_one_question_and_no_follow_up(self):
         intake.opening()
-        self.assertIn("Never ask a follow-up question", intake.INSTRUCTIONS)
         for topic, answer in (("Goals", "I don't know."), ("Health", "Nothing really."),
                               ("Reminders", "Maybe.")):
             self.assertEqual(intake.plan(intake.load())["next_topic"], topic)
@@ -257,31 +293,12 @@ class PlanTest(IntakeTestCase):
         self.assertEqual(intake.plan(state)["next_topic"], "Reminders")
         self.assertIn('"next_topic": "Reminders"', intake.conversation(state)[0]["content"])
 
-    def test_the_goodbye_ends_the_call_without_end_call(self):
+    def test_the_goodbye_ends_the_call(self):
         intake.opening()
         for answer in ("Walk more.", "None.", "No."):
             intake.add_person_turn(answer)
-            pieces = asyncio.run(self._reply_without_model("Thanks. Press Continue."))
-        self.assertEqual(pieces[-1], intake.END_MARK)
-
-    def test_end_call_hangs_up_only_at_the_goodbye_step(self):
-        async def hang_up(messages, tools=None):
-            self.assertEqual(tools, [intake.END_CALL])
-            yield "Thanks. Press Continue to add your records."
-            yield {"id": "call_1", "name": "end_call", "arguments": {}}
-
-        async def pieces():
-            with patch.object(intake, "stream_tokens", hang_up):
-                return [piece async for piece in intake.reply()]
-
-        intake.opening()
-        intake.add_person_turn("I want to walk more.")
-        self.assertNotIn(intake.END_MARK, asyncio.run(pieces()))
-        intake.add_person_turn("No conditions.")
-        asyncio.run(self._reply_without_model("Would reminders help?"))
-        intake.add_person_turn("No, that's all.")
-        self.assertEqual(asyncio.run(pieces()),
-                         ["Thanks.", "Press Continue to add your records.", intake.END_MARK])
+            pieces = asyncio.run(self._reply_without_model("Thanks. Anything else to add?"))
+        self.assertEqual(pieces, ["Thanks.", intake.CLOSING, intake.END_MARK])
 
     async def _reply_without_model(self, text):
         async def tokens(messages, tools=None):

@@ -87,7 +87,7 @@
       ]
     },
     {
-      "agent": "Thanks, Denver. You want to keep the weight off and ease your knees, you manage diabetes and blood pressure, and you'd like a Monday weigh-in reminder. You can edit your notes, then press Continue to add your records. [END]",
+      "agent": "Thanks, Denver: you want to keep the weight off and ease your knees, you manage diabetes and blood pressure, and you'd like a Monday weigh-in reminder. You can edit your notes, then press Continue to add your records. [END]",
       "person": null,
       "notes": "same"
     }
