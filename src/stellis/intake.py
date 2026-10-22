@@ -381,12 +381,23 @@ def _key() -> str:
     return key
 
 
-async def stream_tokens(messages: list[dict[str, str]]) -> AsyncIterator[str]:
-    """Streams the reply text from the agent model."""
+async def stream_tokens(messages: list[dict[str, object]],
+                        tools: list[dict] | None = None) -> AsyncIterator[str | dict]:
+    """Streams the reply from the agent model.
+
+    Yields:
+        Text as it arrives, then, when ``tools`` are given, one dict for
+        each complete tool call: ``id``, ``name`` and ``arguments`` (a
+        dict; arguments that are not a JSON object come back empty).
+    """
     body = {"model": runtime_profile.model_id("agent"), "messages": messages, "stream": True,
             "stream_options": {"include_usage": True}, "temperature": 0.4, "max_tokens": REPLY_TOKENS,
             "chat_template_kwargs": {"enable_thinking": False}}
+    if tools:
+        body.update(tools=tools, tool_choice="auto")
     headers = {"Authorization": "Bearer " + _key()}
+    # Tool calls arrive in pieces, keyed by index.
+    calls: dict[int, dict[str, str]] = {}
     try:
         async with httpx.AsyncClient(timeout=60, follow_redirects=False, trust_env=False) as client:
             async with client.stream("POST", runtime_profile.inference_url() + "/chat/completions",
@@ -400,38 +411,49 @@ async def stream_tokens(messages: list[dict[str, str]]) -> AsyncIterator[str]:
                     if data.get("usage"):
                         token_quota.record(data["usage"])
                     for choice in data.get("choices") or []:
-                        text = (choice.get("delta") or {}).get("content")
-                        if text:
-                            yield text
+                        delta = choice.get("delta") or {}
+                        if delta.get("content"):
+                            yield delta["content"]
+                        for piece in delta.get("tool_calls") or []:
+                            call = calls.setdefault(int(piece.get("index", 0)),
+                                                    {"id": "", "name": "", "arguments": ""})
+                            function = piece.get("function") or {}
+                            call["id"] = piece.get("id") or call["id"]
+                            call["name"] += function.get("name") or ""
+                            call["arguments"] += function.get("arguments") or ""
     except (httpx.HTTPError, ValueError) as exc:
         raise IntakeError("The intake agent is unavailable. Try again.") from exc
+    for index in sorted(calls):
+        call = calls[index]
+        try:
+            arguments = json.loads(call["arguments"] or "{}")
+        except ValueError:
+            arguments = {}
+        yield {"id": call["id"] or f"call_{index}", "name": call["name"],
+               "arguments": arguments if isinstance(arguments, dict) else {}}
 
 
-async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str]:
-    """Streams the agent's next reply as speakable pieces.
+async def speakable(tokens: AsyncIterator[str | dict],
+                    timings: dict[str, float] | None = None) -> AsyncIterator[str | dict]:
+    """Splits streamed text into speakable pieces; passes tool calls through.
 
     The first piece ends at the first complete clause, later pieces at
     sentence ends, so speech can start before the reply is complete.
-    ``END_MARK`` is left in the text for the caller to act on.
 
     Args:
+        tokens: Text and tool calls, as ``stream_tokens`` yields them.
         timings: When given, ``first_token`` is set to the time of the
             first streamed text, from ``time.perf_counter``.
     """
-    state = load()
-    step = plan(state)["next_topic"]
-    # The instructions end the call at the goodbye; after one more exchange,
-    # for a correction, it ends whatever the model writes.
-    must_end = step == GOODBYE and _answers(state["turns"]).get(GOODBYE, 0) > 0
-    _update(lambda current: current.__setitem__("asking", step))
-    pending = written = ""
+    pending = ""
     first = True
-    ended = False
-    async for token in stream_tokens(conversation(state)):
+    async for token in tokens:
+        if isinstance(token, dict):
+            yield token
+            continue
         if timings is not None and "first_token" not in timings:
             timings["first_token"] = time.perf_counter()
         pending += token
-        written += token
         while True:
             parts = _SENTENCE.split(pending, maxsplit=1)
             if len(parts) == 1 and first:
@@ -443,14 +465,33 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str]:
             piece, pending = parts
             first = False
             if piece.strip():
-                ended = ended or END_MARK in piece
                 yield piece.strip()
     if pending.strip():
-        ended = ended or END_MARK in pending
         yield pending.strip()
+
+
+async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str]:
+    """Streams the agent's next reply as speakable pieces (see ``speakable``).
+
+    ``END_MARK`` is left in the text for the caller to act on.
+    """
+    state = load()
+    step = plan(state)["next_topic"]
+    # The instructions end the call at the goodbye; after one more exchange,
+    # for a correction, it ends whatever the model writes.
+    must_end = step == GOODBYE and _answers(state["turns"]).get(GOODBYE, 0) > 0
+    _update(lambda current: current.__setitem__("asking", step))
+    written = []
+    ended = False
+    async for piece in speakable(stream_tokens(conversation(state)), timings):
+        if isinstance(piece, dict):
+            continue
+        written.append(piece)
+        ended = ended or END_MARK in piece
+        yield piece
     if must_end and not ended:
         yield END_MARK
-    debug_data.record("intake-replies", {"step": step, "reply": written})
+    debug_data.record("intake-replies", {"step": step, "reply": " ".join(written)})
 
 
 async def complete_json(instructions: str, context: dict[str, object], schema: dict | None,

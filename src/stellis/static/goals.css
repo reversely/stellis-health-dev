@@ -551,3 +551,14 @@ html[data-theme='dark'] .home-goals {
   border-style: solid;
   border-color: var(--accent);
 }
+
+.coach-overview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+.coach-overview-head .coach-title {
+  margin: 0;
+}

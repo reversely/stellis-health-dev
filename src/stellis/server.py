@@ -1013,6 +1013,31 @@ def _websocket_allowed(websocket: WebSocket) -> bool:
 
 async def intake_call(websocket: WebSocket) -> None:
     """The intake call: microphone audio in, the agent's speech and notes out."""
+    from stellis import intake
+    await _run_call(websocket, intake)
+
+
+async def coach_call(websocket: WebSocket) -> None:
+    """A coach call; the query names its kind and the person's local day and time."""
+    from stellis import coach_call as script
+    query = websocket.query_params
+    if not _websocket_allowed(websocket):
+        await websocket.close(code=4401)
+        return
+    try:
+        await script.begin(query.get("kind", "call"), query.get("today", ""),
+                           query.get("now", ""), int(query.get("utc_offset", "0")))
+    except ValueError:
+        await websocket.close(code=4400)
+        return
+    try:
+        await _run_call(websocket, script)
+    finally:
+        script.end()
+
+
+async def _run_call(websocket: WebSocket, script) -> None:
+    """Runs a voice call through ``script``, a module as ``intake_voice.Call`` takes it."""
     from stellis import intake_voice
     if not _websocket_allowed(websocket):
         await websocket.close(code=4401)
@@ -1021,9 +1046,9 @@ async def intake_call(websocket: WebSocket) -> None:
     try:
         engine = await asyncio.to_thread(intake_voice.acquire)
     except Exception:  # Missing or unloadable models fall back to a typed call.
-        logging.getLogger(__name__).exception("Intake voice unavailable")
+        logging.getLogger(__name__).info("Call voice unavailable; the call runs by text")
         engine = None
-    call = intake_voice.Call(websocket.send_json, websocket.send_bytes, engine)
+    call = intake_voice.Call(websocket.send_json, websocket.send_bytes, engine, script)
     try:
         await call.start()
         while True:
@@ -1054,6 +1079,31 @@ async def intake_call(websocket: WebSocket) -> None:
 
 
 app.add_api_websocket_route("/api/v1/intake/call", intake_call)
+app.add_api_websocket_route("/api/v1/coach/call", coach_call)
+
+
+class MorningAnswer(BaseModel):
+    day: str = Field(max_length=10)
+    answer: Literal["answered", "declined"]
+
+
+@api.get("/coach")
+def coach_state(today: str, now: str) -> dict[str, object]:
+    """Whether the morning check-in is due, and the latest call's transcript."""
+    from stellis import coach_call as script
+    latest = script.load()
+    return {"morning_due": script.morning_due(today, now),
+            "latest": {"kind": latest["kind"], "started_at": latest["started_at"],
+                       "ended_at": latest["ended_at"],
+                       "turns": [{"role": turn["role"], "text": turn["text"]}
+                                 for turn in latest["turns"] if turn["text"]]}}
+
+
+@api.post("/coach/morning")
+def coach_morning(request: MorningAnswer) -> dict[str, bool]:
+    from stellis import coach_call as script
+    _agent_result(lambda: script.answer_morning(request.day, request.answer))
+    return {"saved": True}
 
 
 @app.get("/", include_in_schema=False)

@@ -210,18 +210,26 @@ def is_echo(heard: str, spoken: str) -> bool:
 
 
 class Call:
-    """One intake call over a WebSocket.
+    """One call over a WebSocket.
 
     Args:
         send_json: Sends a JSON message to the browser.
         send_bytes: Sends audio to the browser.
         engine: The speech models, or None to run the call by text only.
+        script: Module that keeps the conversation, with ``load``,
+            ``opening``, ``add_person_turn``, ``extend_person_turn``,
+            ``drop_agent_reply``, ``add_agent_turn``, ``reply`` and
+            ``update_notes`` as ``intake`` defines them. ``reply`` may
+            also yield dicts, which go to the browser as ``action``
+            messages; ``update_notes`` may be None for a call without a
+            notepad.
     """
 
-    def __init__(self, send_json, send_bytes, engine: Engine | None) -> None:
+    def __init__(self, send_json, send_bytes, engine: Engine | None, script=intake) -> None:
         self.send_json = send_json
         self.send_bytes = send_bytes
         self.engine = engine
+        self.script = script
         self.vad = engine.vad() if engine else None
         self.pending = np.zeros(0, dtype=np.float32)
         # Recent audio, so each answer can start a little before detection.
@@ -248,10 +256,11 @@ class Call:
         self.ended = False
 
     async def start(self) -> None:
+        state = self.script.load()
         await self.send_json({"type": "ready", "voice": self.engine is not None,
-                              "notes": intake.load()["notes"],
-                              "revision": intake.load()["notes_revision"]})
-        text = intake.opening()
+                              "notes": state.get("notes", []),
+                              "revision": state.get("notes_revision", 0)})
+        text = self.script.opening()
         self.replying = asyncio.create_task(self._say_all([text], record=False))
 
     async def audio(self, frame: bytes) -> None:
@@ -357,11 +366,11 @@ class Call:
         turn = self.turn if follow_on else self.turn + 1
         try:
             if follow_on:
-                intake.drop_agent_reply()
-                text = intake.extend_person_turn(text)
+                self.script.drop_agent_reply()
+                text = self.script.extend_person_turn(text)
                 turn = self.turn
             else:
-                text = intake.add_person_turn(text)
+                text = self.script.add_person_turn(text)
         except ValueError as exc:
             await self.send_json({"type": "error", "message": str(exc)})
             return
@@ -378,7 +387,10 @@ class Call:
         spoken: list[tuple[str, float]] = []
         cut = False
         try:
-            async for piece in intake.reply(self.timings[turn]):
+            async for piece in self.script.reply(self.timings[turn]):
+                if isinstance(piece, dict):
+                    await self.send_json({"type": "action", **piece})
+                    continue
                 spoken.append((piece, await self._say(piece, turn)))
         except asyncio.CancelledError:
             cut = True
@@ -392,7 +404,7 @@ class Call:
             if not self.discard_reply:
                 # An interrupted reply keeps only the pieces that started playing.
                 now = time.perf_counter()
-                intake.add_agent_turn(" ".join(piece for piece, start in spoken if not cut or start <= now))
+                self.script.add_agent_turn(" ".join(piece for piece, start in spoken if not cut or start <= now))
         await self.send_json({"type": "state", "state": "listening"})
         if any(intake.END_MARK in piece for piece, _ in spoken):
             self.ended = True
@@ -402,7 +414,7 @@ class Call:
         for piece in pieces:
             await self._say(piece, 0)
         if record:
-            intake.add_agent_turn(" ".join(pieces))
+            self.script.add_agent_turn(" ".join(pieces))
         await self.send_json({"type": "state", "state": "listening"})
 
     async def _say(self, piece: str, turn: int) -> float:
@@ -444,6 +456,8 @@ class Call:
             log.write(json.dumps(report) + "\n")
 
     def _refresh_notes(self) -> None:
+        if self.script.update_notes is None:
+            return
         if self.notes is not None and not self.notes.done():
             self.notes_again = True
             return
@@ -453,7 +467,7 @@ class Call:
         while True:
             self.notes_again = False
             try:
-                state = await intake.update_notes()
+                state = await self.script.update_notes()
                 await self.send_json({"type": "notes", "notes": state["notes"],
                                       "revision": state["notes_revision"]})
             except intake.IntakeError:
