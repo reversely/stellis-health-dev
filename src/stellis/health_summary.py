@@ -10,6 +10,7 @@ and regenerated on request.
 from __future__ import annotations
 
 import datetime
+import itertools
 import json
 import uuid
 
@@ -22,7 +23,8 @@ HEADINGS = ("Overview", "Conditions", "Medications", "Care team",
             "Recent changes")
 # Words that rank passages for each heading; recent changes use dates instead.
 _QUERIES = {
-    "Conditions": "diagnosis assessment history disorder condition problems",
+    "Conditions": (
+        "diagnosis assessment history disorder condition problems allergy allergies"),
     "Medications": "medications mg daily tablet stop start continue dose",
     "Care team": "referral dietitian physiotherapist trainer MD DDS clinic",
 }
@@ -51,6 +53,11 @@ def _create_table(conn) -> None:
             citations_json TEXT NOT NULL,
             document_count INTEGER NOT NULL,
             created_at TEXT NOT NULL)""")
+    columns = {row["name"] for row in conn.execute(
+        "PRAGMA table_info(health_summaries)")}
+    for name in ("selected_document_count", "passage_count"):
+        if name not in columns:
+            conn.execute(f"ALTER TABLE health_summaries ADD COLUMN {name} INTEGER")
 
 
 def _sources() -> list[dict[str, object]]:
@@ -70,20 +77,31 @@ def select_passages(
         sources: Documents with text, newest first.
 
     Returns:
-        Every passage of the ``RECENT_DOCUMENTS`` newest documents, then the
-        best matches for each heading's query across all documents, without
-        repeats and at most ``MAX_PASSAGES`` in all.
+        At most ``MAX_PASSAGES`` unique passages, with reserved capacity
+        for recent documents and for each historical topic.
     """
-    recent = notebook_chat.read_passages(sources[:RECENT_DOCUMENTS])
     every = notebook_chat.read_passages(sources)
-    chosen: list[notebook_chat.Passage] = []
-    for passage in recent + [
-            match for query in _QUERIES.values()
-            for match in notebook_chat.rank(every, query, PASSAGES_PER_QUERY)
-    ]:
-        if passage not in chosen and len(chosen) < MAX_PASSAGES:
-            chosen.append(passage)
-    return chosen
+    recent_ids = {str(source["id"]) for source in sources[:RECENT_DOCUMENTS]}
+    recent_by_source: dict[str, list[notebook_chat.Passage]] = {}
+    for passage in every:
+        if passage.source_id in recent_ids:
+            recent_by_source.setdefault(passage.source_id, []).append(passage)
+    recent = _interleave(list(recent_by_source.values()))
+    ranked = _interleave([
+        notebook_chat.rank(every, query, PASSAGES_PER_QUERY)
+        for query in _QUERIES.values()
+    ])
+    # Topic slots remain available even when one recent document is long.
+    recent_slots = MAX_PASSAGES - len(_QUERIES) * PASSAGES_PER_QUERY
+    candidates = recent[:recent_slots] + ranked + recent[recent_slots:]
+    return list(dict.fromkeys(candidates))[:MAX_PASSAGES]
+
+
+def _interleave(groups: list[list[notebook_chat.Passage]]
+                ) -> list[notebook_chat.Passage]:
+    """Alternates between sources so long records share the passage budget."""
+    return [passage for row in itertools.zip_longest(*groups)
+            for passage in row if passage is not None]
 
 
 def build_prompt(passages: list[notebook_chat.Passage],
@@ -119,6 +137,8 @@ def latest() -> dict[str, object] | None:
         "content": row["content"],
         "citations": json.loads(row["citations_json"]),
         "document_count": row["document_count"],
+        "selected_document_count": row["selected_document_count"],
+        "passage_count": row["passage_count"],
         "created_at": row["created_at"],
     }
 
@@ -148,11 +168,12 @@ async def refresh() -> dict[str, object]:
     stamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     with storage.connect() as conn:
         _create_table(conn)
+        selected_documents = len({passage.source_id for passage in passages})
         conn.execute(
             """
             INSERT INTO health_summaries (id, content, citations_json,
-                document_count, created_at)
-            VALUES (?, ?, ?, ?, ?)""",
+                document_count, created_at, selected_document_count, passage_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (str(uuid.uuid4()), content, json.dumps(citations), len(sources),
-             stamp))
+             stamp, selected_documents, len(passages)))
     return latest()

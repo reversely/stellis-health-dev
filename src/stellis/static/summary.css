@@ -75,8 +75,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
+  min-width: 44px;
+  height: 24px;
   margin: 0 2px;
   padding: 0 6px;
   border-radius: 11px;
@@ -88,4 +88,9 @@
   text-decoration: none;
   vertical-align: 1px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Keep the 44px touch target inside the citation's horizontal bounds. */
+.summary-section .nb-cite::after {
+  inset: -10px 0;
 }
