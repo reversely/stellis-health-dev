@@ -16,54 +16,54 @@ Denver is 79. He has type 2 diabetes, low blood pressure that has made him dizzy
 | Principle | What it means on screen |
 | --- | --- |
 | The video stays on the device | Face detection, brightness and the pulse method all run in the browser. Only the final number and a quality score are saved. The screen says this before the camera starts. |
-| Fix the setup before measuring | Four checks (face, light, stillness, signal) must pass before the countdown runs. The countdown pauses, without resetting, when a check fails. |
-| One instruction at a time | The status line names the single most important fix ("Move closer", then "Turn toward the light"), never a list of problems. |
+| Show progress, then advise | Progress steps (Camera on, Face found, Measuring) show that the capture started and how far it is. Measuring pauses only when the face is lost. Distance, light and movement lower the quality and show advice after 3 seconds, in smaller type under the status line. |
+| Advice, not orders | Advice says what helps ("More light on your face gives a better reading"). The voice speaks progress and the result, never instructions. |
 | No jumping numbers | The live screen shows the pulse wave, which reassures without inviting reaction. The number appears once, at the end. |
 | Compare with himself | The result compares the reading with his usual range from Trends, not with population norms. |
 | A wellness trend, not a diagnosis | The result never says "normal" or "abnormal". A reading far from his usual range asks for a retake first. Repeated readings far from it, together with a symptom he reports, lead to the S-01 advice to contact his clinician. |
 
-## The four checks
+## Checks
 
-Each check runs on every vitals event, about 30 times a second. The values are proposals to tune in T-09.
+Each check runs on every vitals event, 20 to 30 times a second. The values are first settings to tune in T-09.
 
-| Check | How it is measured | Passes when | Fix shown |
+| Check | How it is measured | Effect | Advice shown after 3 seconds |
 | --- | --- | --- | --- |
-| Face | vitallens face box (x0, y0, x1, y1) in video pixels | A face is found, its centre is within 15% of the frame width and height from the oval's centre, and its width is 28% to 60% of the frame width | "Move your face into the oval", "Move closer", "Move back a little" |
-| Light | The mean brightness of the face box, from a 48 by 48 pixel canvas sample of the video every 400 ms | Mean luma between 70 and 215 (0 to 255), and the face is no more than 45 levels darker than the whole frame | "Find more light", "Turn toward the light" (backlit), "Too bright, step out of direct sun" |
-| Still | Movement of the face box centre | Under 4% of the frame width over the last second | "Hold still" |
-| Signal | vitallens PPG waveform samples | Samples are arriving and their spread over the last 3 seconds is above zero | "Getting your pulse" (shown while the signal builds) |
+| Face found | vitallens face box | Measuring pauses while no face is found | None; the status reads "Looking for your face" |
+| Signal | vitallens waveform samples arriving within 3 seconds | Measuring pauses | None; the status reads "Finding your pulse" |
+| Face position | Box centre within 15% of the frame from the oval's centre; box height 20% to 85% of the frame height | Quality only | "Keeping your face in the oval gives a better reading", "Sitting a little closer gives a better reading", "Sitting a little farther back gives a better reading" |
+| Light | Mean face brightness from a 48 by 48 pixel sample every 400 ms: 70 to 215 of 255, and no more than 45 below the whole frame | Quality only | "More light on your face gives a better reading", "Facing the light gives a better reading", "Softer light gives a better reading" |
+| Stillness | Face centre movement under 6% of the frame over the last second | Quality only | "Staying still gives a better reading" |
 
-The fix shown is the first failing check in the order Face, Light, Still, Signal.
-
-## Timing
+## Reading and timing
 
 | Rule | Value |
 | --- | --- |
-| Good signal needed | 30 seconds in total. The countdown runs only while all four checks pass. |
-| Longest attempt | 90 seconds. After that the capture stops and explains the check that failed most often. |
-| Reading | The median heart rate over the last 20 seconds of good signal |
-| Kept when | Estimates vary by 8 bpm or less (10th to 90th percentile) |
+| Good signal needed | 30 seconds with a face and a signal |
+| Reading | The strongest rhythm between 40 and 180 bpm in the last 20 seconds of waveform, found with a Fourier transform that uses each sample's own time. The frame rate varies (about 26 samples a second against a reported 30 in testing), so a fixed rate overstates the pulse. |
+| Quality | The share of waveform power within 6 bpm of the peak |
+| Sure reading | Share of 0.3 or more. Below that, measuring runs up to 15 seconds longer, then gives the reading with "Measure again sitting still for a closer reading". |
+| Longest attempt | 90 seconds. 15 seconds or more of good signal still gives a reading. Less gives "No reading yet" with advice for the face or the light. |
 
 ## Screen states and copy
 
-| State | Phone | Desktop | Copy |
-| --- | --- | --- | --- |
-| Before | Sheet with three tips and Start | Same, centred | "Sit down and rest for a minute first." "Face a window or lamp." "Keep your face in the oval for about 30 seconds." "The video stays on this device. Only the number is saved." |
-| Starting | Camera fills the screen, oval guide | Camera on the left, checks panel on the right | "Starting the camera" |
-| Setting up | Oval outline white; check chips show which pass | Same, plus the fix in large type | The first failing fix, such as "Move closer" |
-| Measuring | Oval outline turns teal; a progress ring fills around it; the pulse wave runs along the bottom | Pulse wave in the panel | "Hold still · 18 s" |
-| Paused | Ring stops, oval turns white | Same | The fix, such as "Hold still" |
-| Result | The number, his usual range, one sentence | Same | "64 bpm" · "About your usual (60 to 70)" |
-| No reading | Reason and Try again | Same | "The light kept changing. Face a window or lamp and try again." |
+| State | Status line | Progress steps |
+| --- | --- | --- |
+| Before | Tips: "Rest for a minute before you start", "Sit facing a window or lamp", "Hold still for about 30 seconds", "The video stays on this device". Note: "A home estimate for following your trends". | None |
+| Camera starting | "Turning on the camera", with "Choose Allow if your browser asks" under it | Camera on is current |
+| Loading | "Getting ready" | Camera on is current |
+| No face | "Looking for your face" | Face found is current |
+| Measuring | "About 18 seconds left", then "Almost done"; the ring fills | Measuring is current |
+| Result | "Your pulse", the number, "Within your usual range of 60 to 70" | None |
+| No reading | "No reading yet" and one line of advice | None |
+| Start failure | "No reading yet", "Try again in Chrome or Safari", and a small details line with the technical reason for bug reports | None |
 
 ## Spoken guidance and captions
 
-Denver looks at the camera, not the screen. Short spoken cues, such as "Move closer", "Hold still" and "Done, 64 beats per minute", let him follow along without reading.
+Denver looks at the camera, not the screen. The voice speaks three cues: "Turning on the camera", "Measuring your pulse" and "Your pulse is 64 beats per minute".
 
 - **Voices:** the browser's speech synthesis, using only voices marked as local to the device, so no text leaves the device. A browser with no local voice shows the Voice toggle disabled. Chrome lists its voices after the page first asks, so the toggle repaints when the list arrives.
 - **Default:** on. The Voice toggle turns it off, and the choice is remembered on the device.
-- **First cue:** "Starting the camera" plays inside the Start tap, because Safari speaks only after a tap.
-- **Pace:** one cue at a time, at most one every 3 seconds, so the speech does not chatter.
+- **First cue:** "Turning on the camera" plays inside the Start tap, because Safari speaks only after a tap.
 - **Captions:** on desktop, each cue also appears as a caption at the bottom of the video, next to the camera he is looking at. Captions show even with the voice off. Phones show no caption, because the status line sits directly under the video.
 
 ## Instructions for assistant text about readings (proposal)
