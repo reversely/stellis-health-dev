@@ -318,14 +318,16 @@
   ],
   "notebooks": [
     {
-      "notebook": "Weight and knees",
+      "notebook": "Weight maintenance",
+      "kind": "objective",
       "goal": "Keep the weight off",
       "records": [
         "Dietitian"
       ]
     },
     {
-      "notebook": "Diabetes and heart care",
+      "notebook": "Diabetes",
+      "kind": "condition",
       "goal": "",
       "records": [
         "Lab results"

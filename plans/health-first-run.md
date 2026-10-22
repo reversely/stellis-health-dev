@@ -127,6 +127,8 @@ Home opens with a health overview and goals (`goals.py`, `goals.js`), as #82 des
 
 - **Onboarding call:** the intake model hangs up with an `end_call` tool at the goodbye step, after asking the person to press Continue.
 - **Tour:** finishing setup opens Home with an offer of a two-minute tour. The tour runs on a call docked over the app. Each of its seven steps opens a page, highlights one control and speaks one pre-written line: health overview, goals, a sample notebook, a sample record, the summary, the timeline and recording. The person says "next" or presses Next, or asks a question, which the model answers from the step. The tour closes by naming the features and the goals from the onboarding call (`tour.py`).
+- **Notebook names:** the model names each notebook after one subject of one kind: a condition, a treatment, a goal the person stated, a symptom under investigation, or a recovery. A suspected diagnosis becomes a symptom or an investigation. `intake.name_problem` rejects catch-alls ("Medical issues"), record types ("Lab results") and joined subjects ("Weight and knees"), and sends a rejected name back to the model once. A name the person typed is kept as typed.
+- **Review loop:** Review your notebooks lays the notebooks out as folders with their records. The person renames, unticks or adds a notebook, moves a record with its select, or types a change in Ask for changes, such as "Rename Diabetes to Blood sugar". Stellis revises the layout, says what it changed, and offers Undo. Nothing is filed until the person presses Set up.
 - **Sample notebook:** the tour adds four of Denver Lang's records to a notebook named "Sample: Denver Lang", which the person can delete.
 
 ### Proposed building blocks

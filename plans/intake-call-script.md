@@ -127,5 +127,5 @@ The call ends after this turn.
 
 | Notebook | Goal | Records |
 | --- | --- | --- |
-| Weight and knees | Keep the weight off | Titles containing "Dietitian" |
-| Diabetes and heart care | None | Titles containing "Lab results" |
+| Weight maintenance | Keep the weight off | Titles containing "Dietitian" |
+| Diabetes | None | Titles containing "Lab results" |

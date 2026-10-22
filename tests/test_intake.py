@@ -50,9 +50,9 @@ class ScriptedModel:
             groups = []
             for book in SCRIPT["notebooks"]:
                 items = [r["index"] for r in records if any(w in r["title"] for w in book["records"])]
-                groups.append({"notebook": book["notebook"], "reason": "From the call", "goal": book["goal"],
-                               "items": items})
-            return {"groups": groups}
+                groups.append({"notebook": book["notebook"], "kind": book["kind"],
+                               "reason": "From the call", "goal": book["goal"], "items": items})
+            return {"groups": groups, "question": "", "reply": ""}
         self.notes_calls += 1
         answered = context["transcript"].count("Person:")
         return {"sections": script_notes(answered - 1)}
@@ -273,18 +273,89 @@ class NotebookProposalTest(IntakeTestCase):
     def test_notebooks_come_from_the_call_with_goals_and_empty_records(self):
         intake.save_notes(script_notes(6), 0)
         result = asyncio.run(intake.propose_notebooks())
-        self.assertEqual([g["notebook_name"] for g in result["groups"]],
-                         ["Weight and knees", "Diabetes and heart care"])
+        self.assertEqual([(g["notebook_name"], g["kind"]) for g in result["groups"]],
+                         [("Weight maintenance", "objective"), ("Diabetes", "condition")])
         self.assertEqual(result["groups"][0]["goal"], "Keep the weight off")
         self.assertEqual(result["groups"][0]["items"], [])
+        self.assertEqual(result["groups"][0]["problem"], "")
+
+    def test_names_that_break_the_naming_rules(self):
+        for name in ("Weight and knees", "Diabetes & heart", "Knees, hips", "Lab results",
+                     "Medical issues", "long-term  health"):
+            self.assertTrue(intake.name_problem(name), name)
+        for name in ("Diabetes", "Knee replacement recovery", "IVF cycle 2", "Thyroid investigation"):
+            self.assertEqual(intake.name_problem(name), "", name)
+
+    def test_a_name_that_breaks_a_rule_goes_back_to_the_model_once(self):
+        intake.save_notes(script_notes(6), 0)
+        asked = []
+
+        async def model(instructions, context, schema, max_tokens):
+            asked.append(context)
+            name = "Weight and knees" if len(asked) == 1 else "Weight maintenance"
+            return {"groups": [{"notebook": name, "kind": "objective", "reason": "", "goal": "",
+                                "items": []}], "question": "", "reply": ""}
+
+        with patch.object(intake, "complete_json", model):
+            result = asyncio.run(intake.propose_notebooks())
+        self.assertEqual(result["groups"][0]["notebook_name"], "Weight maintenance")
+        self.assertIn("Weight and knees: Name one subject", asked[1]["request"])
+
+        async def stubborn(instructions, context, schema, max_tokens):
+            return {"groups": [{"notebook": "Lab results", "items": []}]}
+
+        with patch.object(intake, "complete_json", stubborn):
+            result = asyncio.run(intake.propose_notebooks())
+        self.assertEqual(result["groups"][0]["problem"],
+                         "Name the subject of these records, not their type")
+
+    def test_a_request_revises_the_layout_and_keeps_the_persons_names(self):
+        intake.save_notes(script_notes(6), 0)
+        layout = [{"notebook_name": "Knees and hips", "kind": "objective", "goal": "",
+                   "items": [], "named_by_person": True},
+                  {"notebook_name": "Diabetes", "kind": "condition", "goal": "", "items": []}]
+        seen = {}
+
+        async def model(instructions, context, schema, max_tokens):
+            seen.update(context)
+            return {"groups": [{"notebook": "Knees and hips", "kind": "objective", "items": []},
+                               {"notebook": "Blood sugar", "kind": "condition", "items": []}],
+                    "question": "", "reply": "I renamed Diabetes to Blood sugar."}
+
+        with patch.object(intake, "complete_json", model):
+            result = asyncio.run(intake.propose_notebooks("Call diabetes blood sugar", layout))
+        self.assertEqual(seen["request"], "Call diabetes blood sugar")
+        self.assertEqual(seen["named_by_person"], ["knees and hips"])
+        self.assertEqual(seen["layout"][1], {"notebook": "Diabetes", "kind": "condition",
+                                             "goal": "", "items": []})
+        self.assertEqual(result["reply"], "I renamed Diabetes to Blood sugar.")
+        # The person's own name stands, though it joins two subjects.
+        self.assertEqual([(g["named_by_person"], g["problem"]) for g in result["groups"]],
+                         [(True, ""), (False, "")])
+
+    def test_the_endpoint_takes_a_request_and_refuses_an_empty_one(self):
+        from fastapi import testclient
+        from stellis import server
+        intake.save_notes(script_notes(6), 0)
+        with testclient.TestClient(server.app) as client:
+            first = client.post("/api/v1/intake/notebooks")
+            empty = client.post("/api/v1/intake/notebooks", json={"request": " ", "layout": []})
+        self.assertEqual(first.json()["groups"][1]["notebook_name"], "Diabetes")
+        self.assertEqual(empty.status_code, 400)
+
+    def test_a_revision_needs_a_short_request(self):
+        with self.assertRaises(ValueError):
+            asyncio.run(intake.propose_notebooks("", []))
+        with self.assertRaises(ValueError):
+            asyncio.run(intake.propose_notebooks("x" * (intake.MAX_REQUEST + 1), []))
 
     def test_a_goal_becomes_a_to_do_in_the_notebook(self):
         auth.register("denver", "correct horse battery staple")
         account = auth.account_id_for_username("denver")
         onboarding.choose(account, [], "review")
         onboarding.complete(account, record_groups=[
-            {"notebook_name": "Weight and knees", "items": [], "agents": [], "goal": "Keep the weight off"}])
-        book = next(b for b in notebooks.list_notebooks() if b["name"] == "Weight and knees")
+            {"notebook_name": "Weight maintenance", "items": [], "agents": [], "goal": "Keep the weight off"}])
+        book = next(b for b in notebooks.list_notebooks() if b["name"] == "Weight maintenance")
         goals = next(p for p in pages.list_pages(book["id"]) if p["title"] == "Goals")
         # Saving a page gives each to-do an ID after its text.
         self.assertTrue(pages.get(goals["id"])["markdown"].startswith("- [ ] Keep the weight off"))

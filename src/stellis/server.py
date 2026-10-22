@@ -987,11 +987,20 @@ def intake_end():
     return intake.end()
 
 
+class NotebookRevision(BaseModel):
+    request: str = Field(default="", max_length=2000)
+    layout: list[dict] | None = Field(default=None, max_length=10)
+
+
 @api.post("/intake/notebooks")
-async def intake_notebooks():
+async def intake_notebooks(revision: NotebookRevision | None = None):
+    """Proposes notebooks, or revises the reviewed layout as the person asks."""
     from stellis import intake
+    revision = revision or NotebookRevision()
     try:
-        return await intake.propose_notebooks()
+        return await intake.propose_notebooks(revision.request, revision.layout)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except intake.IntakeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
