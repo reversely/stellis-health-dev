@@ -1,0 +1,2723 @@
+{
+  "schema_version": "1.0",
+  "passed": true,
+  "document_count": 70,
+  "pdf_page_count": 70,
+  "checks": [
+    {
+      "check": "minimum_document_count",
+      "passed": true,
+      "detail": "70 individual PDFs"
+    },
+    {
+      "check": "unique_document_ids",
+      "passed": true,
+      "detail": "Unique stable IDs"
+    },
+    {
+      "check": "canonical_ledger_unchanged",
+      "passed": true,
+      "detail": "Renderer and ground truth share fixed SHA-256"
+    },
+    {
+      "check": "five_year_coverage",
+      "passed": true,
+      "detail": "2022-2026"
+    },
+    {
+      "check": "transfer_due_date",
+      "passed": true,
+      "detail": "Day-5 embryo: transfer +261 days"
+    },
+    {
+      "check": "transfer_gestational_age",
+      "passed": true,
+      "detail": "Transfer GA 2+5"
+    },
+    {
+      "check": "delivery_dating",
+      "passed": true,
+      "detail": "39+2, five days before EDD"
+    },
+    {
+      "check": "trigger_retrieval_interval",
+      "passed": true,
+      "detail": "36 hours"
+    },
+    {
+      "check": "progesterone_transfer_interval",
+      "passed": true,
+      "detail": "Five completed days of progesterone"
+    },
+    {
+      "check": "ivf_accounting",
+      "passed": true,
+      "detail": "12 retrieved, 10 MII, 8 2PN, 4 stored, then 1 transferred and 3 remaining"
+    },
+    {
+      "check": "embryo_culture_ages",
+      "passed": true,
+      "detail": "Day 5 and day 6 freezing dates"
+    },
+    {
+      "check": "medication_intervals",
+      "passed": true,
+      "detail": "Inclusive course dates and within-course dose adjustments"
+    },
+    {
+      "check": "medication_references",
+      "passed": true,
+      "detail": "Every medication reference resolves"
+    },
+    {
+      "check": "medication_knowledge_dates",
+      "passed": true,
+      "detail": "Extracted medication history contains no later actual start, stop or adjustment"
+    },
+    {
+      "check": "verified_manifest_references",
+      "passed": true,
+      "detail": "Every assigned primary source URL has a matching verified PDF digest"
+    },
+    {
+      "check": "D001_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D001_2022-01-18_routine-primary-care-consultation.pdf"
+    },
+    {
+      "check": "D001_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D001_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D001_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D001_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D001_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D001_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D002_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D002_2022-01-21_cbc-ferritin-and-thyroid-results.pdf"
+    },
+    {
+      "check": "D002_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D002_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D002_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D002_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D002_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D002_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D003_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D003_2022-02-02_iron-results-review-and-cervical-examination.pdf"
+    },
+    {
+      "check": "D003_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D003_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D003_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D003_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D003_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D003_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D004_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D004_2022-02-07_cervical-cytology.pdf"
+    },
+    {
+      "check": "D004_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D004_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D004_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D004_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D004_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D004_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D005_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D005_2022-02-16_iron-tolerability-telephone-review.pdf"
+    },
+    {
+      "check": "D005_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D005_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D005_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D005_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D005_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D005_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D006_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D006_2022-05-20_iron-treatment-follow-up.pdf"
+    },
+    {
+      "check": "D006_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D006_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D006_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D006_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D006_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D006_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D007_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D007_2022-08-02_iron-repletion-follow-up.pdf"
+    },
+    {
+      "check": "D007_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D007_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D007_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D007_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D007_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D007_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D008_pdf_identity",
+      "passed": true,
+      "detail": "documents/2022/D008_2022-12-06_preconception-and-immunization-visit.pdf"
+    },
+    {
+      "check": "D008_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D008_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D008_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D008_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D008_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D008_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D009_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D009_2023-02-10_upper-respiratory-symptoms.pdf"
+    },
+    {
+      "check": "D009_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D009_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D009_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D009_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D009_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D009_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D010_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D010_2023-09-19_fertility-concerns-in-primary-care.pdf"
+    },
+    {
+      "check": "D010_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D010_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D010_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D010_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D010_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D010_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D011_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D011_2023-10-03_referral-for-fertility-assessment.pdf"
+    },
+    {
+      "check": "D011_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D011_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D011_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D011_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D011_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D011_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D012_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D012_2023-11-14_fertility-intake-and-menstrual-history.pdf"
+    },
+    {
+      "check": "D012_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D012_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D012_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D012_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D012_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D012_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D013_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D013_2023-11-30_baseline-fertility-endocrine-panel.pdf"
+    },
+    {
+      "check": "D013_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D013_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D013_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D013_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D013_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D013_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D014_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D014_2023-12-01_baseline-transvaginal-pelvic-ultrasound.pdf"
+    },
+    {
+      "check": "D014_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D014_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D014_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D014_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D014_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D014_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D015_pdf_identity",
+      "passed": true,
+      "detail": "documents/2023/D015_2023-12-20_mid-luteal-progesterone.pdf"
+    },
+    {
+      "check": "D015_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D015_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D015_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D015_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D015_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D015_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D016_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D016_2024-01-12_reproductive-endocrinology-consultation.pdf"
+    },
+    {
+      "check": "D016_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D016_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D016_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D016_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D016_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D016_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D017_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D017_2024-02-01_hysterosalpingogram.pdf"
+    },
+    {
+      "check": "D017_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D017_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D017_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D017_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D017_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D017_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D018_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D018_2024-02-16_fertility-treatment-decision.pdf"
+    },
+    {
+      "check": "D018_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D018_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D018_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D018_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D018_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D018_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D019_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D019_2024-05-17_pre-ivf-infectious-screening-and-cbc.pdf"
+    },
+    {
+      "check": "D019_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D019_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D019_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D019_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D019_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D019_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D020_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D020_2024-05-24_ovarian-stimulation-medication-orders.pdf"
+    },
+    {
+      "check": "D020_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D020_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D020_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D020_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D020_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D020_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D021_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D021_2024-06-02_ivf-baseline-scan-and-clearance.pdf"
+    },
+    {
+      "check": "D021_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D021_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D021_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D021_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D021_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D021_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D022_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D022_2024-06-07_stimulation-day-6-monitoring.pdf"
+    },
+    {
+      "check": "D022_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D022_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D022_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D022_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D022_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D022_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D023_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D023_2024-06-10_stimulation-day-9-monitoring.pdf"
+    },
+    {
+      "check": "D023_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D023_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D023_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D023_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D023_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D023_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D024_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D024_2024-06-11_trigger-confirmation-and-retrieval-instructions.pdf"
+    },
+    {
+      "check": "D024_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D024_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D024_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D024_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D024_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D024_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D025_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D025_2024-06-13_transvaginal-oocyte-retrieval.pdf"
+    },
+    {
+      "check": "D025_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D025_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D025_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D025_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D025_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D025_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D026_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D026_2024-06-14_day-1-fertilization-report.pdf"
+    },
+    {
+      "check": "D026_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D026_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D026_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D026_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D026_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D026_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D027_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D027_2024-06-19_final-embryo-culture-and-cryopreservation-report.pdf"
+    },
+    {
+      "check": "D027_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D027_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D027_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D027_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D027_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D027_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D028_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D028_2024-06-25_post-retrieval-review.pdf"
+    },
+    {
+      "check": "D028_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D028_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D028_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D028_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D028_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D028_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D029_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D029_2024-10-25_frozen-embryo-transfer-preparation-orders.pdf"
+    },
+    {
+      "check": "D029_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D029_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D029_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D029_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D029_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D029_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D030_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D030_2024-10-29_frozen-transfer-baseline-clearance.pdf"
+    },
+    {
+      "check": "D030_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D030_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D030_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D030_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D030_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D030_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D031_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D031_2024-11-08_frozen-transfer-endometrial-assessment.pdf"
+    },
+    {
+      "check": "D031_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D031_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D031_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D031_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D031_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D031_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D032_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D032_2024-11-15_single-frozen-blastocyst-transfer.pdf"
+    },
+    {
+      "check": "D032_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D032_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D032_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D032_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D032_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D032_gestation",
+      "passed": true,
+      "detail": "2+5"
+    },
+    {
+      "check": "D032_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D033_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D033_2024-11-25_post-transfer-serum-beta-hcg.pdf"
+    },
+    {
+      "check": "D033_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D033_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D033_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D033_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D033_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D033_gestation",
+      "passed": true,
+      "detail": "4+1"
+    },
+    {
+      "check": "D033_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D034_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D034_2024-11-27_repeat-serum-beta-hcg.pdf"
+    },
+    {
+      "check": "D034_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D034_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D034_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D034_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D034_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D034_gestation",
+      "passed": true,
+      "detail": "4+3"
+    },
+    {
+      "check": "D034_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D035_pdf_identity",
+      "passed": true,
+      "detail": "documents/2024/D035_2024-12-13_early-pregnancy-viability-ultrasound.pdf"
+    },
+    {
+      "check": "D035_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D035_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D035_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D035_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D035_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D035_gestation",
+      "passed": true,
+      "detail": "6+5"
+    },
+    {
+      "check": "D035_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D036_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D036_2025-01-06_initial-prenatal-consultation.pdf"
+    },
+    {
+      "check": "D036_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D036_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D036_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D036_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D036_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D036_gestation",
+      "passed": true,
+      "detail": "10+1"
+    },
+    {
+      "check": "D036_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D037_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D037_2025-01-08_initial-prenatal-laboratory-panel.pdf"
+    },
+    {
+      "check": "D037_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D037_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D037_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D037_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D037_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D037_gestation",
+      "passed": true,
+      "detail": "10+3"
+    },
+    {
+      "check": "D037_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D038_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D038_2025-01-15_cell-free-dna-prenatal-screening.pdf"
+    },
+    {
+      "check": "D038_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D038_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D038_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D038_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D038_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D038_gestation",
+      "passed": true,
+      "detail": "11+3"
+    },
+    {
+      "check": "D038_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D039_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D039_2025-01-24_first-trimester-obstetric-ultrasound.pdf"
+    },
+    {
+      "check": "D039_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D039_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D039_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D039_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D039_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D039_gestation",
+      "passed": true,
+      "detail": "12+5"
+    },
+    {
+      "check": "D039_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D040_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D040_2025-02-14_prenatal-visit-at-15-5.pdf"
+    },
+    {
+      "check": "D040_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D040_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D040_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D040_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D040_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D040_gestation",
+      "passed": true,
+      "detail": "15+5"
+    },
+    {
+      "check": "D040_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D041_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D041_2025-03-14_detailed-fetal-anatomy-ultrasound.pdf"
+    },
+    {
+      "check": "D041_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D041_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D041_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D041_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D041_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D041_gestation",
+      "passed": true,
+      "detail": "19+5"
+    },
+    {
+      "check": "D041_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D042_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D042_2025-04-11_prenatal-visit-at-23-5.pdf"
+    },
+    {
+      "check": "D042_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D042_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D042_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D042_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D042_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D042_gestation",
+      "passed": true,
+      "detail": "23+5"
+    },
+    {
+      "check": "D042_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D043_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D043_2025-05-02_glucose-challenge-and-hematology.pdf"
+    },
+    {
+      "check": "D043_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D043_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D043_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D043_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D043_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D043_gestation",
+      "passed": true,
+      "detail": "26+5"
+    },
+    {
+      "check": "D043_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D044_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D044_2025-05-05_iron-treatment-in-pregnancy.pdf"
+    },
+    {
+      "check": "D044_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D044_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D044_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D044_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D044_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D044_gestation",
+      "passed": true,
+      "detail": "27+1"
+    },
+    {
+      "check": "D044_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D045_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D045_2025-05-16_prenatal-review-and-tdap.pdf"
+    },
+    {
+      "check": "D045_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D045_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D045_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D045_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D045_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D045_gestation",
+      "passed": true,
+      "detail": "28+5"
+    },
+    {
+      "check": "D045_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D046_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D046_2025-06-13_pregnancy-iron-follow-up.pdf"
+    },
+    {
+      "check": "D046_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D046_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D046_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D046_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D046_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D046_gestation",
+      "passed": true,
+      "detail": "32+5"
+    },
+    {
+      "check": "D046_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D047_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D047_2025-06-13_third-trimester-growth-ultrasound.pdf"
+    },
+    {
+      "check": "D047_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D047_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D047_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D047_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D047_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D047_gestation",
+      "passed": true,
+      "detail": "32+5"
+    },
+    {
+      "check": "D047_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D048_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D048_2025-06-27_prenatal-visit-at-34-5.pdf"
+    },
+    {
+      "check": "D048_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D048_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D048_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D048_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D048_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D048_gestation",
+      "passed": true,
+      "detail": "34+5"
+    },
+    {
+      "check": "D048_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D049_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D049_2025-07-11_prenatal-visit-and-gbs-collection.pdf"
+    },
+    {
+      "check": "D049_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D049_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D049_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D049_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D049_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D049_gestation",
+      "passed": true,
+      "detail": "36+5"
+    },
+    {
+      "check": "D049_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D050_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D050_2025-07-13_group-b-streptococcus-culture.pdf"
+    },
+    {
+      "check": "D050_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D050_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D050_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D050_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D050_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D050_gestation",
+      "passed": true,
+      "detail": "37+0"
+    },
+    {
+      "check": "D050_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D051_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D051_2025-07-25_prenatal-visit-at-38-5.pdf"
+    },
+    {
+      "check": "D051_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D051_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D051_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D051_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D051_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D051_gestation",
+      "passed": true,
+      "detail": "38+5"
+    },
+    {
+      "check": "D051_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D052_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D052_2025-07-29_labour-and-vaginal-delivery-record.pdf"
+    },
+    {
+      "check": "D052_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D052_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D052_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D052_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D052_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D052_gestation",
+      "passed": true,
+      "detail": "39+2"
+    },
+    {
+      "check": "D052_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D053_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D053_2025-07-30_post-delivery-cbc.pdf"
+    },
+    {
+      "check": "D053_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D053_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D053_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D053_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D053_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D053_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D054_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D054_2025-07-31_maternal-hospital-discharge-summary.pdf"
+    },
+    {
+      "check": "D054_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D054_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D054_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D054_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D054_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D054_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D055_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D055_2025-08-05_postpartum-nurse-telephone-review.pdf"
+    },
+    {
+      "check": "D055_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D055_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D055_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D055_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D055_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D055_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D056_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D056_2025-09-09_six-week-postpartum-examination.pdf"
+    },
+    {
+      "check": "D056_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D056_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D056_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D056_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D056_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D056_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D057_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D057_2025-10-03_pelvic-health-physiotherapy-assessment.pdf"
+    },
+    {
+      "check": "D057_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D057_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D057_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D057_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D057_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D057_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D058_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D058_2025-10-10_postpartum-iron-follow-up.pdf"
+    },
+    {
+      "check": "D058_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D058_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D058_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D058_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D058_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D058_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D059_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D059_2025-11-14_pelvic-health-progress-review.pdf"
+    },
+    {
+      "check": "D059_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D059_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D059_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D059_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D059_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D059_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D060_pdf_identity",
+      "passed": true,
+      "detail": "documents/2025/D060_2025-12-05_primary-care-postpartum-and-iron-review.pdf"
+    },
+    {
+      "check": "D060_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D060_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D060_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D060_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D060_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D060_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D061_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D061_2026-01-16_routine-care-and-hpv-screening-collection.pdf"
+    },
+    {
+      "check": "D061_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D061_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D061_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D061_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D061_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D061_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D062_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D062_2026-01-21_primary-cervical-hpv-screening-result.pdf"
+    },
+    {
+      "check": "D062_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D062_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D062_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D062_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D062_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D062_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D063_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D063_2026-03-20_menstrual-return-follow-up.pdf"
+    },
+    {
+      "check": "D063_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D063_clinical_text",
+      "passed": true,
+      "detail": "2 complete clinical sections extractable"
+    },
+    {
+      "check": "D063_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D063_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D063_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D063_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D064_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D064_2026-06-12_fatigue-and-menstrual-health-visit.pdf"
+    },
+    {
+      "check": "D064_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D064_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D064_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D064_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D064_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D064_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D065_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D065_2026-06-15_fatigue-laboratory-investigation.pdf"
+    },
+    {
+      "check": "D065_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D065_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D065_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D065_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D065_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D065_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D066_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D066_2026-06-19_recurrent-iron-deficiency-treatment.pdf"
+    },
+    {
+      "check": "D066_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D066_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D066_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D066_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D066_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D066_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D067_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D067_2026-09-18_repeat-cbc-and-ferritin.pdf"
+    },
+    {
+      "check": "D067_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D067_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D067_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D067_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D067_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D067_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D068_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D068_2026-09-25_iron-response-and-preventive-review.pdf"
+    },
+    {
+      "check": "D068_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D068_clinical_text",
+      "passed": true,
+      "detail": "3 complete clinical sections extractable"
+    },
+    {
+      "check": "D068_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D068_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D068_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D068_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D069_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D069_2026-12-11_end-of-year-iron-assessment.pdf"
+    },
+    {
+      "check": "D069_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D069_clinical_text",
+      "passed": true,
+      "detail": "1 complete clinical sections extractable"
+    },
+    {
+      "check": "D069_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D069_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D069_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D069_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "D070_pdf_identity",
+      "passed": true,
+      "detail": "documents/2026/D070_2026-12-18_annual-longitudinal-care-review.pdf"
+    },
+    {
+      "check": "D070_age",
+      "passed": true,
+      "detail": "Age calculated at clinical date"
+    },
+    {
+      "check": "D070_clinical_text",
+      "passed": true,
+      "detail": "4 complete clinical sections extractable"
+    },
+    {
+      "check": "D070_lab_values",
+      "passed": true,
+      "detail": "Every analyte and value extracts"
+    },
+    {
+      "check": "D070_past_references",
+      "passed": true,
+      "detail": "All outcome references available at document creation"
+    },
+    {
+      "check": "D070_date_range",
+      "passed": true,
+      "detail": "Clinical and specimen dates valid"
+    },
+    {
+      "check": "D070_has_primary_synthetic_source",
+      "passed": true,
+      "detail": "Every entry has verified primary reference"
+    },
+    {
+      "check": "pdf_text_within_page_bounds",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "check": "repeated_laboratory_claims",
+      "passed": true,
+      "detail": "Twelve clinical follow-up claims checked against original result ledger"
+    },
+    {
+      "check": "historical_embryology_knowledge",
+      "passed": true,
+      "detail": "Retrieval does not know fertilization; day 1 does not know final embryo outcome"
+    },
+    {
+      "check": "pregnancy_evidence_states",
+      "passed": true,
+      "detail": "Biochemical versus ultrasound confirmation distinguished"
+    },
+    {
+      "check": "no_pgt_or_ploidy_claim",
+      "passed": true,
+      "detail": "Morphology never establishes euploidy"
+    },
+    {
+      "check": "menstrual_cycle_count",
+      "passed": true,
+      "detail": "32 tracked cycles; coverage gaps explicitly untracked"
+    },
+    {
+      "check": "no_pregnancy_menses",
+      "passed": true,
+      "detail": "No cycles during pregnancy or lactational amenorrhea"
+    },
+    {
+      "check": "cycle_intervals",
+      "passed": true,
+      "detail": "Bleeding and cycle boundaries ordered"
+    },
+    {
+      "check": "cycle_continuity",
+      "passed": true,
+      "detail": "Lengths reflect next actual start, not next tracked row"
+    },
+    {
+      "check": "appointment_links",
+      "passed": true,
+      "detail": "Appointment records resolve to documents"
+    },
+    {
+      "check": "appointment_scheduling_history",
+      "passed": true,
+      "detail": "Rescheduling and cancellation represented separately"
+    },
+    {
+      "check": "ground_truth_coverage",
+      "passed": true,
+      "detail": "One record per PDF"
+    },
+    {
+      "check": "ground_truth_hashes",
+      "passed": true,
+      "detail": "Actual PDF SHA-256"
+    },
+    {
+      "check": "synthetic_provider_facility_namespace",
+      "passed": true,
+      "detail": "Reserved test identifiers and explicitly fictional facilities"
+    },
+    {
+      "check": "synthetic_contacts",
+      "passed": true,
+      "detail": "Reserved fiction telephone range, invalid email domain, test-only addresses"
+    }
+  ],
+  "passed_count": 541,
+  "failed_count": 0,
+  "limitations": [
+    "Automated checks and authored clinical review are not independent clinician certification.",
+    "PDF text and bounds validated; all pages also rasterized for contact-sheet review. No scanned/OCR challenge variants are included.",
+    "No fully synthetic specialty ultrasound, delivery or postpartum source located. Explicit source limitations remain.",
+    "External source verification records downloads and hashes at research time; later URL availability may change.",
+    "No real patient records are used. Coincidental name overlap with real people cannot be excluded."
+  ],
+  "canonical_ledger_sha256": "dcd7a805ce71600e2345082f3a25cce5a11236aebb401964af2ce2d565b4f918"
+}

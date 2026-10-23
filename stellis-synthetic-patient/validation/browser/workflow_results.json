@@ -1,0 +1,443 @@
+{
+  "scope": "Actual embedded PDF text, visible uploads and confirmations, catalogue notebook selection, timeline source navigation and real configured assistant replies",
+  "results": [
+    {
+      "document_id": "D001",
+      "proposed_date": "2022-01-18",
+      "confirmed": true
+    },
+    {
+      "document_id": "D002",
+      "proposed_date": "2022-01-21",
+      "confirmed": true
+    },
+    {
+      "document_id": "D003",
+      "proposed_date": "2022-02-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D004",
+      "proposed_date": "2022-02-07",
+      "confirmed": true
+    },
+    {
+      "document_id": "D005",
+      "proposed_date": "2022-02-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D006",
+      "proposed_date": "2022-05-20",
+      "confirmed": true
+    },
+    {
+      "document_id": "D007",
+      "proposed_date": "2022-08-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D008",
+      "proposed_date": "2022-12-06",
+      "confirmed": true
+    },
+    {
+      "document_id": "D009",
+      "proposed_date": "2023-02-10",
+      "confirmed": true
+    },
+    {
+      "document_id": "D010",
+      "proposed_date": "2023-09-19",
+      "confirmed": true
+    },
+    {
+      "document_id": "D011",
+      "proposed_date": "2023-10-03",
+      "confirmed": true
+    },
+    {
+      "document_id": "D012",
+      "proposed_date": "2023-11-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D013",
+      "proposed_date": "2023-11-30",
+      "confirmed": true
+    },
+    {
+      "document_id": "D014",
+      "proposed_date": "2023-12-01",
+      "confirmed": true
+    },
+    {
+      "document_id": "D015",
+      "proposed_date": "2023-12-20",
+      "confirmed": true
+    },
+    {
+      "document_id": "D016",
+      "proposed_date": "2024-01-12",
+      "confirmed": true
+    },
+    {
+      "document_id": "D017",
+      "proposed_date": "2024-02-01",
+      "confirmed": true
+    },
+    {
+      "document_id": "D018",
+      "proposed_date": "2024-02-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D019",
+      "proposed_date": "2024-05-17",
+      "confirmed": true
+    },
+    {
+      "document_id": "D020",
+      "proposed_date": "2024-05-24",
+      "confirmed": true
+    },
+    {
+      "document_id": "D021",
+      "proposed_date": "2024-06-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D022",
+      "proposed_date": "2024-06-07",
+      "confirmed": true
+    },
+    {
+      "document_id": "D023",
+      "proposed_date": "2024-06-10",
+      "confirmed": true
+    },
+    {
+      "document_id": "D024",
+      "proposed_date": "2024-06-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D025",
+      "proposed_date": "2024-06-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D026",
+      "proposed_date": "2024-06-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D027",
+      "proposed_date": "2024-06-19",
+      "confirmed": true
+    },
+    {
+      "document_id": "D028",
+      "proposed_date": "2024-06-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D029",
+      "proposed_date": "2024-10-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D030",
+      "proposed_date": "2024-10-29",
+      "confirmed": true
+    },
+    {
+      "document_id": "D031",
+      "proposed_date": "2024-11-08",
+      "confirmed": true
+    },
+    {
+      "document_id": "D032",
+      "proposed_date": "2024-11-15",
+      "confirmed": true
+    },
+    {
+      "document_id": "D033",
+      "proposed_date": "2024-11-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D034",
+      "proposed_date": "2024-11-27",
+      "confirmed": true
+    },
+    {
+      "document_id": "D035",
+      "proposed_date": "2024-12-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D036",
+      "proposed_date": "2025-01-06",
+      "confirmed": true
+    },
+    {
+      "document_id": "D037",
+      "proposed_date": "2025-01-08",
+      "confirmed": true
+    },
+    {
+      "document_id": "D038",
+      "proposed_date": "2025-01-15",
+      "confirmed": true
+    },
+    {
+      "document_id": "D039",
+      "proposed_date": "2025-01-24",
+      "confirmed": true
+    },
+    {
+      "document_id": "D040",
+      "proposed_date": "2025-02-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D041",
+      "proposed_date": "2025-03-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D042",
+      "proposed_date": "2025-04-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D043",
+      "proposed_date": "2025-05-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D044",
+      "proposed_date": "2025-05-05",
+      "confirmed": true
+    },
+    {
+      "document_id": "D045",
+      "proposed_date": "2025-05-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D046",
+      "proposed_date": "2025-06-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D047",
+      "proposed_date": "2025-06-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D048",
+      "proposed_date": "2025-06-27",
+      "confirmed": true
+    },
+    {
+      "document_id": "D049",
+      "proposed_date": "2025-07-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D050",
+      "proposed_date": "2025-07-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D051",
+      "proposed_date": "2025-07-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D052",
+      "proposed_date": "2025-07-29",
+      "confirmed": true
+    },
+    {
+      "document_id": "D053",
+      "proposed_date": "2025-07-30",
+      "confirmed": true
+    },
+    {
+      "document_id": "D054",
+      "proposed_date": "2025-07-31",
+      "confirmed": true
+    },
+    {
+      "document_id": "D055",
+      "proposed_date": "2025-08-05",
+      "confirmed": true
+    },
+    {
+      "document_id": "D056",
+      "proposed_date": "2025-09-09",
+      "confirmed": true
+    },
+    {
+      "document_id": "D057",
+      "proposed_date": "2025-10-03",
+      "confirmed": true
+    },
+    {
+      "document_id": "D058",
+      "proposed_date": "2025-10-10",
+      "confirmed": true
+    },
+    {
+      "document_id": "D059",
+      "proposed_date": "2025-11-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D060",
+      "proposed_date": "2025-12-05",
+      "confirmed": true
+    },
+    {
+      "document_id": "D061",
+      "proposed_date": "2026-01-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D062",
+      "proposed_date": "2026-01-21",
+      "confirmed": true
+    },
+    {
+      "document_id": "D063",
+      "proposed_date": "2026-03-20",
+      "confirmed": true
+    },
+    {
+      "document_id": "D064",
+      "proposed_date": "2026-06-12",
+      "confirmed": true
+    },
+    {
+      "document_id": "D065",
+      "proposed_date": "2026-06-15",
+      "confirmed": true
+    },
+    {
+      "document_id": "D066",
+      "proposed_date": "2026-06-19",
+      "confirmed": true
+    },
+    {
+      "document_id": "D067",
+      "proposed_date": "2026-09-18",
+      "confirmed": true
+    },
+    {
+      "document_id": "D068",
+      "proposed_date": "2026-09-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D069",
+      "proposed_date": "2026-12-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D070",
+      "proposed_date": "2026-12-18",
+      "confirmed": true
+    }
+  ],
+  "milestones": [
+    {
+      "document_id": "D007",
+      "question": "Iron repletion follow-up: compare the January and May 2022 ferritin and hemoglobin values and the August treatment decision with source links",
+      "answer": "Stellis\n\nIn January 2022, Maya's ferritin was 11 ug/L and hemoglobin 124 g/L, confirming iron deficiency without anemia. By May 20, ferritin had increased to 34 ug/L and hemoglobin remained stable at 130 g/L. The August 2022 follow-up recommended stopping therapeutic iron after the completed course and continuing dietary iron, with repeat testing if fatigue recurs. D003 2022-02-02 iron-results-review-and-cervical-examination, D006 2022-05-20 iron-treatment-follow-up, D007 2022-08-02 iron-repletion-follow-up\n\nPreventive Care",
+      "citations": [
+        "/document/87ee68c5-613e-43f6-bfae-025c6cacfdb5?page=1",
+        "/document/ff909d34-9223-4008-9b26-54032c4f6609?page=1",
+        "/document/380cc954-a233-4591-9003-4ebdf445100d?page=1"
+      ],
+      "notebook_id": "9791f62f-82f9-4299-803a-f1986819c166",
+      "timeline_date": "2022-08-02"
+    },
+    {
+      "document_id": "D015",
+      "question": "Mid-luteal progesterone: what result was documented and which fertility investigations are still pending? Cite the records",
+      "answer": "Stellis\n\nThe mid-luteal progesterone result was 38 nmol/L, which falls within the reference interval of 16-80 nmol/L and supports recent ovulation approximately one week before the expected menses D015 2023-12-20 mid-luteal-progesterone. Pending fertility investigations include a partner semen analysis (requested with consent) and tubal testing, which will be scheduled following the physician assessment if still indicated D012 2023-11-14 fertility-intake-and-menstrual-history.\n\nFertility",
+      "citations": [
+        "/document/4ee8b779-3bf8-43a7-9531-2c9cbf1cde82?page=1",
+        "/document/9bb834f3-23af-4e5e-917f-485342ce8c92?page=1"
+      ],
+      "notebook_id": "92ee936d-228c-4a19-b2c4-ddbda5182935",
+      "timeline_date": "2023-12-20"
+    },
+    {
+      "document_id": "D027",
+      "question": "Cryopreservation report: give the numbers of retrieved oocytes, mature oocytes, normally fertilized oocytes and frozen blastocysts with source links",
+      "answer": "Stellis\n\nIn the final embryo culture and cryopreservation report, 12 oocytes were retrieved, 10 mature, 8 normally fertilized, and 4 blastocysts were cryopreserved. D027 2024-06-19 final-embryo-culture-and-cryopreservation-report\n\nFertility",
+      "citations": [
+        "/document/75dc833c-5cd6-4560-b64d-0962062de516?page=1"
+      ],
+      "notebook_id": "92ee936d-228c-4a19-b2c4-ddbda5182935",
+      "timeline_date": "2024-06-19"
+    },
+    {
+      "document_id": "D035",
+      "question": "Viability ultrasound: state the embryo transfer date, gestational age, estimated due date and documented pregnancy findings with source links",
+      "answer": "Stellis\n\nBased on the viability ultrasound (D035), the embryo transfer occurred on November 15, 2024, with a gestational age of 6+5 weeks and an estimated due date of August 3, 2025. The documented findings show a single live intrauterine pregnancy with a yolk sac and embryo, a crown-rump length of 8.1 mm consistent with 6+5 weeks, and fetal cardiac activity at 132/min, with no subchorionic collection, adnexal mass, or free fluid detected. D035 2024-12-13 early-pregnancy-viability-ultrasound\n\nPregnancy",
+      "citations": [
+        "/document/22ef7833-9c37-4901-9050-b74304e2bc2b?page=1"
+      ],
+      "notebook_id": "50fc8f73-6c35-4e03-b69b-6ad24bbaaeb4",
+      "timeline_date": "2024-12-13"
+    },
+    {
+      "document_id": "D041",
+      "question": "Fetal anatomy ultrasound: summarize its findings and distinguish prenatal screening results from confirmed diagnoses with source links",
+      "answer": "Stellis\n\nThe detailed fetal anatomy ultrasound (D041) at 19+5 weeks found a singleton pregnancy with growth concordant with dates and no structural anomalies identified within scan limits, though it cannot exclude every fetal condition. The prenatal screening (D038) was low risk for trisomies 21, 18, and 13, but this is a screening result only and does not constitute a confirmed diagnosis; diagnostic confirmation would be required for positive findings. D041 2025-03-14 detailed-fetal-anatomy-ultrasound D038 2025-01-15 cell-free-dna-prenatal-screening\n\nPregnancy",
+      "citations": [
+        "/document/54c12a5f-5cbd-4324-83d9-0a8d656b283b?page=1",
+        "/document/e5078f62-1f61-4eab-9ec4-996f5d1e2b31?page=1"
+      ],
+      "notebook_id": "50fc8f73-6c35-4e03-b69b-6ad24bbaaeb4",
+      "timeline_date": "2025-03-14"
+    },
+    {
+      "document_id": "D054",
+      "question": "Maternal hospital discharge: state delivery date, gestational age, mode, infant weight and maternal recovery findings with source links",
+      "answer": "Stellis\n\nDelivery occurred on July 29 at 39+2 weeks gestation via spontaneous vaginal delivery. The infant weighed 3320 g with Apgar scores of 8 and 9. Maternal recovery findings include afebrile status, normotension, ambulation, normal voiding, a firm uterus with appropriate bleeding, and successful breastfeeding with positioning support. D054 2025-07-31 maternal-hospital-discharge-summary\n\nPostpartum Recovery",
+      "citations": [
+        "/document/20953b28-a0b7-4cb5-8973-7a44252ce6a5?page=1"
+      ],
+      "notebook_id": "b542eff1-58e4-4bd9-a1dd-efd7ec721ad5",
+      "timeline_date": "2025-07-31"
+    },
+    {
+      "document_id": "D060",
+      "question": "Postpartum iron review: state current ferritin, hemoglobin and the documented iron treatment decision with source links",
+      "answer": "Stellis\n\nCurrent ferritin is 42 ug/L and hemoglobin is 125 g/L, with documented resolution of postpartum anemia. Therapeutic iron was tolerated and the last dose was today, with plans to stop iron on December 6 while continuing prenatal vitamins during breastfeeding. D060 2025-12-05 primary-care-postpartum-and-iron-review\n\nPostpartum Recovery",
+      "citations": [
+        "/document/2778ec52-df1b-4c62-8b76-55da42064409?page=1"
+      ],
+      "notebook_id": "b542eff1-58e4-4bd9-a1dd-efd7ec721ad5",
+      "timeline_date": "2025-12-05"
+    },
+    {
+      "document_id": "D070",
+      "question": "Annual longitudinal care review: state the latest ferritin and the iron treatment plan including the last-dose date with source links",
+      "answer": "Stellis\n\nThe latest ferritin is 48 ug/L from the December 2026 annual review. The iron treatment plan was to stop therapeutic iron after the completed course and continue dietary iron, with the last dose taken on December 19, 2026, and repeat testing if symptoms recur. D070 2026-12-18 annual-longitudinal-care-review\n\nPreventive Care",
+      "citations": [
+        "/document/a19d30e3-788d-42b6-b867-7078eca6b733?page=1"
+      ],
+      "notebook_id": "9791f62f-82f9-4299-803a-f1986819c166",
+      "timeline_date": "2026-12-18"
+    }
+  ],
+  "errors": [],
+  "initial_workspace": "Fresh isolated workspace for the delivery run"
+}

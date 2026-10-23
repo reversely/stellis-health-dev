@@ -1,0 +1,41 @@
+{
+  "transcript_id": "TX-D070",
+  "synthetic": true,
+  "patient_id": "SYN-MAYA-001",
+  "document_id": "D070",
+  "appointment_id": "APT-D070",
+  "date": "2026-12-18",
+  "source": "Original scripted fictional dialogue; no recording or real transcript used",
+  "turns": [
+    {
+      "speaker": "Maya Chen",
+      "text": "My energy is better and my cycles feel regular again.",
+      "start_ms": 0,
+      "end_ms": 12000
+    },
+    {
+      "speaker": "Dr Elara Vale",
+      "text": "The December blood test shows hemoglobin 131 and ferritin 48. Today is the last planned iron dose.",
+      "start_ms": 12000,
+      "end_ms": 24000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "Are there still three embryos stored?",
+      "start_ms": 24000,
+      "end_ms": 36000
+    },
+    {
+      "speaker": "Dr Elara Vale",
+      "text": "The fertility records show three remaining after the single transfer. No later transfer is in this record.",
+      "start_ms": 36000,
+      "end_ms": 48000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "We are not planning another pregnancy now.",
+      "start_ms": 48000,
+      "end_ms": 60000
+    }
+  ]
+}

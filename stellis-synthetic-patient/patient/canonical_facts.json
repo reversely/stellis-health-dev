@@ -1,0 +1,4352 @@
+{
+  "diagnostic_states": [
+    {
+      "concept": "iron deficiency without anemia",
+      "first_confirmed": "2022-02-02"
+    },
+    {
+      "concept": "unexplained infertility",
+      "confirmed": "2024-02-16",
+      "provisional": "2024-01-12"
+    },
+    {
+      "biochemical": "2024-11-25",
+      "concept": "pregnancy",
+      "location_and_viability_confirmed": "2024-12-13"
+    },
+    {
+      "concept": "iron deficiency anemia in pregnancy",
+      "confirmed": "2025-05-05"
+    },
+    {
+      "concept": "postpartum stress urinary incontinence",
+      "documented": "2025-09-09",
+      "resolved": "2026-09-25"
+    }
+  ],
+  "documents": [
+    {
+      "clinical_date": "2022-01-18",
+      "collection_date": "2022-01-18",
+      "created_date": "2022-01-18",
+      "document_id": "D001",
+      "document_type": "note",
+      "encounter_date": "2022-01-18",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [
+        {
+          "concept": "fatigue",
+          "status": "documented"
+        },
+        {
+          "concept": "iron deficiency",
+          "status": "suspected"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "New patient visit. Generally well; mild fatigue after work. Menstrual tracking since January: bleeding 4-5 days, moderate first two days, mild cramps, cycles usually 27-31 days. Uses condoms; no pregnancy attempts yet. No intermenstrual or postcoital bleeding. Mostly vegetarian diet; no GI bleeding or blood donation."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 112/70 mmHg, pulse 72/min, weight 60.8 kg, height 165 cm. Heart and lungs normal. No pallor, thyroid enlargement or abdominal tenderness."
+        },
+        {
+          "heading": "Assessment",
+          "text": "Routine preventive visit. Fatigue requires investigation; iron deficiency is suspected, not yet established. No known chronic illness, prior surgery or drug allergies. Does not smoke; alcohol 0-2 drinks weekly."
+        },
+        {
+          "heading": "Plan",
+          "text": "Request CBC, ferritin and TSH. Cervical screening appointment arranged for February. Review diet, activity and cycle tracking. Return earlier for worsening fatigue, bleeding or shortness of breath."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Routine primary-care consultation"
+    },
+    {
+      "clinical_date": "2022-01-21",
+      "collection_date": "2022-01-21",
+      "created_date": "2022-01-21",
+      "document_id": "D002",
+      "document_type": "lab",
+      "encounter_date": "2022-01-21",
+      "episode_id": "iron",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 124
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 84
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 11,
+          "reference_interval": "4-11",
+          "reference_low": 4,
+          "test": "WBC",
+          "unit": "10^9/L",
+          "value": 5.8
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 400,
+          "reference_interval": "150-400",
+          "reference_low": 150,
+          "test": "Platelets",
+          "unit": "10^9/L",
+          "value": 265
+        },
+        {
+          "indicator": "L",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 11
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 4.0,
+          "reference_interval": "0.4-4.0",
+          "reference_low": 0.4,
+          "test": "TSH",
+          "unit": "mIU/L",
+          "value": 1.72
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D001"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Laboratory comment",
+          "text": "Low ferritin supports depleted iron stores. Hemoglobin remains within the adult female reference interval. Interpret with clinical findings."
+        }
+      ],
+      "specimen": "EDTA whole blood and serum",
+      "tables": [],
+      "title": "CBC, ferritin and thyroid results"
+    },
+    {
+      "clinical_date": "2022-02-02",
+      "collection_date": "2022-02-02",
+      "created_date": "2022-02-02",
+      "document_id": "D003",
+      "document_type": "note",
+      "encounter_date": "2022-02-02",
+      "episode_id": "iron",
+      "facility_key": "gp",
+      "findings": [
+        {
+          "concept": "iron deficiency without anemia",
+          "status": "confirmed"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-1"
+      ],
+      "prior_document_ids": [
+        "D002"
+      ],
+      "procedures": [
+        {
+          "date": "2022-02-02",
+          "name": "Speculum examination and cervical cytology collection"
+        }
+      ],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Fatigue persists. No melena, rectal bleeding or abdominal pain. Dietary iron intake is low. Normal menstrual volume by history."
+        },
+        {
+          "heading": "Examination",
+          "text": "Consent obtained for speculum examination; synthetic nurse Rena Elm present as chaperone. Cervix appears normal; no contact bleeding or abnormal discharge. Cervical sample collected."
+        },
+        {
+          "heading": "Assessment",
+          "text": "Ferritin 11 ug/L and hemoglobin 124 g/L on January 21 confirm iron deficiency without anemia. Likely dietary and menstrual contribution; no evidence of a bleeding disorder."
+        },
+        {
+          "heading": "Plan",
+          "text": "Start ferrous sulfate 300 mg (60 mg elemental iron) every other day. Discuss constipation, nausea and separation from tea/calcium. Repeat CBC and ferritin after treatment. Cytology result pending."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Iron results review and cervical examination"
+    },
+    {
+      "clinical_date": "2022-02-07",
+      "collection_date": "2022-02-02",
+      "created_date": "2022-02-07",
+      "document_id": "D004",
+      "document_type": "cytology",
+      "encounter_date": "2022-02-07",
+      "episode_id": "routine",
+      "facility_key": "lab",
+      "findings": [
+        {
+          "concept": "cervical cytology NILM",
+          "status": "documented"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D003"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "lab-pap"
+      ],
+      "sections": [
+        {
+          "heading": "Specimen",
+          "text": "Liquid-based cervical sample; cervix source. Collected February 2. Satisfactory for evaluation, including transformation-zone component."
+        },
+        {
+          "heading": "Interpretation",
+          "text": "Negative for intraepithelial lesion or malignancy (NILM)."
+        },
+        {
+          "heading": "Comment",
+          "text": "Screening result; a negative result does not exclude all cervical disease. Routine interval under the programme in effect at collection; earlier review if symptoms develop."
+        }
+      ],
+      "specimen": "Liquid-based cervical cytology",
+      "tables": [],
+      "title": "Cervical cytology"
+    },
+    {
+      "clinical_date": "2022-02-16",
+      "collection_date": "2022-02-16",
+      "created_date": "2022-02-16",
+      "document_id": "D005",
+      "document_type": "note",
+      "encounter_date": "2022-02-16",
+      "episode_id": "iron",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-1"
+      ],
+      "prior_document_ids": [
+        "D003",
+        "D004"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Mild nausea with morning iron; no vomiting or constipation. No new bleeding."
+        },
+        {
+          "heading": "Plan",
+          "text": "Continue the same 300 mg every-other-day dose, taken in the evening with food for tolerability. Recheck in May. Cervical cytology from February 7 is NILM; result communicated."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Iron tolerability telephone review"
+    },
+    {
+      "clinical_date": "2022-05-20",
+      "collection_date": "2022-05-20",
+      "created_date": "2022-05-20",
+      "document_id": "D006",
+      "document_type": "lab",
+      "encounter_date": "2022-05-20",
+      "episode_id": "iron",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 130
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 87
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 34
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D002",
+        "D005"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comment",
+          "text": "Ferritin has increased from 11 ug/L on January 21. Hemoglobin is stable."
+        }
+      ],
+      "specimen": "EDTA whole blood and serum",
+      "tables": [],
+      "title": "Iron treatment follow-up"
+    },
+    {
+      "clinical_date": "2022-08-02",
+      "collection_date": "2022-08-02",
+      "created_date": "2022-08-02",
+      "document_id": "D007",
+      "document_type": "note",
+      "encounter_date": "2022-08-02",
+      "episode_id": "iron",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D006"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Energy improved. Completed alternate-day iron through August 1. No new menstrual or gastrointestinal symptoms."
+        },
+        {
+          "heading": "Assessment",
+          "text": "Improved iron stores after treatment; May 20 ferritin 34 ug/L, hemoglobin 130 g/L. No anemia."
+        },
+        {
+          "heading": "Plan",
+          "text": "Stop therapeutic iron after completed course. Continue dietary iron. Repeat if fatigue recurs. Cycle tracking remains useful for menstrual health."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Iron repletion follow-up"
+    },
+    {
+      "clinical_date": "2022-12-06",
+      "collection_date": "2022-12-06",
+      "created_date": "2022-12-06",
+      "document_id": "D008",
+      "document_type": "note",
+      "encounter_date": "2022-12-06",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D004",
+        "D007"
+      ],
+      "procedures": [
+        {
+          "date": "2022-12-06",
+          "name": "Influenza vaccination"
+        }
+      ],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Plans to begin trying to conceive in January 2023. Cycles remain 27-31 days with 4-5 days of flow. Uses condoms until then. Started folic acid 400 micrograms daily on December 1. Childhood rubella and varicella vaccination documented in synthetic history."
+        },
+        {
+          "heading": "Examination",
+          "text": "BP 110/68 mmHg; weight 61.0 kg. No new findings."
+        },
+        {
+          "heading": "Plan",
+          "text": "Continue folic acid, avoid alcohol while attempting pregnancy, review fertile-window timing and vaccination history. Influenza vaccine given with consent; no immediate reaction. Cervical screen February 2022 NILM."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Preconception and immunization visit"
+    },
+    {
+      "clinical_date": "2023-02-10",
+      "collection_date": "2023-02-10",
+      "created_date": "2023-02-10",
+      "document_id": "D009",
+      "document_type": "note",
+      "encounter_date": "2023-02-10",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Three days of sore throat, rhinorrhea and dry cough. No dyspnea or chest pain. Home COVID antigen negative, patient-reported."
+        },
+        {
+          "heading": "Objective",
+          "text": "Temperature 36.8 C, oxygen saturation 99% on room air; chest clear, no tonsillar exudate."
+        },
+        {
+          "heading": "Assessment and plan",
+          "text": "Likely self-limited viral upper respiratory infection. Fluids and rest; return for persistent fever or breathing difficulty. No antibiotics. Continuing folic acid; pregnancy not documented."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Upper respiratory symptoms"
+    },
+    {
+      "clinical_date": "2023-09-19",
+      "collection_date": "2023-09-19",
+      "created_date": "2023-09-19",
+      "document_id": "D010",
+      "document_type": "note",
+      "encounter_date": "2023-09-19",
+      "episode_id": "fertility",
+      "facility_key": "fert",
+      "findings": [
+        {
+          "concept": "subfertility concern",
+          "status": "suspected"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D008"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Trying to conceive since January 1, 2023 with regular unprotected intercourse. No positive pregnancy tests. Cycle lengths 27-31 days; no hirsutism, galactorrhea, significant pelvic pain or dyspareunia. Partner is fictional Alex Chen, SYN-PARTNER-001; age 32, no known reproductive history."
+        },
+        {
+          "heading": "Assessment",
+          "text": "Subfertility concern at about eight and a half months. Under age 35; infertility criteria not yet met. No documented PCOS or endometriosis."
+        },
+        {
+          "heading": "Plan",
+          "text": "Review timing and continue folic acid. Arrange assessment if no pregnancy after twelve months. Patient requests advance referral due to clinic wait; full evaluation to occur after January 2024."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Fertility concerns in primary care"
+    },
+    {
+      "clinical_date": "2023-10-03",
+      "collection_date": "2023-10-03",
+      "created_date": "2023-10-03",
+      "document_id": "D011",
+      "document_type": "letter",
+      "encounter_date": "2023-10-03",
+      "episode_id": "fertility",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D006",
+        "D010"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-letter"
+      ],
+      "sections": [
+        {
+          "heading": "Recipient",
+          "text": "Dr Neri Solan, Example Cedar Reproductive Centre"
+        },
+        {
+          "heading": "Reason for referral",
+          "text": "Dear Dr Solan: Please assess Maya Chen when she reaches twelve months of attempts in January 2024. She began trying January 1, 2023 and has no known pregnancy. This advance referral reflects waiting time, not a confirmed infertility diagnosis."
+        },
+        {
+          "heading": "Relevant history",
+          "text": "Regular cycles 27-31 days, mild cramps, no pelvic surgery, STI/PID history or clinical hyperandrogenism. Cervical cytology February 2022 NILM. Iron deficiency without anemia treated in 2022; May hemoglobin 130 g/L and ferritin 34 ug/L."
+        },
+        {
+          "heading": "Current management",
+          "text": "Folic acid 400 micrograms daily. No drug allergies. Please consider ovulatory, tubal and partner evaluation if conception has not occurred. Yours sincerely, Dr Elara Vale. Copy to patient."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Referral for fertility assessment"
+    },
+    {
+      "clinical_date": "2023-11-14",
+      "collection_date": "2023-11-14",
+      "created_date": "2023-11-14",
+      "document_id": "D012",
+      "document_type": "assessment",
+      "encounter_date": "2023-11-14",
+      "episode_id": "fertility",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D011"
+      ],
+      "procedures": [],
+      "provider_key": "nurse",
+      "reference_ids": [
+        "fert-assessment"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Nurse intake for January physician assessment. No pregnancies to date, G0P0. Intercourse every 2-3 days since January. Last tracked start November 1; usual flow five days. No prior hormonal fertility medication."
+        },
+        {
+          "heading": "Relevant negatives",
+          "text": "No dysmenorrhea requiring time off, intermenstrual bleeding, dyspareunia, galactorrhea or prior pelvic infection. Family history negative for early menopause. BMI 22.5 kg/m2 from weight 61.3 kg and height 165 cm."
+        },
+        {
+          "heading": "Plan",
+          "text": "Baseline endocrine bloods and pelvic ultrasound may be completed before the physician visit. Partner semen analysis requested separately with consent. Tubal testing will be scheduled following the physician assessment if still indicated."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Fertility intake and menstrual history"
+    },
+    {
+      "clinical_date": "2023-11-30",
+      "collection_date": "2023-11-30",
+      "created_date": "2023-11-30",
+      "document_id": "D013",
+      "document_type": "lab",
+      "encounter_date": "2023-11-30",
+      "episode_id": "fertility",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "early follicular",
+          "reference_high": 10,
+          "reference_interval": "3-10",
+          "reference_low": 3,
+          "test": "FSH",
+          "unit": "IU/L",
+          "value": 6.2
+        },
+        {
+          "indicator": "",
+          "reference_context": "early follicular",
+          "reference_high": 12,
+          "reference_interval": "2-12",
+          "reference_low": 2,
+          "test": "LH",
+          "unit": "IU/L",
+          "value": 4.8
+        },
+        {
+          "indicator": "",
+          "reference_context": "early follicular",
+          "reference_high": 500,
+          "reference_interval": "70-500",
+          "reference_low": 70,
+          "test": "Estradiol",
+          "unit": "pmol/L",
+          "value": 145
+        },
+        {
+          "indicator": "",
+          "reference_context": "synthetic laboratory adult interval; assay-dependent",
+          "reference_high": 50,
+          "reference_interval": "7-50",
+          "reference_low": 7,
+          "test": "AMH",
+          "unit": "pmol/L",
+          "value": 18.6
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 500,
+          "reference_interval": "100-500",
+          "reference_low": 100,
+          "test": "Prolactin",
+          "unit": "mIU/L",
+          "value": 286
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 4,
+          "reference_interval": "0.4-4",
+          "reference_low": 0.4,
+          "test": "TSH",
+          "unit": "mIU/L",
+          "value": 1.85
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 38
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D012"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Clinical context",
+          "text": "Cycle day 3, menstrual bleeding started November 28. AMH describes ovarian response potential and cannot establish the cause of infertility. No pregnancy established."
+        }
+      ],
+      "specimen": "Serum",
+      "tables": [],
+      "title": "Baseline fertility endocrine panel"
+    },
+    {
+      "clinical_date": "2023-12-01",
+      "collection_date": "2023-12-01",
+      "created_date": "2023-12-01",
+      "document_id": "D014",
+      "document_type": "imaging",
+      "encounter_date": "2023-12-01",
+      "episode_id": "fertility",
+      "facility_key": "image",
+      "findings": [
+        {
+          "concept": "antral follicle count",
+          "status": "documented",
+          "unit": "follicles",
+          "value": 15
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D012",
+        "D013"
+      ],
+      "procedures": [
+        {
+          "date": "2023-12-01",
+          "name": "Transvaginal pelvic ultrasound"
+        }
+      ],
+      "provider_key": "image",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Indication",
+          "text": "Baseline fertility evaluation; cycle day 4, LMP November 28. Consent documented for transvaginal imaging."
+        },
+        {
+          "heading": "Technique",
+          "text": "Transabdominal and transvaginal ultrasound. Chaperone Rena Elm."
+        },
+        {
+          "heading": "Findings",
+          "text": "Anteverted uterus 72 x 38 x 44 mm. Homogeneous myometrium, no focal lesion. Endometrium 4.2 mm, no cavity lesion. Right ovary 28 x 19 x 21 mm, AFC 8; left ovary 27 x 18 x 20 mm, AFC 7. Total AFC 15. No adnexal mass or free fluid."
+        },
+        {
+          "heading": "Impression",
+          "text": "No structural abnormality identified. AFC 15. Ultrasound does not demonstrate tubal patency or exclude endometriosis."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Baseline transvaginal pelvic ultrasound"
+    },
+    {
+      "clinical_date": "2023-12-20",
+      "collection_date": "2023-12-20",
+      "created_date": "2023-12-20",
+      "document_id": "D015",
+      "document_type": "lab",
+      "encounter_date": "2023-12-20",
+      "episode_id": "fertility",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "mid-luteal; assay-dependent interval",
+          "reference_high": 80,
+          "reference_interval": "16-80",
+          "reference_low": 16,
+          "test": "Progesterone",
+          "unit": "nmol/L",
+          "value": 38
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D013"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Context",
+          "text": "Menstrual start November 28; urinary LH surge December 12 reported by patient. Sample obtained eight days after LH surge, approximately one week before expected next menses. Progesterone supports recent ovulation; one value cannot assess luteal quality."
+        }
+      ],
+      "specimen": "Serum",
+      "tables": [],
+      "title": "Mid-luteal progesterone"
+    },
+    {
+      "clinical_date": "2024-01-12",
+      "collection_date": "2024-01-12",
+      "created_date": "2024-01-12",
+      "document_id": "D016",
+      "document_type": "letter",
+      "encounter_date": "2024-01-12",
+      "episode_id": "fertility",
+      "facility_key": "fert",
+      "findings": [
+        {
+          "concept": "infertility",
+          "status": "confirmed"
+        },
+        {
+          "concept": "unexplained infertility",
+          "status": "provisional"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D011",
+        "D013",
+        "D014",
+        "D015"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-letter"
+      ],
+      "sections": [
+        {
+          "heading": "Recipient",
+          "text": "Dr Elara Vale, Example Orchard Family Practice"
+        },
+        {
+          "heading": "Assessment",
+          "text": "Dear Dr Vale: Maya has now attempted conception for over twelve months without pregnancy. Regular cycles and progesterone 38 nmol/L on December 20 support ovulation. Baseline ultrasound shows AFC 15 and no cavity lesion. AMH 18.6 pmol/L, FSH 6.2 IU/L, TSH 1.85 mIU/L. G0P0."
+        },
+        {
+          "heading": "Partner context",
+          "text": "Partner assessment documented separately: semen concentration 48 million/mL, progressive motility 42%, morphology 5% on December 8, 2023, within that synthetic laboratory reference limits. These are partner facts, not Maya laboratory values."
+        },
+        {
+          "heading": "Plan",
+          "text": "Tubal patency remains unassessed, so unexplained infertility is provisional. Discuss expectant management, ovarian stimulation with IUI, and IVF. Continue folic acid. Arrange HSG early in a cycle after negative pregnancy test."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Reproductive endocrinology consultation"
+    },
+    {
+      "clinical_date": "2024-02-01",
+      "collection_date": "2024-02-01",
+      "created_date": "2024-02-01",
+      "document_id": "D017",
+      "document_type": "imaging",
+      "encounter_date": "2024-02-01",
+      "episode_id": "fertility",
+      "facility_key": "image",
+      "findings": [
+        {
+          "concept": "bilateral tubal patency",
+          "status": "documented"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D016"
+      ],
+      "procedures": [
+        {
+          "date": "2024-02-01",
+          "name": "Hysterosalpingography"
+        }
+      ],
+      "provider_key": "image",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Indication",
+          "text": "Infertility assessment. Cycle day 9, LMP January 24; urine pregnancy test negative today. No symptoms of pelvic infection. Risks explained and consent documented."
+        },
+        {
+          "heading": "Technique",
+          "text": "Fluoroscopic contrast hysterosalpingography using 8 mL nonionic iodinated contrast. Examination tolerated with brief cramping."
+        },
+        {
+          "heading": "Findings",
+          "text": "Normal uterine cavity contour without filling defect. Both tubes opacify; free bilateral intraperitoneal spill. No hydrosalpinx."
+        },
+        {
+          "heading": "Impression",
+          "text": "Bilateral tubal patency. No cavity abnormality identified. This study does not exclude pelvic endometriosis."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Hysterosalpingogram"
+    },
+    {
+      "clinical_date": "2024-02-16",
+      "collection_date": "2024-02-16",
+      "created_date": "2024-02-16",
+      "document_id": "D018",
+      "document_type": "letter",
+      "encounter_date": "2024-02-16",
+      "episode_id": "fertility",
+      "facility_key": "fert",
+      "findings": [
+        {
+          "concept": "unexplained infertility",
+          "status": "confirmed"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D016",
+        "D017"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-letter"
+      ],
+      "sections": [
+        {
+          "heading": "Recipient",
+          "text": "Dr Elara Vale"
+        },
+        {
+          "heading": "Assessment",
+          "text": "HSG February 1 confirms bilateral spill. Ovulatory pattern, unremarkable pelvic ultrasound and partner semen assessment support unexplained infertility. No confirmed PCOS, endometriosis or tubal obstruction."
+        },
+        {
+          "heading": "Discussion",
+          "text": "Reviewed continued attempts, three to four cycles of oral ovarian stimulation with IUI as a usual first treatment, and IVF. Couple elects IVF after discussion of costs, injection burden, procedural risk and alternatives. They understand that response and live birth cannot be guaranteed. No IUI cycles undertaken."
+        },
+        {
+          "heading": "Plan",
+          "text": "One antagonist stimulation cycle planned for June. Conventional IVF and freeze-all strategy selected, with elective single frozen embryo transfer after recovery. No PGT planned. Continue folic acid."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Fertility treatment decision"
+    },
+    {
+      "clinical_date": "2024-05-17",
+      "collection_date": "2024-05-17",
+      "created_date": "2024-05-17",
+      "document_id": "D019",
+      "document_type": "lab",
+      "encounter_date": "2024-05-17",
+      "episode_id": "ivf",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 129
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 36
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "HIV Ag/Ab",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "HBsAg",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "Hepatitis C antibody",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "Syphilis screen",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": ">=10 immune",
+          "reference_low": 10,
+          "test": "Rubella IgG",
+          "unit": "IU/mL",
+          "value": 64
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Categorical",
+          "reference_low": null,
+          "test": "ABO/RhD",
+          "unit": "",
+          "value": "O positive"
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D018"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comment",
+          "text": "Consent documented for infectious screening. Rubella IgG supports immunity; negative screens do not establish lifetime absence of infection."
+        }
+      ],
+      "specimen": "EDTA blood and serum",
+      "tables": [],
+      "title": "Pre-IVF infectious screening and CBC"
+    },
+    {
+      "clinical_date": "2024-05-24",
+      "collection_date": "2024-05-24",
+      "created_date": "2024-05-24",
+      "document_id": "D020",
+      "document_type": "prescription",
+      "encounter_date": "2024-05-24",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FSH",
+        "MED-HMG",
+        "MED-ANT",
+        "MED-TRIGGER"
+      ],
+      "prior_document_ids": [
+        "D018",
+        "D019"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-rx"
+      ],
+      "sections": [
+        {
+          "heading": "Protocol",
+          "text": "Antagonist cycle, SYN-IVF-01. Start medications only after baseline clearance. Initial schedule is provisional; monitoring determines changes."
+        },
+        {
+          "heading": "Prescription",
+          "text": "Follitropin alfa 225 IU SC nightly, planned June 2-10, quantity 2025 IU, no repeats. Menotropins 75 IU SC nightly June 2-10, nine vials, no repeats. Cetrorelix 0.25 mg SC daily when instructed, five prefilled syringes, no repeats. Leuprolide acetate 4 mg SC once at instructed trigger time, one dose, no repeats."
+        },
+        {
+          "heading": "Counselling",
+          "text": "Injection teaching completed. Discussed OHSS symptoms, emergency contact, and medication reconciliation. No treatment started today."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Ovarian stimulation medication orders"
+    },
+    {
+      "clinical_date": "2024-06-02",
+      "collection_date": "2024-06-02",
+      "created_date": "2024-06-02",
+      "document_id": "D021",
+      "document_type": "imaging",
+      "encounter_date": "2024-06-02",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "baseline follicular",
+          "reference_high": 500,
+          "reference_interval": "70-500",
+          "reference_low": 70,
+          "test": "Estradiol",
+          "unit": "pmol/L",
+          "value": 112
+        },
+        {
+          "indicator": "",
+          "reference_context": "baseline follicular",
+          "reference_high": 4.5,
+          "reference_interval": "0.2-4.5",
+          "reference_low": 0.2,
+          "test": "Progesterone",
+          "unit": "nmol/L",
+          "value": 1.0
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "<5 nonpregnant",
+          "reference_low": null,
+          "test": "Beta-hCG",
+          "unit": "IU/L",
+          "value": "<1"
+        }
+      ],
+      "medication_ids": [
+        "MED-FSH",
+        "MED-HMG"
+      ],
+      "prior_document_ids": [
+        "D020"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Indication",
+          "text": "Cycle day 2, LMP June 1. SYN-IVF-01 antagonist protocol."
+        },
+        {
+          "heading": "Findings",
+          "text": "Endometrium 3.8 mm. Right AFC 8 and left AFC 7; no ovarian cysts. Serum estradiol 112 pmol/L; progesterone 1.0 nmol/L; beta-hCG <1 IU/L."
+        },
+        {
+          "heading": "Plan",
+          "text": "Baseline cleared. Start follitropin alfa 225 IU SC and menotropins 75 IU SC nightly today. Monitoring June 7; cetrorelix not yet started."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "IVF baseline scan and clearance"
+    },
+    {
+      "clinical_date": "2024-06-07",
+      "collection_date": "2024-06-07",
+      "created_date": "2024-06-07",
+      "document_id": "D022",
+      "document_type": "imaging",
+      "encounter_date": "2024-06-07",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "stimulated cycle",
+          "reference_high": null,
+          "reference_interval": "Protocol-specific; no population interval",
+          "reference_low": null,
+          "test": "Estradiol",
+          "unit": "pmol/L",
+          "value": 2480
+        },
+        {
+          "indicator": "",
+          "reference_context": "stimulated cycle",
+          "reference_high": null,
+          "reference_interval": "Protocol-specific",
+          "reference_low": null,
+          "test": "Progesterone",
+          "unit": "nmol/L",
+          "value": 1.4
+        }
+      ],
+      "medication_ids": [
+        "MED-FSH",
+        "MED-HMG",
+        "MED-ANT"
+      ],
+      "prior_document_ids": [
+        "D021"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Technique",
+          "text": "Transvaginal follicle tracking with consent. SYN-IVF-01."
+        },
+        {
+          "heading": "Findings",
+          "text": "Right follicles: 14, 13, 12, 11, 10, 9 mm. Left: 14, 13, 12, 11, 10, 9 mm. Endometrium 7.4 mm, trilaminar. No free fluid. Mild bloating only; no dyspnea or oliguria."
+        },
+        {
+          "heading": "Orders",
+          "text": "Estradiol 2480 pmol/L; progesterone 1.4 nmol/L. Reduce follitropin alfa from 225 to 150 IU nightly starting tonight. Continue menotropins 75 IU nightly. Start cetrorelix 0.25 mg daily today. Return June 10."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Stimulation day 6 monitoring"
+    },
+    {
+      "clinical_date": "2024-06-10",
+      "collection_date": "2024-06-10",
+      "created_date": "2024-06-10",
+      "document_id": "D023",
+      "document_type": "imaging",
+      "encounter_date": "2024-06-10",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "stimulated cycle",
+          "reference_high": null,
+          "reference_interval": "Protocol-specific",
+          "reference_low": null,
+          "test": "Estradiol",
+          "unit": "pmol/L",
+          "value": 6150
+        },
+        {
+          "indicator": "",
+          "reference_context": "stimulated cycle",
+          "reference_high": null,
+          "reference_interval": "Protocol-specific",
+          "reference_low": null,
+          "test": "Progesterone",
+          "unit": "nmol/L",
+          "value": 2.3
+        }
+      ],
+      "medication_ids": [
+        "MED-FSH",
+        "MED-HMG",
+        "MED-ANT"
+      ],
+      "prior_document_ids": [
+        "D022"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Findings",
+          "text": "Right follicles 19, 18, 17, 16, 15, 13 mm; left 19, 18, 17, 16, 15, 13 mm. Endometrium 9.1 mm. Estradiol 6150 pmol/L, progesterone 2.3 nmol/L. Mild bloating, stable vital signs; no clinical OHSS."
+        },
+        {
+          "heading": "Plan",
+          "text": "Give final follitropin alfa 150 IU and menotropins 75 IU tonight. Continue cetrorelix through June 11. Leuprolide trigger tomorrow at 21:30 if no new concerns; egg retrieval June 13 at 09:30. Freeze-all strategy confirmed."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Stimulation day 9 monitoring"
+    },
+    {
+      "clinical_date": "2024-06-11",
+      "collection_date": "2024-06-11",
+      "created_date": "2024-06-11",
+      "document_id": "D024",
+      "document_type": "note",
+      "encounter_date": "2024-06-11",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-ANT",
+        "MED-TRIGGER"
+      ],
+      "prior_document_ids": [
+        "D023"
+      ],
+      "procedures": [],
+      "provider_key": "nurse",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Telephone verification",
+          "text": "Patient administered final cetrorelix this morning and leuprolide acetate 4 mg SC at 21:30. Last gonadotropins taken June 10. Repeat-back confirmed retrieval June 13 at 09:30, 36 hours after trigger."
+        },
+        {
+          "heading": "Instructions",
+          "text": "Fasting and escort instructions reviewed. No intercourse until recovered. Seek urgent assessment for severe pain, breathlessness, reduced urine or rapid abdominal swelling. No OHSS currently documented."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Trigger confirmation and retrieval instructions"
+    },
+    {
+      "clinical_date": "2024-06-13",
+      "collection_date": "2024-06-13",
+      "created_date": "2024-06-13",
+      "document_id": "D025",
+      "document_type": "procedure",
+      "encounter_date": "2024-06-13",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D024"
+      ],
+      "procedures": [
+        {
+          "date": "2024-06-13",
+          "end_time": "09:48",
+          "estimated_blood_loss_ml": 10,
+          "name": "Oocyte retrieval",
+          "oocytes_retrieved": 12,
+          "start_time": "09:30"
+        }
+      ],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-procedure"
+      ],
+      "sections": [
+        {
+          "heading": "Pre-procedure",
+          "text": "SYN-IVF-01. Two identifiers and consent checked. Trigger June 11 at 21:30; procedure June 13 at 09:30. Afebrile, BP 114/72, pulse 74/min, SpO2 99%. No drug allergies."
+        },
+        {
+          "heading": "Procedure",
+          "text": "Ultrasound-guided bilateral follicle aspiration under monitored IV sedation and local analgesia. Start 09:30, end 09:48. Twelve oocytes recovered and handed to embryologist Ari Quill. Estimated blood loss 10 mL; no complication."
+        },
+        {
+          "heading": "Recovery",
+          "text": "BP 110/68, pulse 70/min, SpO2 99%; alert, mild cramps, no active bleeding. Discharged with escort at 11:15. Fertilization assessment pending; mature-oocyte and blastocyst counts are not yet known."
+        },
+        {
+          "heading": "Aftercare",
+          "text": "Rest today; acetaminophen if needed within labelled limits. Call for fever, heavy bleeding, increasing pain, vomiting or breathlessness. Embryology will call tomorrow."
+        }
+      ],
+      "specimen": null,
+      "tables": [
+        {
+          "headers": [
+            "Time",
+            "BP mmHg",
+            "Pulse /min",
+            "SpO2 %"
+          ],
+          "rows": [
+            [
+              "09:30",
+              "114/72",
+              "74",
+              "99"
+            ],
+            [
+              "09:40",
+              "108/66",
+              "70",
+              "99"
+            ],
+            [
+              "09:50",
+              "110/68",
+              "70",
+              "99"
+            ]
+          ],
+          "title": "Procedure observations"
+        }
+      ],
+      "title": "Transvaginal oocyte retrieval"
+    },
+    {
+      "clinical_date": "2024-06-14",
+      "collection_date": "2024-06-14",
+      "created_date": "2024-06-14",
+      "document_id": "D026",
+      "document_type": "embryology",
+      "encounter_date": "2024-06-14",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [
+        {
+          "concept": "retrieved oocytes",
+          "status": "documented",
+          "value": 12
+        },
+        {
+          "concept": "mature oocytes",
+          "status": "documented",
+          "value": 10
+        },
+        {
+          "concept": "normally fertilized 2PN",
+          "status": "documented",
+          "value": 8
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D025"
+      ],
+      "procedures": [],
+      "provider_key": "emb",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Laboratory record",
+          "text": "SYN-IVF-01, retrieval June 13. Twelve oocytes retrieved; ten mature (MII), two immature (one MI, one GV). Ten mature oocytes underwent conventional IVF. Eight show normal 2PN fertilization at day-1 assessment; two mature oocytes did not fertilize."
+        },
+        {
+          "heading": "Plan",
+          "text": "Continue culture of eight normally fertilized embryos. Blastocyst number and cryopreservation outcome remain pending. No PGT requested."
+        }
+      ],
+      "specimen": null,
+      "tables": [
+        {
+          "headers": [
+            "Category",
+            "Count"
+          ],
+          "rows": [
+            [
+              "Retrieved",
+              "12"
+            ],
+            [
+              "Mature MII",
+              "10"
+            ],
+            [
+              "Immature MI / GV",
+              "1 / 1"
+            ],
+            [
+              "Normal 2PN",
+              "8"
+            ],
+            [
+              "Mature not fertilized",
+              "2"
+            ]
+          ],
+          "title": "Day 1 accounting"
+        }
+      ],
+      "title": "Day 1 fertilization report"
+    },
+    {
+      "clinical_date": "2024-06-19",
+      "collection_date": "2024-06-19",
+      "created_date": "2024-06-19",
+      "document_id": "D027",
+      "document_type": "embryology",
+      "encounter_date": "2024-06-19",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [
+        {
+          "concept": "blastocysts cryopreserved",
+          "status": "confirmed",
+          "value": 4
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D026"
+      ],
+      "procedures": [],
+      "provider_key": "emb",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Cycle outcome",
+          "text": "SYN-IVF-01: 12 retrieved, 10 mature, 8 normally fertilized. Four blastocysts cryopreserved in total. Embryos E01 and E02 vitrified on day 5 (June 18); E03 and E04 on day 6 (June 19). Four other 2PN embryos arrested and were not suitable for freezing under the laboratory policy."
+        },
+        {
+          "heading": "Storage",
+          "text": "Embryos SYN-E01 to SYN-E04 each stored on an individually labelled device. No embryos transferred in this cycle. PGT not performed; morphology does not confirm chromosomal status. Witnesses Ari Quill and Rena Elm."
+        },
+        {
+          "heading": "Plan",
+          "text": "Four embryos remain stored. Review after recovery to plan a single frozen transfer."
+        }
+      ],
+      "specimen": null,
+      "tables": [
+        {
+          "headers": [
+            "Embryo ID",
+            "Culture day",
+            "Frozen on",
+            "Gardner grade",
+            "Status"
+          ],
+          "rows": [
+            [
+              "SYN-E01",
+              "5",
+              "2024-06-18",
+              "4AA",
+              "Stored"
+            ],
+            [
+              "SYN-E02",
+              "5",
+              "2024-06-18",
+              "4AB",
+              "Stored"
+            ],
+            [
+              "SYN-E03",
+              "6",
+              "2024-06-19",
+              "4BB",
+              "Stored"
+            ],
+            [
+              "SYN-E04",
+              "6",
+              "2024-06-19",
+              "3BB",
+              "Stored"
+            ]
+          ],
+          "title": "Cryopreserved inventory"
+        }
+      ],
+      "title": "Final embryo culture and cryopreservation report"
+    },
+    {
+      "clinical_date": "2024-06-25",
+      "collection_date": "2024-06-25",
+      "created_date": "2024-06-25",
+      "document_id": "D028",
+      "document_type": "note",
+      "encounter_date": "2024-06-25",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D025",
+        "D027"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Bloating resolved; withdrawal bleed began June 20 and ended June 24. No fever, severe pain or breathing symptoms."
+        },
+        {
+          "heading": "Assessment",
+          "text": "Uncomplicated recovery. No OHSS diagnosed. Final laboratory outcome June 19: 12 retrieved, 10 mature, 8 2PN, 4 blastocysts frozen."
+        },
+        {
+          "heading": "Plan",
+          "text": "Patient chooses a treatment break before November frozen transfer. No further stimulation planned. Continue folic acid; discuss transfer preparation at October review."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Post-retrieval review"
+    },
+    {
+      "clinical_date": "2024-10-25",
+      "collection_date": "2024-10-25",
+      "created_date": "2024-10-25",
+      "document_id": "D029",
+      "document_type": "prescription",
+      "encounter_date": "2024-10-25",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-E2",
+        "MED-P4",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D027",
+        "D028"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-rx"
+      ],
+      "sections": [
+        {
+          "heading": "Plan",
+          "text": "Programmed single frozen transfer of day-5 embryo SYN-E01, subject to lining and pregnancy-test clearance. Last spontaneous bleeding October 27 is expected based on tracking; actual start must be confirmed before estradiol. No medication begins today."
+        },
+        {
+          "heading": "Orders",
+          "text": "Estradiol 2 mg orally three times daily from cycle day 3 after confirmed bleed, quantity 204 tablets, no repeats. Progesterone in oil 50 mg IM daily at 09:00 from November 10 only after clearance, quantity 60 daily doses, no repeats. Continue through January 4 if pregnancy confirmed; otherwise stop only after clinic review."
+        },
+        {
+          "heading": "Supplement",
+          "text": "Replace folic acid-only supplement with prenatal multivitamin containing folic acid 1 mg and iron 27 mg on November 1. Review IM injection training, medication allergies and pregnancy-test plan."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Frozen embryo transfer preparation orders"
+    },
+    {
+      "clinical_date": "2024-10-29",
+      "collection_date": "2024-10-29",
+      "created_date": "2024-10-29",
+      "document_id": "D030",
+      "document_type": "note",
+      "encounter_date": "2024-10-29",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "<5 nonpregnant",
+          "reference_low": null,
+          "test": "Beta-hCG",
+          "unit": "IU/L",
+          "value": "<1"
+        },
+        {
+          "indicator": "",
+          "reference_context": "baseline follicular",
+          "reference_high": 500,
+          "reference_interval": "70-500",
+          "reference_low": 70,
+          "test": "Estradiol",
+          "unit": "pmol/L",
+          "value": 118
+        }
+      ],
+      "medication_ids": [
+        "MED-E2",
+        "MED-FOLATE"
+      ],
+      "prior_document_ids": [
+        "D029"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Menstrual bleeding began October 27, cycle day 3 today. Serum beta-hCG <1 IU/L. No interval illness."
+        },
+        {
+          "heading": "Objective",
+          "text": "Endometrium 3.4 mm; ovaries quiescent without cysts. Baseline estrogen 118 pmol/L."
+        },
+        {
+          "heading": "Plan",
+          "text": "Start estradiol 2 mg orally three times daily today. Return November 8 for lining assessment. Continue folic acid until switching to prenatal on November 1."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Frozen transfer baseline clearance"
+    },
+    {
+      "clinical_date": "2024-11-08",
+      "collection_date": "2024-11-08",
+      "created_date": "2024-11-08",
+      "document_id": "D031",
+      "document_type": "imaging",
+      "encounter_date": "2024-11-08",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "before progesterone supplementation",
+          "reference_high": 4.5,
+          "reference_interval": "0.2-4.5",
+          "reference_low": 0.2,
+          "test": "Progesterone",
+          "unit": "nmol/L",
+          "value": 0.8
+        }
+      ],
+      "medication_ids": [
+        "MED-E2",
+        "MED-P4",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D030"
+      ],
+      "procedures": [],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Findings",
+          "text": "Endometrium 8.6 mm, trilaminar; no cavity fluid. Ovaries quiescent. Serum progesterone 0.8 nmol/L before supplementation."
+        },
+        {
+          "heading": "Orders",
+          "text": "Continue estradiol 2 mg three times daily. Start progesterone in oil 50 mg IM daily November 10 at 09:00. Single day-5 embryo transfer planned November 15 at 09:00 after five completed days of progesterone. Pregnancy test November 25. Plans remain contingent on clinical status."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Frozen transfer endometrial assessment"
+    },
+    {
+      "clinical_date": "2024-11-15",
+      "collection_date": "2024-11-15",
+      "created_date": "2024-11-15",
+      "document_id": "D032",
+      "document_type": "procedure",
+      "encounter_date": "2024-11-15",
+      "episode_id": "ivf",
+      "facility_key": "fert",
+      "findings": [],
+      "gestational_age": {
+        "days": 19,
+        "display": "2+5",
+        "remaining_days": 5,
+        "weeks": 2
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-E2",
+        "MED-P4",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D027",
+        "D031"
+      ],
+      "procedures": [
+        {
+          "date": "2024-11-15",
+          "embryo_age_days": 5,
+          "embryo_id": "SYN-E01",
+          "name": "Frozen embryo transfer",
+          "number_transferred": 1,
+          "remaining_frozen": 3,
+          "time": "09:00"
+        }
+      ],
+      "provider_key": "fert",
+      "reference_ids": [
+        "rca-procedure"
+      ],
+      "sections": [
+        {
+          "heading": "Identification and embryo",
+          "text": "SYN-FET-01. Two identifiers checked with patient and embryology witnesses Ari Quill and Rena Elm. SYN-E01, day-5 4AA blastocyst, frozen June 18, warmed today; survived with re-expansion. No PGT performed."
+        },
+        {
+          "heading": "Procedure",
+          "text": "At 09:00, ultrasound-guided atraumatic transfer of one embryo using soft catheter. Catheter check clear. No bleeding or complication. Three cryopreserved blastocysts remain: SYN-E02, SYN-E03 and SYN-E04."
+        },
+        {
+          "heading": "Dating and plan",
+          "text": "Day-5 embryo transfer gives gestational age 2+5 today; ART-equivalent LMP October 27, 2024. If pregnancy established, EDD August 3, 2025. Pregnancy is not yet confirmed. Continue estradiol and progesterone; beta-hCG November 25. Routine activity as tolerated; urgent review for severe pain or heavy bleeding."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Single frozen blastocyst transfer"
+    },
+    {
+      "clinical_date": "2024-11-25",
+      "collection_date": "2024-11-25",
+      "created_date": "2024-11-25",
+      "document_id": "D033",
+      "document_type": "lab",
+      "encounter_date": "2024-11-25",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 29,
+        "display": "4+1",
+        "remaining_days": 1,
+        "weeks": 4
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "pregnancy test",
+          "reference_high": null,
+          "reference_interval": "<5 nonpregnant; >=25 positive",
+          "reference_low": null,
+          "test": "Beta-hCG",
+          "unit": "IU/L",
+          "value": 286
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D032"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Interpretation",
+          "text": "Positive biochemical pregnancy test at 10 days after day-5 transfer. This value does not establish pregnancy location, viability or number. Repeat in 48 hours."
+        }
+      ],
+      "specimen": "Serum",
+      "tables": [],
+      "title": "Post-transfer serum beta-hCG"
+    },
+    {
+      "clinical_date": "2024-11-27",
+      "collection_date": "2024-11-27",
+      "created_date": "2024-11-27",
+      "document_id": "D034",
+      "document_type": "lab",
+      "encounter_date": "2024-11-27",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 31,
+        "display": "4+3",
+        "remaining_days": 3,
+        "weeks": 4
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "early pregnancy",
+          "reference_high": null,
+          "reference_interval": "<5 nonpregnant; >=25 positive",
+          "reference_low": null,
+          "test": "Beta-hCG",
+          "unit": "IU/L",
+          "value": 642
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D033"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Interpretation",
+          "text": "Beta-hCG increased from 286 IU/L on November 25 to 642 IU/L today. Rise is compatible with early pregnancy; viability and location require ultrasound. Continue prescribed support pending clinic review."
+        }
+      ],
+      "specimen": "Serum",
+      "tables": [],
+      "title": "Repeat serum beta-hCG"
+    },
+    {
+      "clinical_date": "2024-12-13",
+      "collection_date": "2024-12-13",
+      "created_date": "2024-12-13",
+      "document_id": "D035",
+      "document_type": "imaging",
+      "encounter_date": "2024-12-13",
+      "episode_id": "pregnancy",
+      "facility_key": "image",
+      "findings": [
+        {
+          "concept": "single live intrauterine pregnancy",
+          "status": "confirmed"
+        }
+      ],
+      "gestational_age": {
+        "days": 47,
+        "display": "6+5",
+        "remaining_days": 5,
+        "weeks": 6
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-E2",
+        "MED-P4",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D032",
+        "D034"
+      ],
+      "procedures": [],
+      "provider_key": "image",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Dating",
+          "text": "ART dating: day-5 transfer November 15; gestation 6+5; EDD August 3, 2025. Dating retained."
+        },
+        {
+          "heading": "Findings",
+          "text": "Single intrauterine gestational sac with yolk sac and embryo. CRL 8.1 mm, approximately 6+5. Fetal cardiac activity 132/min. No subchorionic collection; no adnexal mass or free fluid."
+        },
+        {
+          "heading": "Impression",
+          "text": "Single live intrauterine pregnancy, concordant with ART dates. Early scan cannot exclude all fetal anomalies."
+        },
+        {
+          "heading": "Plan",
+          "text": "Continue estradiol and progesterone through January 4, 2025 inclusive (9+6), stop January 5 at 10+0. Arrange obstetric intake and prenatal screening counselling."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Early pregnancy viability ultrasound"
+    },
+    {
+      "clinical_date": "2025-01-06",
+      "collection_date": "2025-01-06",
+      "created_date": "2025-01-06",
+      "document_id": "D036",
+      "document_type": "note",
+      "encounter_date": "2025-01-06",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 71,
+        "display": "10+1",
+        "remaining_days": 1,
+        "weeks": 10
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D035"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "G1P0, gestation 10+1 by day-5 FET November 15. EDD August 3. Mild nausea without dehydration or bleeding. Estradiol and IM progesterone completed January 4 and stopped January 5 as instructed. Prenatal vitamin continues. No tobacco, alcohol or drug use in pregnancy."
+        },
+        {
+          "heading": "Examination",
+          "text": "BP 108/66 mmHg, weight 62.0 kg, pulse 76/min; well hydrated."
+        },
+        {
+          "heading": "Assessment and plan",
+          "text": "Singleton IVF pregnancy confirmed on December 13 ultrasound. Initial prenatal laboratory panel ordered. Discuss options and limitations of aneuploidy screening; patient elects cfDNA and first-trimester ultrasound. Detailed anatomy scan to follow. Review infection precautions and urgent symptoms."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Initial prenatal consultation"
+    },
+    {
+      "clinical_date": "2025-01-08",
+      "collection_date": "2025-01-06",
+      "created_date": "2025-01-08",
+      "document_id": "D037",
+      "document_type": "lab",
+      "encounter_date": "2025-01-08",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 73,
+        "display": "10+3",
+        "remaining_days": 3,
+        "weeks": 10
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Categorical",
+          "reference_low": null,
+          "test": "ABO/RhD",
+          "unit": "",
+          "value": "O positive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Negative",
+          "reference_low": null,
+          "test": "Antibody screen",
+          "unit": "",
+          "value": "Negative"
+        },
+        {
+          "indicator": "",
+          "reference_context": "first trimester",
+          "reference_high": 160,
+          "reference_interval": "110-160",
+          "reference_low": 110,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 124
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 88
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 400,
+          "reference_interval": "150-400",
+          "reference_low": 150,
+          "test": "Platelets",
+          "unit": "10^9/L",
+          "value": 252
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 32
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "HIV Ag/Ab",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "HBsAg",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "Hepatitis C antibody",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Nonreactive",
+          "reference_low": null,
+          "test": "Syphilis screen",
+          "unit": "",
+          "value": "Nonreactive"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": ">=10 immune",
+          "reference_low": 10,
+          "test": "Rubella IgG",
+          "unit": "IU/mL",
+          "value": 61
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "No significant growth",
+          "reference_low": null,
+          "test": "Urine culture",
+          "unit": "CFU/mL",
+          "value": "No significant growth"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Not detected",
+          "reference_low": null,
+          "test": "Chlamydia NAAT",
+          "unit": "",
+          "value": "Not detected"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Not detected",
+          "reference_low": null,
+          "test": "Gonorrhea NAAT",
+          "unit": "",
+          "value": "Not detected"
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D036"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "lab-prenatal"
+      ],
+      "sections": [
+        {
+          "heading": "Comment",
+          "text": "O positive; antibody screen negative. Rh immune globulin is not indicated for this RhD-positive patient. Rubella result supports immunity. No significant bacteriuria. Screening results reflect specimens collected January 6."
+        }
+      ],
+      "specimen": "Serum, EDTA blood, midstream urine and urine NAAT",
+      "tables": [],
+      "title": "Initial prenatal laboratory panel"
+    },
+    {
+      "clinical_date": "2025-01-15",
+      "collection_date": "2025-01-08",
+      "created_date": "2025-01-15",
+      "document_id": "D038",
+      "document_type": "screen",
+      "encounter_date": "2025-01-15",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 80,
+        "display": "11+3",
+        "remaining_days": 3,
+        "weeks": 11
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "cfDNA assay",
+          "reference_high": null,
+          "reference_interval": ">=4 assay acceptance",
+          "reference_low": null,
+          "test": "Fetal fraction",
+          "unit": "%",
+          "value": 9.2
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Screen result",
+          "reference_low": null,
+          "test": "Trisomy 21 screen",
+          "unit": "",
+          "value": "Low risk"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Screen result",
+          "reference_low": null,
+          "test": "Trisomy 18 screen",
+          "unit": "",
+          "value": "Low risk"
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Screen result",
+          "reference_low": null,
+          "test": "Trisomy 13 screen",
+          "unit": "",
+          "value": "Low risk"
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D036",
+        "D037"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "prenatal-marker",
+        "nipt-demo"
+      ],
+      "sections": [
+        {
+          "heading": "Specimen and pregnancy",
+          "text": "Maternal blood collected January 8 at 10+3. Singleton pregnancy following frozen embryo transfer; maternal age at EDD 32. Fetal fraction 9.2%; quality criteria met."
+        },
+        {
+          "heading": "Results",
+          "text": "Low risk for trisomies 21, 18 and 13. Fetal sex not requested and not reported."
+        },
+        {
+          "heading": "Limitations",
+          "text": "This is screening, not diagnostic testing. It does not exclude all aneuploidy, structural anomalies or genetic disorders. Positive findings would require diagnostic confirmation; normal imaging remains separately assessed."
+        }
+      ],
+      "specimen": "Maternal peripheral blood, cell-free DNA",
+      "tables": [],
+      "title": "Cell-free DNA prenatal screening"
+    },
+    {
+      "clinical_date": "2025-01-24",
+      "collection_date": "2025-01-24",
+      "created_date": "2025-01-24",
+      "document_id": "D039",
+      "document_type": "imaging",
+      "encounter_date": "2025-01-24",
+      "episode_id": "pregnancy",
+      "facility_key": "image",
+      "findings": [],
+      "gestational_age": {
+        "days": 89,
+        "display": "12+5",
+        "remaining_days": 5,
+        "weeks": 12
+      },
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D035",
+        "D038"
+      ],
+      "procedures": [],
+      "provider_key": "image",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Dating",
+          "text": "ART gestation 12+5, EDD August 3, 2025. Transabdominal examination."
+        },
+        {
+          "heading": "Findings",
+          "text": "Single live fetus, CRL 64 mm, fetal heart rate 158/min. Nuchal translucency 1.6 mm. Nasal bone visualized. Limited early anatomy shows no major anomaly; posterior placenta. Ovaries without mass."
+        },
+        {
+          "heading": "Impression",
+          "text": "Measurements concordant with ART dates; EDD retained. First-trimester assessment does not replace detailed anatomy survey."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "First-trimester obstetric ultrasound"
+    },
+    {
+      "clinical_date": "2025-02-14",
+      "collection_date": "2025-02-14",
+      "created_date": "2025-02-14",
+      "document_id": "D040",
+      "document_type": "note",
+      "encounter_date": "2025-02-14",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 110,
+        "display": "15+5",
+        "remaining_days": 5,
+        "weeks": 15
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D037",
+        "D038",
+        "D039"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Nausea improving; no bleeding or fluid loss. Mild constipation since starting prenatal vitamin; no abdominal tenderness."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 110/68, weight 63.0 kg, fetal heart rate 152/min by Doppler."
+        },
+        {
+          "heading": "Review and plan",
+          "text": "January prenatal panel reassuring; cfDNA low risk, a screening result only. Discuss dietary fibre, fluids and activity for constipation. Anatomy ultrasound booked March 14. Continue prenatal vitamin."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Prenatal visit at 15+5"
+    },
+    {
+      "clinical_date": "2025-03-14",
+      "collection_date": "2025-03-14",
+      "created_date": "2025-03-14",
+      "document_id": "D041",
+      "document_type": "imaging",
+      "encounter_date": "2025-03-14",
+      "episode_id": "pregnancy",
+      "facility_key": "image",
+      "findings": [],
+      "gestational_age": {
+        "days": 138,
+        "display": "19+5",
+        "remaining_days": 5,
+        "weeks": 19
+      },
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D039",
+        "D040"
+      ],
+      "procedures": [],
+      "provider_key": "image",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Dating and technique",
+          "text": "Gestation 19+5 by ART; EDD August 3. Transabdominal detailed fetal survey."
+        },
+        {
+          "heading": "Biometry",
+          "text": "BPD 46 mm; HC 170 mm; AC 148 mm; FL 31 mm. Estimated fetal weight 320 g, approximately 50th centile using synthetic local chart. Heart rate 148/min."
+        },
+        {
+          "heading": "Anatomic survey",
+          "text": "Cranium, ventricles, posterior fossa, face, spine, situs, four-chamber heart, outflow tracts, stomach, abdominal wall, kidneys, bladder and limbs visualized without identified structural abnormality. Posterior placenta, lower edge 42 mm from internal os. Amniotic fluid normal. Cervix 36 mm transabdominally."
+        },
+        {
+          "heading": "Impression",
+          "text": "Singleton with growth concordant with dates. No structural anomaly identified within scan limits. ART EDD retained; ultrasound cannot exclude every fetal condition."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Detailed fetal anatomy ultrasound"
+    },
+    {
+      "clinical_date": "2025-04-11",
+      "collection_date": "2025-04-11",
+      "created_date": "2025-04-11",
+      "document_id": "D042",
+      "document_type": "note",
+      "encounter_date": "2025-04-11",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 166,
+        "display": "23+5",
+        "remaining_days": 5,
+        "weeks": 23
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D041"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Fetal movements present. No bleeding, fluid leakage, headache or visual symptoms. Occasional mechanical low-back ache after desk work."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 112/70, weight 65.2 kg, fundal height 23 cm, fetal heart rate 146/min."
+        },
+        {
+          "heading": "Plan",
+          "text": "Reviewed normal anatomy report. Discuss posture and gentle activity. Arrange 50 g glucose challenge and repeat CBC/ferritin at 26-28 weeks. Continue prenatal vitamin."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Prenatal visit at 23+5"
+    },
+    {
+      "clinical_date": "2025-05-02",
+      "collection_date": "2025-05-02",
+      "created_date": "2025-05-02",
+      "document_id": "D043",
+      "document_type": "lab",
+      "encounter_date": "2025-05-02",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 187,
+        "display": "26+5",
+        "remaining_days": 5,
+        "weeks": 26
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "26+5 gestation",
+          "reference_high": 7.7,
+          "reference_interval": "<7.8 negative screen",
+          "reference_low": null,
+          "test": "Glucose, 1 h after 50 g",
+          "unit": "mmol/L",
+          "value": 6.4
+        },
+        {
+          "indicator": "L",
+          "reference_context": "second trimester",
+          "reference_high": 160,
+          "reference_interval": "105-160",
+          "reference_low": 105,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 103
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 83
+        },
+        {
+          "indicator": "L",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 9
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 400,
+          "reference_interval": "150-400",
+          "reference_low": 150,
+          "test": "Platelets",
+          "unit": "10^9/L",
+          "value": 238
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D042"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Context",
+          "text": "Nonfasting 50 g oral glucose challenge; specimen obtained one hour after dose. Result below 7.8 mmol/L screening threshold, no OGTT indicated by this result. Low ferritin and hemoglobin support iron deficiency with anemia in the second trimester."
+        }
+      ],
+      "specimen": "Plasma, EDTA blood and serum",
+      "tables": [],
+      "title": "Glucose challenge and hematology"
+    },
+    {
+      "clinical_date": "2025-05-05",
+      "collection_date": "2025-05-05",
+      "created_date": "2025-05-05",
+      "document_id": "D044",
+      "document_type": "prescription",
+      "encounter_date": "2025-05-05",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [
+        {
+          "concept": "iron deficiency anemia in pregnancy",
+          "status": "confirmed"
+        }
+      ],
+      "gestational_age": {
+        "days": 190,
+        "display": "27+1",
+        "remaining_days": 1,
+        "weeks": 27
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-2",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D043"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-rx"
+      ],
+      "sections": [
+        {
+          "heading": "Indication",
+          "text": "Iron deficiency with anemia: hemoglobin 103 g/L, ferritin 9 ug/L on May 2 at 26+5."
+        },
+        {
+          "heading": "Prescription",
+          "text": "Ferrous sulfate 300 mg tablet, 60 mg elemental iron orally every other day. Quantity 30 tablets, two repeats. Start May 5. Take separately from prenatal vitamin, calcium, tea and coffee; food if needed for nausea."
+        },
+        {
+          "heading": "Follow-up",
+          "text": "Continue prenatal multivitamin. Repeat CBC/ferritin in June; escalate review if intolerance or failure to improve. This oral dose is a synthetic individual treatment order, not general medical advice."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Iron treatment in pregnancy"
+    },
+    {
+      "clinical_date": "2025-05-16",
+      "collection_date": "2025-05-16",
+      "created_date": "2025-05-16",
+      "document_id": "D045",
+      "document_type": "note",
+      "encounter_date": "2025-05-16",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 201,
+        "display": "28+5",
+        "remaining_days": 5,
+        "weeks": 28
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-2",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D043",
+        "D044"
+      ],
+      "procedures": [
+        {
+          "date": "2025-05-16",
+          "name": "Tdap vaccination"
+        }
+      ],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "At 28+5, taking alternate-day iron with no nausea so far. Fetal movements usual. No contractions, bleeding or fluid loss."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 110/70, weight 67.0 kg, fundal height 28 cm, fetal heart rate 142/min."
+        },
+        {
+          "heading": "Plan",
+          "text": "Tdap vaccine administered with consent; no immediate reaction. Glucose screen negative. RhD positive; no routine Rh immune globulin. Continue iron and prenatal vitamin. Repeat hematology scheduled June 13."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Prenatal review and Tdap"
+    },
+    {
+      "clinical_date": "2025-06-13",
+      "collection_date": "2025-06-13",
+      "created_date": "2025-06-13",
+      "document_id": "D046",
+      "document_type": "lab",
+      "encounter_date": "2025-06-13",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 229,
+        "display": "32+5",
+        "remaining_days": 5,
+        "weeks": 32
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "third trimester",
+          "reference_high": 160,
+          "reference_interval": "110-160",
+          "reference_low": 110,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 112
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 87
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 22
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D043",
+        "D044",
+        "D045"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comparison",
+          "text": "Hemoglobin improved from 103 to 112 g/L and ferritin from 9 to 22 ug/L after oral iron. Continue prescribed supplementation pending clinical review."
+        }
+      ],
+      "specimen": "EDTA blood and serum",
+      "tables": [],
+      "title": "Pregnancy iron follow-up"
+    },
+    {
+      "clinical_date": "2025-06-13",
+      "collection_date": "2025-06-13",
+      "created_date": "2025-06-13",
+      "document_id": "D047",
+      "document_type": "imaging",
+      "encounter_date": "2025-06-13",
+      "episode_id": "pregnancy",
+      "facility_key": "image",
+      "findings": [],
+      "gestational_age": {
+        "days": 229,
+        "display": "32+5",
+        "remaining_days": 5,
+        "weeks": 32
+      },
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D041",
+        "D045"
+      ],
+      "procedures": [],
+      "provider_key": "image",
+      "reference_ids": [
+        "rca-image"
+      ],
+      "sections": [
+        {
+          "heading": "Indication",
+          "text": "IVF pregnancy growth assessment, 32+5 by ART, EDD August 3. Transabdominal examination."
+        },
+        {
+          "heading": "Biometry",
+          "text": "BPD 82 mm; HC 296 mm; AC 286 mm; FL 63 mm. Estimated fetal weight 2040 g, approximately 40th centile on synthetic local chart. Fetal heart rate 140/min."
+        },
+        {
+          "heading": "Findings",
+          "text": "Cephalic singleton, posterior placenta without previa. Amniotic fluid index 13.2 cm. Fetal movements and tone observed."
+        },
+        {
+          "heading": "Impression",
+          "text": "Growth within expected range, no interval concern. EDD retained. Centiles are synthetic local reporting values and are not independently calculated chart outputs."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Third-trimester growth ultrasound"
+    },
+    {
+      "clinical_date": "2025-06-27",
+      "collection_date": "2025-06-27",
+      "created_date": "2025-06-27",
+      "document_id": "D048",
+      "document_type": "note",
+      "encounter_date": "2025-06-27",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 243,
+        "display": "34+5",
+        "remaining_days": 5,
+        "weeks": 34
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-2",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D046",
+        "D047"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "No new symptoms; normal fetal movements. Mild dependent ankle swelling resolves overnight, no headache or visual change."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 114/72, weight 69.0 kg, fundal height 34 cm, fetal heart rate 140/min. No unilateral calf findings."
+        },
+        {
+          "heading": "Plan",
+          "text": "June 13 hemoglobin 112 g/L and ferritin 22 ug/L improved; continue iron. Growth assessment reassuring. Discuss labour assessment and decreased fetal movement precautions. GBS swab at 36-37 weeks."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Prenatal visit at 34+5"
+    },
+    {
+      "clinical_date": "2025-07-11",
+      "collection_date": "2025-07-11",
+      "created_date": "2025-07-11",
+      "document_id": "D049",
+      "document_type": "note",
+      "encounter_date": "2025-07-11",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 257,
+        "display": "36+5",
+        "remaining_days": 5,
+        "weeks": 36
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-2",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D048"
+      ],
+      "procedures": [
+        {
+          "date": "2025-07-11",
+          "name": "Vaginal-rectal GBS swab"
+        }
+      ],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "At 36+5, fetal movements usual, no fluid loss or bleeding. Occasional painless tightenings."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 116/72, fundal height 36 cm, cephalic presentation, fetal heart rate 138/min."
+        },
+        {
+          "heading": "Plan",
+          "text": "Vaginal-rectal swab collected for group B streptococcus culture; result pending. Discuss labour signs, delivery preferences and postpartum support. Continue iron and prenatal vitamin."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Prenatal visit and GBS collection"
+    },
+    {
+      "clinical_date": "2025-07-13",
+      "collection_date": "2025-07-11",
+      "created_date": "2025-07-13",
+      "document_id": "D050",
+      "document_type": "lab",
+      "encounter_date": "2025-07-13",
+      "episode_id": "pregnancy",
+      "facility_key": "lab",
+      "findings": [],
+      "gestational_age": {
+        "days": 259,
+        "display": "37+0",
+        "remaining_days": 0,
+        "weeks": 37
+      },
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Not isolated",
+          "reference_low": null,
+          "test": "GBS culture",
+          "unit": "",
+          "value": "Not isolated"
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D049"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Result",
+          "text": "Group B streptococcus not isolated from vaginal-rectal swab collected July 11. Result applies to this collection; intrapartum decisions also depend on risk factors."
+        }
+      ],
+      "specimen": "Vaginal-rectal swab",
+      "tables": [],
+      "title": "Group B streptococcus culture"
+    },
+    {
+      "clinical_date": "2025-07-25",
+      "collection_date": "2025-07-25",
+      "created_date": "2025-07-25",
+      "document_id": "D051",
+      "document_type": "note",
+      "encounter_date": "2025-07-25",
+      "episode_id": "pregnancy",
+      "facility_key": "ob",
+      "findings": [],
+      "gestational_age": {
+        "days": 271,
+        "display": "38+5",
+        "remaining_days": 5,
+        "weeks": 38
+      },
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-2",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D050"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Normal movements, intermittent Braxton Hicks tightenings. No bleeding, fluid loss, persistent headache or visual symptoms."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 114/70, fundal height 38 cm, fetal heart rate 136/min, cephalic."
+        },
+        {
+          "heading": "Plan",
+          "text": "GBS culture July 13 negative. Discussed expectant care and induction options around 39-40 weeks for IVF pregnancy. Patient prefers spontaneous labour for now; next review July 31 if undelivered. Continue prescribed supplements."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Prenatal visit at 38+5"
+    },
+    {
+      "clinical_date": "2025-07-29",
+      "collection_date": "2025-07-29",
+      "created_date": "2025-07-29",
+      "document_id": "D052",
+      "document_type": "procedure",
+      "encounter_date": "2025-07-29",
+      "episode_id": "delivery",
+      "facility_key": "hospital",
+      "findings": [],
+      "gestational_age": {
+        "days": 275,
+        "display": "39+2",
+        "remaining_days": 2,
+        "weeks": 39
+      },
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D032",
+        "D037",
+        "D050",
+        "D051"
+      ],
+      "procedures": [
+        {
+          "apgar_1": 8,
+          "apgar_5": 9,
+          "birthweight_g": 3320,
+          "blood_loss_ml": 350,
+          "date": "2025-07-29",
+          "gestational_days": 275,
+          "infant_id": "SYN-INFANT-001",
+          "name": "Spontaneous vaginal delivery",
+          "time": "11:42"
+        },
+        {
+          "date": "2025-07-29",
+          "name": "Second-degree perineal tear repair"
+        }
+      ],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-procedure"
+      ],
+      "sections": [
+        {
+          "heading": "Admission",
+          "text": "Admitted July 29 at 02:10 with regular painful contractions, G1P0 at 39+2 by ART, EDD August 3. Cervix 5 cm/90%/-1. Membranes initially intact. BP 118/74, afebrile. O positive, antibody negative, GBS July 13 not isolated."
+        },
+        {
+          "heading": "Labour course",
+          "text": "Epidural placed at 04:05 without documented complication. Spontaneous rupture of membranes at 06:20, clear fluid. Continuous fetal monitoring reassuring. Full dilation 10:50; spontaneous vaginal delivery at 11:42."
+        },
+        {
+          "heading": "Birth",
+          "text": "Live singleton female newborn, ID SYN-INFANT-001, weight 3320 g. Apgar scores 8 at one minute and 9 at five minutes. Placenta delivered intact at 11:49; three-vessel cord. Second-degree perineal tear repaired. Quantified blood loss 350 mL. Oxytocin 10 IU IM after delivery at 11:45."
+        },
+        {
+          "heading": "Immediate postpartum",
+          "text": "Mother stable, uterus firm, normal lochia. Skin-to-skin and breastfeeding initiated. No postpartum hemorrhage, hypertensive disorder or neonatal resuscitation beyond routine care documented. G1P1 following birth."
+        }
+      ],
+      "specimen": null,
+      "tables": [
+        {
+          "headers": [
+            "Time",
+            "BP mmHg",
+            "Pulse /min",
+            "Temperature C"
+          ],
+          "rows": [
+            [
+              "02:10",
+              "118/74",
+              "82",
+              "36.8"
+            ],
+            [
+              "06:30",
+              "112/68",
+              "80",
+              "36.9"
+            ],
+            [
+              "10:30",
+              "116/72",
+              "88",
+              "37.0"
+            ],
+            [
+              "12:00",
+              "114/70",
+              "84",
+              "36.9"
+            ]
+          ],
+          "title": "Labour observations"
+        }
+      ],
+      "title": "Labour and vaginal delivery record"
+    },
+    {
+      "clinical_date": "2025-07-30",
+      "collection_date": "2025-07-30",
+      "created_date": "2025-07-30",
+      "document_id": "D053",
+      "document_type": "lab",
+      "encounter_date": "2025-07-30",
+      "episode_id": "delivery",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "L",
+          "reference_context": "nonpregnant laboratory interval; interpret early postpartum",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 106
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 88
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 400,
+          "reference_interval": "150-400",
+          "reference_low": 150,
+          "test": "Platelets",
+          "unit": "10^9/L",
+          "value": 224
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D046",
+        "D052"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comment",
+          "text": "Collected on postpartum day 1. Mild anemia following delivery; stable clinically with no ongoing heavy bleeding. Compare pregnancy hemoglobin 112 g/L on June 13."
+        }
+      ],
+      "specimen": "EDTA blood",
+      "tables": [],
+      "title": "Post-delivery CBC"
+    },
+    {
+      "clinical_date": "2025-07-31",
+      "collection_date": "2025-07-31",
+      "created_date": "2025-07-31",
+      "document_id": "D054",
+      "document_type": "discharge",
+      "encounter_date": "2025-07-31",
+      "episode_id": "postpartum",
+      "facility_key": "hospital",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL",
+        "MED-IRON-2",
+        "MED-IBU",
+        "MED-APAP"
+      ],
+      "prior_document_ids": [
+        "D052",
+        "D053"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-discharge"
+      ],
+      "sections": [
+        {
+          "heading": "Admission and discharge",
+          "text": "Admission July 29, discharge July 31. Term IVF singleton pregnancy delivered at 39+2 on July 29 at 11:42. Spontaneous vaginal delivery; second-degree tear repaired. QBL 350 mL. Infant SYN-INFANT-001 female, 3320 g, Apgar 8/9."
+        },
+        {
+          "heading": "Hospital course",
+          "text": "Afebrile, normotensive, ambulating and voiding normally. Uterus firm and bleeding appropriate. Breastfeeding with positioning support. July 30 hemoglobin 106 g/L. No postpartum hemorrhage or infection diagnosed."
+        },
+        {
+          "heading": "Discharge medications",
+          "text": "Continue prenatal vitamin daily and ferrous sulfate 300 mg every other day. Ibuprofen 400 mg every 6 hours as needed, maximum 1200 mg/day, and acetaminophen 500-1000 mg every 8 hours as needed, maximum 3000 mg/day; seven-day supply, no repeats."
+        },
+        {
+          "heading": "Follow-up",
+          "text": "Nurse call August 5 and postpartum examination September 9. Pelvic rest until comfortable and healing assessed. Seek urgent care for soaking a pad hourly, fever, chest pain, breathlessness, severe headache, unilateral leg swelling or thoughts of self-harm. Contraception discussed; condoms planned when intercourse resumes. Copy to Dr Elara Vale."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Maternal hospital discharge summary"
+    },
+    {
+      "clinical_date": "2025-08-05",
+      "collection_date": "2025-08-05",
+      "created_date": "2025-08-05",
+      "document_id": "D055",
+      "document_type": "note",
+      "encounter_date": "2025-08-05",
+      "episode_id": "postpartum",
+      "facility_key": "ob",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL",
+        "MED-IRON-2"
+      ],
+      "prior_document_ids": [
+        "D054"
+      ],
+      "procedures": [],
+      "provider_key": "nurse",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Postpartum day 7. Lochia decreasing, no fever or heavy bleeding. Perineal pain improving; stopped ibuprofen and acetaminophen August 3. Breastfeeding established with occasional nipple tenderness; no red hot breast or systemic symptoms. Sleep fragmented but support available."
+        },
+        {
+          "heading": "Plan",
+          "text": "Review latch support and urgent symptoms. Continue prenatal vitamin and alternate-day iron. No depressive disorder diagnosed on this call. In-person review September 9."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Postpartum nurse telephone review"
+    },
+    {
+      "clinical_date": "2025-09-09",
+      "collection_date": "2025-09-09",
+      "created_date": "2025-09-09",
+      "document_id": "D056",
+      "document_type": "note",
+      "encounter_date": "2025-09-09",
+      "episode_id": "postpartum",
+      "facility_key": "ob",
+      "findings": [
+        {
+          "concept": "postpartum stress urinary incontinence",
+          "status": "documented"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL",
+        "MED-IRON-2"
+      ],
+      "prior_document_ids": [
+        "D052",
+        "D054",
+        "D055"
+      ],
+      "procedures": [],
+      "provider_key": "ob",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "42 days after July 29 birth. G1P1. Breastfeeding, no menses since delivery. Lochia ended August 23. Mild urine leakage with cough; no dysuria, retention or prolapse symptoms. Uses condoms; pregnancy spacing discussed."
+        },
+        {
+          "heading": "Examination",
+          "text": "BP 110/68, weight 63.8 kg. Perineal repair healed. No uterine tenderness. EPDS 4/30, self-harm item 0; no depression diagnosis."
+        },
+        {
+          "heading": "Plan",
+          "text": "Refer pelvic health physiotherapy for stress leakage. Continue iron and prenatal vitamin while breastfeeding. Repeat CBC/ferritin in October. Cervical screening due under updated HPV programme; patient elects to defer collection until January 2026 after counselling."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Six-week postpartum examination"
+    },
+    {
+      "clinical_date": "2025-10-03",
+      "collection_date": "2025-10-03",
+      "created_date": "2025-10-03",
+      "document_id": "D057",
+      "document_type": "assessment",
+      "encounter_date": "2025-10-03",
+      "episode_id": "postpartum",
+      "facility_key": "physio",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D056"
+      ],
+      "procedures": [],
+      "provider_key": "physio",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Small leakage with coughing and jogging since birth. No urgency, dysuria, hematuria or pelvic pain. Breastfeeding; no menstrual return yet."
+        },
+        {
+          "heading": "Examination",
+          "text": "Consent and chaperone option documented. Pelvic floor contraction 3/5 with reduced endurance and delayed pre-cough contraction. Healed perineum; no significant prolapse observed."
+        },
+        {
+          "heading": "Assessment and plan",
+          "text": "Postpartum stress urinary incontinence. Teach coordinated pelvic floor contraction, breathing and graded return to exercise. Home practice 8 contractions held up to 6 seconds twice daily as tolerated. Reassess in November; stop if pain occurs."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Pelvic health physiotherapy assessment"
+    },
+    {
+      "clinical_date": "2025-10-10",
+      "collection_date": "2025-10-10",
+      "created_date": "2025-10-10",
+      "document_id": "D058",
+      "document_type": "lab",
+      "encounter_date": "2025-10-10",
+      "episode_id": "iron",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 125
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 89
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 42
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D053",
+        "D056"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comparison",
+          "text": "Hemoglobin 125 g/L and ferritin 42 ug/L have recovered from postpartum hemoglobin 106 g/L on July 30. Review treatment duration with primary care."
+        }
+      ],
+      "specimen": "EDTA blood and serum",
+      "tables": [],
+      "title": "Postpartum iron follow-up"
+    },
+    {
+      "clinical_date": "2025-11-14",
+      "collection_date": "2025-11-14",
+      "created_date": "2025-11-14",
+      "document_id": "D059",
+      "document_type": "note",
+      "encounter_date": "2025-11-14",
+      "episode_id": "postpartum",
+      "facility_key": "physio",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D057"
+      ],
+      "procedures": [],
+      "provider_key": "physio",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "Subjective",
+          "text": "Rare leakage only with repeated cough; no leakage during walking or gentle exercise. Home practice comfortable. No urinary infection symptoms."
+        },
+        {
+          "heading": "Assessment and plan",
+          "text": "Improved pelvic floor coordination and endurance. Continue exercises and gradual activity. Follow up as needed; no medication or surgical treatment indicated."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Pelvic health progress review"
+    },
+    {
+      "clinical_date": "2025-12-05",
+      "collection_date": "2025-12-05",
+      "created_date": "2025-12-05",
+      "document_id": "D060",
+      "document_type": "note",
+      "encounter_date": "2025-12-05",
+      "episode_id": "postpartum",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-2",
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D058",
+        "D059",
+        "D027",
+        "D032"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Breastfeeding; infant currently four months old. Infant feeding guidance remains with the infant care team. No menstrual bleeding yet. No fatigue, urinary leakage now rare. Therapeutic iron tolerated."
+        },
+        {
+          "heading": "Assessment",
+          "text": "October 10 hemoglobin 125 g/L, ferritin 42 ug/L; resolved postpartum anemia. Continue diet after completed replenishment."
+        },
+        {
+          "heading": "Plan",
+          "text": "Last therapeutic iron dose today; stop December 6. Continue prenatal vitamin while breastfeeding. January cervical-screening visit confirmed. No additional embryo transfer planned; three embryos remain stored per fertility record."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Primary-care postpartum and iron review"
+    },
+    {
+      "clinical_date": "2026-01-16",
+      "collection_date": "2026-01-16",
+      "created_date": "2026-01-16",
+      "document_id": "D061",
+      "document_type": "note",
+      "encounter_date": "2026-01-16",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-PRENATAL"
+      ],
+      "prior_document_ids": [
+        "D004",
+        "D060"
+      ],
+      "procedures": [
+        {
+          "date": "2026-01-16",
+          "name": "Cervical primary HPV screening collection"
+        }
+      ],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "First postpartum menstrual period began January 12, ended January 16; light to moderate flow. No postcoital or intermenstrual bleeding. Breastfeeding reduced; plans to wean by end of January. No further fertility treatment planned. Condoms for contraception."
+        },
+        {
+          "heading": "Examination",
+          "text": "BP 112/70, weight 61.8 kg. Speculum examination with consent and chaperone Rena Elm: cervix normal, no abnormal discharge or contact bleeding. HPV screening sample collected."
+        },
+        {
+          "heading": "Plan",
+          "text": "Primary HPV screening under Ontario programme introduced in 2025; previous February 2022 cytology NILM. Result pending. Finish prenatal vitamin January 31 after weaning; no other regular medication. Continue tracking natural cycles."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Routine care and HPV screening collection"
+    },
+    {
+      "clinical_date": "2026-01-21",
+      "collection_date": "2026-01-16",
+      "created_date": "2026-01-21",
+      "document_id": "D062",
+      "document_type": "cytology",
+      "encounter_date": "2026-01-21",
+      "episode_id": "routine",
+      "facility_key": "lab",
+      "findings": [
+        {
+          "concept": "high-risk HPV not detected",
+          "status": "documented"
+        }
+      ],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": null,
+          "reference_interval": "Not detected",
+          "reference_low": null,
+          "test": "High-risk HPV",
+          "unit": "",
+          "value": "Not detected"
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D061"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "lab-pap"
+      ],
+      "sections": [
+        {
+          "heading": "Specimen",
+          "text": "Clinician-collected cervical liquid-based sample, collected January 16. Valid assay controls."
+        },
+        {
+          "heading": "Result",
+          "text": "High-risk HPV not detected, including HPV 16, HPV 18 and pooled other high-risk types. Reflex cytology not indicated following HPV-negative primary screen."
+        },
+        {
+          "heading": "Recommendation",
+          "text": "Average-risk routine recall in five years, January 2031, under current Ontario screening guidance. Symptoms require separate assessment regardless of negative screening."
+        }
+      ],
+      "specimen": "Cervical liquid-based sample",
+      "tables": [],
+      "title": "Primary cervical HPV screening result"
+    },
+    {
+      "clinical_date": "2026-03-20",
+      "collection_date": "2026-03-20",
+      "created_date": "2026-03-20",
+      "document_id": "D063",
+      "document_type": "note",
+      "encounter_date": "2026-03-20",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D061",
+        "D062"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Weaned January 31. Menstrual starts January 12, February 15 and March 19: intervals 34 and 32 days. Flow 4-5 days, moderate first two days, mild cramps. No abnormal bleeding or pelvic pain. Condoms used. No desire for pregnancy this year."
+        },
+        {
+          "heading": "Assessment and plan",
+          "text": "Early postpartum cycle variability documented without a diagnosis of PCOS or anovulation. HPV January 21 negative, next routine recall 2031. No regular medications. Continue tracking; review for prolonged amenorrhea, heavy bleeding or pregnancy concern."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Menstrual return follow-up"
+    },
+    {
+      "clinical_date": "2026-06-12",
+      "collection_date": "2026-06-12",
+      "created_date": "2026-06-12",
+      "document_id": "D064",
+      "document_type": "note",
+      "encounter_date": "2026-06-12",
+      "episode_id": "iron",
+      "facility_key": "gp",
+      "findings": [
+        {
+          "concept": "recurrent iron deficiency",
+          "status": "suspected"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D060",
+        "D063"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Mild recurrent fatigue since returning to work. Natural cycles now 29-32 days, 4-5 bleeding days. No heavy bleeding, GI symptoms, weight loss or breathlessness. Mostly vegetarian diet; no therapeutic iron since December."
+        },
+        {
+          "heading": "Objective",
+          "text": "BP 110/70, weight 61.5 kg, pulse 72/min. Examination unremarkable."
+        },
+        {
+          "heading": "Assessment and plan",
+          "text": "Recurrent iron deficiency suspected; request CBC, ferritin and TSH. Sleep interruption may contribute; avoid diagnosing anemia before results. No pregnancy symptoms, contraception with condoms."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Fatigue and menstrual health visit"
+    },
+    {
+      "clinical_date": "2026-06-15",
+      "collection_date": "2026-06-15",
+      "created_date": "2026-06-15",
+      "document_id": "D065",
+      "document_type": "lab",
+      "encounter_date": "2026-06-15",
+      "episode_id": "iron",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 122
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 85
+        },
+        {
+          "indicator": "L",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 13
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 4,
+          "reference_interval": "0.4-4",
+          "reference_low": 0.4,
+          "test": "TSH",
+          "unit": "mIU/L",
+          "value": 1.64
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D064"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comment",
+          "text": "Ferritin below range with hemoglobin within adult female range. Findings support recurrent iron deficiency without anemia. TSH normal."
+        }
+      ],
+      "specimen": "EDTA blood and serum",
+      "tables": [],
+      "title": "Fatigue laboratory investigation"
+    },
+    {
+      "clinical_date": "2026-06-19",
+      "collection_date": "2026-06-19",
+      "created_date": "2026-06-19",
+      "document_id": "D066",
+      "document_type": "prescription",
+      "encounter_date": "2026-06-19",
+      "episode_id": "iron",
+      "facility_key": "gp",
+      "findings": [
+        {
+          "concept": "recurrent iron deficiency without anemia",
+          "status": "confirmed"
+        }
+      ],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-3"
+      ],
+      "prior_document_ids": [
+        "D065"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-rx"
+      ],
+      "sections": [
+        {
+          "heading": "Indication",
+          "text": "June 15 ferritin 13 ug/L and hemoglobin 122 g/L confirm iron deficiency without anemia. No evidence supplied for thyroid disease or major blood loss."
+        },
+        {
+          "heading": "Prescription",
+          "text": "Ferrous sulfate 300 mg tablet, providing 60 mg elemental iron, orally every other day. Quantity 45 tablets, one repeat. Evening with food if nausea. Start today; repeat CBC/ferritin in September."
+        },
+        {
+          "heading": "Plan",
+          "text": "Review dietary intake. Investigate further if no response, heavy bleeding or GI symptoms. Keep medication apart from calcium, tea and coffee."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Recurrent iron deficiency treatment"
+    },
+    {
+      "clinical_date": "2026-09-18",
+      "collection_date": "2026-09-18",
+      "created_date": "2026-09-18",
+      "document_id": "D067",
+      "document_type": "lab",
+      "encounter_date": "2026-09-18",
+      "episode_id": "iron",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 129
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 88
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 35
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D065",
+        "D066"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comparison",
+          "text": "Ferritin increased from 13 ug/L on June 15 to 35 ug/L; hemoglobin from 122 to 129 g/L. Treatment response documented."
+        }
+      ],
+      "specimen": "EDTA blood and serum",
+      "tables": [],
+      "title": "Repeat CBC and ferritin"
+    },
+    {
+      "clinical_date": "2026-09-25",
+      "collection_date": "2026-09-25",
+      "created_date": "2026-09-25",
+      "document_id": "D068",
+      "document_type": "note",
+      "encounter_date": "2026-09-25",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-3"
+      ],
+      "prior_document_ids": [
+        "D062",
+        "D067",
+        "D032"
+      ],
+      "procedures": [
+        {
+          "date": "2026-09-25",
+          "name": "Influenza vaccination"
+        }
+      ],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Fatigue improved. Oral iron tolerated. Cycles now 28-31 days with moderate flow. No new bleeding or GI symptoms. Urinary leakage resolved with exercises."
+        },
+        {
+          "heading": "Review",
+          "text": "September 18 hemoglobin 129 g/L and ferritin 35 ug/L. HPV screen negative January 2026. Three blastocysts remain stored; no subsequent transfer or pregnancy documented."
+        },
+        {
+          "heading": "Plan",
+          "text": "Continue alternate-day iron through December 18 to replenish stores, then reassess. Influenza vaccination offered and accepted. Continue condoms and cycle tracking."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Iron response and preventive review"
+    },
+    {
+      "clinical_date": "2026-12-11",
+      "collection_date": "2026-12-11",
+      "created_date": "2026-12-11",
+      "document_id": "D069",
+      "document_type": "lab",
+      "encounter_date": "2026-12-11",
+      "episode_id": "iron",
+      "facility_key": "lab",
+      "findings": [],
+      "laboratory_values": [
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 160,
+          "reference_interval": "120-160",
+          "reference_low": 120,
+          "test": "Hemoglobin",
+          "unit": "g/L",
+          "value": 131
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 100,
+          "reference_interval": "80-100",
+          "reference_low": 80,
+          "test": "MCV",
+          "unit": "fL",
+          "value": 89
+        },
+        {
+          "indicator": "",
+          "reference_context": "adult nonpregnant",
+          "reference_high": 150,
+          "reference_interval": "15-150",
+          "reference_low": 15,
+          "test": "Ferritin",
+          "unit": "ug/L",
+          "value": 48
+        }
+      ],
+      "medication_ids": [],
+      "prior_document_ids": [
+        "D067",
+        "D068"
+      ],
+      "procedures": [],
+      "provider_key": "lab",
+      "reference_ids": [
+        "jsl-easy"
+      ],
+      "sections": [
+        {
+          "heading": "Comment",
+          "text": "Iron indices remain improved during replacement. Compare September 18 hemoglobin 129 g/L and ferritin 35 ug/L."
+        }
+      ],
+      "specimen": "EDTA blood and serum",
+      "tables": [],
+      "title": "End-of-year iron assessment"
+    },
+    {
+      "clinical_date": "2026-12-18",
+      "collection_date": "2026-12-18",
+      "created_date": "2026-12-18",
+      "document_id": "D070",
+      "document_type": "note",
+      "encounter_date": "2026-12-18",
+      "episode_id": "routine",
+      "facility_key": "gp",
+      "findings": [],
+      "laboratory_values": [],
+      "medication_ids": [
+        "MED-IRON-3"
+      ],
+      "prior_document_ids": [
+        "D052",
+        "D062",
+        "D069"
+      ],
+      "procedures": [],
+      "provider_key": "gp",
+      "reference_ids": [
+        "rca-note"
+      ],
+      "sections": [
+        {
+          "heading": "History",
+          "text": "Well, regular natural cycles, no fatigue or urinary leakage. G1P1 after single IVF pregnancy and July 29, 2025 vaginal birth. Uses condoms; no current conception attempts. Child well by patient report; this is not an infant medical chart."
+        },
+        {
+          "heading": "Examination",
+          "text": "BP 112/68, weight 61.4 kg. No abnormal cardiopulmonary or abdominal findings."
+        },
+        {
+          "heading": "Review",
+          "text": "December 11 hemoglobin 131 g/L, ferritin 48 ug/L. Recurrent iron deficiency improved; complete last iron dose today and stop December 19. HPV negative January 2026, routine recall January 2031. No evidence of PCOS, endometriosis, gestational diabetes, hypertensive disease or postpartum depression."
+        },
+        {
+          "heading": "Plan",
+          "text": "Continue dietary iron and routine care. Repeat iron studies if symptoms or bleeding recur. Three cryopreserved embryos remain from the single 2024 retrieval; no further treatment scheduled."
+        }
+      ],
+      "specimen": null,
+      "tables": [],
+      "title": "Annual longitudinal care review"
+    }
+  ],
+  "episodes": [
+    {
+      "episode_id": "routine",
+      "title": "Routine and preventive health"
+    },
+    {
+      "episode_id": "iron",
+      "title": "Iron deficiency"
+    },
+    {
+      "episode_id": "fertility",
+      "title": "Fertility evaluation"
+    },
+    {
+      "episode_id": "ivf",
+      "title": "IVF treatment"
+    },
+    {
+      "episode_id": "pregnancy",
+      "title": "Pregnancy"
+    },
+    {
+      "episode_id": "delivery",
+      "title": "Delivery"
+    },
+    {
+      "episode_id": "postpartum",
+      "title": "Postpartum recovery"
+    }
+  ],
+  "facilities": {
+    "fert": {
+      "address": "30 Synthetic Cedar Way, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-03",
+      "name": "Example Cedar Reproductive Centre",
+      "phone": "+1-416-555-0130"
+    },
+    "gp": {
+      "address": "10 Synthetic Orchard Lane, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-01",
+      "name": "Example Orchard Family Practice",
+      "phone": "+1-416-555-0110"
+    },
+    "hospital": {
+      "address": "60 Synthetic Lakeshore Road, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-06",
+      "name": "Example Lakeshore Teaching Hospital",
+      "phone": "+1-416-555-0160"
+    },
+    "image": {
+      "address": "40 Synthetic Harbour Walk, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-04",
+      "name": "Example Harbour Diagnostic Imaging",
+      "phone": "+1-416-555-0140"
+    },
+    "lab": {
+      "address": "20 Synthetic Assay Avenue, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-02",
+      "name": "Example Northstar Diagnostic Laboratory",
+      "phone": "+1-416-555-0120"
+    },
+    "ob": {
+      "address": "50 Synthetic Birch Lane, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-05",
+      "name": "Example Birch Maternity Clinic",
+      "phone": "+1-416-555-0150"
+    },
+    "physio": {
+      "address": "70 Synthetic Willow Lane, Toronto, ON, TEST ONLY",
+      "facility_id": "SYN-FAC-07",
+      "name": "Example Willow Pelvic Health",
+      "phone": "+1-416-555-0170"
+    }
+  },
+  "ivf": {
+    "blastocysts_cryopreserved": 4,
+    "cycle_id": "SYN-IVF-01",
+    "embryos": [
+      {
+        "culture_day": 5,
+        "embryo_id": "SYN-E01",
+        "frozen_date": "2024-06-18",
+        "grade": "4AA",
+        "transferred_date": "2024-11-15"
+      },
+      {
+        "culture_day": 5,
+        "embryo_id": "SYN-E02",
+        "frozen_date": "2024-06-18",
+        "grade": "4AB"
+      },
+      {
+        "culture_day": 6,
+        "embryo_id": "SYN-E03",
+        "frozen_date": "2024-06-19",
+        "grade": "4BB"
+      },
+      {
+        "culture_day": 6,
+        "embryo_id": "SYN-E04",
+        "frozen_date": "2024-06-19",
+        "grade": "3BB"
+      }
+    ],
+    "mature_oocytes": 10,
+    "normally_fertilized": 8,
+    "oocytes_retrieved": 12,
+    "pgt_performed": false,
+    "remaining": 3,
+    "retrieval_date": "2024-06-13",
+    "retrieval_time": "09:30",
+    "transferred": 1,
+    "trigger_date": "2024-06-11",
+    "trigger_time": "21:30"
+  },
+  "medication_history": [
+    {
+      "adjustments": [
+        {
+          "date": "2022-02-16",
+          "detail": "Move dose to evening with food because of mild nausea; same dose and frequency"
+        }
+      ],
+      "dose": "300 mg tablet (60 mg elemental iron)",
+      "end": "2022-08-01",
+      "frequency": "every other day",
+      "medication_id": "MED-IRON-1",
+      "name": "Ferrous sulfate",
+      "reason": "Iron deficiency without anemia",
+      "route": "oral",
+      "start": "2022-02-02"
+    },
+    {
+      "dose": "400 micrograms",
+      "end": "2024-10-31",
+      "frequency": "daily",
+      "medication_id": "MED-FOLATE",
+      "name": "Folic acid",
+      "reason": "Preconception supplementation",
+      "route": "oral",
+      "start": "2022-12-01"
+    },
+    {
+      "adjustments": [
+        {
+          "date": "2024-06-07",
+          "detail": "Reduce nightly dose after monitoring",
+          "dose": "150 IU"
+        }
+      ],
+      "dose": "225 IU",
+      "end": "2024-06-10",
+      "frequency": "nightly",
+      "medication_id": "MED-FSH",
+      "name": "Follitropin alfa",
+      "reason": "Ovarian stimulation",
+      "route": "subcutaneous",
+      "start": "2024-06-02"
+    },
+    {
+      "dose": "75 IU",
+      "end": "2024-06-10",
+      "frequency": "nightly",
+      "medication_id": "MED-HMG",
+      "name": "Menotropins",
+      "reason": "Ovarian stimulation",
+      "route": "subcutaneous",
+      "start": "2024-06-02"
+    },
+    {
+      "dose": "0.25 mg",
+      "end": "2024-06-11",
+      "frequency": "daily",
+      "medication_id": "MED-ANT",
+      "name": "Cetrorelix",
+      "reason": "Prevent premature LH surge",
+      "route": "subcutaneous",
+      "start": "2024-06-07"
+    },
+    {
+      "dose": "4 mg",
+      "end": "2024-06-11",
+      "frequency": "once at 21:30",
+      "medication_id": "MED-TRIGGER",
+      "name": "Leuprolide acetate",
+      "reason": "Final oocyte maturation; retrieval 36 hours later",
+      "route": "subcutaneous",
+      "start": "2024-06-11"
+    },
+    {
+      "dose": "2 mg",
+      "end": "2025-01-04",
+      "frequency": "three times daily",
+      "medication_id": "MED-E2",
+      "name": "Estradiol",
+      "reason": "Programmed frozen transfer and early pregnancy support",
+      "route": "oral",
+      "start": "2024-10-29"
+    },
+    {
+      "dose": "50 mg",
+      "end": "2025-01-04",
+      "frequency": "daily at 09:00",
+      "medication_id": "MED-P4",
+      "name": "Progesterone in oil",
+      "reason": "Programmed frozen transfer and early pregnancy support",
+      "route": "intramuscular",
+      "start": "2024-11-10"
+    },
+    {
+      "dose": "one tablet containing folic acid 1 mg and iron 27 mg",
+      "end": "2026-01-31",
+      "frequency": "daily",
+      "medication_id": "MED-PRENATAL",
+      "name": "Prenatal multivitamin",
+      "reason": "Pregnancy and lactation",
+      "route": "oral",
+      "start": "2024-11-01"
+    },
+    {
+      "dose": "300 mg tablet (60 mg elemental iron)",
+      "end": "2025-12-05",
+      "frequency": "every other day, apart from prenatal vitamin",
+      "medication_id": "MED-IRON-2",
+      "name": "Ferrous sulfate",
+      "reason": "Recurrent iron deficiency with anemia during pregnancy",
+      "route": "oral",
+      "start": "2025-05-05"
+    },
+    {
+      "dose": "400 mg",
+      "end": "2025-08-03",
+      "frequency": "every 6 hours as needed for perineal pain, maximum 1200 mg/day",
+      "medication_id": "MED-IBU",
+      "name": "Ibuprofen",
+      "reason": "Postpartum pain; patient stopped after three days",
+      "route": "oral",
+      "start": "2025-07-31"
+    },
+    {
+      "dose": "500-1000 mg",
+      "end": "2025-08-03",
+      "frequency": "every 8 hours as needed, maximum 3000 mg/day",
+      "medication_id": "MED-APAP",
+      "name": "Acetaminophen",
+      "reason": "Postpartum pain; actual stop August 3, seven-day supply originally prescribed",
+      "route": "oral",
+      "start": "2025-07-31"
+    },
+    {
+      "dose": "300 mg tablet (60 mg elemental iron)",
+      "end": "2026-12-18",
+      "frequency": "every other day",
+      "medication_id": "MED-IRON-3",
+      "name": "Ferrous sulfate",
+      "reason": "Recurrent iron deficiency without anemia",
+      "route": "oral",
+      "start": "2026-06-19"
+    }
+  ],
+  "patient": {
+    "address": "Unit SYN-4, 100 Example Orchard Lane, Toronto, ON, TEST ONLY",
+    "allergies": [
+      {
+        "recorded": "2022-01-18",
+        "status": "no known drug allergies",
+        "substance": "medications"
+      }
+    ],
+    "blood_group": "O positive",
+    "city": "Toronto",
+    "country": "Canada",
+    "date_of_birth": "1993-03-14",
+    "email": "maya.chen@example.invalid",
+    "gender": "woman",
+    "height_cm": 165,
+    "name": "Maya Chen",
+    "patient_id": "SYN-MAYA-001",
+    "period_end": "2026-12-31",
+    "period_start": "2022-01-01",
+    "sex_recorded": "female",
+    "telephone": "+1-416-555-0101"
+  },
+  "pregnancy": {
+    "apgar_1": 8,
+    "apgar_5": 9,
+    "art_equivalent_lmp": "2024-10-27",
+    "birthweight_g": 3320,
+    "delivery_date": "2025-07-29",
+    "delivery_gestation": "39+2",
+    "delivery_time": "11:42",
+    "embryo_age_days": 5,
+    "episode_id": "pregnancy",
+    "estimated_due_date": "2025-08-03",
+    "gestational_days_at_delivery": 275,
+    "gestational_days_on_transfer": 19,
+    "infant_id": "SYN-INFANT-001",
+    "sex": "female",
+    "transfer_date": "2024-11-15"
+  },
+  "providers": {
+    "emb": {
+      "name": "Ari Quill",
+      "provider_id": "SYN-PROV-06",
+      "registration": "SYN-EMB-006",
+      "role": "Embryologist"
+    },
+    "fert": {
+      "name": "Dr Neri Solan",
+      "provider_id": "SYN-PROV-03",
+      "registration": "SYN-CPSO-003",
+      "role": "Reproductive endocrinologist"
+    },
+    "gp": {
+      "name": "Dr Elara Vale",
+      "provider_id": "SYN-PROV-01",
+      "registration": "SYN-CPSO-001",
+      "role": "Family physician"
+    },
+    "image": {
+      "name": "Dr Tavi Rowan",
+      "provider_id": "SYN-PROV-04",
+      "registration": "SYN-CPSO-004",
+      "role": "Radiologist"
+    },
+    "lab": {
+      "name": "Dr Iona Field",
+      "provider_id": "SYN-PROV-02",
+      "registration": "SYN-CPSO-002",
+      "role": "Laboratory physician"
+    },
+    "nurse": {
+      "name": "Rena Elm",
+      "provider_id": "SYN-PROV-07",
+      "registration": "SYN-RN-007",
+      "role": "Registered nurse"
+    },
+    "ob": {
+      "name": "Dr Orin Lark",
+      "provider_id": "SYN-PROV-05",
+      "registration": "SYN-CPSO-005",
+      "role": "Obstetrician"
+    },
+    "physio": {
+      "name": "Lumi Fen",
+      "provider_id": "SYN-PROV-08",
+      "registration": "SYN-PT-008",
+      "role": "Pelvic health physiotherapist"
+    }
+  },
+  "schema_version": "1.0",
+  "synthetic": true
+}

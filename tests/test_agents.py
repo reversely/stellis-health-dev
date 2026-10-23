@@ -25,6 +25,22 @@ class AgentTest(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
+    def test_document_evidence_includes_table_beyond_search_preview(self):
+        from stellis import documents
+        book = notebooks.create("Fertility")
+        import io
+        from PIL import Image
+        image = io.BytesIO()
+        Image.new("RGB", (20, 20), "white").save(image, format="PNG")
+        record, _ = documents.create("embryology.png", image.getvalue(), book["id"])
+        text = "Cryopreservation report. " + "Administrative context " * 50 + "\nRetrieved 12; mature 10; fertilized 8; blastocysts frozen 4."
+        documents.save_page(record["id"], 1, text, 0)
+        agent = agents.get(agents.assistant()["id"])
+        found = agent_runtime._sources(agent, "Cryopreservation report counts", book["id"])
+        self.assertEqual(len(found), 1)
+        self.assertIn("blastocysts frozen 4", found[0]["excerpt"])
+        self.assertEqual(found[0]["target"], f"/document/{record['id']}?page=1")
+
     def test_stellis_is_the_one_assistant_in_every_notebook(self):
         stellis = agents.list_agents()[0]
         self.assertEqual((stellis["name"], stellis["is_default"]), ("Stellis", True))

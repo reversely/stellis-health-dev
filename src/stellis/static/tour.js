@@ -23,7 +23,7 @@
       ?.addEventListener('click', openSetup);
   document.getElementById('take-tour')?.addEventListener('click', (event) => {
     event.currentTarget.closest('details')?.removeAttribute('open');
-    window.StellisCoachCall.open({kind: 'tour', chat: false, onAction() {}});
+    window.StellisMayaGuide.open();
   });
   const url = new URL(location.href);
   if (url.searchParams.get('tour') === '1') {

@@ -1,0 +1,356 @@
+{
+  "scope": "Actual PDF text extraction and visible upload/date confirmation; no model or optical recognition claim",
+  "results": [
+    {
+      "document_id": "D001",
+      "proposed_date": "2022-01-18",
+      "confirmed": true
+    },
+    {
+      "document_id": "D002",
+      "proposed_date": "2022-01-21",
+      "confirmed": true
+    },
+    {
+      "document_id": "D003",
+      "proposed_date": "2022-02-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D004",
+      "proposed_date": "2022-02-07",
+      "confirmed": true
+    },
+    {
+      "document_id": "D005",
+      "proposed_date": "2022-02-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D006",
+      "proposed_date": "2022-05-20",
+      "confirmed": true
+    },
+    {
+      "document_id": "D007",
+      "proposed_date": "2022-08-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D008",
+      "proposed_date": "2022-12-06",
+      "confirmed": true
+    },
+    {
+      "document_id": "D009",
+      "proposed_date": "2023-02-10",
+      "confirmed": true
+    },
+    {
+      "document_id": "D010",
+      "proposed_date": "2023-09-19",
+      "confirmed": true
+    },
+    {
+      "document_id": "D011",
+      "proposed_date": "2023-10-03",
+      "confirmed": true
+    },
+    {
+      "document_id": "D012",
+      "proposed_date": "2023-11-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D013",
+      "proposed_date": "2023-11-30",
+      "confirmed": true
+    },
+    {
+      "document_id": "D014",
+      "proposed_date": "2023-12-01",
+      "confirmed": true
+    },
+    {
+      "document_id": "D015",
+      "proposed_date": "2023-12-20",
+      "confirmed": true
+    },
+    {
+      "document_id": "D016",
+      "proposed_date": "2024-01-12",
+      "confirmed": true
+    },
+    {
+      "document_id": "D017",
+      "proposed_date": "2024-02-01",
+      "confirmed": true
+    },
+    {
+      "document_id": "D018",
+      "proposed_date": "2024-02-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D019",
+      "proposed_date": "2024-05-17",
+      "confirmed": true
+    },
+    {
+      "document_id": "D020",
+      "proposed_date": "2024-05-24",
+      "confirmed": true
+    },
+    {
+      "document_id": "D021",
+      "proposed_date": "2024-06-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D022",
+      "proposed_date": "2024-06-07",
+      "confirmed": true
+    },
+    {
+      "document_id": "D023",
+      "proposed_date": "2024-06-10",
+      "confirmed": true
+    },
+    {
+      "document_id": "D024",
+      "proposed_date": "2024-06-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D025",
+      "proposed_date": "2024-06-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D026",
+      "proposed_date": "2024-06-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D027",
+      "proposed_date": "2024-06-19",
+      "confirmed": true
+    },
+    {
+      "document_id": "D028",
+      "proposed_date": "2024-06-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D029",
+      "proposed_date": "2024-10-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D030",
+      "proposed_date": "2024-10-29",
+      "confirmed": true
+    },
+    {
+      "document_id": "D031",
+      "proposed_date": "2024-11-08",
+      "confirmed": true
+    },
+    {
+      "document_id": "D032",
+      "proposed_date": "2024-11-15",
+      "confirmed": true
+    },
+    {
+      "document_id": "D033",
+      "proposed_date": "2024-11-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D034",
+      "proposed_date": "2024-11-27",
+      "confirmed": true
+    },
+    {
+      "document_id": "D035",
+      "proposed_date": "2024-12-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D036",
+      "proposed_date": "2025-01-06",
+      "confirmed": true
+    },
+    {
+      "document_id": "D037",
+      "proposed_date": "2025-01-08",
+      "confirmed": true
+    },
+    {
+      "document_id": "D038",
+      "proposed_date": "2025-01-15",
+      "confirmed": true
+    },
+    {
+      "document_id": "D039",
+      "proposed_date": "2025-01-24",
+      "confirmed": true
+    },
+    {
+      "document_id": "D040",
+      "proposed_date": "2025-02-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D041",
+      "proposed_date": "2025-03-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D042",
+      "proposed_date": "2025-04-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D043",
+      "proposed_date": "2025-05-02",
+      "confirmed": true
+    },
+    {
+      "document_id": "D044",
+      "proposed_date": "2025-05-05",
+      "confirmed": true
+    },
+    {
+      "document_id": "D045",
+      "proposed_date": "2025-05-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D046",
+      "proposed_date": "2025-06-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D047",
+      "proposed_date": "2025-06-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D048",
+      "proposed_date": "2025-06-27",
+      "confirmed": true
+    },
+    {
+      "document_id": "D049",
+      "proposed_date": "2025-07-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D050",
+      "proposed_date": "2025-07-13",
+      "confirmed": true
+    },
+    {
+      "document_id": "D051",
+      "proposed_date": "2025-07-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D052",
+      "proposed_date": "2025-07-29",
+      "confirmed": true
+    },
+    {
+      "document_id": "D053",
+      "proposed_date": "2025-07-30",
+      "confirmed": true
+    },
+    {
+      "document_id": "D054",
+      "proposed_date": "2025-07-31",
+      "confirmed": true
+    },
+    {
+      "document_id": "D055",
+      "proposed_date": "2025-08-05",
+      "confirmed": true
+    },
+    {
+      "document_id": "D056",
+      "proposed_date": "2025-09-09",
+      "confirmed": true
+    },
+    {
+      "document_id": "D057",
+      "proposed_date": "2025-10-03",
+      "confirmed": true
+    },
+    {
+      "document_id": "D058",
+      "proposed_date": "2025-10-10",
+      "confirmed": true
+    },
+    {
+      "document_id": "D059",
+      "proposed_date": "2025-11-14",
+      "confirmed": true
+    },
+    {
+      "document_id": "D060",
+      "proposed_date": "2025-12-05",
+      "confirmed": true
+    },
+    {
+      "document_id": "D061",
+      "proposed_date": "2026-01-16",
+      "confirmed": true
+    },
+    {
+      "document_id": "D062",
+      "proposed_date": "2026-01-21",
+      "confirmed": true
+    },
+    {
+      "document_id": "D063",
+      "proposed_date": "2026-03-20",
+      "confirmed": true
+    },
+    {
+      "document_id": "D064",
+      "proposed_date": "2026-06-12",
+      "confirmed": true
+    },
+    {
+      "document_id": "D065",
+      "proposed_date": "2026-06-15",
+      "confirmed": true
+    },
+    {
+      "document_id": "D066",
+      "proposed_date": "2026-06-19",
+      "confirmed": true
+    },
+    {
+      "document_id": "D067",
+      "proposed_date": "2026-09-18",
+      "confirmed": true
+    },
+    {
+      "document_id": "D068",
+      "proposed_date": "2026-09-25",
+      "confirmed": true
+    },
+    {
+      "document_id": "D069",
+      "proposed_date": "2026-12-11",
+      "confirmed": true
+    },
+    {
+      "document_id": "D070",
+      "proposed_date": "2026-12-18",
+      "confirmed": true
+    }
+  ],
+  "errors": []
+}

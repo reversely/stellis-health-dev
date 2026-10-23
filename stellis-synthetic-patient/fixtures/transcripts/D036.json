@@ -1,0 +1,41 @@
+{
+  "transcript_id": "TX-D036",
+  "synthetic": true,
+  "patient_id": "SYN-MAYA-001",
+  "document_id": "D036",
+  "appointment_id": "APT-D036",
+  "date": "2025-01-06",
+  "source": "Original scripted fictional dialogue; no recording or real transcript used",
+  "turns": [
+    {
+      "speaker": "Maya Chen",
+      "text": "I stopped the estradiol and injections yesterday as the clinic instructed.",
+      "start_ms": 0,
+      "end_ms": 12000
+    },
+    {
+      "speaker": "Dr Orin Lark",
+      "text": "That matches the planned stop at ten weeks. Keep taking the prenatal vitamin.",
+      "start_ms": 12000,
+      "end_ms": 24000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "How did you calculate the due date?",
+      "start_ms": 24000,
+      "end_ms": 36000
+    },
+    {
+      "speaker": "Dr Orin Lark",
+      "text": "A day-five embryo was transferred on November 15. That gives August 3 as the estimated due date.",
+      "start_ms": 36000,
+      "end_ms": 48000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "I would like the blood screening after we discuss what it can and cannot tell us.",
+      "start_ms": 48000,
+      "end_ms": 60000
+    }
+  ]
+}

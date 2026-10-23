@@ -1,0 +1,296 @@
+[
+  {
+    "theme": "light",
+    "width": 360,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 360,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 360,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 768,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 768,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 768,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1024,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1024,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1024,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1280,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1280,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1280,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1440,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1440,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1440,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1920,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1920,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "light",
+    "width": 1920,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 360,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 360,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 360,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 768,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 768,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 768,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1024,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1024,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1024,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1440,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1440,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1440,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1920,
+    "state": "guide",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1920,
+    "state": "chat",
+    "findings": [],
+    "errors": []
+  },
+  {
+    "theme": "dark",
+    "width": 1920,
+    "state": "date-review",
+    "findings": [],
+    "errors": []
+  }
+]

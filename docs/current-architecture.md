@@ -554,3 +554,25 @@ flowchart LR
   Tour --> Cache[Public narration cache]
   Question[User question] --> Model[Existing model route]
 ```
+
+## Maya synthetic patient guide and encounter dates
+
+The My Health Take the tour entry and the offer after setup open Maya's sequential browser guide in the existing docked coach panel. The guide publishes seventy original synthetic PDFs and checks each selected upload against its corpus digest and confirmed encounter date. Users download and choose files, approve catalogue notebooks, inspect Timeline filters, and send questions through the existing Stellis composer. Account-scoped browser progress resumes after source navigation; closing the guide disables resume. The compatibility voice-tour route remains available without automatically creating Denver records or notebooks. The explicit Denver operator loader remains separate.
+
+Document date proposals use labelled evidence from saved embedded text or OCR revisions. The document API returns ranked candidates with source page, text provenance and quoted labels. One best date prefills the shared capture/document review form; conflicting dates require selection. Confirmation writes record_date while later text revisions preserve that confirmed value. Document dates remain separate from per-fact clinical dates. Medical-image capture attempts existing page recognition before displaying review and retains the normal retry path when recognition fails.
+
+Chat retrieval keeps bounded text from the selected document page rather than only its short search preview so report tables remain available to inference. Page links retain their original document/page targets. This does not establish exhaustive coverage of every source in a long notebook.
+
+```mermaid
+flowchart TD
+  Guide[Maya guide in existing coach panel] --> Download[Download next synthetic PDF]
+  Download --> Capture[Shared Add and Upload Record dialog]
+  Capture --> Pages[Saved embedded text or OCR page revisions]
+  Pages --> Proposal[Labelled encounter-date candidates]
+  Proposal --> Confirm[Shared date confirmation]
+  Confirm --> Saved[Saved document record_date]
+  Saved --> Timeline[Existing Timeline filters and source links]
+  Saved --> Chat[Existing notebook-scoped Stellis chat]
+  Guide --> Verify[Check corpus file digest and saved date]
+  Verify --> Next[Next chronological document]
+```

@@ -36,18 +36,17 @@ class TourTest(unittest.TestCase):
                 return [piece async for piece in tour.reply()]
             return asyncio.run(pieces())
 
-    def test_the_tour_loads_a_sample_notebook_once(self):
+    def test_the_tour_does_not_insert_patient_records_or_notebooks(self):
         first = tour.begin()["sample"]
         second = tour.begin()["sample"]
-
-        self.assertEqual(first, second)
-        names = {book["id"]: book["name"] for book in notebooks.list_notebooks()}
-        self.assertEqual(names[first["notebook"]], tour.SAMPLE_NOTEBOOK)
-        self.assertEqual(documents.get(first["record"])["title"], "Annual exam")
+        self.assertEqual(first, {})
+        self.assertEqual(second, {})
+        self.assertEqual(notebooks.list_notebooks(), [])
+        self.assertEqual(documents.list_all(), [])
 
     def test_next_walks_every_step_then_sums_up_and_hangs_up(self):
-        sample = tour.begin()["sample"]
-        self.assertEqual(tour.opening_actions()[0]["selector"], "#home-goals .overview")
+        tour.begin()
+        self.assertEqual(tour.opening_actions()[0]["selector"], "#health-dashboard")
         tour.opening()
         shown = []
         for _ in tour.STEPS[1:]:
@@ -55,9 +54,7 @@ class TourTest(unittest.TestCase):
             shown.append(pieces[0]["path"])
             self.assertIsInstance(pieces[1], str)
 
-        self.assertEqual(shown, ["/", f"/notebook/{sample['notebook']}",
-                                 f"/document/{sample['record']}", "/summary", "/timeline",
-                                 "/recording"])
+        self.assertEqual(shown, ["/", "/records", "/records", "/summary", "/timeline", "/recording"])
         last = self.say("Got it")
         self.assertEqual(last[0]["path"], "/")
         self.assertEqual(last[-2], "Have a nice day.")

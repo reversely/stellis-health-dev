@@ -1,0 +1,1126 @@
+[
+  {
+    "document_id": "D001",
+    "clinical_date": "2022-01-18",
+    "document_type": "note",
+    "purpose": "Routine primary-care consultation",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D002",
+    "clinical_date": "2022-01-21",
+    "document_type": "lab",
+    "purpose": "CBC, ferritin and thyroid results",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D003",
+    "clinical_date": "2022-02-02",
+    "document_type": "note",
+    "purpose": "Iron results review and cervical examination",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D004",
+    "clinical_date": "2022-02-07",
+    "document_type": "cytology",
+    "purpose": "Cervical cytology",
+    "synthetic_pdf_reference_urls": [
+      "https://files.labcorp.com/testmenu-d8/sample_reports/193000.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Accession and account header; patient/specimen/physician columns; ordered test; specimen source; interpretation; adequacy; comments; signatory."
+    ],
+    "reference_limitations": [
+      "Verified test-account example; source facility and some administrative identities are real and excluded from generated corpus."
+    ]
+  },
+  {
+    "document_id": "D005",
+    "clinical_date": "2022-02-16",
+    "document_type": "note",
+    "purpose": "Iron tolerability telephone review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D006",
+    "clinical_date": "2022-05-20",
+    "document_type": "lab",
+    "purpose": "Iron treatment follow-up",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D007",
+    "clinical_date": "2022-08-02",
+    "document_type": "note",
+    "purpose": "Iron repletion follow-up",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D008",
+    "clinical_date": "2022-12-06",
+    "document_type": "note",
+    "purpose": "Preconception and immunization visit",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D009",
+    "clinical_date": "2023-02-10",
+    "document_type": "note",
+    "purpose": "Upper respiratory symptoms",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D010",
+    "clinical_date": "2023-09-19",
+    "document_type": "note",
+    "purpose": "Fertility concerns in primary care",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D011",
+    "clinical_date": "2023-10-03",
+    "document_type": "letter",
+    "purpose": "Referral for fertility assessment",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0006_referral_letter_COLON_CA_Powell.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Letterhead; recipient; RE and DOB panel; salutation; history, investigations, request; closing and cc."
+    ],
+    "reference_limitations": [
+      "Colorectal referral used for correspondence layout only; specialty content not reused."
+    ]
+  },
+  {
+    "document_id": "D012",
+    "clinical_date": "2023-11-14",
+    "document_type": "assessment",
+    "purpose": "Fertility intake and menstrual history",
+    "synthetic_pdf_reference_urls": [
+      "https://apjoppkptzdaztmprijk.supabase.co/storage/v1/object/public/public_bucket/sample-reports/myfertility-report-sample.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Cover; report guide; summary; action table; reproductive history; test and treatment explanations; running footer."
+    ],
+    "reference_limitations": [
+      "Patient education reference for assessment structure, not a specialist examination or laboratory result. No source prose copied."
+    ]
+  },
+  {
+    "document_id": "D013",
+    "clinical_date": "2023-11-30",
+    "document_type": "lab",
+    "purpose": "Baseline fertility endocrine panel",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D014",
+    "clinical_date": "2023-12-01",
+    "document_type": "imaging",
+    "purpose": "Baseline transvaginal pelvic ultrasound",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D015",
+    "clinical_date": "2023-12-20",
+    "document_type": "lab",
+    "purpose": "Mid-luteal progesterone",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D016",
+    "clinical_date": "2024-01-12",
+    "document_type": "letter",
+    "purpose": "Reproductive endocrinology consultation",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0006_referral_letter_COLON_CA_Powell.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Letterhead; recipient; RE and DOB panel; salutation; history, investigations, request; closing and cc."
+    ],
+    "reference_limitations": [
+      "Colorectal referral used for correspondence layout only; specialty content not reused."
+    ]
+  },
+  {
+    "document_id": "D017",
+    "clinical_date": "2024-02-01",
+    "document_type": "imaging",
+    "purpose": "Hysterosalpingogram",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D018",
+    "clinical_date": "2024-02-16",
+    "document_type": "letter",
+    "purpose": "Fertility treatment decision",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0006_referral_letter_COLON_CA_Powell.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Letterhead; recipient; RE and DOB panel; salutation; history, investigations, request; closing and cc."
+    ],
+    "reference_limitations": [
+      "Colorectal referral used for correspondence layout only; specialty content not reused."
+    ]
+  },
+  {
+    "document_id": "D019",
+    "clinical_date": "2024-05-17",
+    "document_type": "lab",
+    "purpose": "Pre-IVF infectious screening and CBC",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D020",
+    "clinical_date": "2024-05-24",
+    "document_type": "prescription",
+    "purpose": "Ovarian stimulation medication orders",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0001_prescription_DEPRESSION_GAD_Edwards.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Patient and prescription identifiers; drug, strength, route, frequency, quantity, repeats grid; prescriber authorization."
+    ],
+    "reference_limitations": [
+      "Australian prescription conventions adapted to an original Canadian test prescription; no PBS or Medicare fields."
+    ]
+  },
+  {
+    "document_id": "D021",
+    "clinical_date": "2024-06-02",
+    "document_type": "imaging",
+    "purpose": "IVF baseline scan and clearance",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D022",
+    "clinical_date": "2024-06-07",
+    "document_type": "imaging",
+    "purpose": "Stimulation day 6 monitoring",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D023",
+    "clinical_date": "2024-06-10",
+    "document_type": "imaging",
+    "purpose": "Stimulation day 9 monitoring",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D024",
+    "clinical_date": "2024-06-11",
+    "document_type": "note",
+    "purpose": "Trigger confirmation and retrieval instructions",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D025",
+    "clinical_date": "2024-06-13",
+    "document_type": "procedure",
+    "purpose": "Transvaginal oocyte retrieval",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0035_anaesthetic_record_CHOLELITHIASIS_Morris.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Theatre and procedure times; preoperative assessment; administered drugs table; observation table; fluids and recovery."
+    ],
+    "reference_limitations": [
+      "Surgical anaesthetic format used for retrieval and delivery layout only; source medication entries are not clinical guidance."
+    ]
+  },
+  {
+    "document_id": "D026",
+    "clinical_date": "2024-06-14",
+    "document_type": "embryology",
+    "purpose": "Day 1 fertilization report",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D027",
+    "clinical_date": "2024-06-19",
+    "document_type": "embryology",
+    "purpose": "Final embryo culture and cryopreservation report",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D028",
+    "clinical_date": "2024-06-25",
+    "document_type": "note",
+    "purpose": "Post-retrieval review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D029",
+    "clinical_date": "2024-10-25",
+    "document_type": "prescription",
+    "purpose": "Frozen embryo transfer preparation orders",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0001_prescription_DEPRESSION_GAD_Edwards.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Patient and prescription identifiers; drug, strength, route, frequency, quantity, repeats grid; prescriber authorization."
+    ],
+    "reference_limitations": [
+      "Australian prescription conventions adapted to an original Canadian test prescription; no PBS or Medicare fields."
+    ]
+  },
+  {
+    "document_id": "D030",
+    "clinical_date": "2024-10-29",
+    "document_type": "note",
+    "purpose": "Frozen transfer baseline clearance",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D031",
+    "clinical_date": "2024-11-08",
+    "document_type": "imaging",
+    "purpose": "Frozen transfer endometrial assessment",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D032",
+    "clinical_date": "2024-11-15",
+    "document_type": "procedure",
+    "purpose": "Single frozen blastocyst transfer",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0035_anaesthetic_record_CHOLELITHIASIS_Morris.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Theatre and procedure times; preoperative assessment; administered drugs table; observation table; fluids and recovery."
+    ],
+    "reference_limitations": [
+      "Surgical anaesthetic format used for retrieval and delivery layout only; source medication entries are not clinical guidance."
+    ]
+  },
+  {
+    "document_id": "D033",
+    "clinical_date": "2024-11-25",
+    "document_type": "lab",
+    "purpose": "Post-transfer serum beta-hCG",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D034",
+    "clinical_date": "2024-11-27",
+    "document_type": "lab",
+    "purpose": "Repeat serum beta-hCG",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D035",
+    "clinical_date": "2024-12-13",
+    "document_type": "imaging",
+    "purpose": "Early pregnancy viability ultrasound",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D036",
+    "clinical_date": "2025-01-06",
+    "document_type": "note",
+    "purpose": "Initial prenatal consultation",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D037",
+    "clinical_date": "2025-01-08",
+    "document_type": "lab",
+    "purpose": "Initial prenatal laboratory panel",
+    "synthetic_pdf_reference_urls": [
+      "https://files.labcorp.com/testmenu-d8/sample_reports/144053.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Seven-page normal/abnormal example packet; demographics and specimen dates; analyte/result/unit/reference/indicator columns; serology and haematology; urinalysis and culture."
+    ],
+    "reference_limitations": [
+      "Visual inspection of all seven pages required because most table content is rasterized. Normal-example pages 1-3 guide field selection; abnormal examples are not adopted."
+    ]
+  },
+  {
+    "document_id": "D038",
+    "clinical_date": "2025-01-15",
+    "document_type": "screen",
+    "purpose": "Cell-free DNA prenatal screening",
+    "synthetic_pdf_reference_urls": [
+      "https://pathofast.com/report_pdfs_new/double-marker-test.pdf"
+    ],
+    "supplemental_demo_reference_urls": [
+      "https://gc-genome.com/wp-content/uploads/2023/09/GCG_G-NIPT_SR_v1.pdf"
+    ],
+    "formatting_requirements": [
+      "Patient/report columns; analyte/result/reference table; risk ratios; impression; methods; limitations; authorization.",
+      "Patient/specimen block; pregnancy and QC grid; fetal fraction; chromosome/result/risk table; limitations."
+    ],
+    "reference_limitations": [
+      "Specialized prenatal laboratory reference; marker values and risk calculations in the sample are not adopted.",
+      "Supplemental layout only, paired with explicitly synthetic prenatal-marker reference. Low-risk result is a screen, not a confirmed diagnosis."
+    ]
+  },
+  {
+    "document_id": "D039",
+    "clinical_date": "2025-01-24",
+    "document_type": "imaging",
+    "purpose": "First-trimester obstetric ultrasound",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D040",
+    "clinical_date": "2025-02-14",
+    "document_type": "note",
+    "purpose": "Prenatal visit at 15+5",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D041",
+    "clinical_date": "2025-03-14",
+    "document_type": "imaging",
+    "purpose": "Detailed fetal anatomy ultrasound",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D042",
+    "clinical_date": "2025-04-11",
+    "document_type": "note",
+    "purpose": "Prenatal visit at 23+5",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D043",
+    "clinical_date": "2025-05-02",
+    "document_type": "lab",
+    "purpose": "Glucose challenge and hematology",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D044",
+    "clinical_date": "2025-05-05",
+    "document_type": "prescription",
+    "purpose": "Iron treatment in pregnancy",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0001_prescription_DEPRESSION_GAD_Edwards.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Patient and prescription identifiers; drug, strength, route, frequency, quantity, repeats grid; prescriber authorization."
+    ],
+    "reference_limitations": [
+      "Australian prescription conventions adapted to an original Canadian test prescription; no PBS or Medicare fields."
+    ]
+  },
+  {
+    "document_id": "D045",
+    "clinical_date": "2025-05-16",
+    "document_type": "note",
+    "purpose": "Prenatal review and Tdap",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D046",
+    "clinical_date": "2025-06-13",
+    "document_type": "lab",
+    "purpose": "Pregnancy iron follow-up",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D047",
+    "clinical_date": "2025-06-13",
+    "document_type": "imaging",
+    "purpose": "Third-trimester growth ultrasound",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Two-column patient/study panel; teal indication, technique, findings, impression strips; radiologist authorization."
+    ],
+    "reference_limitations": [
+      "Trauma MRI used for radiology layout only. No verified fully synthetic obstetric or follicle ultrasound report was located."
+    ]
+  },
+  {
+    "document_id": "D048",
+    "clinical_date": "2025-06-27",
+    "document_type": "note",
+    "purpose": "Prenatal visit at 34+5",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D049",
+    "clinical_date": "2025-07-11",
+    "document_type": "note",
+    "purpose": "Prenatal visit and GBS collection",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D050",
+    "clinical_date": "2025-07-13",
+    "document_type": "lab",
+    "purpose": "Group B streptococcus culture",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D051",
+    "clinical_date": "2025-07-25",
+    "document_type": "note",
+    "purpose": "Prenatal visit at 38+5",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D052",
+    "clinical_date": "2025-07-29",
+    "document_type": "procedure",
+    "purpose": "Labour and vaginal delivery record",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0035_anaesthetic_record_CHOLELITHIASIS_Morris.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Theatre and procedure times; preoperative assessment; administered drugs table; observation table; fluids and recovery."
+    ],
+    "reference_limitations": [
+      "Surgical anaesthetic format used for retrieval and delivery layout only; source medication entries are not clinical guidance."
+    ]
+  },
+  {
+    "document_id": "D053",
+    "clinical_date": "2025-07-30",
+    "document_type": "lab",
+    "purpose": "Post-delivery CBC",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D054",
+    "clinical_date": "2025-07-31",
+    "document_type": "discharge",
+    "purpose": "Maternal hospital discharge summary",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0033_discharge_summary_CAP_PNEUMONIA_Khan.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Hospital masthead; admission/discharge block; diagnoses; hospital course; discharge medication table; follow-up and recipient."
+    ],
+    "reference_limitations": [
+      "Pneumonia discharge layout only; no verified fully synthetic maternity discharge PDF located."
+    ]
+  },
+  {
+    "document_id": "D055",
+    "clinical_date": "2025-08-05",
+    "document_type": "note",
+    "purpose": "Postpartum nurse telephone review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D056",
+    "clinical_date": "2025-09-09",
+    "document_type": "note",
+    "purpose": "Six-week postpartum examination",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D057",
+    "clinical_date": "2025-10-03",
+    "document_type": "assessment",
+    "purpose": "Pelvic health physiotherapy assessment",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D058",
+    "clinical_date": "2025-10-10",
+    "document_type": "lab",
+    "purpose": "Postpartum iron follow-up",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D059",
+    "clinical_date": "2025-11-14",
+    "document_type": "note",
+    "purpose": "Pelvic health progress review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D060",
+    "clinical_date": "2025-12-05",
+    "document_type": "note",
+    "purpose": "Primary-care postpartum and iron review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D061",
+    "clinical_date": "2026-01-16",
+    "document_type": "note",
+    "purpose": "Routine care and HPV screening collection",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D062",
+    "clinical_date": "2026-01-21",
+    "document_type": "cytology",
+    "purpose": "Primary cervical HPV screening result",
+    "synthetic_pdf_reference_urls": [
+      "https://files.labcorp.com/testmenu-d8/sample_reports/193000.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Accession and account header; patient/specimen/physician columns; ordered test; specimen source; interpretation; adequacy; comments; signatory."
+    ],
+    "reference_limitations": [
+      "Verified test-account example; source facility and some administrative identities are real and excluded from generated corpus."
+    ]
+  },
+  {
+    "document_id": "D063",
+    "clinical_date": "2026-03-20",
+    "document_type": "note",
+    "purpose": "Menstrual return follow-up",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D064",
+    "clinical_date": "2026-06-12",
+    "document_type": "note",
+    "purpose": "Fatigue and menstrual health visit",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D065",
+    "clinical_date": "2026-06-15",
+    "document_type": "lab",
+    "purpose": "Fatigue laboratory investigation",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D066",
+    "clinical_date": "2026-06-19",
+    "document_type": "prescription",
+    "purpose": "Recurrent iron deficiency treatment",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0001_prescription_DEPRESSION_GAD_Edwards.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Patient and prescription identifiers; drug, strength, route, frequency, quantity, repeats grid; prescriber authorization."
+    ],
+    "reference_limitations": [
+      "Australian prescription conventions adapted to an original Canadian test prescription; no PBS or Medicare fields."
+    ]
+  },
+  {
+    "document_id": "D067",
+    "clinical_date": "2026-09-18",
+    "document_type": "lab",
+    "purpose": "Repeat CBC and ferritin",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D068",
+    "clinical_date": "2026-09-25",
+    "document_type": "note",
+    "purpose": "Iron response and preventive review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  },
+  {
+    "document_id": "D069",
+    "clinical_date": "2026-12-11",
+    "document_type": "lab",
+    "purpose": "End-of-year iron assessment",
+    "synthetic_pdf_reference_urls": [
+      "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Lavender section strips; patient demographics; lifestyle; vitals; doctor notes; visit, medication and test tables."
+    ],
+    "reference_limitations": [
+      "Generic clinical format only; example clinical content is inconsistent and is not reused."
+    ]
+  },
+  {
+    "document_id": "D070",
+    "clinical_date": "2026-12-18",
+    "document_type": "note",
+    "purpose": "Annual longitudinal care review",
+    "synthetic_pdf_reference_urls": [
+      "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf"
+    ],
+    "supplemental_demo_reference_urls": [],
+    "formatting_requirements": [
+      "Facility masthead; pale patient block; dated author panel; dark SOAP strips; signed author footer."
+    ],
+    "reference_limitations": [
+      "Inpatient respiratory note used for SOAP layout only, not outpatient or obstetric content."
+    ]
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "scope": "Manual comparison of recorded live replies against the locked ledger; interaction success does not imply clinical answer correctness",
+  "confirmed": [
+    {
+      "document_id": "D027",
+      "facts": "12 retrieved, 10 mature, 8 normally fertilized, 4 frozen blastocysts"
+    },
+    {
+      "document_id": "D035",
+      "facts": "Transfer 2024-11-15, scan 2024-12-13 at 6+5, EDD 2025-08-03"
+    },
+    {
+      "document_id": "D054",
+      "facts": "Delivery July 29 at 39+2, vaginal delivery, infant 3320 g"
+    }
+  ],
+  "findings": [
+    {
+      "document_id": "D070",
+      "severity": "factual_error",
+      "expected": "Last therapeutic iron dose 2026-12-18; stop from 2026-12-19 is a plan",
+      "observed": "Live reply says last dose taken 2026-12-19",
+      "corpus_correct": true,
+      "resolved": false
+    },
+    {
+      "document_id": "D035",
+      "severity": "ambiguous_wording",
+      "expected": "Transfer at 2+5; viability scan at 6+5",
+      "observed": "Reply combines transfer date and 6+5 in one clause; 6+5 is the scan age",
+      "corpus_correct": true,
+      "resolved": false
+    }
+  ],
+  "limitations": [
+    "Citation checks validate target existence and source association, not every natural-language claim",
+    "General broad questions can omit records under bounded retrieval",
+    "No new optical recognition, physical microphone, or hosted deployment claim"
+  ]
+}

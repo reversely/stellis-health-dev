@@ -151,14 +151,14 @@ function offerTour() {
   const title = dom.el('strong', 'Stellis is ready to show you around');
   title.id = 'coach-offer-title';
   who.append(
-      title, dom.el('span', 'Explore the app by voice', 'coach-call-line'));
+      title, dom.el('span', 'Follow Maya’s synthetic records', 'coach-call-line'));
   head.append(avatar(36), who);
   const actions = dom.el('div', null, 'coach-call-ended');
   const start = button('phone', 'Start tour', 'coach-button is-primary');
   const later = dom.button('Not now', 'coach-button is-quiet');
   start.addEventListener('click', () => {
     panel.remove();
-    open({kind: 'tour', chat: false, onAction() {}});
+    root.StellisMayaGuide.open();
   });
   later.addEventListener('click', () => panel.remove());
   actions.append(start, later);

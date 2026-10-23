@@ -25,7 +25,7 @@ try {
   await panel.getByRole('textbox',{name:'Message',exact:true}).fill("That's all");await panel.getByRole('button',{name:'Send',exact:true}).click();
   await panel.getByText('Call ended',{exact:true}).waitFor();await panel.getByRole('button',{name:'Close',exact:true}).click();
   const baseline=await counts();
-  await page.locator('#library-more summary').click();await page.locator('#take-tour').click();panel=page.locator('.coach-call');
+  await page.evaluate(()=>window.StellisCoachCall.open({kind:'tour',chat:false,onAction(){}}));panel=page.locator('.coach-call');
   const steps=['overview','goals','notebooks','record','summary','timeline','recording'];
   for(const [index,step] of steps.entries()) {
    await page.waitForFunction(step=>document.querySelector('.coach-call')?.dataset.step===step,step);

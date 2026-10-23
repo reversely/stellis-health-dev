@@ -1,0 +1,240 @@
+[
+  {
+    "observation_id": "OBS-001",
+    "date": "2022-02-16",
+    "type": "medication_tolerability",
+    "value": "Mild nausea with morning iron",
+    "document_ids": [
+      "D005"
+    ]
+  },
+  {
+    "observation_id": "OBS-002",
+    "date": "2023-12-12",
+    "type": "urinary_LH",
+    "value": "Positive, patient-reported",
+    "document_ids": [
+      "D015"
+    ]
+  },
+  {
+    "observation_id": "OBS-003",
+    "date": "2024-06-07",
+    "type": "symptom",
+    "value": "Mild bloating without dyspnea or reduced urine",
+    "document_ids": [
+      "D022"
+    ]
+  },
+  {
+    "observation_id": "OBS-004",
+    "date": "2025-08-03",
+    "type": "medication_stop",
+    "value": "Stopped PRN postpartum analgesia",
+    "available_on": "2025-08-05",
+    "document_ids": [
+      "D055"
+    ]
+  },
+  {
+    "observation_id": "OBS-005",
+    "date": "2026-01-12",
+    "type": "menstrual_return",
+    "value": "First postpartum period",
+    "document_ids": [
+      "D061"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D001",
+    "date": "2022-01-18",
+    "type": "blood_pressure",
+    "systolic": 112,
+    "diastolic": 70,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D001"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D008",
+    "date": "2022-12-06",
+    "type": "blood_pressure",
+    "systolic": 110,
+    "diastolic": 68,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D008"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D025",
+    "date": "2024-06-13",
+    "type": "blood_pressure",
+    "systolic": 114,
+    "diastolic": 72,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D025"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D025",
+    "date": "2024-06-13",
+    "type": "blood_pressure",
+    "systolic": 110,
+    "diastolic": 68,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D025"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D036",
+    "date": "2025-01-06",
+    "type": "blood_pressure",
+    "systolic": 108,
+    "diastolic": 66,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D036"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D040",
+    "date": "2025-02-14",
+    "type": "blood_pressure",
+    "systolic": 110,
+    "diastolic": 68,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D040"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D042",
+    "date": "2025-04-11",
+    "type": "blood_pressure",
+    "systolic": 112,
+    "diastolic": 70,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D042"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D045",
+    "date": "2025-05-16",
+    "type": "blood_pressure",
+    "systolic": 110,
+    "diastolic": 70,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D045"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D048",
+    "date": "2025-06-27",
+    "type": "blood_pressure",
+    "systolic": 114,
+    "diastolic": 72,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D048"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D049",
+    "date": "2025-07-11",
+    "type": "blood_pressure",
+    "systolic": 116,
+    "diastolic": 72,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D049"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D051",
+    "date": "2025-07-25",
+    "type": "blood_pressure",
+    "systolic": 114,
+    "diastolic": 70,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D051"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D052",
+    "date": "2025-07-29",
+    "type": "blood_pressure",
+    "systolic": 118,
+    "diastolic": 74,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D052"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D056",
+    "date": "2025-09-09",
+    "type": "blood_pressure",
+    "systolic": 110,
+    "diastolic": 68,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D056"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D061",
+    "date": "2026-01-16",
+    "type": "blood_pressure",
+    "systolic": 112,
+    "diastolic": 70,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D061"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D064",
+    "date": "2026-06-12",
+    "type": "blood_pressure",
+    "systolic": 110,
+    "diastolic": 70,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D064"
+    ]
+  },
+  {
+    "observation_id": "OBS-BP-D070",
+    "date": "2026-12-18",
+    "type": "blood_pressure",
+    "systolic": 112,
+    "diastolic": 68,
+    "unit": "mmHg",
+    "source": "clinician measurement",
+    "document_ids": [
+      "D070"
+    ]
+  }
+]

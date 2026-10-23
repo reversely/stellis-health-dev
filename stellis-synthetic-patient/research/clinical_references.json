@@ -1,0 +1,86 @@
+[
+  {
+    "title": "ACOG pregnancy dating",
+    "url": "https://www.acog.org/clinical/clinical-guidance/committee-opinion/articles/2017/05/methods-for-estimating-the-due-date",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "For day-5 transfer use transfer +261 days; retain ART dating with concordant scans. Applies D032-D052."
+  },
+  {
+    "title": "ASRM fertility evaluation 2021",
+    "url": "https://www.asrm.org/practice-guidance/practice-committee-documents/fertility-evaluation-of-infertile-women-a-committee-opinion-2021/",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Initiate assessment after twelve months under age 35; evaluate ovulatory status, reproductive anatomy and semen. A progesterone measurement can support ovulation, not luteal quality. D010-D018."
+  },
+  {
+    "title": "ASRM unexplained infertility 2020",
+    "url": "https://www.asrm.org/practice-guidance/practice-committee-documents/evidence-based-treatments-for-couples-with-unexplained-infertility-a-guideline-2020/",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Usual first treatment is a course of oral stimulation and IUI followed by IVF; synthetic couple elects IVF after alternatives counselling. D018."
+  },
+  {
+    "title": "ASRM ovarian reserve 2020",
+    "url": "https://www.asrm.org/practice-guidance/practice-committee-documents/testing-and-interpreting-measures-of-ovarian-reserve-a-committee-opinion-2020/",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "AMH/AFC inform response rather than establishing an infertility cause or predicting an individual live birth. D013-D018."
+  },
+  {
+    "title": "ASRM laboratory operations 2022",
+    "url": "https://www.asrm.org/practice-guidance/practice-committee-documents/comprehensive-guidance-for-human-embryology-andrology-and-endocrinology-laboratories-management-and-operations-a-committee-opinion-2022/",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Written procedure orders, identification, witnessing and recoverable patient reports guide embryology documentation. D025-D032. Does not verify chosen fictional doses."
+  },
+  {
+    "title": "SOGC glucose screening",
+    "url": "https://www.pregnancyinfo.ca/your-pregnancy/routine-tests/glucose-testing/",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Offer screening at 24-28 weeks; nonfasting 50 g one-hour glucose below 7.8 mmol/L is negative. D042-D045."
+  },
+  {
+    "title": "SOGC GBS patient guidance",
+    "url": "https://www.pregnancyinfo.ca/wp-content/uploads/2017/04/Group-B-Streptococcus-Infection-During-Pregnancy-.pdf",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Culture at 35-37 weeks in cited guidance; synthetic collection at 36+5. D049-D052."
+  },
+  {
+    "title": "Canadian Blood Services maternal testing",
+    "url": "https://www.blood.ca/en/laboratory-services/maternal-routine-testing-aborh-typingantibody-screen",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Initial ABO/RhD and antibody screen, including known Rh-positive pregnancies. D037."
+  },
+  {
+    "title": "Canadian Blood Services oral iron",
+    "url": "https://www.blood.ca/en/research/our-research-stories/research-education-discovery/treating-iron-deficiency-oral-iron",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Oral iron can increase hemoglobin/ferritin; intolerance is common and alternate-day use is an evaluated option. Does not prescribe this individual regimen."
+  },
+  {
+    "title": "Ontario HPV programme transition",
+    "url": "https://www.ontario.ca/document/ohip-infobulletins-2025/bulletin-250203-ontario-cervical-screening-program-update-hpv",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Primary HPV replaced cytology March 3, 2025; distinguish 2022 cytology from 2026 HPV screening. D004, D056, D061-D062."
+  },
+  {
+    "title": "Ontario Health cervical screening",
+    "url": "https://www.cancercareontario.ca/en/guidelines-advice/cancer-continuum/screening/resources-healthcare-providers/cervical-screening-recommendations-summary",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "HPV-negative average-risk screening returns at five years. D062."
+  },
+  {
+    "title": "AIM postpartum transitions",
+    "url": "https://saferbirth.org/wp-content/uploads/PPDT_EID_Final_V1_2022.pdf",
+    "checked_on": "2026-10-23",
+    "role": "clinical-content rule; not a synthetic PDF layout reference",
+    "application": "Care transition framework supporting follow-up and warning-symptom communication; not a synthetic patient PDF."
+  }
+]

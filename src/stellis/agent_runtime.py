@@ -118,6 +118,23 @@ _SEARCH_STOPWORDS = {"about", "after", "before", "could", "does", "from", "have"
                      "when", "where", "which", "with", "would"}
 
 
+def _evidence_excerpt(hit: dict, question: str) -> str:
+    """Keeps result tables available beyond the search result's short preview."""
+    if hit["source_type"] != "document":
+        return str(hit["excerpt"])
+    from stellis import documents
+    match = re.search(r"[?&]page=(\d+)", str(hit["target"]))
+    number = int(match[1]) if match else 1
+    record = documents.get(str(hit["source_id"]))
+    text = next((page["text"] for page in record["pages"] if page["number"] == number), "")
+    if len(text) <= 8000:
+        return text
+    terms = [term.casefold() for term in re.findall(r"\w+", question) if len(term) >= 4]
+    positions = [text.casefold().find(term) for term in terms]
+    start = max(0, min((position for position in positions if position >= 0), default=0) - 1000)
+    return text[start:start + 8000]
+
+
 def _sources(agent: dict, question: str, notebook_id: str | None) -> list[dict[str, object]]:
     """Retrieve linked workspace evidence only from notebooks assigned to this agent."""
     case_ids = re.findall(r"\b(?:RFI|RFP|CO|NCR)\s*[-#]?\s*\d+\b", question, re.I)
@@ -141,7 +158,7 @@ def _sources(agent: dict, question: str, notebook_id: str | None) -> list[dict[s
                 seen.add(key)
                 found.append({"index": len(found) + 1, "source_id": hit["source_id"],
                               "notebook": book["notebook_name"], "title": hit["title"],
-                              "excerpt": hit["excerpt"], "target": hit["target"],
+                              "excerpt": _evidence_excerpt(hit, question), "target": hit["target"],
                               "start_ms": hit["start_ms"]})
                 if len(found) >= 12:
                     return found

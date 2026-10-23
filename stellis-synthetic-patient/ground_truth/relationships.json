@@ -1,0 +1,568 @@
+[
+  {
+    "from_document_id": "D002",
+    "to_document_id": "D001",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D003",
+    "to_document_id": "D002",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D004",
+    "to_document_id": "D003",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D005",
+    "to_document_id": "D003",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D005",
+    "to_document_id": "D004",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D006",
+    "to_document_id": "D002",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D006",
+    "to_document_id": "D005",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D007",
+    "to_document_id": "D006",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D008",
+    "to_document_id": "D004",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D008",
+    "to_document_id": "D007",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D010",
+    "to_document_id": "D008",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D011",
+    "to_document_id": "D006",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D011",
+    "to_document_id": "D010",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D012",
+    "to_document_id": "D011",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D013",
+    "to_document_id": "D012",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D014",
+    "to_document_id": "D012",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D014",
+    "to_document_id": "D013",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D015",
+    "to_document_id": "D013",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D016",
+    "to_document_id": "D011",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D016",
+    "to_document_id": "D013",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D016",
+    "to_document_id": "D014",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D016",
+    "to_document_id": "D015",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D017",
+    "to_document_id": "D016",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D018",
+    "to_document_id": "D016",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D018",
+    "to_document_id": "D017",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D019",
+    "to_document_id": "D018",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D020",
+    "to_document_id": "D018",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D020",
+    "to_document_id": "D019",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D021",
+    "to_document_id": "D020",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D022",
+    "to_document_id": "D021",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D023",
+    "to_document_id": "D022",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D024",
+    "to_document_id": "D023",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D025",
+    "to_document_id": "D024",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D026",
+    "to_document_id": "D025",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D027",
+    "to_document_id": "D026",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D028",
+    "to_document_id": "D025",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D028",
+    "to_document_id": "D027",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D029",
+    "to_document_id": "D027",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D029",
+    "to_document_id": "D028",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D030",
+    "to_document_id": "D029",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D031",
+    "to_document_id": "D030",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D032",
+    "to_document_id": "D027",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D032",
+    "to_document_id": "D031",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D032",
+    "to_document_id": "D027",
+    "type": "uses_embryo",
+    "entity_id": "SYN-E01"
+  },
+  {
+    "from_document_id": "D033",
+    "to_document_id": "D032",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D034",
+    "to_document_id": "D033",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D035",
+    "to_document_id": "D032",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D035",
+    "to_document_id": "D034",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D036",
+    "to_document_id": "D035",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D037",
+    "to_document_id": "D036",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D038",
+    "to_document_id": "D036",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D038",
+    "to_document_id": "D037",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D039",
+    "to_document_id": "D035",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D039",
+    "to_document_id": "D038",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D040",
+    "to_document_id": "D037",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D040",
+    "to_document_id": "D038",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D040",
+    "to_document_id": "D039",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D041",
+    "to_document_id": "D039",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D041",
+    "to_document_id": "D040",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D042",
+    "to_document_id": "D041",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D043",
+    "to_document_id": "D042",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D044",
+    "to_document_id": "D043",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D045",
+    "to_document_id": "D043",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D045",
+    "to_document_id": "D044",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D046",
+    "to_document_id": "D043",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D046",
+    "to_document_id": "D044",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D046",
+    "to_document_id": "D045",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D047",
+    "to_document_id": "D041",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D047",
+    "to_document_id": "D045",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D048",
+    "to_document_id": "D046",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D048",
+    "to_document_id": "D047",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D049",
+    "to_document_id": "D048",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D050",
+    "to_document_id": "D049",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D051",
+    "to_document_id": "D050",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D052",
+    "to_document_id": "D032",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D052",
+    "to_document_id": "D037",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D052",
+    "to_document_id": "D050",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D052",
+    "to_document_id": "D051",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D053",
+    "to_document_id": "D046",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D053",
+    "to_document_id": "D052",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D054",
+    "to_document_id": "D052",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D054",
+    "to_document_id": "D053",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D055",
+    "to_document_id": "D054",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D056",
+    "to_document_id": "D052",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D056",
+    "to_document_id": "D054",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D056",
+    "to_document_id": "D055",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D057",
+    "to_document_id": "D056",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D058",
+    "to_document_id": "D053",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D058",
+    "to_document_id": "D056",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D059",
+    "to_document_id": "D057",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D060",
+    "to_document_id": "D058",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D060",
+    "to_document_id": "D059",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D060",
+    "to_document_id": "D027",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D060",
+    "to_document_id": "D032",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D061",
+    "to_document_id": "D004",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D061",
+    "to_document_id": "D060",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D062",
+    "to_document_id": "D061",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D063",
+    "to_document_id": "D061",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D063",
+    "to_document_id": "D062",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D064",
+    "to_document_id": "D060",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D064",
+    "to_document_id": "D063",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D065",
+    "to_document_id": "D064",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D066",
+    "to_document_id": "D065",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D067",
+    "to_document_id": "D065",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D067",
+    "to_document_id": "D066",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D068",
+    "to_document_id": "D062",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D068",
+    "to_document_id": "D067",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D068",
+    "to_document_id": "D032",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D069",
+    "to_document_id": "D067",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D069",
+    "to_document_id": "D068",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D070",
+    "to_document_id": "D052",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D070",
+    "to_document_id": "D062",
+    "type": "references_prior_record"
+  },
+  {
+    "from_document_id": "D070",
+    "to_document_id": "D069",
+    "type": "references_prior_record"
+  }
+]
