@@ -20,7 +20,7 @@
 .catalogue-option span { min-width: 0; overflow-wrap: anywhere; }
 .catalogue-option small { display: block; margin-top: .3rem; }
 .health-catalogue footer { margin-top: 1rem; }
-.health-catalogue footer a { display: block; margin-block: 1rem; font-size: .875rem; overflow-wrap: anywhere; }
+.health-catalogue footer a { color: var(--ink); display: block; margin-block: 1rem; font-size: .875rem; overflow-wrap: anywhere; }
 .catalogue-archived { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 .catalogue-archived span { overflow-wrap: anywhere; }
 .health-catalogue .dialog-actions { position: static; background: var(--surface); padding-block: .75rem; }

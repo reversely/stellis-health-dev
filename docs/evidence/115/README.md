@@ -25,7 +25,7 @@ Final audits cover catalogue browsing, custom notebook creation, notebook settin
 - `.agents/catalogue-runtime/recommendations-light/report.md`
 - `.agents/catalogue-runtime/recommendations-dark/report.md`
 
-Every final report has zero layout failures and zero warnings. Modal audits exclude the inert page behind the native dialog; workspace audits exclude the decorative rail canvas. Screenshots were reviewed across widths and themes. The catalogue keeps actions outside its scrolling contents. The populated onboarding cards use zero-minimum grid tracks and shrinking inputs to fit the narrowest width. An empty chat keeps its composer in document flow so it cannot cover introductory text.
+Every final report has zero layout failures and zero warnings. Modal audits exclude the inert page behind the native dialog; workspace audits exclude the decorative rail canvas. Screenshots were reviewed across widths and themes. The attribution link uses the dialog ink colour so the dark theme's light dialog keeps readable text. The catalogue keeps actions outside its scrolling contents. The populated onboarding cards use zero-minimum grid tracks and shrinking inputs to fit the narrowest width. An empty chat keeps its composer in document flow so it cannot cover introductory text.
 
 The first page in a fresh browser logs the existing `/favicon.ico` 404. A separate network trace identifies that URL. Workflow regressions report no JavaScript exceptions.
 
