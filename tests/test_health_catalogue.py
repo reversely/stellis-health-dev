@@ -55,6 +55,17 @@ class CatalogueTest(unittest.TestCase):
         self.assertEqual(notebooks.list_notebooks()[0]['collection_id'],'nutrition')
         with self.assertRaises(ValueError): collections.update('fitness',name='Sport')
 
+    def test_selection_adopts_matching_legacy_notebook_and_preserves_records(self):
+        book = notebooks.create('Fitness')
+        note = pages.create('Training log', book['id'], 'A saved training plan')
+        selected = self.selected()
+        self.assertEqual(selected['id'], book['id'])
+        saved = notebooks.list_notebooks()[0]
+        self.assertEqual(saved['template_id'], 'fitness--fitness')
+        self.assertEqual(saved['collection_id'], 'fitness')
+        self.assertEqual(pages.get(note['id'])['notebook_id'], book['id'])
+        self.assertEqual(len(notebooks.list_notebooks()), 1)
+
     def test_custom_identity_and_source_survive_archive_reassignment_and_deletion(self):
         first=catalogue.activate([{'name':'My <script>plan</script>','description':'Literal text','collection_id':'fitness'}])[0]
         second=self.selected('nutrition--nutrition')

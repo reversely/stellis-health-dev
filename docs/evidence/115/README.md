@@ -4,7 +4,7 @@ The implementation registers all 32 approved collections and 85 curated notebook
 
 ## Automated checks
 
-The full Python suite passed 509 tests with four skips and 115 subtests. The focused catalogue, source, search and sorting run passed 24 tests with three subtests. All 191 JavaScript tests passed. The package build succeeded, and the wheel contains `stellis/health_catalogue.json`.
+The full Python suite passed 509 tests with four skips and 115 subtests. The focused catalogue, source, search and sorting run passed 24 tests with three subtests. After rebasing onto the shared control-style changes, the focused catalogue, intake, onboarding and sorting run passed 48 tests with one skip and three subtests. The catalogue suite also passed a regression for adopting a matching legacy notebook while preserving its records. All 191 JavaScript tests passed. The package build succeeded, and the wheel contains `stellis/health_catalogue.json`.
 
 Coverage includes atomic activation, unknown IDs, repeat selection, preserved names and reassigned collections, custom notebook identity, archive and restore, account data isolation, and invalid feature preferences. A shared document retains one original and one accepted clinical fact while both notebooks retrieve its text and show the fact in their health context and timelines. Shared notes appear in each notebook's source list and contextual search. Historical, negated and unconfirmed note examples do not activate notebooks.
 

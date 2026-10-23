@@ -65,6 +65,14 @@ def activate(selections):
             existing = conn.execute('SELECT id,name,collection_id FROM notebooks WHERE template_id = ?' if tid else
                                     'SELECT id,name,collection_id FROM notebooks WHERE normalized = ?',
                                     (tid or title.casefold(),)).fetchone()
+            if existing is None and tid:
+                existing = conn.execute('SELECT id,name,collection_id FROM notebooks WHERE normalized = ? AND template_id IS NULL',
+                                        (title.casefold(),)).fetchone()
+                if existing:
+                    # Explicit selection adopts an existing workspace without copying its records.
+                    conn.execute('UPDATE notebooks SET template_id = ?, catalogue_version = ?, collection_id = COALESCE(collection_id, ?) WHERE id = ?',
+                                 (tid, configuration()['version'], parent, existing['id']))
+                    existing = conn.execute('SELECT id,name,collection_id FROM notebooks WHERE id = ?', (existing['id'],)).fetchone()
             if existing:
                 # Re-selecting an archived template restores it without changing organization.
                 conn.execute('UPDATE notebooks SET archived_at = NULL WHERE id = ?', (existing['id'],))
