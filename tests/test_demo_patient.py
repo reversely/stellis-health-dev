@@ -138,3 +138,57 @@ def test_demo_reuses_saved_model_configuration_without_patient_data(tmp_path,mon
         assert model_routes.path()==original
         assert runtime_profile.model_id('agent')=='installed-agent-model'
         assert runtime_profile.model_id('transcript')=='installed-local-model'
+
+
+def test_clear_waits_for_read_and_stale_requests_cannot_resurrect_demo(client,monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    entered=threading.Event();release=threading.Event()
+    client.post('/api/v1/demo/enter').raise_for_status()
+    old_generation=demo_patient.workspace()
+    original=documents.list_all
+    def delayed_read(*args,**kwargs):
+        entered.set()
+        assert release.wait(5)
+        return original(*args,**kwargs)
+    monkeypatch.setattr(documents,'list_all',delayed_read)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        read=pool.submit(client.get,'/api/v1/documents')
+        assert entered.wait(5)
+        clear=pool.submit(client.delete,'/api/v1/demo/history')
+        try:
+            with pytest.raises(TimeoutError):
+                clear.result(timeout=0.2)
+        finally:
+            release.set()
+        assert read.result(timeout=5).status_code==200
+        assert clear.result(timeout=5).status_code==200
+    assert not old_generation.exists()
+    stale=client.get('/api/v1/documents',headers={'Cookie':'stellis-demo=maya'})
+    assert stale.status_code==410
+    assert demo_patient.existing_workspace() is None
+    assert not old_generation.exists()
+    assert not client.get('/api/v1/demo/status',headers={'Cookie':'stellis-demo=maya'}).json()['active']
+
+
+def test_clear_interrupts_running_inference_before_waiting_for_response(client,monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    import asyncio
+    import threading
+    from stellis import agent_gateway
+    entered=threading.Event()
+    monkeypatch.setattr(agent_gateway,'configured',lambda:True)
+    monkeypatch.setenv('STELLIS_RUNTIME_PROFILE','direct')
+    async def blocked_turn(*args,**kwargs):
+        entered.set()
+        await asyncio.Event().wait()
+    monkeypatch.setattr(agent_gateway,'turn',blocked_turn)
+    client.post('/api/v1/demo/enter').raise_for_status()
+    agent=client.get('/api/v1/agents').json()[0]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        ask=pool.submit(client.post,f"/api/v1/agents/{agent['id']}/ask",json={'question':'Synthetic pending question'})
+        assert entered.wait(5)
+        clear=pool.submit(client.delete,'/api/v1/demo/history')
+        assert clear.result(timeout=5).status_code==200
+        assert ask.result(timeout=5).status_code==409
+    assert demo_patient.existing_workspace() is None

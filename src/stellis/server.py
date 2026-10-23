@@ -75,6 +75,39 @@ async def demo_request(request: Request, call_next):
     path = request.url.path
     if path.startswith('/api/') and not path.startswith('/api/v1/'):
         path = '/api/v1/' + path.removeprefix('/api/')
+    demo_endpoint = path.startswith('/api/v1/demo/')
+    scoped = (request.cookies.get(demo_patient.COOKIE) == 'maya'
+              and path.startswith('/api/v1/') and not path.startswith('/api/v1/auth/'))
+    if not (demo_endpoint or scoped):
+        return await call_next(request)
+    clearing = request.method == 'DELETE' and path == '/api/v1/demo/history'
+    if clearing and not demo_patient.begin_clear():
+        return JSONResponse({'detail':'Demo clearing is already in progress'}, status_code=409)
+    try:
+        if clearing:
+            from stellis.demo_routes import cancel_pending
+            # An Ask request holds the response lock while inference runs.
+            # Interrupt it before waiting for the lock, then drain file reads.
+            await cancel_pending()
+        async with demo_patient.request_lock():
+            if not clearing and demo_patient.clearing():
+                return JSONResponse({'detail':'Demo clearing is in progress'}, status_code=409)
+            response = await _demo_response(request, call_next, path)
+            # FileResponse opens its source after response headers. Finish that
+            # read before Clear removes this generation's files and database.
+            if hasattr(response, 'body_iterator'):
+                body = b''.join([part async for part in response.body_iterator])
+                buffered = Response(body, status_code=response.status_code, background=response.background)
+                buffered.raw_headers = response.raw_headers
+                return buffered
+            return response
+    finally:
+        if clearing:
+            demo_patient.finish_clear()
+
+
+async def _demo_response(request: Request, call_next, path: str):
+    from stellis import demo_patient
     if (request.cookies.get('stellis-demo') == 'maya' and path.startswith('/api/v1/')
             and not path.startswith(('/api/v1/demo/', '/api/v1/auth/'))):
         if ((path.startswith('/api/v1/calendar/') and not path.startswith('/api/v1/calendar/milestones') and not (request.method == 'GET' and path in {'/api/v1/calendar/events','/api/v1/calendar/meetings','/api/v1/calendar/connections','/api/v1/calendar/milestones'})) or path.startswith(('/api/v1/onboarding','/api/v1/account'))):
@@ -85,7 +118,12 @@ async def demo_request(request: Request, call_next):
             return JSONResponse({'detail':'Upload yearly demo ZIPs in Maya’s story'}, status_code=422)
         if request.method not in {'GET','HEAD','OPTIONS'} and path.startswith(('/api/v1/ai/', '/api/v1/models', '/api/v1/inference')):
             return JSONResponse({'detail':'Inference settings are shared with your account'}, status_code=403)
-        with storage.demo_workspace(demo_patient.workspace()):
+        workspace = demo_patient.existing_workspace()
+        if workspace is None:
+            response = JSONResponse({'detail':'Demo cleared. Reload to return to your records'}, status_code=410)
+            response.delete_cookie(demo_patient.COOKIE, path='/')
+            return response
+        with storage.demo_workspace(workspace):
             return await call_next(request)
     return await call_next(request)
 

@@ -12,7 +12,7 @@
   "layout_states": 70,
   "layout_findings": 0,
   "python_suite": {
-    "passed": 597,
+    "passed": 600,
     "skipped": 4,
     "subtests": 127
   },
@@ -25,5 +25,8 @@
   "demo_clear_preserves_ordinary_records": true,
   "demo_clear_preserves_ordinary_drafts": true,
   "clinical_answer_validation_passed": false,
-  "known_clinical_answer_issue": "D070 last-dose date misread by live assistant; canonical date remains 2026-12-18"
+  "known_clinical_answer_issue": "Earlier D070 reply misread last-dose date; repeated run is correct. Temporal answer reliability is not fully validated.",
+  "reset_regression_tests": 8,
+  "repeated_browser_server_errors": 0,
+  "latest_D070_last_dose_correct": true
 }

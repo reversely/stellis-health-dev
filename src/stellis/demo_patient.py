@@ -1,6 +1,7 @@
 """Isolated, disposable Maya workspaces and verified yearly synthetic packages."""
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import io
 import json
@@ -11,6 +12,7 @@ import shutil
 import threading
 import uuid
 import zipfile
+import weakref
 from datetime import date
 
 from stellis import documents, health_catalogue, notebook_sources, notebooks, storage
@@ -18,6 +20,8 @@ from stellis import documents, health_catalogue, notebook_sources, notebooks, st
 COOKIE = 'stellis-demo'
 MAX_ZIP_BYTES = 10_000_000
 _LOCK = threading.RLock()
+_REQUEST_LOCKS = weakref.WeakKeyDictionary()
+_CLEARING = set()
 STATIC = Path(__file__).parent / 'static' / 'maya'
 
 
@@ -41,6 +45,34 @@ def workspace() -> Path:
         if not isinstance(generation, str) or not re.fullmatch('[a-f0-9]{32}', generation):
             raise ValueError('Reset the demo workspace')
         return storage.base_dir() / 'demos' / generation
+
+
+def clearing():
+    return str(storage.base_dir()) in _CLEARING
+
+
+def begin_clear():
+    account = str(storage.base_dir())
+    if account in _CLEARING:
+        return False
+    _CLEARING.add(account)
+    return True
+
+
+def finish_clear():
+    _CLEARING.discard(str(storage.base_dir()))
+
+
+def request_lock():
+    """Coordinate demo responses and resets within the account's server loop."""
+    locks = _REQUEST_LOCKS.setdefault(asyncio.get_running_loop(), {})
+    return locks.setdefault(str(storage.base_dir()), asyncio.Lock())
+
+
+def existing_workspace():
+    """Resolve an existing generation without resurrecting a cleared demo."""
+    with _LOCK:
+        return workspace() if _control().exists() else None
 
 
 def _state():
