@@ -5059,7 +5059,7 @@ for (const [source,target] of [['dashboard-note','home-new-note'],['dashboard-re
     document.getElementById(target).click();
   });
 }
-document.getElementById('dashboard-call').addEventListener('click', () => window.StellisCoachCall?.open({kind:'general', onAction: () => {
+document.getElementById('dashboard-call').addEventListener('click', () => window.StellisCoachCall?.open({kind:'call', chat:false, onAction: () => {
   if (location.pathname === '/') {
     window.StellisHealthDashboard?.mount(document.querySelector('#health-dashboard'), {books:libraryNotebooks, collections:libraryCollections});
     window.StellisGoals?.home(document.querySelector('#home-goals'), document.querySelector('#dashboard-notifications'));
