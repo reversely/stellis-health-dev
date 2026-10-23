@@ -17,7 +17,7 @@ const day = value => {
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}) : '';
 };
 let dialogId = 0;
-const dateKey = (date = new Date()) => root.StellisCalendarDates.formatDate(date);
+const dateKey = date => date?root.StellisCalendarDates.formatDate(date):(root.StellisDemoDate||root.StellisCalendarDates.formatDate(new Date()));
 
 /** Uses the current data order unless the person saved an explicit selection. */
 function selected(items, keys, field = 'id') {
@@ -261,6 +261,6 @@ async function mount(host, library) {
   current = new Dashboard(host,library); await current.load();
 }
 root.addEventListener?.('stellis:health-preferences-changed',()=>{if(current&&!current.destroyed)current.load();});
-root.StellisHealthDashboard = {mount,customize:()=>current?.customize(),selected};
+root.StellisHealthDashboard = {mount,reload:()=>current?.load(),focusCycle:day=>current?.tracker?.openRecord('day:'+day),focusCalendar:day=>current?.calendarView?.focusDate(day),customize:()=>current?.customize(),selected};
 if (typeof module !== 'undefined') module.exports = {selected};
 })(typeof window !== 'undefined' ? window : globalThis);

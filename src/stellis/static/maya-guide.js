@@ -1,131 +1,166 @@
-/** Sequential synthetic records in the existing docked tour surface. */
+/** Maya's yearly story uses isolated demo files and the existing health controls. */
 (() => {
 'use strict';
-const dom = window.StellisDom;
-let active;
-function navigate(path) {
-  if (location.pathname !== path) {
-    history.pushState({}, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }
+const dom=window.StellisDom, el=dom.el, api=dom.api;
+let view, data, status, progress, key, activeReview;
+const avatar=(maya,size=36)=>{const icon=window.StellisAgentAvatar.avatarElement(document,{seed:maya?'maya-chen-synthetic':'stellis',coordinator:!maya,size});if(maya)icon.style.setProperty('--avatar-color','var(--demo-frame)');return icon;};
+const button=(label,run,primary=false)=>{const node=dom.button(label,`coach-button ${primary?'is-primary':'is-quiet'}`);node.addEventListener('click',async()=>{node.disabled=true;try{await run();}catch(error){notice(error.message);}finally{node.disabled=false;}});return node;};
+const currentYear=()=>data.years[progress.year];
+const currentTurn=()=>currentYear().turns[progress.turn];
+function save(){if(key)localStorage.setItem(key,JSON.stringify(progress));}
+function storyClock(){
+ const year=currentYear(),turn=currentTurn();
+ const day=turn.end||turn.start||turn.starts_at?.slice(0,10)||data.care_dates.filter(d=>d.startsWith(String(year.year))).at(-1);
+ const changed=window.StellisDemoDate!==day;window.StellisDemoDate=status.active?day:null;
+ if(changed&&status.active)window.dispatchEvent(new Event('stellis:health-preferences-changed'));
 }
-async function digest(record) {
-  const response = await fetch(`/api/v1/documents/${encodeURIComponent(record.id)}/file`);
-  if (!response.ok) throw Error('Could not check the uploaded file');
-  const bytes = await crypto.subtle.digest('SHA-256', await response.arrayBuffer());
-  return Array.from(new Uint8Array(bytes), n => n.toString(16).padStart(2, '0')).join('');
+function notice(text){const node=view?.querySelector('[data-story-status]');if(node)node.textContent=text;}
+function navigate(path){if(location.pathname!==path){history.pushState({},'',path);window.dispatchEvent(new PopStateEvent('popstate'));}}
+async function waitFor(selector){for(let i=0;i<80;i++){const node=document.querySelector(selector);if(node?.checkVisibility())return node;await new Promise(resolve=>setTimeout(resolve,100));}throw Error('The health view could not open');}
+function profile(year,large=false){
+ const row=el('div',null,'maya-profile');row.append(avatar(true,large?64:36));
+ const text=el('div');text.append(el('strong','Maya Chen'),el('span',`${year.year} / Toronto / Born 1993`));row.append(text);return row;
 }
-async function open() {
-  active?.close();
-  const opener = document.activeElement;
-  const panel = dom.el('section', null, 'coach-call');
-  panel.dataset.kind = 'tour'; panel.dataset.guide = 'maya'; panel.setAttribute('aria-label', 'Maya’s story');
-  const head = dom.el('div', null, 'coach-call-head');
-  const who = dom.el('div', null, 'coach-call-who');
-  who.append(dom.el('strong', 'Maya’s story'), dom.el('span', 'Synthetic test patient', 'coach-call-line'));
-  const button = (label, run, primary = false) => {
-    const b = dom.button(label, `coach-button ${primary ? 'is-primary' : 'is-quiet'}`);
-    b.addEventListener('click', run); return b;
-  };
-  const body = dom.el('div', null, 'coach-call-body'); body.tabIndex = 0;
-  const foot = dom.el('div', null, 'coach-call-ended');
-  const close = () => {if (state && key) {state.active = false; save();} panel.remove(); window.removeEventListener('health-capture-saved', changed); if (active?.panel === panel) active = null; (opener?.isConnected && opener.getClientRects().length ? opener : document.querySelector('#global-add'))?.focus();};
-  const minimise = button('Minimise', () => {
-    const small = panel.classList.toggle('is-minimised');
-    minimise.textContent = small ? 'Expand' : 'Minimise';
-    if (state) {state.minimised = small; save();}
-  });
-  panel.addEventListener('keydown', event => {if (event.key === 'Escape' && !document.querySelector('dialog[open]')) {event.preventDefault(); close();}});
-  head.append(who, minimise, button('Close', close)); panel.append(head, body, foot);
-  document.body.append(panel); active = {panel, close};
-  let data, state, key, record, busy = false;
-  const changed = () => {record = null; if (data && state) paint();};
-  window.addEventListener('health-capture-saved', changed);
-  const message = dom.el('p'); message.role = 'status';
-  function save() {localStorage.setItem(key, JSON.stringify(state));}
-  function move(delta) {state.index = Math.max(0, Math.min(data.steps.length - 1, state.index + delta)); record = null; message.textContent = ''; save(); paint();}
-  function paint() {
-    const step = data.steps[state.index];
-    body.replaceChildren(); foot.replaceChildren();
-    const section = dom.el('div', null, 'coach-tour-step');
-    section.append(dom.el('h3', `${step.year}: ${step.chapter}`),
-      dom.el('p', `${state.index + 1} of ${data.steps.length}: ${step.title}`),
-      dom.el('p', step.story));
-    const download = dom.el('a', 'Download this record', 'coach-button');
-    download.href = step.download; download.download = step.filename;
-    section.append(download, dom.el('p', 'Upload the downloaded PDF through Add'),
-      dom.el('p', 'Confirm the encounter date proposed from its text'));
-    section.append(dom.el('p', 'Suggested notebooks: ' + step.notebooks.map(book => book.name).join(' / ')));
-    const actions = dom.el('div', null, 'document-actions');
-    actions.append(button('Add Notebook', () => window.StellisHealthCatalogue.open({onSelect: async selections => {
-        await dom.api('/health-catalogue/activate', {method:'POST', json:{selections}});
-        await window.reloadLibrary?.();
-      }})),
-      button('Upload Record', () => window.StellisCapture.open('upload')),
-      button('Check upload', check, true));
-    section.append(actions, message);
-    if (record) {
-      section.append(button('Review record', () => navigate(`/document/${encodeURIComponent(record.id)}`)));
-    }
-    if (step.milestone) {
-      section.append(dom.el('p', 'Review the timeline and ask Stellis about the records uploaded so far'),
-        dom.el('p', step.question));
-      const tools = dom.el('div', null, 'document-actions');
-      tools.append(button('Timeline', () => {state.minimised = true; save(); panel.classList.add('is-minimised'); minimise.textContent = 'Expand'; navigate('/timeline');}),
-        button('Ask Stellis', () => {state.minimised = true; save(); panel.classList.add('is-minimised'); minimise.textContent = 'Expand'; navigate('/chat');}));
-      section.append(tools);
-    }
-    body.append(section);
-    const next = button(state.index === data.steps.length - 1 ? 'Finish guide' : 'Next record', () => {
-      if (state.index === data.steps.length - 1) {state.finished = true; save(); close();}
-      else move(1);
-    }, true);
-    next.disabled = !record || record.record_date !== step.date || !record.pages.some(page => page.text.trim());
-    if (record?.notebook_id) section.append(dom.el('p', 'Filed in a notebook'));
-    if (state.index) foot.append(button('Previous', () => move(-1)));
-    foot.append(next);
-  }
-  async function check() {
-    if (busy) return;
-    busy = true; message.textContent = 'Checking the saved record';
-    try {
-      const step = data.steps[state.index];
-      const records = await dom.api('/documents');
-      record = null;
-      // Filename narrows candidates; the file digest establishes corpus identity.
-      for (const summary of records.filter(item => item.filename === step.filename)) {
-        const candidate = await dom.api(`/documents/${encodeURIComponent(summary.id)}`);
-        if (candidate.filename === step.filename && await digest(candidate) === step.sha256) {record = candidate; break;}
-      }
-      if (!record) message.textContent = 'Upload this PDF to continue';
-      else if (!record.pages.some(page => page.text.trim())) message.textContent = 'Open the record and read its page text';
-      else if (record.record_date !== step.date) message.textContent = 'Review and confirm the encounter date';
-      else if (!record.notebook_id) message.textContent = 'Date confirmed with general health history';
-      else message.textContent = 'Record and encounter date verified';
-      paint();
-    } catch (error) {message.textContent = error.message;}
-    finally {busy = false;}
-  }
-  try {
-    const response = await fetch('/static/maya/guide.json');
-    if (!response.ok) throw Error('Maya’s records could not load');
-    data = await response.json();
-    const account = await dom.api('/auth/status');
-    key = `stellis-maya:${account.username || 'local'}:${data.version}`;
-    try {state = JSON.parse(localStorage.getItem(key));} catch (_) {state = null;}
-    if (!state || !Number.isInteger(state.index) || state.index < 0 || state.index >= data.steps.length) state = {index: 0};
-    state.active = true; save();
-    panel.classList.toggle('is-minimised', Boolean(state.minimised));
-    minimise.textContent = state.minimised ? 'Expand' : 'Minimise';
-    paint(); await check();
-  } catch (error) {body.replaceChildren(dom.el('p', error.message), button('Try again', open));}
+function closeView(){view?.remove();view=null;}
+function banner(){
+ document.getElementById('maya-demo-banner')?.remove();document.body.classList.toggle('is-maya-demo',Boolean(status?.active));
+ if(!status?.active)return;
+ const bar=el('aside',null,'maya-demo-banner');bar.id='maya-demo-banner';bar.setAttribute('aria-label','Demo workspace');
+ bar.append(el('strong','Demo / Maya'),el('span','Story date '+window.StellisDemoDate),button('Maya’s story',()=>showYear()),button('My records',leave),button('Clear demo',clear));document.body.append(bar);
 }
-window.StellisMayaGuide = {open};
-(async () => {
-  try {
-    const account = await dom.api('/auth/status');
-    const saved = JSON.parse(localStorage.getItem(`stellis-maya:${account.username || 'local'}:maya-v1`));
-    if (saved?.active && !active) await open();
-  } catch (_) { /* A closed guide does not interrupt normal app startup. */ }
-})();
+async function clear(){const generation=status.generation;await api('/demo/history',{method:'DELETE'});for(const store of [localStorage,sessionStorage])for(const name of Object.keys(store))if(name===key||name.includes(':demo-'+generation+':'))store.removeItem(name);location.reload();}
+async function leave(){await api('/demo/leave',{method:'POST'});location.reload();}
+async function refresh(){status=await api('/demo/status');if(status.active && status.years[String(currentYear().year)])activeReview=await api(`/demo/years/${currentYear().year}`);else activeReview=null;banner();}
+function heading(title,year){
+ const head=el('div',null,'maya-story-head');const identity=profile(year,true);const text=el('div',null,'maya-story-title');text.append(el('h2',title),el('p','Maya’s story / Scripted synthetic demo'));head.append(identity,text,button('Close',()=>{progress.open=false;save();closeView();}));return head;
+}
+function dialog(title){
+ closeView();const node=el('dialog',null,'dashboard-dialog maya-story');node.setAttribute('aria-label',title);view=node;
+ node.addEventListener('cancel',()=>{progress.open=false;save();});node.addEventListener('close',()=>{if(!node.open)node.remove();});document.body.append(node);node.showModal();return node;
+}
+function graphic(){
+ const figure=el('figure',null,'maya-story-timelines');figure.setAttribute('aria-label','Five-year life, care and menstrual timelines');
+ for(const [label,dates] of [['Life',data.life_events.map(e=>e.date)],['Records',data.care_dates],['Periods',data.cycle_dates]]){
+  const row=el('div',null,'maya-timeline-track');row.append(el('span',label));const line=el('div',null,'maya-timeline-line');
+  for(const date of dates){const marker=el('span',null,'maya-timeline-mark');marker.style.left=`${(Date.parse(date)-Date.parse('2022-01-01'))/(Date.parse('2027-01-01')-Date.parse('2022-01-01'))*100}%`;marker.title=label==='Life'?data.life_events.find(event=>event.date===date).label+' / '+date:date;if(label==='Life')marker.classList.add('is-life');if(label==='Periods')marker.classList.add('is-period');line.append(marker);}row.append(line);figure.append(row);
+ }
+ const years=el('div',null,'maya-timeline-years');years.append(el('span'));for(const y of data.years)years.append(el('span',String(y.year)));figure.append(years);return figure;
+}
+function showOverview(){
+ progress.mode='overview';progress.open=true;save();const node=dialog('Maya’s story');node.append(heading('Meet Maya',currentYear()));
+ const body=el('div',null,'maya-story-body');
+ body.append(el('p','Maya is a fictional Toronto resident. Meet her at 28 as she starts tracking her health, then follow her through fertility care, IVF, pregnancy and life after birth.','maya-introduction'),
+  el('p','Each year has its own demo ZIP and a set of situations to work through. Demo records, notebooks, tracking and conversations stay separate from your records.'),graphic());
+ const years=el('div',null,'maya-year-list');
+ for(const [index,year] of data.years.entries()){
+  const row=button(`${year.year} / ${year.title}`,async()=>{progress.year=index;progress.turn=progress.completed?.includes(year.year)?year.turns.length-1:0;save();await refresh();showYear();});
+  row.disabled=!status.active||index>progress.year&&!progress.completed?.includes(data.years[index-1]?.year);row.setAttribute('aria-current',index===progress.year?'step':'false');years.append(row);
+ }
+ body.append(years);node.append(body);const foot=el('div',null,'maya-story-actions');
+ foot.append(button(status.active?'Continue as Maya':'Start Maya’s demo',async()=>{
+  if(!status.active){await api('/demo/enter',{method:'POST'});sessionStorage.setItem('stellis-open-maya','1');location.reload();return;}
+  showYear();
+ },true));if(status.active)foot.append(button('Clear demo history',clear));node.append(foot);
+}
+function message(maya,text){const article=el('article',null,`agent-message ${maya?'agent-message-user':'agent-message-agent'} maya-story-message`);const who=el('strong',null,'agent-message-author');who.append(avatar(maya,28),document.createTextNode(maya?'Maya':'Stellis'));article.append(who,el('p',text));return article;}
+function collapse(){
+ progress.mode='dock';progress.open=true;save();closeView();const dock=el('section',null,'coach-call maya-story-dock');dock.setAttribute('aria-label','Maya’s story');
+ const head=el('div',null,'maya-story-head');head.append(profile(currentYear()),button('Open story',showYear));const hint=el('p',currentTurn().stellis);dock.append(head,hint);view=dock;document.body.append(dock);
+}
+async function showYear(){
+ if(!status.active){showOverview();return;}
+ progress.mode='year';progress.open=true;save();storyClock();await refresh();const year=currentYear(), turn=currentTurn();const node=dialog('Maya’s story');
+ node.append(heading(`${year.year} / ${year.title}`,year));const nav=el('div',null,'maya-story-year-nav');nav.append(button('Five-year timeline',showOverview),el('span',`Situation ${progress.turn+1} of ${year.turns.length}`),button('Use health interface',()=>{collapse();navigate('/');}));node.append(nav);
+ const body=el('div',null,'maya-story-body');const log=el('div',null,'maya-story-log');log.setAttribute('role','log');log.setAttribute('aria-label',`Maya’s ${year.year} story`);
+ if(progress.turn){const earlier=el('details',null,'maya-earlier-turns');earlier.append(el('summary','Earlier situations'));for(const item of year.turns.slice(0,progress.turn)){earlier.append(message(true,item.maya),message(false,item.stellis));}log.append(earlier);}
+ log.append(message(true,turn.maya),message(false,turn.stellis));body.append(log);
+ const tool=el('section',null,'maya-story-tool');tool.setAttribute('aria-label','Current action');body.append(tool);await renderTool(tool,turn,year);const error=el('p');error.dataset.storyStatus='';error.role='status';body.append(error);node.append(body);
+ const actions=el('div',null,'maya-story-actions');
+ actions.append(button('Check my action',async()=>{await refresh();if(await completed(turn)){progress.checked=true;save();showYear();}else notice('Complete the current action in the health interface');}));
+ const next=button(progress.turn===year.turns.length-1?'Next year':'Continue as Maya',async()=>{
+  if(!await completed(turn)){notice('Complete the current action first');return;}
+  progress.checked=false;
+  if(progress.turn<year.turns.length-1)progress.turn++;
+  else{progress.completed=[...new Set([...(progress.completed||[]),year.year])];if(progress.year<4){progress.year++;progress.turn=0;}else{save();showOverview();return;}}
+  save();await showYear();
+ },true);
+ actions.append(next);if(progress.turn)actions.append(button('Previous situation',()=>{progress.turn--;save();showYear();}));node.append(actions);
+}
+async function renderTool(host,turn,year){
+ const controls=el('div',null,'document-actions');host.append(controls);
+ if(turn.kind==='upload'){
+  const link=el('a',`Download ${year.year} demo ZIP`,'coach-button');link.href=`/static/maya/years/maya-${year.year}.zip`;link.download=`maya-${year.year}.zip`;host.append(link);
+  const box=el('label',null,'records-drop maya-demo-drop');box.append(dom.icon('upload'),el('strong',`Upload ${year.year} demo ZIP`),el('span','Demo files only'));
+  const picker=el('input');picker.type='file';picker.accept='.zip,application/zip';picker.setAttribute('aria-label',`${year.year} demo ZIP`);box.append(picker);
+  const upload=async file=>{if(!file)return;notice('Checking and importing demo records');const form=new FormData();form.append('file',file);try{await api('/demo/upload',{method:'POST',body:form});await window.reloadLibrary?.();await showYear();}catch(error){notice(error.message);}};
+  picker.addEventListener('change',()=>upload(picker.files[0]));box.addEventListener('dragover',e=>e.preventDefault());box.addEventListener('drop',e=>{e.preventDefault();upload(e.dataTransfer.files[0]);});host.append(box);
+  if(activeReview)host.append(el('p',`${activeReview.documents.length} demo records added / ${status.notebooks.length} notebooks`));
+ }else if(turn.kind==='dates'){
+  if(!activeReview){host.append(el('p','Upload this year’s ZIP first'));return;}
+  const form=el('form',null,'capture-form maya-date-review');const inputs=new Map();
+  for(const record of activeReview.documents){const label=el('label',null,'capture-field');label.append(el('span',record.title));const field=el('input');field.type='date';field.required=true;field.setAttribute('aria-label',record.corpus_id+' encounter date');field.value=record.record_date||record.date_suggestion.date||'';label.append(field);form.append(label);const quote=record.date_suggestion.candidates.find(c=>c.date===field.value);if(quote)form.append(el('small',`From page ${quote.page}: ${quote.quote}`));inputs.set(record.id,field);}
+  if(activeReview.dates_confirmed)host.append(el('p','Encounter dates confirmed'));
+  const save=button('Confirm encounter dates',()=>{},true);save.type='submit';form.append(save);form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{await api(`/demo/years/${year.year}/dates`,{method:'POST',json:{dates:Object.fromEntries([...inputs].map(([id,input])=>[id,input.value]))}});await showYear();}catch(error){notice(error.message);save.disabled=false;}});host.append(form);
+ }else if(turn.kind==='notebooks'){
+  if(!activeReview)return;
+  host.append(el('p',`Before this review: ${status.notebooks.length} notebooks`));const selected=[];
+  for(const suggestion of activeReview.suggestions){const label=el('label',null,'catalogue-option');const checkbox=el('input');checkbox.type='checkbox';checkbox.checked=true;checkbox.value=suggestion.template_id;selected.push(checkbox);const description=el('span');description.append(el('strong',suggestion.name),el('small',`${suggestion.record_count} related records / ${suggestion.existing?'Existing notebook':'New suggestion'}`));label.append(checkbox,description);host.append(label);}
+  host.append(button('Add notebooks and file records',async()=>{await api(`/demo/years/${year.year}/notebooks`,{method:'POST',json:{templates:selected.filter(c=>c.checked).map(c=>c.value)}});await window.reloadLibrary?.();await showYear();},true));
+  if(activeReview.filed)host.append(el('p',`${activeReview.documents.filter(r=>r.notebook_id).length} records filed / ${status.notebooks.length} notebooks now available`));
+ }else controls.append(button(actionLabel(turn.kind),()=>useTool(turn),true));
+}
+function actionLabel(kind){return {cycle:'Open Cycle',appointment:'Add appointment',timeline:'Open timeline',chat:'Ask Stellis',milestone:'Add due-date milestone',birth:'Update birth milestone',overview:'Open My Health'}[kind]||'Open health interface';}
+function localInput(value){const d=new Date(value);const pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+async function useTool(turn){
+ collapse();
+ if(turn.kind==='appointment'){
+  await window.StellisCapture.open('appointment');const title=await waitFor('dialog.health-capture input[aria-label="Title"]');title.value=turn.title;
+  document.querySelector('dialog.health-capture input[aria-label="When"]').value=localInput(turn.starts_at);return;
+ }
+ if(turn.kind==='chat'){
+  navigate('/chat');const input=await waitFor('.agent-composer textarea');const books=(await api('/notebooks')).notebooks;const book=books.find(b=>b.template_id===turn.template_id);const select=document.querySelector('.agent-composer-context select');if(book){select.value=book.id;select.dispatchEvent(new Event('change'));}input.value=turn.maya;input.dispatchEvent(new Event('input'));input.focus();return;
+ }
+ if(turn.kind==='timeline'){
+  navigate('/timeline');await waitFor('#timeline-view .timeline-filters');document.querySelector('#timeline-view button[data-kind="document"]').click();
+  const review=await api(`/demo/years/${currentYear().year}`);const record=review.documents.find(item=>item.corpus_id===turn.document_id);
+  if(!record)throw Error('This report has not been imported');
+  const source=await waitFor(`#timeline-view a[href="/document/${record.id}"]`);source.scrollIntoView({block:'center'});source.focus();
+  progress.visited=progress.visited||[];progress.visited.push(currentYear().year+':'+progress.turn);save();source.click();await waitFor('#document-view');return;
+ }
+ navigate('/');await waitFor('#health-dashboard .dashboard-calendar');
+ if(turn.kind==='cycle'){
+  await api('/health/preferences',{method:'PUT',json:{experiences_periods:true}});await window.StellisHealthDashboard.reload();
+  await waitFor('.dashboard-reproductive .tracker-daily');await window.StellisHealthDashboard.focusCycle(turn.start);
+  const button=[...document.querySelectorAll('.dashboard-reproductive button')].find(node=>node.textContent==='Edit period history');button.click();
+  const start=await waitFor('dialog input[aria-label="Period start"]');start.value=turn.start;document.querySelector('dialog input[aria-label="Period end"]').value=turn.end;const note=document.querySelector('dialog textarea');if(note)note.value=turn.note;const gap=document.querySelector('dialog input[aria-label="Tracking resumed after a gap"]');if(gap)gap.checked=currentYear().year!==2022;return;
+ }
+ if(turn.kind==='milestone'||turn.kind==='birth'){
+  await window.StellisHealthDashboard.reload();await waitFor('.health-calendar-milestones button');
+  if(turn.kind==='milestone'){document.querySelector('.health-calendar-milestones button').click();const title=await waitFor('dialog input[aria-label="Milestone name"]');title.value=turn.title;const target=document.querySelector('dialog input[aria-label="Target date"]');if(target)target.value=turn.target_date;const kind=document.querySelector('dialog select');if(kind)kind.value='estimated';}
+  else{document.querySelector('.health-milestone-card button').click();const actual=await waitFor('dialog input[aria-label="Confirmed date"]');actual.value=turn.actual_date;}
+  return;
+ }
+ progress.visited=progress.visited||[];progress.visited.push(currentYear().year+':'+progress.turn);save();
+}
+async function completed(turn){
+ if(!status?.active)return false;
+ const entry=status.years[String(currentYear().year)];
+ if(turn.kind==='upload')return Boolean(entry);
+ if(turn.kind==='dates')return Boolean(entry?.dates_confirmed);
+ if(turn.kind==='notebooks')return Boolean(entry?.filed);
+ if(turn.kind==='cycle')return (await api('/reproductive')).records.some(r=>r.kind==='period'&&r.start===turn.start&&r.end===turn.end);
+ if(turn.kind==='appointment')return (await api('/care-events')).events.some(e=>e.title===turn.title&&Date.parse(e.starts_at)===Date.parse(turn.starts_at));
+ if(turn.kind==='milestone'||turn.kind==='birth')return (await api('/calendar/milestones')).milestones.some(m=>turn.kind==='milestone'?m.title===turn.title&&m.target_date===turn.target_date&&m.date_kind==='estimated':m.actual_date===turn.actual_date);
+ if(turn.kind==='chat'){
+  for(const agent of await api('/agents')){const messages=await api(`/agents/${agent.id}/messages`);const question=messages.filter(m=>m.role==='user'&&m.content===turn.maya).at(-1);if(question&&messages.some(m=>m.job_id===question.job_id&&m.role==='agent'&&m.content.includes('/document/')))return true;}return false;
+ }
+ return Boolean(progress.visited?.includes(currentYear().year+':'+progress.turn));
+}
+async function initialize(){
+ data=await (await fetch('/static/maya/story.json')).json();status=await api('/demo/status');key='stellis-maya-story:'+(status.generation||'intro');
+ try{progress=JSON.parse(localStorage.getItem(key));}catch(_){progress=null;}if(!progress||!data.years[progress.year]?.turns[progress.turn])progress={year:0,turn:0,completed:[],open:false};storyClock();banner();
+}
+async function open(){await initialize();await showOverview();}
+window.StellisMayaGuide={open};
+(async()=>{try{await initialize();if(sessionStorage.getItem('stellis-open-maya')){sessionStorage.removeItem('stellis-open-maya');progress.open=true;save();await showYear();}else if(status.active&&progress.open){if(progress.mode==='dock')collapse();else await showYear();}}catch(_){/* Demo availability does not block the real workspace. */}})();
 })();

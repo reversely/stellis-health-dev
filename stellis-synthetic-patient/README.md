@@ -45,24 +45,18 @@ python3 stellis-synthetic-patient/generator/build.py --package-only
 
 Research inspection scripts document the research workflow and use downloaded inspection caches from the original session. Reproduction of the corpus does not require those caches or network access. `verify_sources.py` independently downloads the linked sources to refresh provenance checks without bundling them.
 
-## UI guide
+## Maya’s story in Stellis
 
-Choose **Take the tour** in the My Health library menu. Maya's story uses the existing docked tour panel and shared Add dialogs. Each step offers the next PDF in chronological order. Download it and select it through **Upload Record**. Choose an existing notebook or use **Add Notebook** to approve a template from the existing catalogue.
+Choose **Take the tour** in the My Health library menu. The overview introduces Maya with her own avatar and shows life events, medical records and period history on parallel timelines. Start the demo to open an empty, isolated workspace. Each year opens a larger story dialog with Maya’s first-person situation, Stellis’s guidance and an action in the existing health interface.
 
-The app proposes an encounter date from labelled embedded or OCR text. Confirm or correct it in the shared date form. Ambiguous dates require review. **Check upload** compares the uploaded file SHA-256 and confirmed date with the locked corpus before enabling **Next record**. It creates no records automatically. Guide progress survives normal navigation and reload and is scoped to the signed-in account. **Close** stops automatic resume.
+The five files in `demo_packages/` are the demo upload units: `maya-2022.zip` through `maya-2026.zip`. Each contains that year’s original PDFs and a small package identifier. Upload each file in the dedicated **demo ZIP** box when that year introduces it. The complete corpus archive remains an archival deliverable; it is not an upload package.
 
-At clinical milestones the guide links to the existing Timeline and Ask Stellis controls and supplies a question about records uploaded so far. Inspect dates with the Documents and Notebook filters. Use the shared chat composer and check its source citations. Live replies require configured inference. Suggested notebook names map to existing catalogue templates. General history remains available when a person chooses no notebook.
+Records initially remain unfiled. Encounter dates are prefilled from the existing text extraction/date-suggestion service, with page evidence for confirmation. Approve suggested notebooks explicitly; counts distinguish new notebooks from existing ones. Later years reuse the same notebooks and extend the saved history. Demo ZIP contents and PDF hashes are verified against the canonical corpus before records are created.
 
-## Browser validation and recording
+Maya logs periods, books appointments, opens actual report sources from the timeline, asks source-linked questions through the real chat composer, adds an estimated due date and later confirms the birth date. The story’s selected historical date is labelled in the demo banner. It affects frontend calendar/tracker views only. A tracking gap is recorded explicitly when selected periods resume; it is excluded from cycle-length averages.
 
-`tests/browser/maya_guide.mjs` drives the visible file picker and date confirmation for all 70 documents. Set `STELLIS_MAYA_WORKFLOW=1` to also exercise catalogue selection, notebook context, timeline filters, source navigation and real cited assistant replies at the milestones. Run against an isolated disposable app. The workflow option requires configured inference and fails if a real cited reply is unavailable.
+Maya’s records, notebooks, appointments, tracking, conversations and derived data live in a separate workspace generation. **My records** returns to the ordinary account. **Clear demo** removes the demo generation in one action, including its progress and drafts. Ordinary records and drafts are retained. Demo inference uses the configured provider with demo source text and no managed workspace tools.
 
-```sh
-STELLIS_TEST_ORIGIN=http://127.0.0.1:8977 \
-STELLIS_PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs \
-STELLIS_BROWSER=/path/to/chromium \
-STELLIS_MAYA_WORKFLOW=1 \
-node tests/browser/maya_guide.mjs
-```
+## Verification
 
-`STELLIS_MAYA_LIMIT` limits a diagnostic run. `STELLIS_MAYA_EVIDENCE` selects the evidence directory. The script saves JSON, screenshots and WebM video and verifies the video file exists. Use the FFmpeg build matching the installed Playwright version. Read `validation/browser/README.md` for completed checks and remaining limitations. Browser tests validate app behavior separately from clinical consistency.
+The corpus validation and older browser evidence are in `validation/`. The earlier individual-PDF walkthrough predates the yearly ZIP story and is historical evidence only. Live assistant answers require configured inference; scripted story dialogue is labelled and does not pretend to be an assistant response. Optical recognition accuracy and clinical answer quality remain separate from workflow validation.

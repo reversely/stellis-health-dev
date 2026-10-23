@@ -34,7 +34,7 @@
     const title = element('h4');
     const grid = element('div',null,'calendar-month-grid');
     grid.setAttribute('role','grid');
-    const today = options.today || dates.formatDate(new Date());
+    const today = options.today || root.StellisDemoDate || dates.formatDate(new Date());
     const dateLabel = value => dates.parseDate(value).toLocaleDateString(locale,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
     function navigationButton(label,icon,offset) {

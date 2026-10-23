@@ -286,6 +286,11 @@ def main():
     result=validate(facts,manifests,ledger_hash)
     print(json.dumps({k:result[k] for k in ['passed','document_count','pdf_page_count','passed_count','failed_count']}))
     if not result['passed']:raise SystemExit(1)
+    if not args.validate_only:
+        from guide_data import main as build_guide
+        from story_data import main as build_story
+        from year_packages import main as build_years
+        build_guide();build_story();build_years()
     print(package())
 
 if __name__=='__main__':main()

@@ -74,7 +74,7 @@ def _now() -> str:
 
 
 def _key_file() -> Path:
-    return storage.data_dir() / "nebius-api-key"
+    return storage.base_dir() / "nebius-api-key"
 
 
 def _saved_key() -> str | None:

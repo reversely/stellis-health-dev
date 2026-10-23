@@ -1,0 +1,70 @@
+/* The story shares the app's typography, avatars, forms and primary actions. */
+:root { --demo-frame: #495575; --demo-frame-ink: #fff; }
+.maya-story { width:min(1040px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); padding:0; border:1px solid var(--demo-frame); overflow:hidden; }
+.maya-story[open] { display:flex; flex-direction:column; }
+.maya-story-head { display:flex; align-items:center; gap:20px; padding:20px 24px; background:var(--demo-frame); color:var(--demo-frame-ink); flex:none; }
+html[data-theme] .maya-story-head .coach-button { color:var(--demo-frame-ink); background:transparent; border-color:currentColor; }
+.maya-profile { display:flex; align-items:center; gap:12px; flex:none; }
+.maya-profile>div { display:grid; gap:4px; }
+.maya-profile strong { font-size:18px; }
+.maya-profile span { font-size:13px; }
+.maya-profile .agent-avatar { color:var(--demo-frame-ink); }
+.maya-story-title { flex:1; min-width:0; }
+.maya-story-title h2 { font:300 28px/1.2 Piazzolla,serif; margin:0 0 6px; color:inherit; }
+.maya-story-title p { margin:0; font-size:13px; color:inherit; }
+.maya-story-body { padding:24px; overflow:auto; min-height:0; }
+.maya-introduction { font-size:19px; line-height:1.6; max-width:64ch; }
+.maya-story-year-nav,.maya-story-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 24px; flex:none; }
+.maya-story-year-nav { border-bottom:1px solid var(--line); justify-content:space-between; }
+.maya-story-actions { border-top:1px solid var(--line); }
+.maya-story-log { max-width:800px; margin:auto; }
+.maya-story-message p { white-space:normal; margin:10px 0 0; line-height:1.6; }
+.maya-story-message.agent-message-user { margin-left:48px; padding:16px 20px; }
+.maya-story-message.agent-message-agent { margin:20px 48px 24px 0; }
+.maya-story-tool { max-width:800px; margin:24px auto 0; }
+.maya-earlier-turns summary { min-height:44px; cursor:pointer; }
+.maya-story-timelines { margin:28px 0; }
+.maya-timeline-track { display:grid; grid-template-columns:72px 1fr; gap:12px; align-items:center; min-height:36px; }
+.maya-timeline-line { position:relative; height:2px; background:var(--line); margin-right:12px; }
+.maya-timeline-mark { position:absolute; top:-5px; width:2px; height:12px; background:var(--demo-frame); }
+.maya-timeline-mark.is-life { width:14px; height:14px; border-radius:50%; top:-6px; }
+.maya-timeline-mark.is-period { background:#335C63; height:8px; top:-3px; }
+.maya-timeline-years { display:grid; grid-template-columns:72px repeat(5,1fr); gap:12px; font-size:13px; margin-top:8px; }
+.maya-year-list { display:grid; gap:8px; }
+.maya-year-list .coach-button { justify-content:flex-start; text-align:left; min-height:52px; }
+.maya-demo-drop { margin-top:16px; padding:24px; cursor:pointer; }
+.maya-demo-drop input { width:100%; max-width:100%; font:inherit; font-size:16px; }
+.maya-date-review { gap:12px; }
+.maya-date-review small { margin-bottom:12px; color:var(--muted); }
+.coach-call.maya-story-dock { top:80px; bottom:auto; display:block; height:auto; max-height:240px; overflow:auto; }
+.maya-story-dock .maya-story-head { padding:12px; gap:12px; }
+.maya-story-dock>p { padding:12px 16px; margin:0; line-height:1.5; }
+.maya-demo-banner { position:fixed; z-index:39; top:8px; left:calc(var(--rail-width,300px) + 20px); right:150px; display:flex; align-items:center; gap:8px; background:var(--surface); color:var(--ink); }
+.maya-demo-banner strong { margin-right:auto; white-space:nowrap; }
+.maya-demo-banner .coach-button { padding:8px; }
+@media(max-width:1000px) {
+ .maya-demo-banner { top:72px; left:8px; right:8px; border-bottom:1px solid var(--line); gap:4px; flex-wrap:wrap; }
+ .maya-demo-banner strong { font-size:13px; }
+ body.is-maya-demo main { padding-top:104px; }
+ .coach-call.maya-story-dock { top:154px; }
+}
+@media(max-width:600px) {
+ .maya-story { width:calc(100vw - 16px); max-height:calc(100dvh - 16px); }
+ .maya-story-head { flex-wrap:wrap; padding:16px; gap:12px; }
+ .maya-story-title { flex-basis:calc(100% - 80px); order:3; }
+ .maya-story-head>.coach-button { margin-left:auto; }
+ .maya-story-title h2 { font-size:24px; }
+ .maya-story-body { padding:16px; }
+ .maya-story-message.agent-message-user { margin-left:20px; }
+ .maya-story-message.agent-message-agent { margin-right:20px; }
+ .maya-story-actions,.maya-story-year-nav { padding:12px 16px; }
+ .maya-timeline-track { grid-template-columns:52px 1fr; }
+ .maya-timeline-years { grid-template-columns:52px repeat(5,1fr); gap:5px; font-size:12px; }
+}
+
+body.is-maya-demo #setup-card { display:none; }
+.maya-year-list .coach-button { white-space:normal; overflow-wrap:anywhere; }
+@media(max-width:600px) {
+ .maya-timeline-track { grid-template-columns:72px 1fr; }
+ .maya-timeline-years { grid-template-columns:72px repeat(5,minmax(0,1fr)); }
+}

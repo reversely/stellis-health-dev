@@ -32,3 +32,13 @@ assert.equal(summaries[1].day,6);
 assert.equal(summaries[1].estimatedNextStart,null);
 assert.equal(summaries[2].episodeCount,0);
 console.log('Shared dates, multiple cycles, overlapping events and independent summaries passed');
+// A break in tracking is not evidence of an unusually long menstrual cycle.
+const resumed=cycles.summarizeCycle({id:'periods',label:'Periods',episodes:[
+ {startDate:'2023-06-12',endDate:'2023-06-16'},
+ {startDate:'2026-01-12',endDate:'2026-01-16',trackingGapBefore:true},
+ {startDate:'2026-02-10',endDate:'2026-02-14'},
+]},'2026-02-12');
+assert.equal(resumed.averageLength,29);
+assert.equal(resumed.intervalCount,1);
+assert.equal(resumed.day,3);
+assert.equal(resumed.estimatedNextStart,'2026-03-11');

@@ -4,11 +4,14 @@
   const dates=root.StellisCalendarDates;
   function mount(host,options={}) {
     const createElement=root.StellisDom.el;
-    let month=dates.formatDate(new Date()).slice(0,7),selectedDate=dates.formatDate(new Date()),events=[],tracks=[],hasLoaded=false,loadFailed=false,requestId=0,destroyed=false;
+    let month=(root.StellisDemoDate||dates.formatDate(new Date())).slice(0,7),selectedDate=root.StellisDemoDate||dates.formatDate(new Date()),events=[],tracks=[],hasLoaded=false,loadFailed=false,requestId=0,destroyed=false;
     const status=createElement('p',null,'health-calendar-status');status.setAttribute('role','status');
+    const milestoneHost=createElement('section',null,'health-calendar-milestones');
+    milestoneHost.setAttribute('aria-label','Health milestones');
     const layout=createElement('div',null,'health-calendar-layout');
     const monthHost=createElement('div',null,'health-calendar-month');
-    const agenda=createElement('div',null,'health-calendar-agenda');layout.append(monthHost,agenda);host.replaceChildren(status,layout);
+    const agenda=createElement('div',null,'health-calendar-agenda');layout.append(monthHost,agenda);host.replaceChildren(milestoneHost,status,layout);
+    const milestones=root.StellisHealthMilestones.mount(milestoneHost,{onChange:()=>load(),getSelectedDate:()=>selectedDate});
     function selectDate(selection) {selectedDate=selection.date;renderAgenda();}
     function renderAgenda() {
       const label=dates.parseDate(selectedDate).toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'});
@@ -20,9 +23,9 @@
         const row=root.StellisDom.button(null,'health-calendar-event');row.dataset.eventId=event.id;
         const title=createElement('strong',event.title);
         const track=tracks.find(track=>track.id===event.track_id);
-        const detail=event.all_day?(track?.label || event.kind):new Date(event.start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+        const detail=event.all_day?(event.date_status || track?.label || event.kind):new Date(event.start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
         row.append(title,createElement('span',detail,'dashboard-meta'));
-        row.addEventListener('click',()=>options.onSelectEvent?.(event));agenda.append(row);
+        row.addEventListener('click',()=>event.source_type==='milestone'?milestones.open(event.source_id):options.onSelectEvent?.(event));agenda.append(row);
       }
       if(focusedEventId)[...agenda.querySelectorAll('[data-event-id]')].find(row=>row.dataset.eventId===focusedEventId)?.focus();
     }
@@ -55,7 +58,7 @@
       }
     }
     renderMonth();load();
-    return {reload:load,getSelectedDate:()=>selectedDate,destroy:()=>{destroyed=true;requestId++;}};
+    return {focusDate:async value=>{month=value.slice(0,7);selectedDate=value;renderMonth();await load();},reload:()=>Promise.all([load(),milestones.reload()]),getSelectedDate:()=>selectedDate,destroy:()=>{destroyed=true;requestId++;milestones.destroy();}};
   }
   root.StellisHealthCalendar={mount};
 })(window);

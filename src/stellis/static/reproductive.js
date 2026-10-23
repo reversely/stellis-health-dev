@@ -6,7 +6,7 @@ const createElement = (tag, text, className) => getDomHelpers().el(tag, text, cl
 const requestTracker = (path, options) => getDomHelpers().api('/reproductive' + path, options);
 const calendarDates=root.StellisCalendarDates;
 const formatCalendarDate=calendarDates.formatDate;
-const currentDate=()=>formatCalendarDate(new Date());
+const currentDate=()=>root.StellisDemoDate||formatCalendarDate(new Date());
 const daysBetween=calendarDates.daysBetween;
 const shiftCalendarDate=calendarDates.shiftDate;
 const formatDateLabel = date => new Date(date+'T12:00:00').toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'});
@@ -28,7 +28,7 @@ const mounted=new WeakMap();
 function mount(host,options={}) {
   mounted.get(host)?.();
   const instance=++nextId;
-  let records=[], current='period', busy=false;
+  let records=[], observations=[], referenceDay=currentDate(), current='period', busy=false;
   let selectedDose=new Map();
   const tabs=new Map();
   const status=createElement('p',null,'tracker-status');status.setAttribute('role','status');
@@ -64,9 +64,9 @@ function mount(host,options={}) {
     paint();
   }
   async function load() {
-    const result=await requestTracker('');
+    const [result,daily]=await Promise.all([requestTracker(''),getDomHelpers().api('/health/observations')]);
     if(!host.isConnected)return;
-    records=result.records;paint();checkReminders();
+    records=result.records;observations=daily.observations;paint();checkReminders();
   }
   async function mutate(operation) {
     if(busy)return false;
@@ -114,15 +114,94 @@ function mount(host,options={}) {
     panel.replaceChildren();
     if(current==='period')paintCycle();else if(current==='pill')paintPills();else paintDevices();
   }
+  function paintDailyLog() {
+    const daily=createElement('section',null,'tracker-daily');
+    daily.setAttribute('aria-label','Daily log');
+    const title=createElement('div',null,'tracker-daily-title');
+    title.append(heading(referenceDay===currentDate()?'Today':formatDateLabel(referenceDay),
+      referenceDay===currentDate()?formatDateLabel(referenceDay):null));
+    if(referenceDay!==currentDate())title.append(createButton('Today',()=>{referenceDay=currentDate();paint();}));
+    daily.append(title);
+    const dates=createElement('div',null,'tracker-day-strip');dates.setAttribute('aria-label','Log date');
+    for(let offset=-6;offset<=0;offset++) {
+      const day=shiftCalendarDate(currentDate(),offset);
+      const choice=createButton(null,()=>{referenceDay=day;paint();panel.querySelector(`[data-log-day="${day}"]`)?.focus();},'tracker-day-choice');
+      const parsed=calendarDates.parseDate(day);
+      choice.append(createElement('span',parsed.toLocaleDateString([],{weekday:'short'})),createElement('strong',String(parsed.getDate())));
+      choice.dataset.logDay=day;choice.setAttribute('aria-label',formatDateLabel(day));choice.setAttribute('aria-pressed',String(day===referenceDay));
+      if(day===currentDate())choice.setAttribute('aria-current','date');
+      dates.append(choice);
+    }
+    daily.append(dates);
+    const pending=createElement('div',null,'tracker-daily-pending');
+    const logged=createElement('details',null,'tracker-daily-logged');
+    const loggedSummary=createElement('summary','Logged');logged.append(loggedSummary);
+    let loggedCount=0;
+    async function confirm(row,operation,focusLabel) {
+      if(busy)return;
+      busy=true;row.setAttribute('aria-busy','true');
+      for(const button of row.querySelectorAll('button'))button.disabled=true;
+      try {
+        await operation();
+        row.classList.add('is-confirmed');
+        await new Promise(resolve=>setTimeout(resolve,root.matchMedia('(prefers-reduced-motion: reduce)').matches?0:180));
+        await load();options.onChange?.();
+        status.textContent=focusLabel+' saved';
+        const review=panel.querySelector('.tracker-daily-logged');
+        review.open=true;review.querySelector('summary').focus();
+      }catch(error){status.textContent=error.message;for(const button of row.querySelectorAll('button'))button.disabled=false;}
+      finally{busy=false;}
+    }
+    function addItem(label,value,choices,saveValue) {
+      const row=createElement('article',null,'tracker-daily-item');
+      row.append(createElement('h4',label));
+      const actions=createElement('div',null,'tracker-daily-actions');
+      if(value) {
+        row.append(createElement('p',value,'tracker-daily-value'));
+        actions.append(createButton('Undo',()=>confirm(row,()=>saveValue(null),label),'coach-button is-quiet'));
+        loggedCount++;logged.append(row);
+      }else {
+        for(const choice of choices)actions.append(createButton(choice,()=>confirm(row,()=>saveValue(choice),label)));
+        pending.append(row);
+      }
+      row.append(actions);
+    }
+    const flow=observations.find(item=>item.day===referenceDay&&item.track_id==='periods');
+    addItem('Period flow',flow?.value,['No bleeding','Spotting','Light','Moderate','Heavy'],value=>
+      getDomHelpers().api('/health/observations',{method:'PUT',json:{day:referenceDay,track_id:'periods',value}}));
+    for(const pack of entries('pill')) {
+      const elapsed=daysBetween(referenceDay,pack.start);
+      if(elapsed<0||elapsed%(pack.active+pack.break_days)>=pack.active)continue;
+      const value=pack.doses.includes(referenceDay)?'Taken':(pack.skipped||[]).includes(referenceDay)?'Skipped':null;
+      addItem(pack.name+(pack.reminder?' / '+pack.time:''),value,['Taken','Skipped'],choice=>
+        requestTracker('/'+pack.id+'/dose',{method:'PUT',json:{day:referenceDay,taken:false,status:choice?choice.toLowerCase():null}}));
+    }
+    if(!pending.children.length)pending.append(createElement('p','All logged for this day','tracker-muted'));
+    loggedSummary.textContent=`Logged (${loggedCount})`;logged.hidden=!loggedCount;
+    daily.append(pending,logged,createButton('Edit period history',()=>openForm('period'),'coach-button is-quiet'));
+    panel.append(daily);
+  }
   function paintCycle() {
+    paintDailyLog();
     const periodRecords=entries('period');
+    const recordedDays=observations.filter(item=>item.track_id==='periods'&&item.value!=='No bleeding').map(item=>item.day).sort();
+    const dailyEpisodes=[];
+    for(const day of recordedDays) {
+      if(periodRecords.some(period=>period.start<=day&&day<=(period.end||currentDate())))continue;
+      const previous=dailyEpisodes.at(-1);
+      // An unlogged day does not establish that a period ended.
+      const ended=previous&&observations.some(item=>item.track_id==='periods'&&item.value==='No bleeding'&&item.day>previous.end&&item.day<day);
+      if(previous&&!ended)previous.end=day;
+      else dailyEpisodes.push({start:day,end:day});
+    }
+    const cycleEpisodes=[...periodRecords,...dailyEpisodes].sort((a,b)=>b.start.localeCompare(a.start));
     const overview=createElement('div',null,'tracker-overview tracker-cycle-overview tracker-cycle-summary');
-    if(!periodRecords.length) {
-      overview.append(heading('Cycle tracking','Log a period to start your history'));
+    if(!cycleEpisodes.length) {
+      overview.append(heading('Cycle tracking','Log flow above to start your history'));
     }else {
       const cycleSummary=root.StellisHealthCycles.summarizeCycle({id:'menstrual-cycle',label:'menstrual cycle',
-        episodes:periodRecords.map(period=>({id:period.id,startDate:period.start,endDate:period.end}))},currentDate());
-      const latestPeriod=periodRecords[0], averageCycleLength=cycleSummary.averageLength;
+        episodes:cycleEpisodes.map(period=>({id:period.id,startDate:period.start,endDate:period.end,trackingGapBefore:period.tracking_gap_before}))},currentDate());
+      const latestPeriod=cycleEpisodes[0], averageCycleLength=cycleSummary.averageLength;
       const periodIsOngoing=!latestPeriod.end;
       overview.append(root.StellisHealthCycles.createDayFigure({day:cycleSummary.day,label:cycleSummary.label,startDate:latestPeriod.start}));
       const metrics=createElement('dl',null,'tracker-metrics');
@@ -244,7 +323,7 @@ function mount(host,options={}) {
       if(type==='number'){input.min=key==='active'?'1':'0';input.max='365';}
       if(type==='text'&&!options)input.maxLength=key==='note'?500:120;
       if(type==='date'&&(key==='end'||(key==='start'&&kind!=='pill')))input.max=currentDate();
-      input.required=!['end','note','reminder'].includes(key);
+      input.required=!['end','note','reminder','tracking_gap_before'].includes(key);
       if(key==='note')input.rows=3;
       wrapper.append(input);fields.append(wrapper);controls[key]=input;return input;
     }
@@ -252,6 +331,7 @@ function mount(host,options={}) {
     field('start',kind==='period'?'Period start':kind==='pill'?'Pack start':'Insertion date','date');
     if(kind==='period') {
       field('end','Period end','date');
+      field('tracking_gap_before','Tracking resumed after a gap','checkbox',null,true);
       const group=createElement('fieldset',null,'tracker-choices is-wide');group.append(createElement('legend','Flow'));
       const choiceButtons=[];
       controls.flow={value:defaults.flow,type:'text'};
@@ -333,8 +413,8 @@ function mount(host,options={}) {
   },30000);
   mounted.set(host,()=>clearInterval(timer));
   return {
-    createPeriod:date=>{selectTab('period');openForm('period',null,{start:date&&date<=currentDate()?date:currentDate()});},
-    openRecord:async recordId=>{await load();const record=records.find(record=>record.id===recordId);if(record){selectTab(record.kind);openForm(record.kind,record);}},
+    createPeriod:()=>{referenceDay=currentDate();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});panel.querySelector('.tracker-daily button[aria-pressed="true"]')?.focus();},
+    openRecord:async recordId=>{if(recordId.startsWith('day:')){referenceDay=recordId.slice(4);await load();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});return;}await load();const record=records.find(record=>record.id===recordId);if(record){selectTab(record.kind);openForm(record.kind,record);}},
     destroy:()=>{clearInterval(timer);host.replaceChildren();},
   };
 }

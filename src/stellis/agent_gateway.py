@@ -32,7 +32,8 @@ def _settings() -> tuple[str, str]:
 
 
 def configured() -> bool:
-    if runtime_profile.direct():
+    from stellis import storage
+    if runtime_profile.direct() or storage.in_demo():
         from stellis import ai
         return bool(ai._key())
     try:
@@ -91,7 +92,8 @@ async def _turn(prompt: str, session_id: str) -> tuple[str, str]:
     """
     if message := token_quota.exceeded():
         raise GatewayError(message)
-    if runtime_profile.direct():
+    from stellis import storage
+    if runtime_profile.direct() or storage.in_demo():
         return await _direct_turn(prompt, session_id)
     endpoint, token = _settings()
     if not session_id or len(session_id) > 200 or any(c not in

@@ -20,7 +20,8 @@ def direct() -> bool:
 
 def remote_agents() -> bool:
     """Agent turns run over HTTPS instead of a NemoClaw subprocess on this machine."""
-    return selected() in {"cloud", "direct"}
+    from stellis import storage
+    return storage.in_demo() or selected() in {"cloud", "direct"}
 
 
 def shared_provider_keys() -> bool:

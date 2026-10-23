@@ -1,7 +1,7 @@
 /* A current-day figure names its cycle without implying a known duration. */
-.health-cycle-figure { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 260px; margin: 0; padding: 24px 16px; border-radius: 6px; background: var(--cycle-figure-fill,var(--raised)); color: var(--cycle-figure-ink,var(--ink)); text-align: center; font-variant-numeric: tabular-nums; }
-.health-cycle-day-label { font-size: 16px; line-height: 1.4; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
-.health-cycle-day-number { font: 300 112px/1.05 Piazzolla,serif; margin-block: 4px; }
-.health-cycle-day-context { font-size: 14px; line-height: 1.5; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-.health-cycle-figure figcaption { font-size: 13px; line-height: 1.5; margin-top: 16px; color: var(--ink); }
-@media(max-width:640px) { .health-cycle-figure { min-height: 252px; } .health-cycle-day-number { font-size: 104px; } }
+.health-date-figure { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 260px; margin: 0; padding: 24px 16px; border-radius: 6px; background: var(--date-figure-fill,var(--raised)); color: var(--date-figure-ink,var(--ink)); text-align: center; font-variant-numeric: tabular-nums; }
+.health-date-label { font-size: 16px; line-height: 1.4; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+.health-date-number { font: 300 112px/1.05 Piazzolla,serif; margin-block: 4px; }
+.health-date-context { font-size: 14px; line-height: 1.5; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.health-date-figure figcaption { font-size: 13px; line-height: 1.5; margin-top: 16px; color: var(--ink); }
+@media(max-width:640px) { .health-date-figure { min-height: 252px; } .health-date-number { font-size: 104px; } }

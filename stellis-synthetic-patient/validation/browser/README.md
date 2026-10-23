@@ -1,3 +1,5 @@
+> Historical evidence: this individual-PDF walkthrough predates the yearly ZIP story. It does not validate the revised interface. The clinical answer issues below remain open.
+
 # Maya workflow verification
 
 The delivery run started with an isolated empty workspace. Playwright uploaded all 70 actual corpus PDFs through the shared file picker, asserted the proposed encounter date before confirming it, and verified each saved file digest and date through the guide. Notebook templates were approved through the existing catalogue and selected in the upload dialog. A final API check confirms all 70 persisted dates and primary notebook associations.

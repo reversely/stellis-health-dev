@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import reproductive_routes
+from stellis import reproductive_routes, milestone_routes
 from stellis import care_events, photo_readings, dashboard, notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
@@ -35,7 +35,7 @@ _retention_thread: threading.Thread | None = None
 async def session_gate(request: Request, call_next):
     """Gate all workspace and API routes in explicit local login mode."""
     if not auth.enabled():
-        return await call_next(request)
+        return await demo_request(request, call_next)
     path = request.url.path
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
@@ -67,6 +67,26 @@ async def session_gate(request: Request, call_next):
     if (request.method == "GET" and not path.startswith("/api/") and path not in {"/onboarding", "/accuracy"}
             and auth.needs_onboarding(account_id)):
         return RedirectResponse("/onboarding", status_code=303)
+    return await demo_request(request, call_next)
+
+
+async def demo_request(request: Request, call_next):
+    from stellis import demo_patient
+    path = request.url.path
+    if path.startswith('/api/') and not path.startswith('/api/v1/'):
+        path = '/api/v1/' + path.removeprefix('/api/')
+    if (request.cookies.get('stellis-demo') == 'maya' and path.startswith('/api/v1/')
+            and not path.startswith(('/api/v1/demo/', '/api/v1/auth/'))):
+        if ((path.startswith('/api/v1/calendar/') and not path.startswith('/api/v1/calendar/milestones') and not (request.method == 'GET' and path in {'/api/v1/calendar/events','/api/v1/calendar/meetings','/api/v1/calendar/connections','/api/v1/calendar/milestones'})) or path.startswith(('/api/v1/onboarding','/api/v1/account'))):
+            return JSONResponse({'detail':'Use your real workspace for account connections'}, status_code=403)
+        if request.method not in {'GET','HEAD','OPTIONS'} and path.startswith(('/api/v1/recording','/api/v1/recorder')):
+            return JSONResponse({'detail':'Use the demo ZIPs for synthetic visit records'}, status_code=422)
+        if request.method == 'POST' and path == '/api/v1/documents':
+            return JSONResponse({'detail':'Upload yearly demo ZIPs in Maya’s story'}, status_code=422)
+        if request.method not in {'GET','HEAD','OPTIONS'} and path.startswith(('/api/v1/ai/', '/api/v1/models', '/api/v1/inference')):
+            return JSONResponse({'detail':'Inference settings are shared with your account'}, status_code=403)
+        with storage.demo_workspace(demo_patient.workspace()):
+            return await call_next(request)
     return await call_next(request)
 
 
@@ -3283,7 +3303,10 @@ def edit_clean_segment(run_id: str, segment_id: str, edit: CleanSegmentEdit) -> 
     return {"edit_revision": revision}
 
 
+from stellis.demo_routes import router as demo_router
+api.include_router(demo_router)
 api.include_router(reproductive_routes.router)
+api.include_router(milestone_routes.router)
 
 app.include_router(api, prefix="/api/v1")
 app.include_router(api, prefix="/api", include_in_schema=False)

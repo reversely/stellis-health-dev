@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, StrictBool
-from stellis import reproductive, health_preferences, calendar
+from stellis import reproductive, health_preferences, calendar, health_observations
 
 router = APIRouter()
 
@@ -21,6 +21,7 @@ class TrackerIn(BaseModel):
     renewal: str = Field(default='', max_length=10)
     notice: int = Field(default=30, ge=0, le=365)
     reminder: bool = False
+    tracking_gap_before: bool = False
 
 
 def checked(action):
@@ -76,3 +77,19 @@ async def calendar_event_view(start: str, end: str, utc_offset: int = Query(defa
         return await calendar.event_view(start, end, utc_offset, time_zone)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+
+
+class ObservationIn(BaseModel):
+    day: str = Field(max_length=10)
+    track_id: Literal['periods']
+    value: Literal['No bleeding', 'Spotting', 'Light', 'Moderate', 'Heavy'] | None = None
+
+
+@router.get('/health/observations')
+def daily_observations():
+    return {'observations': health_observations.entries()}
+
+
+@router.put('/health/observations')
+def save_daily_observation(request: ObservationIn):
+    return checked(lambda: health_observations.save(request.day, request.track_id, request.value))
