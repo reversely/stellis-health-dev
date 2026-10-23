@@ -37,3 +37,14 @@ def test_future_and_unlisted_status_rejected():
         health_observations.save((date.today()+timedelta(days=1)).isoformat(), 'periods', 'Light')
     with pytest.raises(ValueError):
         health_observations.save(date.today().isoformat(), 'periods', 'Missed')
+
+
+def test_one_tap_flow_retains_unspecified_intensity_and_calendar_title():
+    health_preferences.save(True)
+    days = [(date.today()-timedelta(days=offset)).isoformat() for offset in range(3)]
+    for day in days:
+        health_observations.save(day, 'periods', 'Had flow')
+    assert len(health_observations.entries()) == 3
+    assert all(event['title'] == 'Had flow' for event in calendar_sources.tracking_events(min(days), max(days)))
+    health_observations.save(days[1], 'periods', None)
+    assert {entry['day'] for entry in health_observations.entries()} == {days[0], days[2]}

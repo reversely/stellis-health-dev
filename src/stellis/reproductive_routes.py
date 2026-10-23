@@ -82,7 +82,7 @@ async def calendar_event_view(start: str, end: str, utc_offset: int = Query(defa
 class ObservationIn(BaseModel):
     day: str = Field(max_length=10)
     track_id: Literal['periods']
-    value: Literal['No bleeding', 'Spotting', 'Light', 'Moderate', 'Heavy'] | None = None
+    value: Literal['Had flow', 'No bleeding', 'Spotting', 'Light', 'Moderate', 'Heavy'] | None = None
 
 
 @router.get('/health/observations')

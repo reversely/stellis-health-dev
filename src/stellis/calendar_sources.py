@@ -21,7 +21,7 @@ def tracking_events(first_date, last_date, current_date=None):
         result.append({'id': 'observation:'+observation['day']+':'+observation['track_id'],
                        'source_type': 'reproductive', 'source_id': 'day:'+observation['day'],
                        'kind': 'observation', 'track_id': observation['track_id'],
-                       'title': observation['value'] + ('' if observation['value'] == 'No bleeding' else ' flow'),
+                       'title': observation['value'] + ('' if observation['value'] in {'No bleeding', 'Had flow'} else ' flow'),
                        'start_date': observation['day'], 'end_date': observation['day'], 'all_day': True})
     return result
 
