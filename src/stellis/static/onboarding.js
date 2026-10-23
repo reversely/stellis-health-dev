@@ -109,7 +109,7 @@
     main.append(scene);
     if (state.step === 'welcome') {
       welcome(scene);
-    } else if (state.step === 'call') {
+    } else if ((state.step === 'call' || state.step === 'health')) {
       callStep = window.StellisOnboardingPersonalize.render(scene, {
         api,
         node,
@@ -614,7 +614,7 @@
     }
 
     const actions = node('div', null, 'setup-actions');
-    actions.append(finish, button('Back', () => go('records')));
+    actions.append(finish, button('Back', () => go('call')));
     scene.append(head, grid, add, actions);
     api('/intake/notebooks', 'POST')
         .then((result) => {

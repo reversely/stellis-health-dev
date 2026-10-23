@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import json
@@ -11,8 +12,9 @@ import secrets
 import sqlite3
 import time
 from urllib.parse import quote
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from urllib.parse import urlencode, urlparse
 
 import httpx
@@ -442,3 +444,58 @@ def save_notebook_assignment(event: dict, notebook_id: str | None, scope: str) -
             conn.execute("DELETE FROM notebook_assignments WHERE provider = ? AND key_kind = 'event' AND event_key = ?",
                          (event["provider"], event["id"]))
     return assign_notebook(event)
+
+
+async def meetings(now=None, until=None):
+    """Read appointment events through the shared calendar connection service."""
+    from stellis import notes
+    connected = [row["provider"] for row in connections() if row["connected"]]
+    results = await asyncio.gather(*((events(provider) if now is None and until is None else events(provider, now, until)) for provider in connected), return_exceptions=True)
+    meetings: list[dict] = []
+    errors: list[dict] = []
+    for provider, result in zip(connected, results):
+        if isinstance(result, Exception):
+            errors.append({"provider": provider, "message": str(result) if isinstance(result, CalendarError)
+                           else "Could not load meetings. Try Refresh."})
+        else:
+            meetings.extend(result)
+    meetings.sort(key=lambda event: event["start"])
+    noted = notes.events_with_notes()
+    for event in meetings:
+        event["has_notes"] = (event["provider"], event["id"]) in noted
+        event.update(assign_notebook(event))
+    return {"meetings": meetings[:100], "errors": errors}
+
+
+async def event_view(first_date, last_date, utc_offset=0, time_zone=None):
+    """Read one date-bounded calendar projection from appointments and registered sources."""
+    from stellis import calendar_sources
+    first = date.fromisoformat(first_date)
+    last = date.fromisoformat(last_date)
+    if last < first or (last-first).days > 366:
+        raise ValueError('Choose a calendar range of up to one year')
+    first_date, last_date = first.isoformat(), last.isoformat()
+    try:
+        local_zone = ZoneInfo(time_zone) if time_zone else timezone(-timedelta(minutes=utc_offset))
+    except ZoneInfoNotFoundError as error:
+        raise ValueError('Choose a valid calendar timezone') from error
+    appointments = await meetings(datetime.combine(first, datetime.min.time(), tzinfo=local_zone).astimezone(timezone.utc),
+                                  datetime.combine(last+timedelta(days=1), datetime.min.time(), tzinfo=local_zone).astimezone(timezone.utc))
+    entries = calendar_sources.local_events(first_date, last_date, datetime.now(local_zone).date().isoformat())
+    for appointment in appointments['meetings']:
+        starts = appointment['start'][:10] if 'T' not in appointment['start'] else datetime.fromisoformat(appointment['start']).astimezone(local_zone).date().isoformat()
+        ends = appointment['end'][:10] if 'T' not in appointment['end'] else datetime.fromisoformat(appointment['end']).astimezone(local_zone).date().isoformat()
+        if appointment['all_day']:
+            ends = (date.fromisoformat(ends)-timedelta(days=1)).isoformat()
+        elif 'T' in appointment['end']:
+            ends = (datetime.fromisoformat(appointment['end'])-timedelta(microseconds=1)).astimezone(local_zone).date().isoformat()
+        entries.append({'id': 'appointment:'+appointment['provider']+':'+appointment['id'],
+                        'kind': 'appointment', 'track_id': 'appointments', 'title': appointment['title'],
+                        'start_date': starts, 'end_date': max(starts, ends),
+                        'start': appointment['start'], 'end': appointment['end'],
+                        'all_day': appointment['all_day'], 'appointment': appointment,
+                        'notebook_id': appointment.get('notebook_id')})
+    entries = [entry for entry in entries if entry['start_date'] <= last_date and entry['end_date'] >= first_date]
+    entries.sort(key=lambda entry: (entry.get('start') or entry['start_date'], entry['id']))
+    return {'events': entries, 'tracks': [track for track in calendar_sources.TRACKS if any(entry['track_id'] == track['id'] for entry in entries)],
+            'errors': appointments['errors'], 'start_date': first_date, 'end_date': last_date}

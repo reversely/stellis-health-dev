@@ -21,7 +21,7 @@ function render({node, api, onSelect, category: initialCategory = 'goals'}) {
   const sourceText = node('p');
   attribution.append(sourceText);
   for (const [id, label] of [['goals','Goals'],['health','Health topics'],['medicines','Medicines and supplements']]) {
-    const button = node('button', label, 'coach-button');
+    const button = node('button', label);
     button.type = 'button';
     button.setAttribute('aria-pressed', String(id === category));
     button.addEventListener('click', () => {

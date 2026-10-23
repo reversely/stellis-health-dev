@@ -6,7 +6,7 @@
 }
 .intake-library[hidden] { display: none; }
 .intake-library-categories { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.intake-library-categories button[aria-pressed='true'] { background: var(--ink); color: var(--raised); }
+.onboarding-page .intake-library-categories button[aria-pressed='true'] { background: var(--ink); color: var(--raised); }
 .intake-library input { box-sizing: border-box; width: 100%; min-width: 0; font-size: 16px; }
 .intake-library-status { color: var(--muted); margin: 12px 0; font-size: 14px; }
 .intake-library-results { display: grid; gap: 8px; }
@@ -26,4 +26,3 @@
 .intake-library-item span { font-size: 14px; font-weight: 400; color: var(--muted); }
 .intake-library-source { margin-top: 16px; font-size: 13px; color: var(--muted); }
 .intake-library-source summary { cursor: pointer; min-height: 28px; }
-.call-tabs { flex-wrap: wrap; }

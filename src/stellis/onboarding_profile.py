@@ -44,7 +44,10 @@ def fields(profile):
 
 def status():
     state = onboarding._read()
-    profile = state.get("profile", {})
+    profile = dict(state.get("profile", {}))
+    preference = health_preferences.preferences()["experiences_periods"]
+    if preference is not None:
+        profile["period"] = "Yes" if preference else "No"
     return {"answers": profile, "fields": fields(profile),
             "step": state.get("profile_step", "name"), "complete": state.get("profile_completed", False)}
 

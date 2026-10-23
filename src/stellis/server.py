@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
+from stellis import reproductive_routes
 from stellis import care_events, photo_readings, dashboard, notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
@@ -752,22 +753,7 @@ async def calendar_disconnect(provider: str) -> dict[str, bool]:
 
 @api.get("/calendar/meetings")
 async def calendar_meetings() -> dict[str, object]:
-    connected = [row["provider"] for row in calendar.connections() if row["connected"]]
-    results = await asyncio.gather(*(calendar.events(provider) for provider in connected), return_exceptions=True)
-    meetings: list[dict] = []
-    errors: list[dict] = []
-    for provider, result in zip(connected, results):
-        if isinstance(result, Exception):
-            errors.append({"provider": provider, "message": str(result) if isinstance(result, calendar.CalendarError)
-                           else "Could not load meetings. Try Refresh."})
-        else:
-            meetings.extend(result)
-    meetings.sort(key=lambda event: event["start"])
-    noted = notes.events_with_notes()
-    for event in meetings:
-        event["has_notes"] = (event["provider"], event["id"]) in noted
-        event.update(calendar.assign_notebook(event))
-    return {"meetings": meetings[:100], "errors": errors}
+    return await calendar.meetings()
 
 
 class EventNotebookSave(BaseModel):
@@ -830,7 +816,7 @@ def onboarding_page(request: Request):
 
 class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
-    step: Literal["welcome", "call", "records", "uses", "review"] = "review"
+    step: Literal["welcome", "health", "call", "records", "uses", "review"] = "review"
     task_choices: dict[str, StrictBool] | None = None
     notebook_choices: list[dict] | None = Field(default=None, max_length=100)
 
@@ -3296,6 +3282,8 @@ def edit_clean_segment(run_id: str, segment_id: str, edit: CleanSegmentEdit) -> 
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"edit_revision": revision}
 
+
+api.include_router(reproductive_routes.router)
 
 app.include_router(api, prefix="/api/v1")
 app.include_router(api, prefix="/api", include_in_schema=False)

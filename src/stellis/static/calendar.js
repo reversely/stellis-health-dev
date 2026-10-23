@@ -24,13 +24,11 @@ window.StellisCalendar = (() => {
   try { if (localStorage.getItem('stellis-calendar-view') === 'days') view = 'days'; } catch {}
 
   // All-day events carry a calendar date; timed events carry an instant.
-  function localDate(value) {
-    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-    return new Date(year, month - 1, day);
-  }
+  const calendarDates=window.StellisCalendarDates;
+  const localDate=value=>calendarDates.parseDate(value.slice(0,10));
   function startOf(item) { return item.all_day ? localDate(item.start) : new Date(item.start); }
   function endOf(item) { return item.all_day ? localDate(item.end) : new Date(item.end); }
-  function addDays(date, count) { return new Date(date.getFullYear(), date.getMonth(), date.getDate() + count); }
+  const addDays=calendarDates.addDays;
   function windowDates() {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     return Array.from({length:DAY_COUNT}, (_, index) => addDays(today, index));
@@ -41,7 +39,7 @@ window.StellisCalendar = (() => {
   }
   function dayName(date) {
     const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const offset = Math.round((day - windowDates()[0]) / 86400000);
+    const offset = calendarDates.daysBetween(day,windowDates()[0]);
     return offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' :
       offset < 7 ? date.toLocaleDateString([], {weekday:'long'}) :
       date.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
@@ -168,14 +166,8 @@ window.StellisCalendar = (() => {
     const [firstHour, lastHour] = hourRange(timed);
     days.style.setProperty('--hour', `${HOUR_PX}px`);
     days.style.setProperty('--hours', lastHour - firstHour);
-    const head = document.createElement('div'); head.className = 'days-head';
-    head.append(document.createElement('span'), ...dates.map(date => {
-      const label = document.createElement('div'); label.className = 'days-label';
-      const name = document.createElement('strong'); name.textContent = dayName(date);
-      const number = document.createElement('span'); number.textContent = date.toLocaleDateString([], {month:'short', day:'numeric'});
-      label.append(name, number);
-      return label;
-    }));
+    const head=window.StellisCalendarView.createDateHeader({dates,className:'days-head',cellClassName:'days-label',leadingCell:true,
+      getLabel:dayName,getDetail:date=>date.toLocaleDateString([],{month:'short',day:'numeric'})});
     const parts = [head];
     if (allDay.some(list => list.length)) {
       const row = document.createElement('div'); row.className = 'days-all-day';
@@ -322,7 +314,7 @@ window.StellisCalendar = (() => {
   });
 
   async function refresh() {
-    if (loading || card.parentElement.closest('[hidden]')) return;
+    if (loading || card.parentElement.closest('[hidden]') || document.querySelector('.dashboard-calendar')) return;
     loading = true; refreshButton.disabled = true;
     try {
       const rows = await request('/connections');
@@ -337,5 +329,5 @@ window.StellisCalendar = (() => {
   refreshButton.addEventListener('click', refresh);
   // app.js renders home before this script loads, so refresh once now.
   refresh();
-  return {refresh, request, labels};
+  return {refresh, request, labels, openNotes, openNotebook, recordMeeting};
 })();

@@ -43,6 +43,9 @@ class ProfileTest(unittest.TestCase):
         for answer, expected in [('Yes', True), ('No', False), ('Not currently', None), ('Prefer not to say', None), (None, None)]:
             profile.save(1, 'period', answer)
             self.assertIs(health_preferences.preferences()['experiences_periods'], expected)
+        health_preferences.save(False)
+        self.assertEqual(profile.status()['answers']['period'], 'No')
+        health_preferences.save(None)
         profile.save(1, 'cycle_tracking', 'Yes')
         self.assertIsNone(health_preferences.preferences()['experiences_periods'])
 

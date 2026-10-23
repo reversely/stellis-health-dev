@@ -1,0 +1,7 @@
+.health-preference-question { display: grid; gap: 10px; max-width: 480px; font-size: 16px; text-align: left; }
+.health-preference-question select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
+.health-preference-question small { font-weight: 400; font-size: 14px; color: var(--muted); line-height: 1.5; }
+.health-preference-question select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.setup-health-preferences { display: grid; align-content: center; gap: 24px; max-width: 600px; margin-inline: auto; }
+.setup-health-preferences h1 { margin: 0; }
+.setup-health-preferences .setup-health-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; }

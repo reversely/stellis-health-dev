@@ -19,7 +19,7 @@ try {
  await page.goto(origin);
  const root=page.locator('#health-dashboard');
  await root.getByText('Add your records to see your health overview',{exact:true}).waitFor();
- assert.deepEqual(await root.locator('.dashboard-section-head h2').allTextContents(),['Health Overview','Upcoming','My Notebooks','Measurements','Health History']);
+ assert.deepEqual(await root.locator('.dashboard-section-head h2').allTextContents(),['Health Overview','Calendar','My Notebooks','Measurements','Cycle and contraception','Health History']);
  await page.unroute('**/static/trends.js');
  assert.equal(await root.locator('.dashboard-measure').count(),3);
  assert.equal(await root.locator('.dashboard-measure time').count(),0);
@@ -34,7 +34,12 @@ try {
  await api('/readings',{measure:'weight',value:70,taken_at:'2026-10-20T08:00:00'});
  await api('/readings',{measure:'weight',value:71,taken_at:'2026-10-21T08:00:00'});
  await api('/dashboard/preferences',{notebooks:[book.id],measurements:['weight','sleep'],care_contexts:[book.id]},'put');
- await page.route('**/api/v1/calendar/meetings',route=>route.fulfill({json:{meetings:[{id:'fixture',provider:'google',title:'Scheduled consultation',start:'2099-01-04T10:00:00Z',end:'2099-01-04T11:00:00Z',notebook_id:book.id}],errors:[]}}));
+ const today=new Date().toISOString().slice(0,10);
+ await page.route('**/api/v1/calendar/events?*',async route=>{
+  const response=await route.fetch();const result=await response.json();
+  result.events.push({id:'appointment:fixture',kind:'appointment',track_id:'appointments',title:'Scheduled consultation',start_date:today,end_date:today,all_day:true,appointment:{id:'fixture',provider:'google',title:'Scheduled consultation',start:today,end:today,all_day:true,notebook_id:book.id}});
+  result.tracks.push({id:'appointments',label:'Appointments',tone:'default'});await route.fulfill({json:result});
+ });
  const target='/document/'+document.id+'?page=1';
  await page.route('**/api/v1/summary',route=>route.fulfill({json:{summary:{content:'## Overview\nA summary from the care letter [[1]]',citations:[{n:1,title:'Care letter',page:1,target,excerpt:'Fixture source'}]},document_count:1}}));
  await page.route('**/api/v1/facts',route=>route.fulfill({json:{facts:[{id:'fixture',kind:'allergy',name:'Fixture allergy <img src=x>',value:'',unit:'',date:'2026-10-21',target}]}}));
@@ -47,11 +52,12 @@ try {
  assert.equal(await root.locator('.dashboard-measure').count(),2);
  assert.equal(await root.locator('.dashboard-sparkline').count(),1);
  assert.equal(await root.locator('.dashboard-notebooks .dashboard-book .dashboard-meta').textContent(),'Nutrition');
- await root.getByRole('link',{name:'Scheduled consultation',exact:true}).waitFor();
+ await root.getByRole('button',{name:/^Scheduled consultation/}).waitFor();
  assert.match(await root.locator('.dashboard-upcoming').textContent(),/Scheduled/);
- await api('/documents/'+document.id,{record_date:'2099-01-05'},'patch');
- await page.reload();await root.locator('.dashboard-upcoming').getByText('Dated record — Care letter',{exact:true}).waitFor();
- assert.equal(await root.locator('.dashboard-upcoming').getByRole('link',{name:'Care letter',exact:true}).getAttribute('href'),'/document/'+document.id);
+ await api('/documents/'+document.id,{record_date:today},'patch');
+ await page.reload();const datedRecord=root.locator('.health-calendar-event').filter({hasText:'Care letter'});await datedRecord.waitFor();
+ assert.equal(await datedRecord.locator('.dashboard-meta').innerText(),'Records');
+ await datedRecord.click();await page.waitForURL(origin+'/document/'+document.id);await page.goBack();await root.locator('.dashboard-measure').first().waitFor();
  await api('/documents/'+document.id,{record_date:'2026-10-21'},'patch');
  await page.locator('#library-more summary').click();await page.getByRole('button',{name:'Customize dashboard',exact:true}).click();
  const dialog=page.getByRole('dialog');
