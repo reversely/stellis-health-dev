@@ -18,6 +18,12 @@ Notebook rows retain template identity, description, version, archive state, opt
 
 # Current architecture (development)
 
+## My Health dashboard
+
+`health-dashboard.js` composes five previews from the existing summary, accepted facts, readings, timeline, calendar and saved-task APIs. Account-local `dashboard_preferences` stores up to three notebook IDs, measurement keys and active-care notebook IDs through `GET` and `PUT /dashboard/preferences`. Validation rejects unavailable IDs and duplicate or oversized selections; archived notebooks disappear from previews without changing their records.
+
+The dashboard retains original source links and does not generate clinical claims. Calendar appointments, dated records and saved plans keep separate status labels. Calendar loading proceeds separately from local data. The initial browser route waits for deferred UI modules before using their exports. Full detail pages and legacy capture/review controls remain available. See [dashboard evidence](evidence/121/README.md).
+
 ## Hosted document recognition and request timing
 
 The hosted health build lets people read printed scans and photos, correct the text and use saved pages in search, notebook chat, health facts and summaries. An authenticated account gateway routes requests to account-local workspaces. The workspace keeps original files and page text separately. Page revisions protect corrections from concurrent recognition results; changing a page clears facts derived from its previous wording.
