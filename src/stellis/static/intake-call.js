@@ -10,7 +10,7 @@ const STATUS = Object.freeze({
   ready:'Ready when you are', connecting:'Connecting', listening:'Listening',
   hearing:'Hearing you', transcribing:'Processing your answer', thinking:'Thinking',
   speaking:'Speaking', ending:'Finishing the call', typing:'Type your answer below',
-  ended:'Call ended', lost:"The call disconnected",
+  ended:'Call ended', lost:"Sorry we couldn't reach the agent",
 });
 
 /**

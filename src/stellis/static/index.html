@@ -31,7 +31,7 @@
     <script src="/static/notebook-dom.js" defer></script>
     <script src="/static/notebook-viewer.js" defer></script>
     <script src="/static/notebook-add-source.js" defer></script>
-    <script src="/static/health-pillars.js" defer></script><script src="/static/intake-call.js" defer></script><script src="/static/coach-call.js" defer></script><script src="/static/tour.js" defer></script><link rel="stylesheet" href="/static/coach-call.css" /><script src="/static/goals.js" defer></script><link rel="stylesheet" href="/static/goals.css" /><link rel="stylesheet" href="/static/accuracy.css" /><script src="/static/notebook-chat.js" defer></script>
+    <script src="/static/health-dashboard.js" defer></script><link rel="stylesheet" href="/static/health-dashboard.css" /><script src="/static/health-pillars.js" defer></script><script src="/static/intake-call.js" defer></script><script src="/static/coach-call.js" defer></script><script src="/static/tour.js" defer></script><link rel="stylesheet" href="/static/coach-call.css" /><script src="/static/goals.js" defer></script><link rel="stylesheet" href="/static/goals.css" /><link rel="stylesheet" href="/static/accuracy.css" /><script src="/static/notebook-chat.js" defer></script>
     <script src="/static/document-view.js" defer></script>
     <script src="/static/health-facts.js" defer></script>
     <script src="/static/timeline.js" defer></script>
@@ -91,7 +91,17 @@
           <a id="settings-link" class="settings-link" href="/settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Account settings</span></a>
         </aside>
         <div class="home-main">
-          <div class="home-heading"><h2 id="home-title"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span>Home</span></h2><details id="library-more" class="more-menu library-more"><summary aria-label="Library options" title="Library options">⋯</summary><div class="more-menu-items"><button id="edit-widgets" type="button"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span>Edit widgets</span></button><a href="/vocabulary"><svg class="icon" aria-hidden="true"><use href="#i-abc"/></svg><span>Custom vocabulary</span></a><button id="open-tags" type="button"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg><span>Tags</span></button><button id="open-people" type="button"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>People</span></button><button id="show-trash" type="button"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg><span>Recently deleted</span></button><button id="workspace-setup" type="button"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Set up workspace</span></button><button id="take-tour" type="button"><svg class="icon" aria-hidden="true"><use href="#i-bulb"/></svg><span>Take the tour</span></button></div></details></div>
+          <div class="home-heading"><h2 id="home-title"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span>My Health</span></h2><div class="dashboard-add"><button id="dashboard-call" class="coach-button" type="button">Call Stellis</button><details class="more-menu dashboard-add-menu"><summary><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add</summary><div class="more-menu-items"><a href="/records">Add a record</a><button type="button" id="dashboard-note">New note</button><button type="button" id="dashboard-record">Record</button><button type="button" id="dashboard-import">Import recording</button><button type="button" id="dashboard-notebook">Add notebook</button><button type="button" id="dashboard-goal">Add goal</button></div></details></div><details id="library-more" class="more-menu library-more"><summary aria-label="Library options" title="Library options">⋯</summary><div class="more-menu-items"><button id="edit-widgets" type="button"><svg class="icon" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span>Customize dashboard</span></button><a href="/vocabulary"><svg class="icon" aria-hidden="true"><use href="#i-abc"/></svg><span>Custom vocabulary</span></a><button id="open-tags" type="button"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg><span>Tags</span></button><button id="open-people" type="button"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>People</span></button><button id="show-trash" type="button"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg><span>Recently deleted</span></button><button id="workspace-setup" type="button"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Set up workspace</span></button><button id="take-tour" type="button"><svg class="icon" aria-hidden="true"><use href="#i-bulb"/></svg><span>Take the tour</span></button></div></details></div>
+          <a id="live-recording-card" class="live-recording-card" href="/recording" hidden><span id="live-recording-state" class="live-recording-state">Live</span><strong id="live-recording-title">New recording</strong><small id="live-recording-time">0:00</small><div class="live-recording-preview"><span id="live-recording-preview-status">Listening for speech</span><div id="live-recording-preview-lines"></div></div><span class="live-recording-arrow" aria-hidden="true">→</span></a>
+          <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
+          <section id="setup-card" class="setup-card" aria-labelledby="setup-title" hidden>
+            <h2 id="setup-title">Transcription setup</h2>
+            <p id="setup-status" role="status" aria-live="polite"></p>
+            <progress id="setup-progress" max="1" aria-label="Speech model download"></progress>
+            <button id="setup-retry" class="invert-button" type="button" hidden>Try again</button>
+          </section>
+          <div id="dashboard-notifications"></div><div id="health-dashboard"></div>
+          <details id="dashboard-tools" class="dashboard-tools"><summary>Goals and library</summary>
           <section id="home-goals" class="home-goals" aria-labelledby="goals-title"></section>
           <section id="home-pillars" class="home-pillars" aria-label="Your health"></section>
           <section id="daily-brief" class="daily-brief" data-widget="brief" aria-labelledby="daily-brief-title">
@@ -106,14 +116,6 @@
           <section class="search-card" aria-label="Search results">
             <div id="library-search-controls" hidden><label for="library-search-kind">Show</label><select id="library-search-kind"><option value="all">All results</option><option value="conversation">Conversations</option><option value="passage">Passages</option><option value="speaker">Speakers</option><option value="person">People</option><option value="document">Documents</option></select></div>
             <p id="library-search-status" role="status" aria-live="polite"></p><div id="library-search-results" aria-label="Search results"></div>
-          </section>
-          <a id="live-recording-card" class="live-recording-card" href="/recording" hidden><span id="live-recording-state" class="live-recording-state">Live</span><strong id="live-recording-title">New recording</strong><small id="live-recording-time">0:00</small><div class="live-recording-preview"><span id="live-recording-preview-status">Listening for speech</span><div id="live-recording-preview-lines"></div></div><span class="live-recording-arrow" aria-hidden="true">→</span></a>
-          <div id="recover-recordings" class="recover-recordings" aria-live="polite"></div>
-          <section id="setup-card" class="setup-card" aria-labelledby="setup-title" hidden>
-            <h2 id="setup-title">Transcription setup</h2>
-            <p id="setup-status" role="status" aria-live="polite"></p>
-            <progress id="setup-progress" max="1" aria-label="Speech model download"></progress>
-            <button id="setup-retry" class="invert-button" type="button" hidden>Try again</button>
           </section>
           <div class="home-columns">
             <div class="home-col home-col-left"><section id="home-todos" data-widget="todos" aria-label="Check-ins"></section></div>
@@ -140,6 +142,7 @@
           </section>
             </div>
           </div>
+          </details>
         </div>
       </section>
       <section id="vocabulary-panel" class="vocab-page" hidden>

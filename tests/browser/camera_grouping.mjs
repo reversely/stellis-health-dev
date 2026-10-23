@@ -10,9 +10,12 @@ const browser = await chromium.launch({
   args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
 });
 const saved = [];
+let context, preferences;
 
 try {
-  const context = await browser.newContext({reducedMotion: 'reduce'});
+  context = await browser.newContext({reducedMotion: 'reduce', ...(process.env.STELLIS_TEST_STORAGE ? {storageState:process.env.STELLIS_TEST_STORAGE} : {})});
+  preferences = await (await context.request.get(origin + '/api/v1/dashboard/preferences')).json();
+  assert.equal((await context.request.put(origin + '/api/v1/dashboard/preferences', {data:{...preferences, measurements:['pulse','breathing_rate','hrv']}})).status(),200);
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -35,8 +38,8 @@ try {
         await page.evaluate(theme => localStorage.setItem('stellis-theme', theme), theme);
         for (const route of ['/', '/trends']) {
           await page.goto(origin + route);
-          const group = page.locator(route === '/' ? '.overview-vitals' : '.trend-vitals');
-          await group.getByRole('heading', {name: 'Vital signs', exact: true}).waitFor();
+          const group = page.locator(route === '/' ? '.dashboard-measurements' : '.trend-vitals');
+          await group.getByRole('heading', {name: route === '/' ? 'Measurements' : 'Vital signs', exact: true}).waitFor();
           for (const label of ['Breathing rate', 'Heart rate variability']) {
             await group.getByText(label, {exact: true}).waitFor();
           }
@@ -60,10 +63,9 @@ try {
     console.log(`PASS ${stage}: Home and Trends group one capture at phone and desktop widths in both themes`);
   }
   assert.deepEqual(errors, []);
-  await context.close();
 } finally {
-  for (const id of saved) {
-    await fetch(origin + '/api/v1/readings/' + id, {method: 'DELETE'});
-  }
+  for (const id of saved) await context.request.delete(origin + '/api/v1/readings/' + id);
+  if (preferences) await context.request.put(origin + '/api/v1/dashboard/preferences',{data:preferences});
+  await context?.close();
   await browser.close();
 }

@@ -69,8 +69,8 @@ try {
     await page.goto(origin);
     await page.evaluate(theme => localStorage.setItem('stellis-theme', theme), theme);
     await page.reload();
-    const record = page.getByRole('button', {name: 'Record', exact: true});
-    const vitalSigns = page.getByRole('button', {name: 'Log vital signs', exact: true});
+    const record = page.locator('#home-record');
+    const vitalSigns = page.locator('#health-dashboard').getByRole('button', {name: 'Log vital signs', exact: true});
     try {
       await vitalSigns.waitFor();
     } catch (error) {
@@ -78,6 +78,7 @@ try {
       console.error('Home errors:', errors);
       throw error;
     }
+    await page.locator('#dashboard-tools').evaluate(node => {node.open = true;});
     await record.hover();
     const hoverReference = await style(record);
     await page.mouse.move(0, 0);
@@ -104,11 +105,12 @@ try {
       for (const route of routes) {
         await page.goto(origin + route);
         if (route === '/') {
-          await check(page.getByRole('button', {name: 'Log vital signs', exact: true}));
-          const camera = page.getByRole('button', {name: 'Log vital signs', exact: true});
+          await check(page.locator('#health-dashboard').getByRole('button', {name: 'Log vital signs', exact: true}));
+          const camera = page.locator('#health-dashboard').getByRole('button', {name: 'Log vital signs', exact: true});
           await camera.hover();
           assert.equal((await style(camera)).fill, hoverReference.fill);
           await page.mouse.move(0, 0);
+          await page.locator('#dashboard-tools').evaluate(node => {node.open = true;});
           await check(page.getByRole('button', {name: 'Add goal', exact: true}));
           await check(page.getByRole('button', {name: 'Start setup', exact: true}));
         } else if (route === '/trends') {

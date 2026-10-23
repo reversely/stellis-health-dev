@@ -246,7 +246,7 @@ function weekChart(goal, today) {
  * @param {!Element} host
  * @return {{load: function(): !Promise}}
  */
-function create(host) {
+function create(host, notifications = null) {
   const dom = root.StellisDom;
   let data = {goals: [], reminders: [], activities: []};
   let measures = [];
@@ -340,6 +340,7 @@ function create(host) {
       }));
     }
     for (const reminder of data.reminders) parts.push(banner(reminder));
+    if (notifications) notifications.replaceChildren(...parts.splice(0));
     const head = dom.el('div', null, 'coach-overview-head');
     const title = dom.el('h2', null, 'coach-title');
     title.id = 'goals-title';
@@ -824,10 +825,10 @@ let mounted = null;
  * @param {?Element} host
  * @return {(!Promise|undefined)}
  */
-function home(host) {
+function home(host, notifications = null) {
   if (!host) return;
   if (!mounted || mounted.host !== host) {
-    mounted = {host, view: create(host)};
+    mounted = {host, view: create(host, notifications)};
   }
   return mounted.view.load();
 }
