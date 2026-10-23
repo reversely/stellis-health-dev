@@ -1,0 +1,194 @@
+{
+  "passed": true,
+  "scope": "UI control wiring uses a transport probe; confirmation persists through real authenticated APIs",
+  "commands": [
+    {
+      "name": "setMuted",
+      "args": [
+        false
+      ]
+    },
+    {
+      "name": "setSpeaker",
+      "args": [
+        true
+      ]
+    },
+    {
+      "name": "setMuted",
+      "args": [
+        true
+      ]
+    },
+    {
+      "name": "setSpeaker",
+      "args": [
+        false
+      ]
+    },
+    {
+      "name": "setMuted",
+      "args": [
+        false
+      ]
+    },
+    {
+      "name": "finishAnswer",
+      "args": []
+    },
+    {
+      "name": "end",
+      "args": []
+    },
+    {
+      "name": "setMuted",
+      "args": [
+        false
+      ]
+    },
+    {
+      "name": "setSpeaker",
+      "args": [
+        false
+      ]
+    },
+    {
+      "name": "end",
+      "args": []
+    },
+    {
+      "name": "setMuted",
+      "args": [
+        false
+      ]
+    },
+    {
+      "name": "setSpeaker",
+      "args": [
+        false
+      ]
+    }
+  ],
+  "confirmed_profile": {
+    "answers": {
+      "name": "Maya",
+      "gender": null,
+      "period": null,
+      "birth_date": null,
+      "conditions": null,
+      "medicines": null,
+      "goals": null,
+      "interests": null
+    },
+    "fields": [
+      {
+        "id": "name",
+        "question": "First, what should I call you?",
+        "kind": "text"
+      },
+      {
+        "id": "gender",
+        "question": "How do you describe your gender?",
+        "kind": "text",
+        "choices": [
+          "Woman",
+          "Man",
+          "Non-binary",
+          "Prefer not to say"
+        ]
+      },
+      {
+        "id": "period",
+        "question": "Do you have a period?",
+        "kind": "choice",
+        "choices": [
+          "Yes",
+          "No",
+          "Not currently",
+          "Prefer not to say"
+        ]
+      },
+      {
+        "id": "birth_date",
+        "question": "When is your birth date?",
+        "kind": "date"
+      },
+      {
+        "id": "conditions",
+        "question": "Do you have any preexisting health conditions?",
+        "kind": "long",
+        "library": "health",
+        "choices": [
+          "None that I know of",
+          "I'd rather skip this"
+        ]
+      },
+      {
+        "id": "medicines",
+        "question": "Do you take any medicines or supplements?",
+        "kind": "long",
+        "library": "medicines",
+        "choices": [
+          "None",
+          "I'll add them later"
+        ]
+      },
+      {
+        "id": "goals",
+        "question": "What health goals would you like help navigating?",
+        "kind": "long",
+        "library": "goals"
+      },
+      {
+        "id": "interests",
+        "question": "Which other areas interest you?",
+        "kind": "multiple",
+        "choices": [
+          {
+            "id": "wellness",
+            "label": "General wellness",
+            "note": "General wellness and preventive care"
+          },
+          {
+            "id": "nutrition",
+            "label": "Nutrition",
+            "note": "Nutrition"
+          },
+          {
+            "id": "fitness",
+            "label": "Movement",
+            "note": "Fitness and movement"
+          },
+          {
+            "id": "sleep",
+            "label": "Sleep",
+            "note": "Sleep"
+          },
+          {
+            "id": "emotional-wellbeing",
+            "label": "Emotional wellbeing",
+            "note": "Emotional wellbeing"
+          },
+          {
+            "id": "pregnancy",
+            "label": "Pregnancy",
+            "note": "Pregnancy"
+          },
+          {
+            "id": "sexual-health",
+            "label": "Sexual health",
+            "note": "Sexual health"
+          },
+          {
+            "id": "dental-care",
+            "label": "Dental care",
+            "note": "Dental care"
+          }
+        ]
+      }
+    ],
+    "step": "gender",
+    "complete": false
+  },
+  "errors": []
+}

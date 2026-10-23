@@ -1,0 +1,120 @@
+{
+  "passed": true,
+  "real_text_reply": true,
+  "confirmation_required": true,
+  "confirmed_notes": true,
+  "real_voice_ready": true,
+  "playback": {
+    "started": 1,
+    "pending": 0
+  },
+  "events": [
+    {
+      "type": "ready",
+      "voice": false,
+      "notes": [],
+      "revision": 0
+    },
+    {
+      "type": "say",
+      "text": "First, what should I call you?",
+      "turn": 0,
+      "rate": null,
+      "audio": false
+    },
+    {
+      "type": "state",
+      "state": "listening"
+    },
+    {
+      "type": "heard",
+      "text": "My name is Maya",
+      "turn": 1
+    },
+    {
+      "type": "state",
+      "state": "thinking"
+    },
+    {
+      "type": "action",
+      "turn": 1,
+      "action": "profile_answer",
+      "field": "name",
+      "value": "Maya",
+      "heard": "My name is Maya"
+    },
+    {
+      "type": "say",
+      "text": "Is that right? You can correct the field before continuing.",
+      "turn": 1,
+      "rate": null,
+      "audio": false
+    },
+    {
+      "type": "state",
+      "state": "listening"
+    },
+    {
+      "type": "heard",
+      "text": "Yes",
+      "turn": 2
+    },
+    {
+      "type": "state",
+      "state": "thinking"
+    },
+    {
+      "type": "say",
+      "text": "Thank you.",
+      "turn": 2,
+      "rate": null,
+      "audio": false
+    },
+    {
+      "type": "action",
+      "turn": 2,
+      "action": "profile_confirm",
+      "field": "name"
+    },
+    {
+      "type": "state",
+      "state": "listening"
+    },
+    {
+      "type": "ready",
+      "voice": false,
+      "notes": [],
+      "revision": 0
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Maya. How do you describe your gender?",
+      "turn": 0,
+      "rate": null,
+      "audio": false
+    },
+    {
+      "type": "state",
+      "state": "listening"
+    },
+    {
+      "type": "ready",
+      "voice": true,
+      "notes": [],
+      "revision": 0
+    },
+    {
+      "type": "say",
+      "text": "Thanks, Maya. How do you describe your gender?",
+      "turn": 0,
+      "rate": 24000,
+      "audio": true
+    },
+    {
+      "type": "state",
+      "state": "listening"
+    }
+  ],
+  "errors": [],
+  "limitation": "Microphone capture used Chromium synthetic media; physical microphone and recognition quality are not claimed"
+}

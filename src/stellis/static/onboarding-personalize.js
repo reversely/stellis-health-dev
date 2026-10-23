@@ -1,50 +1,73 @@
-/** One confirmed profile field at a time, with optional real call recognition. */
+/** Confirmed answers inside the shared call and live-notepad interface. */
 (function(root) {
 'use strict';
 function render(scene, kit) {
   const {node, api, button} = kit;
   scene.classList.add('setup-personalize');
   let state, call, voice = false, field, editor, selected = new Set(), busy = false, typing = 0, candidate = null, motion, textMode = false, epoch = 0, confirmRequested = false, fieldEdited = false;
-  const header = node('div', null, 'profile-header');
+  scene.classList.add('setup-call');
+  const {panel, shrink, ring, status:callStatus, timer, caption, startButton:voiceButton,
+    typeForm, doneSpeaking, retryReply, mute, sound, hangUp, controls} = root.StellisOnboardingCall.createPanel(kit);
+  typeForm.remove();
+  let muted=false, speaker=true, clock=0, started=0;
+  const head=node('div',null,'setup-call-head');head.append(node('h1','Onboarding call'));
   const back = button('Back', () => previous(), 'profile-back');
-  const voiceButton = button('Use microphone', () => {
-    voice = !voice;
-    textMode = false; chat.hidden = true; textButton.textContent = 'Text Stellis'; textButton.setAttribute('aria-expanded','false');
-    voiceButton.textContent = voice ? 'Microphone on' : 'Use microphone';
-    voiceButton.setAttribute('aria-pressed', String(voice));
-    if (voice) startCall(); else stopCall();
-  });
-  voiceButton.setAttribute('aria-pressed', 'false');
+  voiceButton.addEventListener('click',()=>{voice=true;textMode=false;chat.hidden=true;startCall();});
   const textButton = button('Text Stellis', () => {
-    textMode = !textMode; voice = false;
-    voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
-    chat.hidden = !textMode; textButton.textContent = textMode ? 'Close chat' : 'Text Stellis'; textButton.setAttribute('aria-expanded',String(textMode));
-    if (textMode) {startCall(); messageInput.focus();} else stopCall();
-  });
+    textMode=true;voice=false;chat.hidden=false;selectTab('transcript');startCall();messageInput.focus();
+  },'call-text');
   textButton.setAttribute('aria-expanded','false');
-  header.append(back, textButton, voiceButton);
   const body = node('div', null, 'profile-body');
-  const status = node('p', '', 'profile-status');
-  status.setAttribute('role', 'status');
+  const status = node('p', '', 'profile-status');status.setAttribute('role', 'status');
+  const savedNotes=node('section',null,'profile-saved-notes');savedNotes.setAttribute('aria-label','Confirmed notes');
   const actions = node('div', null, 'setup-actions');
   const next = button('Continue', () => confirm(), 'primary');
-  const skip = button('Skip', () => confirm(true));
-  actions.append(next, skip);
-  const chat = node('section', null, 'profile-chat'); chat.hidden = true;
-  chat.setAttribute('aria-label','Conversation with Stellis');
-  const transcript = node('div', null, 'profile-transcript');
-  transcript.setAttribute('role','log'); transcript.setAttribute('aria-live','polite');
+  const skip = button('Skip', () => confirm(true));actions.append(next, skip, back);
+  for(const control of [voiceButton,textButton,next,skip,back])control.disabled=true;
+  const chat = node('section', null, 'profile-chat');chat.hidden=true;chat.setAttribute('aria-label','Conversation with Stellis');
+  const transcript = node('div', null, 'call-transcript profile-transcript');transcript.hidden=true;
+  transcript.setAttribute('role','tabpanel');transcript.setAttribute('aria-live','polite');
   const composer = node('form', null, 'profile-composer');
-  const messageInput = node('input'); messageInput.maxLength = 2000;
-  messageInput.setAttribute('aria-label','Message Stellis'); messageInput.placeholder = 'Your answer or question';
-  const send = node('button', 'Send'); send.type = 'submit'; send.disabled = true;
-  composer.append(messageInput, send); chat.append(transcript, composer);
+  const messageInput = node('input');messageInput.maxLength = 2000;
+  messageInput.setAttribute('aria-label','Message Stellis');messageInput.placeholder = 'Your answer or question';
+  const send = node('button', 'Send');send.type = 'submit';send.disabled = true;
+  composer.append(messageInput, send);chat.append(composer);panel.append(textButton,chat);
+  const pad=node('section',null,'call-notepad');pad.setAttribute('aria-label','Notepad');
+  const tabs=node('div',null,'call-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Call notes');
+  const notesTab=button('Notes',()=>selectTab('notes'),'call-tab');
+  const transcriptTab=button('Transcript',()=>selectTab('transcript'),'call-tab');
+  const notes=node('div',null,'call-notes');notes.setAttribute('role','tabpanel');notes.append(body,status,savedNotes);
+  for(const [tab,id,target] of [[notesTab,'notes',notes],[transcriptTab,'transcript',transcript]]){
+    tab.setAttribute('role','tab');tab.id='profile-'+id+'-tab';target.id='profile-'+id;
+    tab.setAttribute('aria-controls',target.id);target.setAttribute('aria-labelledby',tab.id);
+    tab.addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?'notes':event.key==='End'?'transcript':notes.hidden?'notes':'transcript';selectTab(next);(next==='notes'?notesTab:transcriptTab).focus();}});
+  }
+  tabs.append(notesTab,transcriptTab);pad.append(tabs,notes,transcript);selectTab('notes');
+  const layout=node('div',null,'call-layout');layout.append(panel,pad);scene.append(head,layout,actions);
   composer.addEventListener('submit', e => {
-    e.preventDefault(); const text = messageInput.value.trim();
+    e.preventDefault();const text = messageInput.value.trim();
     if (!text || !call || send.disabled || busy) return;
-    fieldEdited = false; call.sendText(text); messageInput.value = ''; send.disabled = true;
+    fieldEdited = false;call.sendText(text);messageInput.value = '';send.disabled = true;
   });
-  scene.append(header, body, status, chat, actions);
+  shrink.addEventListener('click',()=>{const minimized=scene.classList.toggle('is-minimised');shrink.setAttribute('aria-label',minimized?'Expand call':'Minimise call');shrink.title=shrink.getAttribute('aria-label');setGlyph(shrink,minimized?'arrows-diagonal':'arrows-diagonal-minimize-2');});
+  mute.addEventListener('click',()=>{muted=!muted;call?.setMuted(muted);mute.setAttribute('aria-pressed',String(muted));setGlyph(mute,muted?'microphone-off':'microphone');});
+  sound.addEventListener('click',()=>{speaker=!speaker;call?.setSpeaker(speaker);sound.setAttribute('aria-pressed',String(!speaker));setGlyph(sound,speaker?'volume':'volume-off');});
+  mute.setAttribute('aria-pressed','false');sound.setAttribute('aria-pressed','false');
+  hangUp.setAttribute('aria-label','End call');hangUp.addEventListener('click',()=>endSession('ended'));
+  doneSpeaking.addEventListener('click',()=>call?.finishAnswer());retryReply.addEventListener('click',()=>{retryReply.hidden=true;call?.retryReply();});
+  function setGlyph(control,glyph){control.querySelector('use')?.setAttribute('href','#i-'+glyph);}
+  function selectTab(id){notes.hidden=id!=='notes';transcript.hidden=id!=='transcript';for(const [tab,name] of [[notesTab,'notes'],[transcriptTab,'transcript']]){tab.setAttribute('aria-selected',String(id===name));tab.tabIndex=id===name?0:-1;}}
+  function setCallStatus(key){panel.dataset.state=key;callStatus.textContent=root.StellisIntakeCall.STATUS[key]||key;doneSpeaking.hidden=key!=='hearing'||!voice||muted;}
+  function endSession(key){stopCall();voice=false;textMode=false;clearInterval(clock);clock=0;started=0;controls.hidden=true;chat.hidden=true;doneSpeaking.hidden=retryReply.hidden=true;voiceButton.hidden=false;voiceButton.querySelector('span').textContent='Call again';textButton.hidden=false;caption.textContent='';ring.style.setProperty('--level','0');setCallStatus(key);}
+  function paintSavedNotes(){
+    savedNotes.replaceChildren();
+    const labels={name:'Name',gender:'Gender',period:'Periods',birth_date:'Date of birth',conditions:'Conditions',medicines:'Medicines',goals:'Goals',interests:'Interests',cycle_tracking:'Cycle tracking'};
+    for(const item of state.fields){const value=state.answers[item.id];if(value==null||value===''||Array.isArray(value)&&!value.length)continue;
+      const block=node('section',null,'call-note');block.append(node('h3',labels[item.id]));
+      const text=Array.isArray(value)?value.map(id=>item.choices.find(choice=>choice.id===id)?.label||id).join(' / '):value;
+      const edit=button(text,()=>{if(!busy){selectTab('notes');show(item.id);}},'profile-note-edit');edit.setAttribute('aria-label',`Edit ${labels[item.id]}: ${text}`);block.append(edit);savedNotes.append(block);
+    }
+  }
   function line(role, text) {
     const row = node('p', null, 'profile-message');
     row.append(node('strong', role === 'person' ? 'You' : 'Stellis'), node('span',text));
@@ -58,16 +81,25 @@ function render(scene, kit) {
   function stopCall() { ++epoch; if (call) call.end(); call = null; send.disabled = true; confirmRequested = false; lockReply(false); }
   function startCall() {
     stopCall();
-    const active = epoch; lockReply(true);
+    const active = epoch;lockReply(true);setCallStatus('connecting');voiceButton.hidden=true;textButton.hidden=true;controls.hidden=false;chat.hidden=false;mute.disabled=!voice;sound.disabled=!voice;textButton.setAttribute('aria-expanded',String(textMode));
     call = root.StellisIntakeCall.start(message => {if (active === epoch) event(message);}, {
       listen:voice,
       path:'/api/v1/onboarding/profile/call?field=' + encodeURIComponent(field?.id || 'complete')
     });
+    call.setMuted(muted);call.setSpeaker(speaker);
   }
   function event(message) {
-    if (message.type === 'say') {line('agent',message.text); lockReply(true);}
+    if(message.type==='ready'){
+      if(!message.voice){voice=false;textMode=true;chat.hidden=false;}
+      if(!clock){started=Date.now();timer.textContent='0:00';timer.hidden=false;clock=setInterval(()=>{const seconds=Math.floor((Date.now()-started)/1000);timer.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');},1000);}
+      mute.disabled=!message.voice;sound.disabled=!message.voice;setCallStatus(message.voice?'listening':'typing');
+    }else if(message.type==='caption'){caption.textContent=message.text;if(message.audio&&message.text)setCallStatus('speaking');}
+    else if(message.type==='level'){ring.style.setProperty('--level',String(Math.min(1,(message.speaking?message.agent:message.person)*6)));}
+    else if (message.type === 'say') {line('agent',message.text); lockReply(true);}
     else if (message.type === 'heard') line('person',message.text);
-    else if (message.type === 'state' && ['listening','hearing'].includes(message.state)) {
+    else if (message.type === 'state') {
+      setCallStatus(message.state==='listening'&&!voice?'typing':message.state);
+      if(!['listening','hearing'].includes(message.state))return;
       lockReply(false);
       if (confirmRequested) {confirmRequested = false; confirm();}
     }
@@ -78,13 +110,13 @@ function render(scene, kit) {
     } else if (message.type === 'action' && message.action === 'profile_confirm' && message.field === field?.id) {
       confirmRequested = true;
     } else if (message.type === 'mic' && !message.ok) {
-      status.textContent = 'Microphone unavailable';
+      status.textContent = 'Microphone unavailable';voice=false;textMode=true;chat.hidden=false;mute.disabled=true;setCallStatus('typing');
     } else if (message.type === 'error') {
-      status.textContent = message.message;
+      status.textContent = message.message;retryReply.hidden=!message.retryable;
     } else if (message.type === 'ended') {
-      call?.end(); call = null; lockReply(false); voice = false; textMode = false; textButton.textContent = 'Text Stellis'; textButton.setAttribute('aria-expanded',String(!chat.hidden)); voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
+      endSession('ended');
     } else if (message.type === 'closed') {
-      lockReply(false); send.disabled = true; status.textContent = 'Connection lost';
+      endSession('lost');status.textContent='Connection lost';
     }
   }
   function value() { return field.kind === 'multiple' ? [...selected] : candidate ?? editor.value.trim(); }
@@ -120,13 +152,14 @@ function render(scene, kit) {
     field = state.fields.find(item => item.id === id);
     next.textContent = field ? 'Continue' : 'Review notebooks';
     skip.hidden = !field;
-    back.disabled = field?.id === 'name';
+    back.disabled = false;
+    paintSavedNotes();
     if (!field) {
-      body.append(node('h1', "You're all set"), node('p', 'Review the notebooks suggested from your interests'));
+      body.append(node('h2', "You're all set"), node('p', 'Review the notebooks suggested from your interests'));
       if ((voice || textMode) && speak) startCall();
       return;
     }
-    body.append(node('h1', field.question));
+    body.append(node('h2', field.question));
     const saved = state.answers[field.id];
     selected = new Set(Array.isArray(saved) ? saved : []);
     if (field.kind !== 'multiple') {
@@ -175,7 +208,7 @@ function render(scene, kit) {
     if ((voice || textMode) && speak) startCall();
   }
   async function confirm(skipped = false) {
-    if (busy) return;
+    if (busy || !state) return;
     if (!field) {stopCall(); await kit.next(); return;}
     if (field.kind === 'date' && !skipped && !editor.checkValidity()) {editor.reportValidity(); return;}
     busy = true; next.disabled = skip.disabled = voiceButton.disabled = textButton.disabled = true; send.disabled = true;
@@ -193,13 +226,13 @@ function render(scene, kit) {
     }
   }
   function previous() {
-    if (busy) return;
+    if (busy || !state) return;
     const index = state.fields.findIndex(item => item.id === field?.id);
     const previous = state.fields[index < 0 ? state.fields.length-1 : index-1];
     if (previous) show(previous.id); else kit.back();
   }
-  api('/onboarding/profile').then(loaded => {state = loaded;show(state.complete ? 'name' : state.step,false);}).catch(e=>kit.error(e.message));
-  return {leave() {++typing; stopCall();}};
+  api('/onboarding/profile').then(async loaded => {state = loaded;await show(state.complete ? 'name' : state.step,false);voiceButton.disabled=textButton.disabled=false;lockReply(false);}).catch(e=>kit.error(e.message));
+  return {leave() {++typing;stopCall();clearInterval(clock);}};
 }
 root.StellisOnboardingPersonalize = {render};
 })(window);

@@ -25,14 +25,14 @@ page.on('websocket',socket=>socket.on('framereceived',frame=>{if(typeof frame.pa
 page.on('pageerror',e=>errors.push(e.message));
 async function pause(){await page.waitForTimeout(pace);}
 async function profile(){return (await context.request.get(origin+'/api/v1/onboarding/profile')).json();}
-async function heading(name){await page.getByRole('heading',{name,exact:true}).waitFor();await page.getByRole('button',{name:'Send',exact:true}).waitFor();await page.waitForFunction(()=>!document.querySelector('.profile-composer button')?.disabled);}
+async function heading(name){await page.getByRole('heading',{name,exact:true,includeHidden:true}).waitFor({state:'attached'});await page.getByRole('button',{name:'Send',exact:true}).waitFor();await page.waitForFunction(()=>!document.querySelector('.profile-composer button')?.disabled);}
 async function send(text){
  const input=page.getByRole('textbox',{name:'Message Stellis',exact:true});
  await input.scrollIntoViewIfNeeded();await input.pressSequentially(text,{delay:12});await pause();
  const before=await page.locator('.profile-message').count();
  await page.getByRole('button',{name:'Send',exact:true}).click();
  await page.waitForFunction(count=>document.querySelectorAll('.profile-message').length>=count+2,before);
- await page.waitForFunction(()=>!document.querySelector('.profile-composer button')?.disabled || document.querySelector('.profile-body h1')?.textContent === "You're all set");
+ await page.waitForFunction(()=>!document.querySelector('.profile-composer button')?.disabled || document.querySelector('.profile-body :is(h1,h2)')?.textContent === "You're all set");
  const latest=await page.locator('.profile-message').last().innerText();
  await page.waitForTimeout(Math.min(5000,Math.max(pace,latest.length*18)));
 }
@@ -55,10 +55,10 @@ try {
  await send("I'm not sure what counts?");assert.equal((await profile()).step,'conditions');
  await answer('conditions','None that I know of','Do you take any medicines or supplements?');
  await send('What counts as medicine?');assert.equal((await profile()).step,'medicines');
- await page.locator('.profile-library > summary').click();await page.getByLabel('Search health library',{exact:true}).fill('ferrous');
+ await page.getByRole('tab',{name:'Notes',exact:true}).click();await page.locator('.profile-library > summary').click();await page.getByLabel('Search health library',{exact:true}).fill('ferrous');
  await page.locator('.intake-library-item').first().waitFor();await pause();
  // At Maya's January 2022 intake, treatment has not yet been prescribed.
- await page.locator('.profile-library > summary').click();
+ await page.locator('.profile-library > summary').click();await page.getByRole('tab',{name:'Transcript',exact:true}).click();
  await answer('medicines',"I'm not taking any medicines right now",'What health goals would you like help navigating?');
  for(const text of ['What do you usually offer?','Can you give examples?','Give me a moment','What options are there?']){await send(text);assert.equal((await profile()).step,'goals');}
  const draft=page.getByRole('textbox',{name:'Message Stellis',exact:true});
@@ -67,11 +67,11 @@ try {
  await draft.fill('');
  checks.push({check:'Four clarifications and an unsent draft pause do not advance or end setup',pass:true});
  await send('I want to track my periods, understand fatigue, and improve my nutrition and movement');
- await page.locator('.profile-answer').fill('Track menstrual health\nUnderstand fatigue and preventive care\nImprove nutrition and movement');
+ await page.getByRole('tab',{name:'Notes',exact:true}).click();await page.locator('.profile-answer').fill('Track menstrual health\nUnderstand fatigue and preventive care\nImprove nutrition and movement');
  await page.getByRole('button',{name:'Continue',exact:true}).click();await heading('Which other areas interest you?');
  await answer('interests','Nutrition, general wellness and movement','Are you interested in cycle tracking?');
  await send('Yes');await send('Yes');
- await page.getByRole('heading',{name:"You're all set",exact:true}).waitFor();
+ await page.getByRole('tab',{name:'Notes',exact:true}).click();await page.getByRole('heading',{name:"You're all set",exact:true}).waitFor();
  await page.getByRole('button',{name:'Review notebooks',exact:true}).waitFor();
  await page.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Review notebooks')?.disabled);
  assert(received.some(event=>event.type==='say'&&event.text.includes('Goodbye')&&event.text.includes('Review notebooks')));

@@ -1,0 +1,338 @@
+[
+  {
+    "theme": "light",
+    "width": 360,
+    "state": "expanded",
+    "viewport": {
+      "width": 360,
+      "height": 1000,
+      "scrollWidth": 360,
+      "scrollHeight": 1764
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 360,
+    "state": "compact",
+    "viewport": {
+      "width": 360,
+      "height": 1000,
+      "scrollWidth": 360,
+      "scrollHeight": 1153
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "state": "expanded",
+    "viewport": {
+      "width": 390,
+      "height": 1000,
+      "scrollWidth": 390,
+      "scrollHeight": 1334
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "state": "compact",
+    "viewport": {
+      "width": 390,
+      "height": 1000,
+      "scrollWidth": 390,
+      "scrollHeight": 1099
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 768,
+    "state": "expanded",
+    "viewport": {
+      "width": 768,
+      "height": 1000,
+      "scrollWidth": 768,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 768,
+    "state": "compact",
+    "viewport": {
+      "width": 768,
+      "height": 1000,
+      "scrollWidth": 768,
+      "scrollHeight": 1396
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1024,
+    "state": "expanded",
+    "viewport": {
+      "width": 1024,
+      "height": 1000,
+      "scrollWidth": 1024,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1024,
+    "state": "compact",
+    "viewport": {
+      "width": 1024,
+      "height": 1000,
+      "scrollWidth": 1024,
+      "scrollHeight": 1407
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1280,
+    "state": "expanded",
+    "viewport": {
+      "width": 1280,
+      "height": 1000,
+      "scrollWidth": 1280,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1280,
+    "state": "compact",
+    "viewport": {
+      "width": 1280,
+      "height": 1000,
+      "scrollWidth": 1280,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1440,
+    "state": "expanded",
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1440,
+    "state": "compact",
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1920,
+    "state": "expanded",
+    "viewport": {
+      "width": 1920,
+      "height": 1000,
+      "scrollWidth": 1920,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "light",
+    "width": 1920,
+    "state": "compact",
+    "viewport": {
+      "width": 1920,
+      "height": 1000,
+      "scrollWidth": 1920,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 360,
+    "state": "expanded",
+    "viewport": {
+      "width": 360,
+      "height": 1000,
+      "scrollWidth": 360,
+      "scrollHeight": 1533
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 360,
+    "state": "compact",
+    "viewport": {
+      "width": 360,
+      "height": 1000,
+      "scrollWidth": 360,
+      "scrollHeight": 1153
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "state": "expanded",
+    "viewport": {
+      "width": 390,
+      "height": 1000,
+      "scrollWidth": 390,
+      "scrollHeight": 1334
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "state": "compact",
+    "viewport": {
+      "width": 390,
+      "height": 1000,
+      "scrollWidth": 390,
+      "scrollHeight": 1099
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 768,
+    "state": "expanded",
+    "viewport": {
+      "width": 768,
+      "height": 1000,
+      "scrollWidth": 768,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 768,
+    "state": "compact",
+    "viewport": {
+      "width": 768,
+      "height": 1000,
+      "scrollWidth": 768,
+      "scrollHeight": 1396
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1024,
+    "state": "expanded",
+    "viewport": {
+      "width": 1024,
+      "height": 1000,
+      "scrollWidth": 1024,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1024,
+    "state": "compact",
+    "viewport": {
+      "width": 1024,
+      "height": 1000,
+      "scrollWidth": 1024,
+      "scrollHeight": 1407
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "state": "expanded",
+    "viewport": {
+      "width": 1280,
+      "height": 1000,
+      "scrollWidth": 1280,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "state": "compact",
+    "viewport": {
+      "width": 1280,
+      "height": 1000,
+      "scrollWidth": 1280,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1440,
+    "state": "expanded",
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1440,
+    "state": "compact",
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "scrollWidth": 1440,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1920,
+    "state": "expanded",
+    "viewport": {
+      "width": 1920,
+      "height": 1000,
+      "scrollWidth": 1920,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  },
+  {
+    "theme": "dark",
+    "width": 1920,
+    "state": "compact",
+    "viewport": {
+      "width": 1920,
+      "height": 1000,
+      "scrollWidth": 1920,
+      "scrollHeight": 1000
+    },
+    "findings": []
+  }
+]
