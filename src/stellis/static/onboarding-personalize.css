@@ -21,3 +21,16 @@
 .profile-message strong { font-size: 14px; }
 .profile-composer { display: flex; gap: 12px; align-items: center; }
 .profile-composer input { flex: 1; width: 0; min-width: 0; font-size: 16px; }
+
+/* Confirmed answers stay inside the existing call and notepad layout. */
+.setup-personalize.setup-call { max-width:none; }
+.setup-personalize .profile-body h2 { font-size:clamp(24px,3vw,32px); line-height:1.25; margin:0 0 20px; }
+.setup-personalize .call-notepad { grid-template-rows:auto minmax(0,1fr); }
+.setup-personalize .profile-transcript { max-height:none; border:0; padding:20px 24px 28px; }
+.setup-personalize .profile-chat { width:100%; margin-top:8px; }
+.setup-personalize .profile-composer { flex-wrap:wrap; }
+.setup-personalize .profile-composer input { flex-basis:180px; background:var(--call-bg); color:var(--call-ink); border-color:var(--call-muted); }
+.setup-personalize .call-text { background:transparent; color:var(--call-ink); border-color:var(--call-muted); }
+.setup-personalize .profile-saved-notes:not(:empty) { margin-top:24px; border-top:1px solid var(--line-soft); padding-top:16px; }
+.setup-personalize .profile-note-edit { display:block; width:100%; white-space:pre-wrap; overflow-wrap:anywhere; text-align:left; border:0; background:transparent; padding:8px 0; }
+.setup-personalize.is-minimised :is(.profile-chat, .call-text) { display:none; }

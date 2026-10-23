@@ -1,0 +1,288 @@
+{
+  "scope": "Synthetic Maya at January 2022 intake, before iron treatment or later fertility/pregnancy outcomes",
+  "origin": "http://127.0.0.1:8985",
+  "profile": {
+    "answers": {
+      "name": "Maya",
+      "gender": "Woman",
+      "period": "Yes",
+      "birth_date": "1993-03-14",
+      "conditions": "None that I know of",
+      "medicines": "I'm not taking any medicines right now",
+      "goals": "Track menstrual health\nUnderstand fatigue and preventive care\nImprove nutrition and movement",
+      "interests": [
+        "wellness",
+        "nutrition",
+        "fitness"
+      ],
+      "cycle_tracking": "Yes"
+    },
+    "fields": [
+      {
+        "id": "name",
+        "question": "First, what should I call you?",
+        "kind": "text"
+      },
+      {
+        "id": "gender",
+        "question": "How do you describe your gender?",
+        "kind": "text",
+        "choices": [
+          "Woman",
+          "Man",
+          "Non-binary",
+          "Prefer not to say"
+        ]
+      },
+      {
+        "id": "period",
+        "question": "Do you have a period?",
+        "kind": "choice",
+        "choices": [
+          "Yes",
+          "No",
+          "Not currently",
+          "Prefer not to say"
+        ]
+      },
+      {
+        "id": "birth_date",
+        "question": "When is your birth date?",
+        "kind": "date"
+      },
+      {
+        "id": "conditions",
+        "question": "Do you have any preexisting health conditions?",
+        "kind": "long",
+        "library": "health",
+        "choices": [
+          "None that I know of",
+          "I'd rather skip this"
+        ]
+      },
+      {
+        "id": "medicines",
+        "question": "Do you take any medicines or supplements?",
+        "kind": "long",
+        "library": "medicines",
+        "choices": [
+          "None",
+          "I'll add them later"
+        ]
+      },
+      {
+        "id": "goals",
+        "question": "What health goals would you like help navigating?",
+        "kind": "long",
+        "library": "goals"
+      },
+      {
+        "id": "interests",
+        "question": "Which other areas interest you?",
+        "kind": "multiple",
+        "choices": [
+          {
+            "id": "wellness",
+            "label": "General wellness",
+            "note": "General wellness and preventive care"
+          },
+          {
+            "id": "nutrition",
+            "label": "Nutrition",
+            "note": "Nutrition"
+          },
+          {
+            "id": "fitness",
+            "label": "Movement",
+            "note": "Fitness and movement"
+          },
+          {
+            "id": "sleep",
+            "label": "Sleep",
+            "note": "Sleep"
+          },
+          {
+            "id": "emotional-wellbeing",
+            "label": "Emotional wellbeing",
+            "note": "Emotional wellbeing"
+          },
+          {
+            "id": "pregnancy",
+            "label": "Pregnancy",
+            "note": "Pregnancy"
+          },
+          {
+            "id": "sexual-health",
+            "label": "Sexual health",
+            "note": "Sexual health"
+          },
+          {
+            "id": "dental-care",
+            "label": "Dental care",
+            "note": "Dental care"
+          }
+        ]
+      },
+      {
+        "id": "cycle_tracking",
+        "question": "Are you interested in cycle tracking?",
+        "kind": "choice",
+        "choices": [
+          "Yes",
+          "No",
+          "Maybe later"
+        ]
+      }
+    ],
+    "step": "complete",
+    "complete": true
+  },
+  "preferences": {
+    "experiences_periods": true
+  },
+  "notebooks": [
+    {
+      "id": "59e3e5bc-a05f-470b-bd6d-906b3d3db854",
+      "name": "Menstrual Health",
+      "color": "#547980",
+      "created_at": "2026-10-23T12:38:22.037784+00:00",
+      "collection_id": "reproductive-health",
+      "todo_list": "on",
+      "template_id": "reproductive-health--menstrual-health",
+      "description": "Menstrual health fertility contraception and menopause",
+      "catalogue_version": 1,
+      "archived_at": null,
+      "capabilities_json": null,
+      "recommendation_evidence_json": "[{\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"Track menstrual health\"}, {\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"Menstrual health and cycle tracking\"}]",
+      "todo_enabled": true,
+      "conversations": [],
+      "pages": [
+        {
+          "id": "6ed9bc6e-3a5e-4ea1-a768-674275355685",
+          "title": "Goals",
+          "updated_at": "2026-10-23T12:38:22.067720+00:00",
+          "category_ids": []
+        }
+      ],
+      "progress": []
+    },
+    {
+      "id": "9d10163d-9d96-4b82-9328-c1da979fbba7",
+      "name": "Preventive Care",
+      "color": "#594F4F",
+      "created_at": "2026-10-23T12:38:22.037763+00:00",
+      "collection_id": "preventive-care",
+      "todo_list": "on",
+      "template_id": "preventive-care--preventive-care",
+      "description": "Screening vaccination and routine preventive care",
+      "catalogue_version": 1,
+      "archived_at": null,
+      "capabilities_json": null,
+      "recommendation_evidence_json": "[{\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"Understand fatigue and preventive care\"}, {\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"General wellness and preventive care\"}]",
+      "todo_enabled": true,
+      "conversations": [],
+      "pages": [
+        {
+          "id": "4543574b-dbd7-45b1-9379-3c94a3a4b0eb",
+          "title": "Goals",
+          "updated_at": "2026-10-23T12:38:22.060006+00:00",
+          "category_ids": []
+        }
+      ],
+      "progress": []
+    },
+    {
+      "id": "5f5baa4e-0dc1-45a8-86a9-9d1480cf5e3f",
+      "name": "Nutrition",
+      "color": "#56465C",
+      "created_at": "2026-10-23T12:38:22.037740+00:00",
+      "collection_id": "nutrition",
+      "todo_list": "on",
+      "template_id": "nutrition--nutrition",
+      "description": "Diet weight management and nutritional support",
+      "catalogue_version": 1,
+      "archived_at": null,
+      "capabilities_json": null,
+      "recommendation_evidence_json": "[{\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"Improve nutrition and movement\"}, {\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"Nutrition\"}]",
+      "todo_enabled": true,
+      "conversations": [],
+      "pages": [
+        {
+          "id": "33d87371-6edd-4f8f-8515-cfa1c7fc94b0",
+          "title": "Goals",
+          "updated_at": "2026-10-23T12:38:22.052993+00:00",
+          "category_ids": []
+        }
+      ],
+      "progress": []
+    },
+    {
+      "id": "96b0c382-32b8-4bd7-97f6-66e10a1a933b",
+      "name": "Fitness",
+      "color": "#495575",
+      "created_at": "2026-10-23T12:38:22.037690+00:00",
+      "collection_id": "fitness",
+      "todo_list": "on",
+      "template_id": "fitness--fitness",
+      "description": "Exercise physical activity training and general mobility",
+      "catalogue_version": 1,
+      "archived_at": null,
+      "capabilities_json": null,
+      "recommendation_evidence_json": "[{\"kind\": \"intake\", \"id\": \"notes\", \"quote\": \"Fitness and movement\"}]",
+      "todo_enabled": true,
+      "conversations": [],
+      "pages": [
+        {
+          "id": "b66a5887-006f-4b08-af65-08b6e4dc6df9",
+          "title": "Goals",
+          "updated_at": "2026-10-23T12:38:22.044277+00:00",
+          "category_ids": []
+        }
+      ],
+      "progress": []
+    }
+  ],
+  "checks": [
+    {
+      "check": "Corrected name only saved after Yes",
+      "pass": true
+    },
+    {
+      "check": "gender stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "period stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "birth_date stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "conditions stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "medicines stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "Four clarifications and an unsent draft pause do not advance or end setup",
+      "pass": true
+    },
+    {
+      "check": "interests stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "Reason and next action with goodbye before completion",
+      "pass": true
+    },
+    {
+      "check": "Explicit notebook creation and reload preserve selection",
+      "pass": true
+    }
+  ],
+  "errors": []
+}

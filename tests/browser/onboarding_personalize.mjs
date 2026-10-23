@@ -9,12 +9,12 @@ let r=await context.request.post(origin+'/api/v1/auth/register',{data:{username:
 const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(origin+'/onboarding');await page.getByRole('button',{name:'Get started',exact:true}).click();
 await page.getByRole('heading',{name:'First, what should I call you?',exact:true}).waitFor();
-await page.getByRole('button',{name:'Use microphone',exact:true}).click();
+await page.getByRole('button',{name:'Start call',exact:true}).click();
 await page.getByText('Is that right?',{exact:true}).waitFor({timeout:40000});
 const name=page.getByRole('textbox',{name:'First, what should I call you?',exact:true});
 await page.waitForFunction(()=>document.querySelector('.profile-answer').value.toLowerCase().includes('alex'),{},{timeout:5000});
 let state=await (await context.request.get(origin+'/api/v1/onboarding/profile')).json();assert(!state.answers.name);
-await page.getByRole('button',{name:'Microphone on',exact:true}).click();
+await page.getByRole('button',{name:'End call',exact:true}).click();
 await name.fill('Alexandria');await page.getByRole('button',{name:'Continue',exact:true}).click();
 await page.getByRole('heading',{name:'How do you describe your gender?',exact:true}).waitFor();
 state=await (await context.request.get(origin+'/api/v1/onboarding/profile')).json();assert.equal(state.answers.name,'Alexandria');

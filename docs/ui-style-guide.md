@@ -106,3 +106,7 @@ The call distinguishes Listening, Hearing you and Processing your answer. Done s
 ## Call and tour completion
 
 Calls share status labels and expose Retry reply after a preparation failure. Add records follows onboarding; Go to My Health follows a completed tour or check-in. My Health keeps Daily check-in beside Call Stellis. Each tour stage has a visible title and narration. The tour uses the selected surface behind its narration card to separate it from the page. Its conversation region scrolls while the header and controls remain visible. Phone message fields use 16-pixel text and occupy a separate row above the controls.
+
+## Onboarding call continuity
+
+The call panel beside the live Notes/Transcript notepad is the primary onboarding interface. Keep Start call visible at entry, with Text Stellis as an alternative. Preserve the avatar, live status/ring, timer, mute, speaker, end, answer-finish, retry and minimize/expand controls. New confirmed-answer fields belong inside Notes; they must not replace this call interface with a standalone questionnaire. Notes stay editable and confirmation remains explicit. Compact mode stays in the layout beside or above the notepad.

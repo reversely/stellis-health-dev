@@ -12,32 +12,8 @@ const STATUS = {...root.StellisIntakeCall.STATUS,
   ended:'Call ended. Press Continue to add your records.',
 };
 
-/**
- * Renders the call step.
- * @param {!Element} scene
- * @param {!Object} kit Helpers from onboarding.js: api, node, icon, avatar,
- *     button, and next and back, which move between steps.
- */
-function render(scene, kit) {
-  const {api, node, icon, avatar} = kit;
-  scene.classList.add('setup-call');
-  let call = null;
-  let state = null;
-  let started = 0;
-  let clock = 0;
-  let revision = 0;
-  let deferred = null;
-  let muted = false;
-  let speaker = true;
-
-  const head = node('div', null, 'setup-call-head');
-  head.append(
-      node('h1', 'Onboarding call'),
-      node(
-          'p', 'Stellis learns what you need, then shows you around',
-          'setup-hint'));
-
-  // The call panel.
+/** The existing call controls shared by intake and confirmed-profile setup. */
+function createPanel({node, icon, avatar}) {
   const panel = node('section', null, 'call-panel');
   panel.setAttribute('aria-label', 'Call');
   const shrink =
@@ -67,11 +43,9 @@ function render(scene, kit) {
   const doneSpeaking = node('button', 'Done speaking', 'call-finish');
   doneSpeaking.type = 'button';
   doneSpeaking.hidden = true;
-  doneSpeaking.addEventListener('click', () => call?.finishAnswer());
   const retryReply = node('button', 'Retry reply', 'call-retry');
   retryReply.type = 'button';
   retryReply.hidden = true;
-  retryReply.addEventListener('click', () => call?.retryReply());
   const mute = control('microphone', 'Mute');
   const sound = control('volume', 'Speaker');
   const hangUp = control('phone-off', 'End');
@@ -82,6 +56,56 @@ function render(scene, kit) {
   panel.append(
       shrink, face, name, status, timer, caption, startButton, doneSpeaking, retryReply, typeForm,
       controls);
+
+  function iconButton(glyph, label, cls) {
+    const element = node('button', null, cls);
+    element.type = 'button';
+    element.setAttribute('aria-label', label);
+    element.title = label;
+    element.append(icon(glyph));
+    return element;
+  }
+
+  function control(glyph, label) {
+    const element = node('button', null, 'call-control');
+    element.type = 'button';
+    element.append(icon(glyph), node('span', label));
+    return element;
+  }
+
+  return {panel, shrink, face, ring, name, status, timer, caption, startButton,
+    typeForm, typeInput, typeSend, doneSpeaking, retryReply, mute, sound, hangUp, controls};
+}
+
+/**
+ * Renders the call step.
+ * @param {!Element} scene
+ * @param {!Object} kit Helpers from onboarding.js: api, node, icon, avatar,
+ *     button, and next and back, which move between steps.
+ */
+function render(scene, kit) {
+  const {api, node, icon, avatar} = kit;
+  scene.classList.add('setup-call');
+  let call = null;
+  let state = null;
+  let started = 0;
+  let clock = 0;
+  let revision = 0;
+  let deferred = null;
+  let muted = false;
+  let speaker = true;
+
+  const head = node('div', null, 'setup-call-head');
+  head.append(
+      node('h1', 'Onboarding call'),
+      node(
+          'p', 'Stellis learns what you need, then shows you around',
+          'setup-hint'));
+
+  const {panel, shrink, ring, status, timer, caption, startButton, doneSpeaking,
+    retryReply, typeForm, typeInput, mute, sound, hangUp, controls} = createPanel(kit);
+  doneSpeaking.addEventListener('click', () => call?.finishAnswer());
+  retryReply.addEventListener('click', () => call?.retryReply());
 
   // The notepad, with the transcript behind it.
   const pad = node('section', null, 'call-notepad');
@@ -110,22 +134,6 @@ function render(scene, kit) {
   const layout = node('div', null, 'call-layout');
   layout.append(panel, pad);
   scene.append(head, layout, actions);
-
-  function iconButton(glyph, label, cls) {
-    const element = node('button', null, cls);
-    element.type = 'button';
-    element.setAttribute('aria-label', label);
-    element.title = label;
-    element.append(icon(glyph));
-    return element;
-  }
-
-  function control(glyph, label) {
-    const element = node('button', null, 'call-control');
-    element.type = 'button';
-    element.append(icon(glyph), node('span', label));
-    return element;
-  }
 
   function setGlyph(element, glyph) {
     element.querySelector('use').setAttribute('href', '#i-' + glyph);
@@ -425,5 +433,5 @@ function render(scene, kit) {
   return {leave: hangUpCall};
 }
 
-root.StellisOnboardingCall = {render};
+root.StellisOnboardingCall = {render, createPanel};
 })(window);

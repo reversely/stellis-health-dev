@@ -1,0 +1,11 @@
+# Restored onboarding call
+
+The confirmed-profile implementation had replaced the primary call interface with a standalone form. The restored screen reuses the original call panel factory and its existing visual styles: avatar/live ring, status, timer, microphone/speaker/end controls, answer finish/retry, typed fallback and minimize/expand. Notes and Transcript are beside the call again. Confirmed answers remain editable in Notes; candidates still require explicit confirmation. Health/medicine search and notebook review remain in their existing services.
+
+`desktop.png`, `compact.png` and `transcript.png` come from a real authenticated profile call. The typed name stayed unconfirmed until Yes. Starting voice then received a real voice-ready handshake, local Chatterbox audio and browser playback that finished before the Listening state. The microphone used Chromium synthetic media and was muted for this check; physical microphone and recognition quality are not claimed. The short MP4 is the actual silent browser recording.
+
+`phone.png` and `layout.json` cover 28 active expanded/compact states at 360, 390, 768, 1024, 1280, 1440 and 1920 pixels in both themes with zero findings. `controls.json` checks control wiring with an explicit transport probe while confirmations persist through real authenticated APIs. It distinguishes those checks from real transport evidence in `real-transport.json`.
+
+The complete Maya setup also passes name correction, explicit confirmations, clarifications, pauses, an unsent draft, manual edits, medicine search, shared tracking preferences, notebook review and saved approval. `full-setup.json` and `full-transcript.md` retain those results. Forty-one Python onboarding/call/intake tests pass with one model-dependent skip; all 199 JavaScript tests pass. Test-server logs contain no errors.
+
+Reproduce with `tests/browser/onboarding_call_interface.mjs`, `tests/browser/onboarding_call_real.mjs` and `tests/browser/maya_onboarding.mjs` against fresh disposable app directories. The real test requires configured local speech models and synthesis. Set the usual Playwright module/browser/origin variables; the controls test requires STELLIS_TEST_DISPOSABLE=1. No inference or microphone-quality success is inferred from geometry tests.
