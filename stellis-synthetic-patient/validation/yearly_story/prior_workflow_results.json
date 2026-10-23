@@ -1,0 +1,451 @@
+{
+  "passed": true,
+  "errors": [],
+  "results": [
+    {
+      "year": 2022,
+      "question": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+      "threads": [
+        {
+          "agent": "Stellis",
+          "messages": [
+            {
+              "id": "0dff275c-59cb-49be-8e8b-f37e95a788db",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "user",
+              "content": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:23.469669+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "5448ddd9-41e2-4b5c-b7ee-18082865329d",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "agent",
+              "content": "Your ferritin rose from 11 ug/L in January to 34 ug/L by May 2022, indicating improved iron stores after treatment. Hemoglobin remained stable around 124-130 g/L, staying within the normal adult female range. The follow-up note states you completed an alternate-day iron course through August and were advised to continue dietary iron. [D007 2022-08-02 iron-repletion-follow-up](/document/b23b4fa6-8d1b-4181-8fde-0e327d008e05?page=1) [D006 2022-05-20 iron-treatment-follow-up](/document/468e0cd2-7e82-41f2-9f9f-1b4f8f456e16?page=1)",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:24.407781+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2023,
+      "question": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
+      "threads": [
+        {
+          "agent": "Stellis",
+          "messages": [
+            {
+              "id": "0dff275c-59cb-49be-8e8b-f37e95a788db",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "user",
+              "content": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:23.469669+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "5448ddd9-41e2-4b5c-b7ee-18082865329d",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "agent",
+              "content": "Your ferritin rose from 11 ug/L in January to 34 ug/L by May 2022, indicating improved iron stores after treatment. Hemoglobin remained stable around 124-130 g/L, staying within the normal adult female range. The follow-up note states you completed an alternate-day iron course through August and were advised to continue dietary iron. [D007 2022-08-02 iron-repletion-follow-up](/document/b23b4fa6-8d1b-4181-8fde-0e327d008e05?page=1) [D006 2022-05-20 iron-treatment-follow-up](/document/468e0cd2-7e82-41f2-9f9f-1b4f8f456e16?page=1)",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:24.407781+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "a5e2fe71-2697-4795-a9bd-7afd45488cc6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:33.429022+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "87663d79-7b65-44d7-a885-ee11470fb940",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your mid-luteal progesterone result was 38 nmol/L, which falls within the reference interval of 16–80 nmol/L. The report notes that a single value cannot assess luteal quality. Pending investigations included baseline endocrine bloods, a pelvic ultrasound, a partner semen analysis, and tubal testing, which would be scheduled following the physician assessment if still indicated. [D015 2023-12-20 mid-luteal-progesterone](/document/0ab4a014-8e21-42f0-a14e-560da98418d0?page=1) [D012 2023-11-14 fertility-intake-and-menstrual-history](/document/7b8738c8-f5be-4274-966a-c79bf54e0935?page=1)",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:34.229373+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "question": "My cryopreservation report is here. How many eggs were retrieved, mature and normally fertilized, and how many blastocysts were frozen?",
+      "threads": [
+        {
+          "agent": "Stellis",
+          "messages": [
+            {
+              "id": "0dff275c-59cb-49be-8e8b-f37e95a788db",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "user",
+              "content": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:23.469669+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "5448ddd9-41e2-4b5c-b7ee-18082865329d",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "agent",
+              "content": "Your ferritin rose from 11 ug/L in January to 34 ug/L by May 2022, indicating improved iron stores after treatment. Hemoglobin remained stable around 124-130 g/L, staying within the normal adult female range. The follow-up note states you completed an alternate-day iron course through August and were advised to continue dietary iron. [D007 2022-08-02 iron-repletion-follow-up](/document/b23b4fa6-8d1b-4181-8fde-0e327d008e05?page=1) [D006 2022-05-20 iron-treatment-follow-up](/document/468e0cd2-7e82-41f2-9f9f-1b4f8f456e16?page=1)",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:24.407781+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "a5e2fe71-2697-4795-a9bd-7afd45488cc6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:33.429022+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "87663d79-7b65-44d7-a885-ee11470fb940",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your mid-luteal progesterone result was 38 nmol/L, which falls within the reference interval of 16–80 nmol/L. The report notes that a single value cannot assess luteal quality. Pending investigations included baseline endocrine bloods, a pelvic ultrasound, a partner semen analysis, and tubal testing, which would be scheduled following the physician assessment if still indicated. [D015 2023-12-20 mid-luteal-progesterone](/document/0ab4a014-8e21-42f0-a14e-560da98418d0?page=1) [D012 2023-11-14 fertility-intake-and-menstrual-history](/document/7b8738c8-f5be-4274-966a-c79bf54e0935?page=1)",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:34.229373+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "caac3ef6-80f2-4769-81bc-9791da1436c6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My cryopreservation report is here. How many eggs were retrieved, mature and normally fertilized, and how many blastocysts were frozen?",
+              "job_id": "2692c386-6811-4282-bc27-51fd4dec4e25",
+              "created_at": "2026-10-23T05:31:41.482870+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "cb0ee29c-4250-4461-a74a-99eff80f0243",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your cycle retrieved 12 eggs, of which 10 were mature and 8 were normally fertilized. Four blastocysts were cryopreserved. [D027 2024-06-19 final-embryo-culture-and-cryopreservation-report](/document/caf9e5cc-36b5-4637-9195-27e9d45158da?page=1)",
+              "job_id": "2692c386-6811-4282-bc27-51fd4dec4e25",
+              "created_at": "2026-10-23T05:31:42.363459+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "question": "My maternal discharge summary is here. Can you help me review the birth and my recovery using that report?",
+      "threads": [
+        {
+          "agent": "Stellis",
+          "messages": [
+            {
+              "id": "0dff275c-59cb-49be-8e8b-f37e95a788db",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "user",
+              "content": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:23.469669+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "5448ddd9-41e2-4b5c-b7ee-18082865329d",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "agent",
+              "content": "Your ferritin rose from 11 ug/L in January to 34 ug/L by May 2022, indicating improved iron stores after treatment. Hemoglobin remained stable around 124-130 g/L, staying within the normal adult female range. The follow-up note states you completed an alternate-day iron course through August and were advised to continue dietary iron. [D007 2022-08-02 iron-repletion-follow-up](/document/b23b4fa6-8d1b-4181-8fde-0e327d008e05?page=1) [D006 2022-05-20 iron-treatment-follow-up](/document/468e0cd2-7e82-41f2-9f9f-1b4f8f456e16?page=1)",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:24.407781+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "a5e2fe71-2697-4795-a9bd-7afd45488cc6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:33.429022+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "87663d79-7b65-44d7-a885-ee11470fb940",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your mid-luteal progesterone result was 38 nmol/L, which falls within the reference interval of 16–80 nmol/L. The report notes that a single value cannot assess luteal quality. Pending investigations included baseline endocrine bloods, a pelvic ultrasound, a partner semen analysis, and tubal testing, which would be scheduled following the physician assessment if still indicated. [D015 2023-12-20 mid-luteal-progesterone](/document/0ab4a014-8e21-42f0-a14e-560da98418d0?page=1) [D012 2023-11-14 fertility-intake-and-menstrual-history](/document/7b8738c8-f5be-4274-966a-c79bf54e0935?page=1)",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:34.229373+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "caac3ef6-80f2-4769-81bc-9791da1436c6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My cryopreservation report is here. How many eggs were retrieved, mature and normally fertilized, and how many blastocysts were frozen?",
+              "job_id": "2692c386-6811-4282-bc27-51fd4dec4e25",
+              "created_at": "2026-10-23T05:31:41.482870+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "cb0ee29c-4250-4461-a74a-99eff80f0243",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your cycle retrieved 12 eggs, of which 10 were mature and 8 were normally fertilized. Four blastocysts were cryopreserved. [D027 2024-06-19 final-embryo-culture-and-cryopreservation-report](/document/caf9e5cc-36b5-4637-9195-27e9d45158da?page=1)",
+              "job_id": "2692c386-6811-4282-bc27-51fd4dec4e25",
+              "created_at": "2026-10-23T05:31:42.363459+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "c24e9aa7-0122-498d-9135-a3e4a325125f",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "cccab60c-f329-4b48-8c2d-9cff2320b135",
+              "role": "user",
+              "content": "My maternal discharge summary is here. Can you help me review the birth and my recovery using that report?",
+              "job_id": "fb53d5f3-ab08-417f-a41d-f09c4a6f4060",
+              "created_at": "2026-10-23T05:31:51.945344+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "d869d7cb-b51b-42de-959f-3105d5d536b5",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "cccab60c-f329-4b48-8c2d-9cff2320b135",
+              "role": "agent",
+              "content": "I can help you review your maternal discharge summary. The report shows you had a term IVF singleton pregnancy delivered vaginally at 39+2 weeks on July 29, with a second-degree tear repaired and 350 mL blood loss. Your hemoglobin was 106 g/L on July 30, and you were afebrile and normotensive during your stay. Discharge medications include prenatal vitamins, ferrous sulfate every other day, and ibuprofen or acetaminophen as needed for pain. You were advised pelvic rest until comfortable and healing is assessed, with follow-up calls and an exam scheduled. Seek urgent care for heavy bleeding, fever, chest pain, breathlessness, severe headache, leg swelling, or self-harm thoughts. [D054 2025-07-31 maternal-hospital-discharge-summary](/document/77d4e0aa-4de2-409f-8697-0f6c680fabc1?page=1)",
+              "job_id": "fb53d5f3-ab08-417f-a41d-f09c4a6f4060",
+              "created_at": "2026-10-23T05:31:53.716769+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "question": "My annual review says my latest ferritin is 48. What is the documented iron plan and the last-dose date?",
+      "threads": [
+        {
+          "agent": "Stellis",
+          "messages": [
+            {
+              "id": "0dff275c-59cb-49be-8e8b-f37e95a788db",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "user",
+              "content": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:23.469669+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "5448ddd9-41e2-4b5c-b7ee-18082865329d",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "agent",
+              "content": "Your ferritin rose from 11 ug/L in January to 34 ug/L by May 2022, indicating improved iron stores after treatment. Hemoglobin remained stable around 124-130 g/L, staying within the normal adult female range. The follow-up note states you completed an alternate-day iron course through August and were advised to continue dietary iron. [D007 2022-08-02 iron-repletion-follow-up](/document/b23b4fa6-8d1b-4181-8fde-0e327d008e05?page=1) [D006 2022-05-20 iron-treatment-follow-up](/document/468e0cd2-7e82-41f2-9f9f-1b4f8f456e16?page=1)",
+              "job_id": "fb7efae4-f8f1-4840-90ad-5c616a3921bc",
+              "created_at": "2026-10-23T05:31:24.407781+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "a5e2fe71-2697-4795-a9bd-7afd45488cc6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:33.429022+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "87663d79-7b65-44d7-a885-ee11470fb940",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your mid-luteal progesterone result was 38 nmol/L, which falls within the reference interval of 16–80 nmol/L. The report notes that a single value cannot assess luteal quality. Pending investigations included baseline endocrine bloods, a pelvic ultrasound, a partner semen analysis, and tubal testing, which would be scheduled following the physician assessment if still indicated. [D015 2023-12-20 mid-luteal-progesterone](/document/0ab4a014-8e21-42f0-a14e-560da98418d0?page=1) [D012 2023-11-14 fertility-intake-and-menstrual-history](/document/7b8738c8-f5be-4274-966a-c79bf54e0935?page=1)",
+              "job_id": "b3b5ee47-dd7c-463f-93ca-f0d6d4112bc2",
+              "created_at": "2026-10-23T05:31:34.229373+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "caac3ef6-80f2-4769-81bc-9791da1436c6",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "user",
+              "content": "My cryopreservation report is here. How many eggs were retrieved, mature and normally fertilized, and how many blastocysts were frozen?",
+              "job_id": "2692c386-6811-4282-bc27-51fd4dec4e25",
+              "created_at": "2026-10-23T05:31:41.482870+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "cb0ee29c-4250-4461-a74a-99eff80f0243",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "7f7f86a4-aad8-42a0-a52f-a6781932127f",
+              "role": "agent",
+              "content": "Your cycle retrieved 12 eggs, of which 10 were mature and 8 were normally fertilized. Four blastocysts were cryopreserved. [D027 2024-06-19 final-embryo-culture-and-cryopreservation-report](/document/caf9e5cc-36b5-4637-9195-27e9d45158da?page=1)",
+              "job_id": "2692c386-6811-4282-bc27-51fd4dec4e25",
+              "created_at": "2026-10-23T05:31:42.363459+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "c24e9aa7-0122-498d-9135-a3e4a325125f",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "cccab60c-f329-4b48-8c2d-9cff2320b135",
+              "role": "user",
+              "content": "My maternal discharge summary is here. Can you help me review the birth and my recovery using that report?",
+              "job_id": "fb53d5f3-ab08-417f-a41d-f09c4a6f4060",
+              "created_at": "2026-10-23T05:31:51.945344+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "d869d7cb-b51b-42de-959f-3105d5d536b5",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "cccab60c-f329-4b48-8c2d-9cff2320b135",
+              "role": "agent",
+              "content": "I can help you review your maternal discharge summary. The report shows you had a term IVF singleton pregnancy delivered vaginally at 39+2 weeks on July 29, with a second-degree tear repaired and 350 mL blood loss. Your hemoglobin was 106 g/L on July 30, and you were afebrile and normotensive during your stay. Discharge medications include prenatal vitamins, ferrous sulfate every other day, and ibuprofen or acetaminophen as needed for pain. You were advised pelvic rest until comfortable and healing is assessed, with follow-up calls and an exam scheduled. Seek urgent care for heavy bleeding, fever, chest pain, breathlessness, severe headache, leg swelling, or self-harm thoughts. [D054 2025-07-31 maternal-hospital-discharge-summary](/document/77d4e0aa-4de2-409f-8697-0f6c680fabc1?page=1)",
+              "job_id": "fb53d5f3-ab08-417f-a41d-f09c4a6f4060",
+              "created_at": "2026-10-23T05:31:53.716769+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "682d16f6-25a1-4c01-a134-e2bc5f5cba7f",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "user",
+              "content": "My annual review says my latest ferritin is 48. What is the documented iron plan and the last-dose date?",
+              "job_id": "9f771200-2d30-4fa6-8709-ef2832622217",
+              "created_at": "2026-10-23T05:32:03.786983+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            },
+            {
+              "id": "a133ed9d-7d5d-4c1b-9d92-d6d6ce7ae93f",
+              "agent_id": "af5117b3-674d-4d48-a21e-74177e41b70d",
+              "notebook_id": "c8306471-9b92-45f4-9d75-313a1ed6de7f",
+              "role": "agent",
+              "content": "Your latest ferritin of 48 ug/L is documented in the 2026-12-18 annual longitudinal care review (source [D070 2026-12-18 annual-longitudinal-care-review](/document/44c05a4d-3ad8-4ebe-8251-ef0eb46e149b?page=1)). The recorded iron plan is to continue dietary iron and repeat studies only if symptoms or bleeding recur; no further therapeutic iron is scheduled. The last therapeutic iron dose was completed on December 19, 2026, as noted in the plan to stop iron that day (source [D070 2026-12-18 annual-longitudinal-care-review](/document/44c05a4d-3ad8-4ebe-8251-ef0eb46e149b?page=1)).",
+              "job_id": "9f771200-2d30-4fa6-8709-ef2832622217",
+              "created_at": "2026-10-23T05:32:04.909879+00:00",
+              "addressed_agent_id": null,
+              "addressed_agent_name": null,
+              "reply_id": null,
+              "target_message_id": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

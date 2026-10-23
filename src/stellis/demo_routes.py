@@ -20,7 +20,7 @@ def response(value, active=None):
 
 @router.get('/status')
 def status(request: Request):
-    return {**demo_patient.status(), 'active': request.cookies.get(demo_patient.COOKIE) == 'maya'}
+    return {**demo_patient.status(), 'active': request.cookies.get(demo_patient.COOKIE) == 'maya' and demo_patient.existing_workspace() is not None}
 
 
 @router.post('/enter')
@@ -34,8 +34,7 @@ def leave():
     return response({'active': False}, False)
 
 
-@router.delete('/history')
-async def clear():
+async def cancel_pending():
     from stellis import agent_runtime, agents
     pending=[]
     if demo_patient._control().exists():
@@ -47,13 +46,21 @@ async def clear():
                         task.cancel(); pending.append(task)
     if pending:
         await asyncio.gather(*pending, return_exceptions=True)
+
+
+@router.delete('/history')
+async def clear():
+    await cancel_pending()
     demo_patient.clear()
     return response({'cleared': True}, False)
 
 
 async def checked(action):
     try:
-        with storage.demo_workspace(demo_patient.workspace()):
+        workspace = demo_patient.existing_workspace()
+        if workspace is None:
+            raise ValueError('Start Maya’s demo before uploading records')
+        with storage.demo_workspace(workspace):
             def synchronized():
                 with demo_patient._LOCK:
                     return action()
