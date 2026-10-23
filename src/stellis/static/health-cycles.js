@@ -3,11 +3,11 @@
   'use strict';
   const calendarDates=root.StellisCalendarDates;
 
-  function summarizeCycle(cycle,today=calendarDates.formatDate(new Date())) {
+  function summarizeCycle(cycle,today=root.StellisDemoDate||calendarDates.formatDate(new Date())) {
     const episodes=[...cycle.episodes].filter(episode=>episode.startDate<=today).sort((first,second)=>second.startDate.localeCompare(first.startDate));
     if(!episodes.length)return {id:cycle.id,label:cycle.label,episodeCount:0};
     const latestEpisode=episodes[0];
-    const intervals=episodes.slice(0,-1).map((episode,index)=>calendarDates.daysBetween(episode.startDate,episodes[index+1].startDate));
+    const intervals=episodes.slice(0,-1).flatMap((episode,index)=>episode.trackingGapBefore?[]:[calendarDates.daysBetween(episode.startDate,episodes[index+1].startDate)]);
     const averageLength=intervals.length?Math.round(intervals.reduce((sum,length)=>sum+length,0)/intervals.length):null;
     return {
       id:cycle.id,label:cycle.label,episodeCount:episodes.length,latestEpisode,
@@ -22,14 +22,9 @@
   }
 
   function createDayFigure({day,label,startDate,locale}) {
-    const createElement=root.StellisDom.el;
-    const figure=createElement('figure',null,'health-cycle-figure');
     const startLabel=calendarDates.parseDate(startDate).toLocaleDateString(locale,{month:'short',day:'numeric',year:'numeric'});
-    figure.setAttribute('role','img');
-    figure.setAttribute('aria-label',`Day ${day} of ${label} / Started ${startLabel}`);
-    figure.append(createElement('span','Day','health-cycle-day-label'),createElement('strong',String(day),'health-cycle-day-number'),
-      createElement('span','of '+label,'health-cycle-day-context'),createElement('figcaption','Started '+startLabel));
-    return figure;
+    return root.StellisHealthDates.createFigure({value:day,unit:'Day',context:'of '+label,
+      caption:'Started '+startLabel,ariaLabel:`Day ${day} of ${label} / Started ${startLabel}`});
   }
 
   const exported={summarizeCycle,summarizeCycles,createDayFigure};

@@ -360,7 +360,9 @@
   async function show(requestedId) {
     status('');
     const [items, books, groups, runtime] = await Promise.all([request('/agents'), request('/notebooks'), request('/collections'), request('/agents/runtime')]);
-    accountScope = (await request('/auth/status')).username || 'local';
+    const account = (await request('/auth/status')).username || 'local';
+    const demo = await request('/demo/status');
+    accountScope = demo.active ? account + ':demo-' + demo.generation : account;
     agents = items; notebooks = books.notebooks || []; collections = groups.collections || []; runtimeConfigured = runtime.configured;
     const id = agents.some(agent => agent.id === requestedId) ? requestedId : agents[0]?.id;
     if (id) await select(id, false);

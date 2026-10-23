@@ -51,9 +51,9 @@ try {
   originalHealthPreference=(await (await request.get(origin+'/api/v1/health/preferences')).json()).experiences_periods;
   assert((await request.put(origin+'/api/v1/health/preferences',{data:{experiences_periods:true}})).ok());changedHealthPreference=true;
   await page.goto(origin);
-  await tracker.getByText('Log a period to start your history',{exact:true}).waitFor();
+  await tracker.getByText('Log flow above to start your history',{exact:true}).waitFor();
   await screenshots('empty');
-  await calendarSurface.getByRole('button',{name:'Log period',exact:true}).first().click();
+  await tracker.getByRole('button',{name:'Edit period history',exact:true}).click();
   await dialog.getByLabel('Period start',{exact:true}).fill(date(-31));
   await dialog.getByLabel('Period end',{exact:true}).fill(date(-27));
   await dialog.getByRole('button',{name:'Heavy',exact:true}).click();
@@ -61,7 +61,7 @@ try {
   await dialog.getByLabel('Symptoms and notes',{exact:true}).fill('Cramps');
   await dialog.getByRole('button',{name:'Save',exact:true}).click();
   await dialog.waitFor({state:'detached'});
-  await calendarSurface.getByRole('button',{name:'Log period',exact:true}).click();
+  await tracker.getByRole('button',{name:'Edit period history',exact:true}).click();
   await dialog.getByLabel('Period start',{exact:true}).fill(date(-31));
   await dialog.getByLabel('Period end',{exact:true}).fill(date(-27));
   await dialog.getByRole('button',{name:'Save',exact:true}).click();
@@ -76,7 +76,7 @@ try {
   await tracker.getByRole('img',{name:/Day 4 of menstrual cycle/}).waitFor();
   assert.equal(await tracker.locator('.tracker-ring').count(),0);
   assert.equal(await calendarSurface.locator('.dashboard-section-head').getByRole('button',{name:'Log period',exact:true}).count(),1);
-  assert(Number(await tracker.locator('.health-cycle-day-number').evaluate(element=>parseFloat(getComputedStyle(element).fontSize)))>=100);
+  assert(Number(await tracker.locator('.health-date-number').evaluate(element=>parseFloat(getComputedStyle(element).fontSize)))>=100);
   await screenshots('cycle');
   await calendarSurface.getByRole('button',{name:'Previous month',exact:true}).click();
   await calendarSurface.getByRole('button',{name:'Next month',exact:true}).click();

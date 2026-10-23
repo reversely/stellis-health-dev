@@ -1,6 +1,6 @@
 """Adapters from canonical workspace records into the shared calendar event model."""
 from datetime import date
-from stellis import health_preferences, reproductive, timeline, todos
+from stellis import health_preferences, reproductive, timeline, todos, health_observations, health_milestones
 
 
 def tracking_events(first_date, last_date, current_date=None):
@@ -17,6 +17,12 @@ def tracking_events(first_date, last_date, current_date=None):
             result.append({'id': 'renewal:'+record['id'], 'source_id': record['id'], 'source_type': 'reproductive',
                            'kind': 'renewal', 'track_id': 'renewals', 'title': record['name']+' renewal',
                            'start_date': record['renewal'], 'end_date': record['renewal'], 'all_day': True})
+    for observation in health_observations.entries():
+        result.append({'id': 'observation:'+observation['day']+':'+observation['track_id'],
+                       'source_type': 'reproductive', 'source_id': 'day:'+observation['day'],
+                       'kind': 'observation', 'track_id': observation['track_id'],
+                       'title': observation['value'] + ('' if observation['value'] == 'No bleeding' else ' flow'),
+                       'start_date': observation['day'], 'end_date': observation['day'], 'all_day': True})
     return result
 
 
@@ -42,8 +48,21 @@ def plan_events(first_date, last_date, current_date=None):
     return result
 
 
-SOURCES = (tracking_events, record_events, plan_events)
+def milestone_events(first_date, last_date, current_date=None):
+    result = []
+    for milestone in health_milestones.entries():
+        event_date = milestone['actual_date'] or milestone['target_date']
+        qualifier = 'Confirmed' if milestone['actual_date'] else milestone['date_kind'].capitalize()
+        result.append({'id': 'milestone:'+milestone['id'], 'source_id': milestone['id'],
+                       'source_type': 'milestone', 'kind': 'milestone', 'track_id': 'milestones',
+                       'title': milestone['title'], 'date_status': qualifier,
+                       'start_date': event_date, 'end_date': event_date, 'all_day': True})
+    return result
+
+
+SOURCES = (tracking_events, record_events, plan_events, milestone_events)
 TRACKS = (
+    {'id': 'milestones', 'label': 'Milestones', 'tone': 'accent'},
     {'id': 'appointments', 'label': 'Appointments', 'tone': 'default'},
     {'id': 'records', 'label': 'Records', 'tone': 'muted'},
     {'id': 'plans', 'label': 'Plans', 'tone': 'accent'},

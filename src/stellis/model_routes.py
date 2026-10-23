@@ -16,8 +16,8 @@ ROLES = {
 
 def path():
     from stellis import runtime_profile
-    profile = "local" if runtime_profile.local_inference() else runtime_profile.selected() if runtime_profile.remote_agents() else "legacy"
-    return storage.data_dir() / f"model-routes-{profile}.json"
+    profile = "local" if runtime_profile.local_inference() else runtime_profile.selected() if runtime_profile.selected() in {"cloud", "direct"} else "legacy"
+    return storage.base_dir() / f"model-routes-{profile}.json"
 
 
 def choices():

@@ -17,7 +17,7 @@ const day = value => {
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}) : '';
 };
 let dialogId = 0;
-const dateKey = (date = new Date()) => root.StellisCalendarDates.formatDate(date);
+const dateKey = date => date?root.StellisCalendarDates.formatDate(date):(root.StellisDemoDate||root.StellisCalendarDates.formatDate(new Date()));
 
 /** Uses the current data order unless the person saved an explicit selection. */
 function selected(items, keys, field = 'id') {
@@ -150,8 +150,8 @@ class Dashboard {
     }
     if (groups.childElementCount) body.append(groups);
     if (!body.childElementCount) this.empty(body,
-      !this.data.summary || !this.data.facts ? 'Your health overview could not load' : 'Add your records to see your health overview',
-      'Add a record','/records');
+      !this.data.summary || !this.data.facts ? 'Your health overview could not load' : this.entries.some(entry=>entry.kind==='document') ? 'Your reports are in Health History' : 'Add your records to see your health overview',
+      this.entries.some(entry=>entry.kind==='document')?'Review records':'Add a record','/records');
     const contexts = selected(this.books,this.preferences?.care_contexts || []);
     if (contexts.length) {
       const active = el('div',null,'dashboard-contexts'); active.append(el('h3','Active care'));
@@ -261,6 +261,6 @@ async function mount(host, library) {
   current = new Dashboard(host,library); await current.load();
 }
 root.addEventListener?.('stellis:health-preferences-changed',()=>{if(current&&!current.destroyed)current.load();});
-root.StellisHealthDashboard = {mount,customize:()=>current?.customize(),selected};
+root.StellisHealthDashboard = {mount,reload:()=>current?.load(),focusCycle:day=>current?.tracker?.openRecord('day:'+day),focusCalendar:day=>current?.calendarView?.focusDate(day),customize:()=>current?.customize(),selected};
 if (typeof module !== 'undefined') module.exports = {selected};
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -598,3 +598,25 @@ flowchart TD
   Guide --> Verify[Check corpus file digest and saved date]
   Verify --> Next[Next chronological document]
 ```
+
+## Isolated Maya demo workspace
+
+The demo cookie selects a request-scoped `storage.demo_workspace` ContextVar after normal authentication and origin validation. All ordinary patient services use a separate generation directory and SQLite database beneath the account root. Auth and provider credentials remain account configuration at `storage.base_dir`; demo routes cannot mutate those settings. Managed workspace tools are bypassed for demo inference; the configured local or hosted provider receives only the assembled demo source context.
+
+`demo_patient.py` validates yearly ZIP structure, bounded sizes, exact PDF membership and canonical hashes before creating unfiled records. Existing extraction proposes encounter dates. Explicit date confirmation precedes notebook approval and filing. Imports are idempotent and years are ordered. A generation control file and operation lock coordinate imports/reset. Clear cancels that generation’s running agent jobs and deletes its directory; client progress and drafts are keyed by generation and cleared separately. External calendar connection/write and recording creation routes are blocked in demo mode.
+
+```mermaid
+flowchart LR
+    Auth[Authenticated request] --> Cookie{Demo cookie}
+    Cookie -->|Absent| Account[Ordinary patient workspace]
+    Cookie -->|Maya| Demo[Isolated generation and database]
+    Zip[Verified yearly ZIP] --> Demo
+    Demo --> Dates[Extracted dates and review]
+    Dates --> Approval[Notebook approval and filing]
+    Approval --> Views[Existing health tools and chat]
+    Demo --> Clear[Cancel demo jobs and delete generation]
+    Config[Account provider configuration] --> Chat[Source-only demo inference]
+    Views --> Chat
+```
+
+`maya-guide.js` presents labelled scripted turns and opens existing controls; it does not fabricate saved tool results or assistant replies. The demo banner explicitly labels the historical story date used by frontend calendar and cycle views. Real workspace dates remain based on the current date.

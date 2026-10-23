@@ -1,0 +1,29 @@
+{
+  "workflow_passed": true,
+  "years": [
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "pdf_count": 70,
+  "yearly_zip_count": 5,
+  "layout_states": 70,
+  "layout_findings": 0,
+  "python_suite": {
+    "passed": 597,
+    "skipped": 4,
+    "subtests": 127
+  },
+  "followup_configuration_tests": {
+    "passed": 20,
+    "subtests": 12
+  },
+  "javascript_tests": 199,
+  "corpus_checks": 543,
+  "demo_clear_preserves_ordinary_records": true,
+  "demo_clear_preserves_ordinary_drafts": true,
+  "clinical_answer_validation_passed": false,
+  "known_clinical_answer_issue": "D070 last-dose date misread by live assistant; canonical date remains 2026-12-18"
+}

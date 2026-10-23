@@ -8,6 +8,7 @@ import sqlite3
 import time
 import uuid
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
@@ -20,13 +21,35 @@ def normalized_person_name(value: str) -> str:
     return " ".join(value.split()).casefold()
 
 
-def data_dir() -> Path:
+_workspace = ContextVar("stellis_workspace", default=None)
+
+
+def base_dir() -> Path:
     """Return the private local data directory, creating it when needed."""
     configured = os.environ.get("STELLIS_DATA_DIR")
     root = Path(configured).expanduser() if configured else Path.home() / "Library/Application Support/Stellis"
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     root.chmod(0o700)
     return root
+
+
+def data_dir() -> Path:
+    """Returns the request's isolated demo workspace or the real account directory."""
+    return _workspace.get() or base_dir()
+
+
+def in_demo() -> bool:
+    return _workspace.get() is not None
+
+
+@contextmanager
+def demo_workspace(path: Path):
+    token = _workspace.set(path)
+    try:
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+        yield
+    finally:
+        _workspace.reset(token)
 
 
 class TolerantConnection(sqlite3.Connection):

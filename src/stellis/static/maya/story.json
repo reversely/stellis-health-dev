@@ -1,0 +1,411 @@
+{
+  "patient": {
+    "name": "Maya Chen",
+    "dob": "1993-03-14",
+    "location": "Toronto",
+    "synthetic": true
+  },
+  "years": [
+    {
+      "year": 2022,
+      "age": 28,
+      "title": "Getting to know my health",
+      "summary": "Fatigue, periods and low iron",
+      "turns": [
+        {
+          "kind": "cycle",
+          "maya": "I'm Maya. I'm 28 and live in Toronto. I've been tired lately, and I'd like to understand my periods better.",
+          "stellis": "Start with the Cycle tracker so your period dates and flow have a home.",
+          "start": "2022-01-08",
+          "end": "2022-01-11",
+          "note": "Mild cramps on day 1"
+        },
+        {
+          "kind": "appointment",
+          "maya": "I'd like to see my family doctor about the tiredness.",
+          "stellis": "Add your primary-care appointment to the calendar.",
+          "title": "Maya: primary-care appointment",
+          "starts_at": "2022-01-18T10:00:00-05:00"
+        },
+        {
+          "kind": "upload",
+          "maya": "I've seen my doctor and collected my 2022 reports. Can you help me keep them together?",
+          "stellis": "Upload the 2022 demo ZIP in the demo box."
+        },
+        {
+          "kind": "dates",
+          "maya": "These are visits and tests from different days. I want them in the right order.",
+          "stellis": "The report text supplies the encounter dates for you to review."
+        },
+        {
+          "kind": "notebooks",
+          "maya": "My reports cover low iron and period health as well as routine care.",
+          "stellis": "Review the suggested notebooks before adding them to Maya\u2019s empty library."
+        },
+        {
+          "kind": "timeline",
+          "maya": "My hemoglobin was normal but my ferritin was low. I'd like to see the follow-up results together.",
+          "stellis": "Open the timeline and compare January and May with the August review.",
+          "document_id": "D007"
+        },
+        {
+          "kind": "chat",
+          "maya": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
+          "stellis": "Ask Stellis with Preventive Care selected and inspect the source links.",
+          "template_id": "preventive-care--preventive-care"
+        },
+        {
+          "kind": "overview",
+          "maya": "I'm feeling better, and we're thinking about trying for a baby next year.",
+          "stellis": "Return to My Health to see the notebooks, cycle log and records you added."
+        }
+      ],
+      "record_count": 8
+    },
+    {
+      "year": 2023,
+      "age": 30,
+      "title": "Trying for a baby",
+      "summary": "Cycle history and fertility investigations",
+      "turns": [
+        {
+          "kind": "cycle",
+          "maya": "We've been trying for a baby since January. I'm still tracking my periods.",
+          "stellis": "Add the June period to the same Cycle history.",
+          "start": "2023-06-12",
+          "end": "2023-06-16",
+          "note": "Mild cramps on day 1"
+        },
+        {
+          "kind": "appointment",
+          "maya": "My family doctor has referred me to a fertility clinic. I'd like help getting ready.",
+          "stellis": "Add the fertility intake appointment to your calendar.",
+          "title": "Maya: fertility intake",
+          "starts_at": "2023-11-14T10:00:00-05:00"
+        },
+        {
+          "kind": "upload",
+          "maya": "I've now had the intake, blood tests and an ultrasound. Here are my 2023 records.",
+          "stellis": "Upload the 2023 demo ZIP alongside the earlier demo history."
+        },
+        {
+          "kind": "dates",
+          "maya": "Can we separate the test dates from the dates I reviewed them with the clinic?",
+          "stellis": "Review the encounter dates found in the report text."
+        },
+        {
+          "kind": "notebooks",
+          "maya": "I'd like a place for fertility care without losing my general health history.",
+          "stellis": "Add Fertility and reuse Menstrual Health where the reports overlap."
+        },
+        {
+          "kind": "timeline",
+          "maya": "I want to take the hormone results and ultrasound findings to my next visit.",
+          "stellis": "Use the timeline\u2019s document and notebook filters to review the investigations.",
+          "document_id": "D015"
+        },
+        {
+          "kind": "chat",
+          "maya": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
+          "stellis": "Ask from the Fertility notebook and follow the citations.",
+          "template_id": "reproductive-health--fertility"
+        }
+      ],
+      "record_count": 7
+    },
+    {
+      "year": 2024,
+      "age": 31,
+      "title": "Starting IVF",
+      "summary": "Treatment, retrieval and frozen transfer",
+      "turns": [
+        {
+          "kind": "appointment",
+          "maya": "We've decided to go ahead with IVF. The clinic confirmed my retrieval after the trigger instructions.",
+          "stellis": "Add the confirmed retrieval time to the calendar.",
+          "title": "Maya: egg retrieval",
+          "starts_at": "2024-06-13T09:30:00-04:00"
+        },
+        {
+          "kind": "upload",
+          "maya": "One treatment cycle is a lot to keep track of. I've collected the monitoring, retrieval and transfer records from 2024.",
+          "stellis": "Upload the 2024 demo ZIP to extend the existing history."
+        },
+        {
+          "kind": "dates",
+          "maya": "Some reports were written after the procedure. Please help me keep the clinical dates straight.",
+          "stellis": "Review the extracted encounter dates before adding this year to the timeline."
+        },
+        {
+          "kind": "notebooks",
+          "maya": "Can I keep IVF together while retaining the connection to my fertility investigations?",
+          "stellis": "Review the new IVF notebook and the existing Fertility notebook."
+        },
+        {
+          "kind": "timeline",
+          "maya": "The retrieval and embryology reports describe different stages. I'd like to see them in sequence.",
+          "stellis": "Open the embryo culture report from the timeline.",
+          "document_id": "D027"
+        },
+        {
+          "kind": "chat",
+          "maya": "My cryopreservation report is here. How many eggs were retrieved, mature and normally fertilized, and how many blastocysts were frozen?",
+          "stellis": "Ask Stellis from Fertility and check the four counts against the report.",
+          "template_id": "reproductive-health--fertility"
+        },
+        {
+          "kind": "milestone",
+          "maya": "The November transfer led to a positive pregnancy test and then an ultrasound. The clinic gave me a due date.",
+          "stellis": "Add the estimated due date as a milestone with its estimated status.",
+          "title": "Maya: estimated due date",
+          "target_date": "2025-08-03"
+        },
+        {
+          "kind": "overview",
+          "maya": "My priorities are changing from fertility treatment to pregnancy care.",
+          "stellis": "Review how My Health has grown while keeping the earlier history available."
+        }
+      ],
+      "record_count": 20
+    },
+    {
+      "year": 2025,
+      "age": 32,
+      "title": "Pregnancy and becoming a parent",
+      "summary": "Prenatal care, birth and recovery",
+      "turns": [
+        {
+          "kind": "appointment",
+          "maya": "I'm pregnant and have an anatomy ultrasound booked. I'd like to keep the appointment with my other care.",
+          "stellis": "Add the March ultrasound appointment to the calendar.",
+          "title": "Maya: anatomy ultrasound",
+          "starts_at": "2025-03-14T10:00:00-04:00"
+        },
+        {
+          "kind": "upload",
+          "maya": "I've collected my prenatal, birth and postpartum reports from 2025. I'd like to make sense of this year.",
+          "stellis": "Upload the 2025 demo ZIP to bring these records into the same demo history."
+        },
+        {
+          "kind": "dates",
+          "maya": "There are screening dates, visits, the birth and later follow-ups.",
+          "stellis": "Confirm the extracted encounter dates so the timeline preserves that sequence."
+        },
+        {
+          "kind": "notebooks",
+          "maya": "Pregnancy and recovery now deserve their own places, but my iron history still matters.",
+          "stellis": "Review Pregnancy, Birth Preparation and Postpartum Recovery alongside the existing notebooks."
+        },
+        {
+          "kind": "timeline",
+          "maya": "My anatomy scan was reassuring. I want to understand the difference between screening and a diagnosis.",
+          "stellis": "Review the scan and prenatal screening sources from the timeline.",
+          "document_id": "D041"
+        },
+        {
+          "kind": "chat",
+          "maya": "My maternal discharge summary is here. Can you help me review the birth and my recovery using that report?",
+          "stellis": "Ask from Postpartum Recovery and inspect the discharge citation.",
+          "template_id": "pregnancy-postpartum--postpartum-recovery"
+        },
+        {
+          "kind": "birth",
+          "maya": "My baby was born on July 29. I'd like the calendar to distinguish the actual birth from the estimated due date.",
+          "stellis": "Confirm the birth date in the existing milestone instead of changing the estimate.",
+          "actual_date": "2025-07-29"
+        },
+        {
+          "kind": "overview",
+          "maya": "I'm recovering after birth and following up on iron and pelvic health. I haven't resumed periods yet.",
+          "stellis": "Review postpartum care in My Health while keeping lochia separate from period tracking."
+        }
+      ],
+      "record_count": 25
+    },
+    {
+      "year": 2026,
+      "age": 33,
+      "title": "Finding a new routine",
+      "summary": "Periods return and routine care resumes",
+      "turns": [
+        {
+          "kind": "cycle",
+          "maya": "My first period after birth started on January 12. I'd like to resume tracking without counting postpartum bleeding as a period.",
+          "stellis": "Log the January period in Cycle with its actual start and end.",
+          "start": "2026-01-12",
+          "end": "2026-01-16",
+          "note": "First postpartum period; light to moderate flow"
+        },
+        {
+          "kind": "appointment",
+          "maya": "I've felt tired again and want to discuss my periods and iron with my family doctor.",
+          "stellis": "Add the June review to the calendar.",
+          "title": "Maya: fatigue and menstrual review",
+          "starts_at": "2026-06-16T10:00:00-04:00"
+        },
+        {
+          "kind": "upload",
+          "maya": "I've collected my screening, repeat iron tests and annual review from 2026.",
+          "stellis": "Upload the final yearly demo ZIP."
+        },
+        {
+          "kind": "dates",
+          "maya": "I'd like this year\u2019s tests and treatment reviews to stay in clinical date order.",
+          "stellis": "Confirm the extracted dates from the reports."
+        },
+        {
+          "kind": "notebooks",
+          "maya": "These records belong with the health history I've already built.",
+          "stellis": "Review the existing notebooks and file the new items without making duplicates."
+        },
+        {
+          "kind": "timeline",
+          "maya": "My ferritin fell again and improved with follow-up. I want to compare the results across years.",
+          "stellis": "Open the annual review and compare it with earlier iron results.",
+          "document_id": "D070"
+        },
+        {
+          "kind": "chat",
+          "maya": "My annual review says my latest ferritin is 48. What is the documented iron plan and the last-dose date?",
+          "stellis": "Ask from Preventive Care and check the dated source.",
+          "template_id": "preventive-care--preventive-care"
+        },
+        {
+          "kind": "overview",
+          "maya": "I can now see five years of my health together, from routine care through fertility treatment and becoming a parent.",
+          "stellis": "Review the complete demo history or clear it in one action when you finish."
+        }
+      ],
+      "record_count": 10
+    }
+  ],
+  "life_events": [
+    {
+      "date": "2022-01-18",
+      "label": "Seeking help for fatigue"
+    },
+    {
+      "date": "2023-11-14",
+      "label": "Fertility assessment"
+    },
+    {
+      "date": "2024-06-13",
+      "label": "Egg retrieval"
+    },
+    {
+      "date": "2024-11-15",
+      "label": "Frozen embryo transfer"
+    },
+    {
+      "date": "2025-07-29",
+      "label": "Becoming a parent"
+    },
+    {
+      "date": "2026-01-12",
+      "label": "Periods resume"
+    }
+  ],
+  "care_dates": [
+    "2022-01-18",
+    "2022-01-21",
+    "2022-02-02",
+    "2022-02-07",
+    "2022-02-16",
+    "2022-05-20",
+    "2022-08-02",
+    "2022-12-06",
+    "2023-02-10",
+    "2023-09-19",
+    "2023-10-03",
+    "2023-11-14",
+    "2023-11-30",
+    "2023-12-01",
+    "2023-12-20",
+    "2024-01-12",
+    "2024-02-01",
+    "2024-02-16",
+    "2024-05-17",
+    "2024-05-24",
+    "2024-06-02",
+    "2024-06-07",
+    "2024-06-10",
+    "2024-06-11",
+    "2024-06-13",
+    "2024-06-14",
+    "2024-06-19",
+    "2024-06-25",
+    "2024-10-25",
+    "2024-10-29",
+    "2024-11-08",
+    "2024-11-15",
+    "2024-11-25",
+    "2024-11-27",
+    "2024-12-13",
+    "2025-01-06",
+    "2025-01-08",
+    "2025-01-15",
+    "2025-01-24",
+    "2025-02-14",
+    "2025-03-14",
+    "2025-04-11",
+    "2025-05-02",
+    "2025-05-05",
+    "2025-05-16",
+    "2025-06-13",
+    "2025-06-13",
+    "2025-06-27",
+    "2025-07-11",
+    "2025-07-13",
+    "2025-07-25",
+    "2025-07-29",
+    "2025-07-30",
+    "2025-07-31",
+    "2025-08-05",
+    "2025-09-09",
+    "2025-10-03",
+    "2025-10-10",
+    "2025-11-14",
+    "2025-12-05",
+    "2026-01-16",
+    "2026-01-21",
+    "2026-03-20",
+    "2026-06-12",
+    "2026-06-15",
+    "2026-06-19",
+    "2026-09-18",
+    "2026-09-25",
+    "2026-12-11",
+    "2026-12-18"
+  ],
+  "cycle_dates": [
+    "2022-01-08",
+    "2022-02-05",
+    "2022-03-07",
+    "2022-04-04",
+    "2022-05-03",
+    "2022-06-01",
+    "2022-06-30",
+    "2023-06-12",
+    "2023-07-11",
+    "2023-08-09",
+    "2023-09-06",
+    "2023-10-04",
+    "2023-11-01",
+    "2023-11-28",
+    "2023-12-27",
+    "2024-01-24",
+    "2024-02-22",
+    "2026-01-12",
+    "2026-02-15",
+    "2026-03-19",
+    "2026-04-19",
+    "2026-05-19",
+    "2026-06-18",
+    "2026-07-17",
+    "2026-08-16",
+    "2026-09-14",
+    "2026-10-14",
+    "2026-11-12",
+    "2026-12-12"
+  ]
+}

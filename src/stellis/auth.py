@@ -49,7 +49,7 @@ def dev_enabled() -> bool:
 
 @contextmanager
 def _connect() -> Iterator[sqlite3.Connection]:
-    path = Path(os.environ.get("STELLIS_AUTH_DB_DIR") or storage.data_dir()) / "auth.sqlite3"
+    path = Path(os.environ.get("STELLIS_AUTH_DB_DIR") or storage.base_dir()) / "auth.sqlite3"
     conn = sqlite3.connect(path, timeout=30, factory=storage.TolerantConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("""CREATE TABLE IF NOT EXISTS account (

@@ -19,8 +19,9 @@ def direct() -> bool:
 
 
 def remote_agents() -> bool:
-    """Agent turns run over HTTPS instead of a NemoClaw subprocess on this machine."""
-    return selected() in {"cloud", "direct"}
+    """Agent turns use the source-only inference transport instead of managed tools."""
+    from stellis import storage
+    return storage.in_demo() or selected() in {"cloud", "direct"}
 
 
 def shared_provider_keys() -> bool:
@@ -54,7 +55,7 @@ def inference_url() -> str:
 def _default_text_model() -> str:
     if local_inference():
         from stellis import storage
-        path = storage.data_dir() / "local-inference-model"
+        path = storage.base_dir() / "local-inference-model"
         if path.is_file():
             value = path.read_text().strip()
             if value and len(value) <= 200:
