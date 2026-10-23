@@ -24,6 +24,7 @@ Calendar loading runs separately from local data. A startup check also found tha
 - The browser regression deliberately delays the Trends script to check startup ordering
 - `tests/browser/camera_grouping.mjs` passes empty, partial and complete readings on My Health and Trends at phone and desktop widths in both themes
 - `tests/browser/style_sweep.mjs` passes shared controls, hover/disabled states, onboarding and pointer/keyboard/reduced-motion dialog checks
+- Authenticated calls pass greeting, query parameters, connection loss and retry at all six widths in both themes after rebasing onto the shared call-completion changes; the shared disconnected status retains the requested apology
 - Layout audit covers My Health, Timeline, Records, a logging form and a notebook at 360, 390, 768, 1024, 1280 and 1920px in both themes; final results have no layout failures or warnings
 
 The browser uses a separate local account with real notebook, document, reading and preference writes. Calendar, accepted-fact and summary responses use explicit fixtures to check presentation and citation links without a provider request. Real calendar authorization and clinical extraction quality are outside this check. No source content is copied into a new clinical store.
