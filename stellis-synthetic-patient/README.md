@@ -59,4 +59,4 @@ Maya’s records, notebooks, appointments, tracking, conversations and derived d
 
 ## Verification
 
-The corpus validation and older browser evidence are in `validation/`. The earlier individual-PDF walkthrough predates the yearly ZIP story and is historical evidence only. Live assistant answers require configured inference; scripted story dialogue is labelled and does not pretend to be an assistant response. Optical recognition accuracy and clinical answer quality remain separate from workflow validation.
+Current UI evidence and the complete recording are in `validation/yearly_story/`. The corpus validation and older browser evidence are in `validation/`. The earlier individual-PDF walkthrough predates the yearly ZIP story and is historical evidence only. Live assistant answers require configured inference; scripted story dialogue is labelled and does not pretend to be an assistant response. Optical recognition accuracy and clinical answer quality remain separate from workflow validation.

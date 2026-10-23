@@ -203,7 +203,8 @@ function mount(host,options={}) {
         episodes:cycleEpisodes.map(period=>({id:period.id,startDate:period.start,endDate:period.end,trackingGapBefore:period.tracking_gap_before}))},currentDate());
       const latestPeriod=cycleEpisodes[0], averageCycleLength=cycleSummary.averageLength;
       const periodIsOngoing=!latestPeriod.end;
-      overview.append(root.StellisHealthCycles.createDayFigure({day:cycleSummary.day,label:cycleSummary.label,startDate:latestPeriod.start}));
+      if(root.StellisDemoDate&&cycleSummary.day>60)overview.append(heading('Period history','Only selected periods are logged in this demo'));
+      else overview.append(root.StellisHealthCycles.createDayFigure({day:cycleSummary.day,label:cycleSummary.label,startDate:latestPeriod.start}));
       const metrics=createElement('dl',null,'tracker-metrics');
       if(averageCycleLength) {
         metrics.append(metric('Estimated next period',formatDateLabel(cycleSummary.estimatedNextStart)),metric('Average cycle',`${averageCycleLength} days`));

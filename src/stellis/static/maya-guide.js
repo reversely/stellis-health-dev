@@ -136,8 +136,8 @@ async function useTool(turn){
  }
  if(turn.kind==='milestone'||turn.kind==='birth'){
   await window.StellisHealthDashboard.reload();await waitFor('.health-calendar-milestones button');
-  if(turn.kind==='milestone'){document.querySelector('.health-calendar-milestones button').click();const title=await waitFor('dialog input[aria-label="Milestone name"]');title.value=turn.title;const target=document.querySelector('dialog input[aria-label="Target date"]');if(target)target.value=turn.target_date;const kind=document.querySelector('dialog select');if(kind)kind.value='estimated';}
-  else{document.querySelector('.health-milestone-card button').click();const actual=await waitFor('dialog input[aria-label="Confirmed date"]');actual.value=turn.actual_date;}
+  if(turn.kind==='milestone'){document.querySelector('.health-calendar-milestones button').click();const title=await waitFor('dialog input[aria-label="Milestone name"]');title.value=turn.title;const target=document.querySelector('dialog input[aria-label="Target date"]');if(target)target.value=turn.target_date;const kind=document.querySelector('dialog.health-milestone-dialog select[name="date_kind"]');if(kind)kind.value='estimated';}
+  else{(await waitFor('.health-milestone-card button')).click();const actual=await waitFor('dialog input[aria-label="Confirmed date"]');actual.value=turn.actual_date;}
   return;
  }
  progress.visited=progress.visited||[];progress.visited.push(currentYear().year+':'+progress.turn);save();

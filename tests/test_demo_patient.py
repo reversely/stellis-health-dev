@@ -125,3 +125,16 @@ def test_demo_inference_retains_configured_provider_without_managed_tools(tmp_pa
             assert agent_gateway.configured()
             assert runtime_profile.inference_url()==url
             assert ai._key()==key
+
+
+def test_demo_reuses_saved_model_configuration_without_patient_data(tmp_path,monkeypatch):
+    from stellis import model_routes,runtime_profile
+    monkeypatch.setenv('STELLIS_DATA_DIR',str(tmp_path))
+    monkeypatch.setenv('STELLIS_RUNTIME_PROFILE','local')
+    (tmp_path/'local-inference-model').write_text('installed-local-model')
+    model_routes.save({'agent':'installed-agent-model'})
+    original=model_routes.path()
+    with storage.demo_workspace(tmp_path/'demo'):
+        assert model_routes.path()==original
+        assert runtime_profile.model_id('agent')=='installed-agent-model'
+        assert runtime_profile.model_id('transcript')=='installed-local-model'

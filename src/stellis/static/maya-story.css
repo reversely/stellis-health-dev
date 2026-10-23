@@ -50,21 +50,20 @@ html[data-theme] .maya-story-head .coach-button { color:var(--demo-frame-ink); b
 }
 @media(max-width:600px) {
  .maya-story { width:calc(100vw - 16px); max-height:calc(100dvh - 16px); }
- .maya-story-head { flex-wrap:wrap; padding:16px; gap:12px; }
- .maya-story-title { flex-basis:calc(100% - 80px); order:3; }
+ .maya-story .maya-story-head { display:grid; grid-template-columns:minmax(0,1fr) auto; padding:16px; gap:12px; }
+ .maya-story .maya-profile { min-width:0; gap:8px; }
+ .maya-story .maya-profile>div { min-width:0; }
+ .maya-story .maya-profile .agent-avatar { --avatar-size:48px !important; }
+ .maya-story-title { grid-column:1 / -1; order:3; }
  .maya-story-head>.coach-button { margin-left:auto; }
  .maya-story-title h2 { font-size:24px; }
  .maya-story-body { padding:16px; }
  .maya-story-message.agent-message-user { margin-left:20px; }
  .maya-story-message.agent-message-agent { margin-right:20px; }
  .maya-story-actions,.maya-story-year-nav { padding:12px 16px; }
- .maya-timeline-track { grid-template-columns:52px 1fr; }
- .maya-timeline-years { grid-template-columns:52px repeat(5,1fr); gap:5px; font-size:12px; }
+ .maya-timeline-track { grid-template-columns:72px 1fr; }
+ .maya-timeline-years { grid-template-columns:72px repeat(5,minmax(0,1fr)); gap:5px; font-size:12px; }
 }
 
 body.is-maya-demo #setup-card { display:none; }
 .maya-year-list .coach-button { white-space:normal; overflow-wrap:anywhere; }
-@media(max-width:600px) {
- .maya-timeline-track { grid-template-columns:72px 1fr; }
- .maya-timeline-years { grid-template-columns:72px repeat(5,minmax(0,1fr)); }
-}

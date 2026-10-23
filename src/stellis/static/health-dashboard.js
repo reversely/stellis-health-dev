@@ -150,8 +150,8 @@ class Dashboard {
     }
     if (groups.childElementCount) body.append(groups);
     if (!body.childElementCount) this.empty(body,
-      !this.data.summary || !this.data.facts ? 'Your health overview could not load' : 'Add your records to see your health overview',
-      'Add a record','/records');
+      !this.data.summary || !this.data.facts ? 'Your health overview could not load' : this.entries.some(entry=>entry.kind==='document') ? 'Your reports are in Health History' : 'Add your records to see your health overview',
+      this.entries.some(entry=>entry.kind==='document')?'Review records':'Add a record','/records');
     const contexts = selected(this.books,this.preferences?.care_contexts || []);
     if (contexts.length) {
       const active = el('div',null,'dashboard-contexts'); active.append(el('h3','Active care'));
