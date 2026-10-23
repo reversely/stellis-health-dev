@@ -20,6 +20,11 @@
       "detail": "Renderer and ground truth share fixed SHA-256"
     },
     {
+      "check": "canonical_lock_matches",
+      "passed": true,
+      "detail": "Canonical ledger matches its stored lock"
+    },
+    {
       "check": "five_year_coverage",
       "passed": true,
       "detail": "2022-2026"
@@ -2680,6 +2685,11 @@
       "detail": "Lengths reflect next actual start, not next tracked row"
     },
     {
+      "check": "spontaneous_admission_not_prescheduled",
+      "passed": true,
+      "detail": "Spontaneous labour arrival is recorded on admission rather than booked beforehand"
+    },
+    {
       "check": "appointment_links",
       "passed": true,
       "detail": "Appointment records resolve to documents"
@@ -2710,7 +2720,7 @@
       "detail": "Reserved fiction telephone range, invalid email domain, test-only addresses"
     }
   ],
-  "passed_count": 541,
+  "passed_count": 543,
   "failed_count": 0,
   "limitations": [
     "Automated checks and authored clinical review are not independent clinician certification.",

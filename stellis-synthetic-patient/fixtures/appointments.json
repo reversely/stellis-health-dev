@@ -142,7 +142,7 @@
     "episode_id": "routine",
     "schedule_history": [
       {
-        "changed_on": "2023-01-27",
+        "changed_on": "2023-02-10",
         "status": "scheduled",
         "scheduled_date": "2023-02-10",
         "time": "10:00"
@@ -449,7 +449,7 @@
     "episode_id": "ivf",
     "schedule_history": [
       {
-        "changed_on": "2024-05-28",
+        "changed_on": "2024-06-11",
         "status": "scheduled",
         "scheduled_date": "2024-06-11",
         "time": "10:00"
@@ -474,7 +474,7 @@
     "episode_id": "ivf",
     "schedule_history": [
       {
-        "changed_on": "2024-05-30",
+        "changed_on": "2024-06-11",
         "status": "scheduled",
         "scheduled_date": "2024-06-13",
         "time": "09:30"
@@ -599,7 +599,7 @@
     "episode_id": "ivf",
     "schedule_history": [
       {
-        "changed_on": "2024-11-01",
+        "changed_on": "2024-11-08",
         "status": "scheduled",
         "scheduled_date": "2024-11-15",
         "time": "09:00"
@@ -922,7 +922,7 @@
     "end_time": "12:30",
     "timezone": "America/Toronto",
     "status": "completed",
-    "mode": "in_person",
+    "mode": "unscheduled_hospital_admission",
     "facility_id": "SYN-FAC-06",
     "provider_id": "SYN-PROV-05",
     "document_ids": [
@@ -931,35 +931,10 @@
     "episode_id": "delivery",
     "schedule_history": [
       {
-        "changed_on": "2025-07-15",
-        "status": "scheduled",
+        "changed_on": "2025-07-29",
+        "status": "arrived",
         "scheduled_date": "2025-07-29",
         "time": "02:10"
-      }
-    ]
-  },
-  {
-    "appointment_id": "APT-D054",
-    "patient_id": "SYN-MAYA-001",
-    "title": "Maternal hospital discharge summary",
-    "date": "2025-07-31",
-    "start_time": "10:00",
-    "end_time": "10:30",
-    "timezone": "America/Toronto",
-    "status": "completed",
-    "mode": "in_person",
-    "facility_id": "SYN-FAC-06",
-    "provider_id": "SYN-PROV-05",
-    "document_ids": [
-      "D054"
-    ],
-    "episode_id": "postpartum",
-    "schedule_history": [
-      {
-        "changed_on": "2025-07-17",
-        "status": "scheduled",
-        "scheduled_date": "2025-07-31",
-        "time": "10:00"
       }
     ]
   },
@@ -981,7 +956,7 @@
     "episode_id": "postpartum",
     "schedule_history": [
       {
-        "changed_on": "2025-07-22",
+        "changed_on": "2025-07-31",
         "status": "scheduled",
         "scheduled_date": "2025-08-05",
         "time": "10:00"
