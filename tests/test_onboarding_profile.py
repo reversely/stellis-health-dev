@@ -79,3 +79,49 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(profile.candidate('birth_date','June 12th, 1990'),'1990-06-12')
         self.assertEqual(profile.candidate('gender',"I'm a woman"),'Woman')
         self.assertEqual(profile.candidate('birth_date','Not sure'),'')
+
+    def test_clarifications_and_pauses_keep_the_current_answer_unconfirmed(self):
+        async def reply(voice, text):
+            voice.add_person_turn(text)
+            return [piece async for piece in voice.reply({})]
+        voice=profile.VoiceField('goals')
+        for text in ['What do you usually offer?', 'Can you give examples?', 'Give me a moment', 'What options are there?']:
+            pieces=asyncio.run(reply(voice,text))
+            self.assertTrue(pieces)
+            self.assertFalse(any(isinstance(piece,dict) for piece in pieces))
+            self.assertNotIn(intake.END_MARK,pieces)
+        self.assertNotIn('goals',profile.status()['answers'])
+        pieces=asyncio.run(reply(voice,'Improve sleep and nutrition'))
+        self.assertEqual(pieces[0]['action'],'profile_answer')
+        self.assertNotIn('goals',profile.status()['answers'])
+
+    def test_greeting_correction_and_explicit_stop(self):
+        self.assertEqual(profile.candidate('name', "Hi, I'm Maya"),'Maya')
+        voice=profile.VoiceField('name')
+        async def collect(text):
+            voice.add_person_turn(text)
+            return [item async for item in voice.reply({})]
+        result=asyncio.run(collect('Goodbye'))
+        self.assertEqual(result[-1],intake.END_MARK)
+        self.assertIn('Return to setup',result[0])
+        self.assertNotIn('name',profile.status()['answers'])
+
+    def test_text_confirmation_has_a_reply_and_no_transport_error(self):
+        from stellis.intake_voice import Call
+        messages=[]
+        async def capture(message): messages.append(message)
+        async def ignore(data): pass
+        async def run():
+            call=Call(capture,ignore,None,profile.VoiceField('name'))
+            try:
+                await call.start()
+                await call.text('My name is Maya')
+                await call.replying
+                await call.text('Yes')
+                await call.replying
+            finally:
+                await call.close()
+        asyncio.run(run())
+        self.assertFalse([message for message in messages if message['type']=='error'])
+        self.assertTrue(any(message.get('action')=='profile_confirm' for message in messages))
+        self.assertTrue(any(message.get('text')=='Thank you.' for message in messages))

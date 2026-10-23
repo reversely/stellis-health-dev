@@ -12,3 +12,12 @@
 .profile-library > summary { cursor: pointer; min-height: 32px; }
 .profile-library .intake-library { max-height: 380px; padding: 16px 0; }
 @media(max-width: 600px) { .profile-header { margin-bottom: 32px; } .onboarding-page .profile-answer { font-size: 18px; } }
+
+.profile-header { flex-wrap: wrap; }
+.profile-chat[hidden] { display: none; }
+.profile-chat { margin-top: 16px; min-width: 0; }
+.profile-transcript { max-height: 220px; overflow: auto; border-top: 1px solid var(--line-soft); padding: 8px 0; }
+.profile-message { display: grid; gap: 4px; margin: 12px 0; overflow-wrap: anywhere; }
+.profile-message strong { font-size: 14px; }
+.profile-composer { display: flex; gap: 12px; align-items: center; }
+.profile-composer input { flex: 1; width: 0; min-width: 0; font-size: 16px; }

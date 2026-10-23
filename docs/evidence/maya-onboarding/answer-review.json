@@ -1,0 +1,26 @@
+{
+  "status": "Open answer-quality failures; onboarding transport validation passed",
+  "issue": "https://github.com/reversely/stellis-health-dev/issues/135",
+  "findings": [
+    {
+      "record": "D015",
+      "problem": "Unsupported pending-investigation list and endometriosis exclusion",
+      "expected": "Only list pending investigations explicitly stated in supplied records"
+    },
+    {
+      "record": "D035",
+      "problem": "6+5 scan gestational age attached to the transfer date",
+      "expected": "Transfer November 15, 2024; scan December 13 at 6+5; EDD August 3, 2025"
+    },
+    {
+      "record": "D060",
+      "problem": "Planned December 6 iron stop described as already completed",
+      "expected": "December 5 note: last dose today; planned stop December 6"
+    },
+    {
+      "record": "D070",
+      "problem": "Last dose stated as December 19",
+      "expected": "Last dose December 18; stop December 19"
+    }
+  ]
+}
