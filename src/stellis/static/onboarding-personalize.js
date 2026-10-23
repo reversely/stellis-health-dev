@@ -82,7 +82,7 @@ function render(scene, kit) {
     } else if (message.type === 'error') {
       status.textContent = message.message;
     } else if (message.type === 'ended') {
-      call = null; lockReply(false); voice = false; textMode = false; textButton.textContent = 'Text Stellis'; textButton.setAttribute('aria-expanded',String(!chat.hidden)); voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
+      call?.end(); call = null; lockReply(false); voice = false; textMode = false; textButton.textContent = 'Text Stellis'; textButton.setAttribute('aria-expanded',String(!chat.hidden)); voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
     } else if (message.type === 'closed') {
       lockReply(false); send.disabled = true; status.textContent = 'Connection lost';
     }
