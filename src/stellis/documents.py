@@ -39,7 +39,7 @@ _PARAGRAPH_END = 0.7
 _HEADING_CHARS = 60
 _LIST_ITEM = re.compile(r"^(\d+[.)]|[-*•])\s")
 _COLUMN_GAP = re.compile(r"\S {3,}\S")
-_SUMMARY_COLUMNS = ("id, title, media_type, page_count, status, notebook_id, "
+_SUMMARY_COLUMNS = ("id, title, filename, media_type, page_count, status, notebook_id, "
                     "record_date, created_at")
 
 
@@ -227,6 +227,8 @@ def _record(conn, row) -> dict[str, object]:
         "ocr_status": page["ocr_status"],
         "revision": page["revision"],
     } for page in pages]
+    from stellis import document_dates
+    record["date_suggestion"] = document_dates.suggest(record["pages"])
     return record
 
 
@@ -397,6 +399,10 @@ def update(document_id: str,
     if record_date is not None:
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", record_date):
             raise ValueError("Enter the record date as YYYY-MM-DD")
+        try:
+            datetime.date.fromisoformat(record_date)
+        except ValueError as exc:
+            raise ValueError("Enter a valid calendar date") from exc
         changes["record_date"] = record_date
     if move:
         changes["notebook_id"] = notebook_id

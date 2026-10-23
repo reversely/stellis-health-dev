@@ -345,3 +345,10 @@ html[data-theme] .coach-call[data-kind='tour'] {
   .coach-call-foot button[type='submit'] { grid-column: 3; grid-row: 2; }
   .coach-call-foot .is-primary { grid-column: 4; grid-row: 2; }
 }
+
+/* Keep the guide's collapsed controls clear of the chat composer. */
+.coach-call[data-guide='maya'].is-minimised {
+  top: 96px;
+  bottom: auto;
+}
+.coach-call[data-guide='maya'].is-minimised .coach-call-ended { display: none; }

@@ -1,0 +1,41 @@
+{
+  "transcript_id": "TX-D056",
+  "synthetic": true,
+  "patient_id": "SYN-MAYA-001",
+  "document_id": "D056",
+  "appointment_id": "APT-D056",
+  "date": "2025-09-09",
+  "source": "Original scripted fictional dialogue; no recording or real transcript used",
+  "turns": [
+    {
+      "speaker": "Maya Chen",
+      "text": "The tear feels healed. I sometimes leak a little when I cough.",
+      "start_ms": 0,
+      "end_ms": 12000
+    },
+    {
+      "speaker": "Dr Orin Lark",
+      "text": "The examination shows that the repair has healed. Pelvic health physiotherapy can help with coordination and strength.",
+      "start_ms": 12000,
+      "end_ms": 24000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "I am breastfeeding and have not had a period.",
+      "start_ms": 24000,
+      "end_ms": 36000
+    },
+    {
+      "speaker": "Dr Orin Lark",
+      "text": "We discussed contraception because ovulation can return before the first period. You plan to use condoms.",
+      "start_ms": 36000,
+      "end_ms": 48000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "I would prefer to do the cervical screening in January.",
+      "start_ms": 48000,
+      "end_ms": 60000
+    }
+  ]
+}

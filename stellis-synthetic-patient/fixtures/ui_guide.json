@@ -1,0 +1,1718 @@
+{
+  "version": "maya-v1",
+  "patient": {
+    "name": "Maya Chen",
+    "date_of_birth": "1993-03-14",
+    "patient_id": "SYN-MAYA-001",
+    "synthetic": true
+  },
+  "steps": [
+    {
+      "document_id": "D001",
+      "date": "2022-01-18",
+      "title": "Routine primary-care consultation",
+      "filename": "D001_2022-01-18_routine-primary-care-consultation.pdf",
+      "download": "/static/maya/documents/2022/D001_2022-01-18_routine-primary-care-consultation.pdf",
+      "sha256": "eaf130283b0c95e52de6c31d2ee56fa408eabd9f8c0414eb7064a76c708bfeb5",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "New patient visit. Generally well; mild fatigue after work.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D002",
+      "date": "2022-01-21",
+      "title": "CBC, ferritin and thyroid results",
+      "filename": "D002_2022-01-21_cbc-ferritin-and-thyroid-results.pdf",
+      "download": "/static/maya/documents/2022/D002_2022-01-21_cbc-ferritin-and-thyroid-results.pdf",
+      "sha256": "93a347fb67c14552bef6507f9425b864e8837912cb635ebdd5351067b4cced58",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Low ferritin supports depleted iron stores. Hemoglobin remains within the adult female reference interval.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D003",
+      "date": "2022-02-02",
+      "title": "Iron results review and cervical examination",
+      "filename": "D003_2022-02-02_iron-results-review-and-cervical-examination.pdf",
+      "download": "/static/maya/documents/2022/D003_2022-02-02_iron-results-review-and-cervical-examination.pdf",
+      "sha256": "a3a917383f8470811f4c5dcf6f6e623c3d476a67f17ffd240b7fd1533bc83e1d",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Fatigue persists. No melena, rectal bleeding or abdominal pain.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D004",
+      "date": "2022-02-07",
+      "title": "Cervical cytology",
+      "filename": "D004_2022-02-07_cervical-cytology.pdf",
+      "download": "/static/maya/documents/2022/D004_2022-02-07_cervical-cytology.pdf",
+      "sha256": "eca127faee3b1e348b16040152d87423474104b1bf481e9a7e75558561bc090f",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Liquid-based cervical sample; cervix source. Collected February 2.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D005",
+      "date": "2022-02-16",
+      "title": "Iron tolerability telephone review",
+      "filename": "D005_2022-02-16_iron-tolerability-telephone-review.pdf",
+      "download": "/static/maya/documents/2022/D005_2022-02-16_iron-tolerability-telephone-review.pdf",
+      "sha256": "6c6deedd982fb4c63026547896d11f36da00f06bb5ec6f1a7a5940ac1abf7a04",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Mild nausea with morning iron; no vomiting or constipation. No new bleeding.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D006",
+      "date": "2022-05-20",
+      "title": "Iron treatment follow-up",
+      "filename": "D006_2022-05-20_iron-treatment-follow-up.pdf",
+      "download": "/static/maya/documents/2022/D006_2022-05-20_iron-treatment-follow-up.pdf",
+      "sha256": "aaf4910ac53a6d903600cba96b30bfb57b3516c87d516a0503744f0babfe59e6",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Ferritin has increased from 11 ug/L on January 21. Hemoglobin is stable.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D007",
+      "date": "2022-08-02",
+      "title": "Iron repletion follow-up",
+      "filename": "D007_2022-08-02_iron-repletion-follow-up.pdf",
+      "download": "/static/maya/documents/2022/D007_2022-08-02_iron-repletion-follow-up.pdf",
+      "sha256": "0e0fc6fc02fe598a1de2cefdca553044432ee96875aebcfa502093266dd91032",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Energy improved. Completed alternate-day iron through August 1.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "Iron repletion follow-up: compare the January and May 2022 ferritin and hemoglobin values and the August treatment decision with source links",
+      "milestone": true
+    },
+    {
+      "document_id": "D008",
+      "date": "2022-12-06",
+      "title": "Preconception and immunization visit",
+      "filename": "D008_2022-12-06_preconception-and-immunization-visit.pdf",
+      "download": "/static/maya/documents/2022/D008_2022-12-06_preconception-and-immunization-visit.pdf",
+      "sha256": "38b770b1a4cb57a3e9bfe6a6985ee65dfc5d9952fad7a03053be7ac058a2ebe3",
+      "year": "2022",
+      "chapter": "Routine health",
+      "chapter_summary": "Maya tracks her periods and investigates fatigue",
+      "story": "Plans to begin trying to conceive in January 2023. Cycles remain 27-31 days with 4-5 days of flow.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "How did Maya's iron results change during 2022? Cite the records",
+      "milestone": false
+    },
+    {
+      "document_id": "D009",
+      "date": "2023-02-10",
+      "title": "Upper respiratory symptoms",
+      "filename": "D009_2023-02-10_upper-respiratory-symptoms.pdf",
+      "download": "/static/maya/documents/2023/D009_2023-02-10_upper-respiratory-symptoms.pdf",
+      "sha256": "3064e375c7fc54f2772e1efb3e7138d4d24a653bb542e707f92bcff854b0bd38",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Three days of sore throat, rhinorrhea and dry cough. No dyspnea or chest pain.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What fertility investigations are documented so far? Separate suspected conditions from confirmed findings",
+      "milestone": false
+    },
+    {
+      "document_id": "D010",
+      "date": "2023-09-19",
+      "title": "Fertility concerns in primary care",
+      "filename": "D010_2023-09-19_fertility-concerns-in-primary-care.pdf",
+      "download": "/static/maya/documents/2023/D010_2023-09-19_fertility-concerns-in-primary-care.pdf",
+      "sha256": "55dce846089de72cac87f22975cfb5077525afa857da3acb6b094fd3777b2192",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Trying to conceive since January 1, 2023 with regular unprotected intercourse. No positive pregnancy tests.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What fertility investigations are documented so far? Separate suspected conditions from confirmed findings",
+      "milestone": false
+    },
+    {
+      "document_id": "D011",
+      "date": "2023-10-03",
+      "title": "Referral for fertility assessment",
+      "filename": "D011_2023-10-03_referral-for-fertility-assessment.pdf",
+      "download": "/static/maya/documents/2023/D011_2023-10-03_referral-for-fertility-assessment.pdf",
+      "sha256": "d6c79ef4b6acce9b029f6987bbf6f5be56a232daaa7fb49f7368da82fd2a9a5d",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Dr Neri Solan, Example Cedar Reproductive Centre",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What fertility investigations are documented so far? Separate suspected conditions from confirmed findings",
+      "milestone": false
+    },
+    {
+      "document_id": "D012",
+      "date": "2023-11-14",
+      "title": "Fertility intake and menstrual history",
+      "filename": "D012_2023-11-14_fertility-intake-and-menstrual-history.pdf",
+      "download": "/static/maya/documents/2023/D012_2023-11-14_fertility-intake-and-menstrual-history.pdf",
+      "sha256": "b2a37d11cd74a2796b93a31469118b78cacdd1525067651a3d88f621f5eed328",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Nurse intake for January physician assessment. No pregnancies to date, G0P0.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What fertility investigations are documented so far? Separate suspected conditions from confirmed findings",
+      "milestone": false
+    },
+    {
+      "document_id": "D013",
+      "date": "2023-11-30",
+      "title": "Baseline fertility endocrine panel",
+      "filename": "D013_2023-11-30_baseline-fertility-endocrine-panel.pdf",
+      "download": "/static/maya/documents/2023/D013_2023-11-30_baseline-fertility-endocrine-panel.pdf",
+      "sha256": "4cecfd4d60876eda189315e66e491a3d894426f1678cb241b7a4359d33ee9658",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Cycle day 3, menstrual bleeding started November 28. AMH describes ovarian response potential and cannot establish the cause of infertility.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What fertility investigations are documented so far? Separate suspected conditions from confirmed findings",
+      "milestone": false
+    },
+    {
+      "document_id": "D014",
+      "date": "2023-12-01",
+      "title": "Baseline transvaginal pelvic ultrasound",
+      "filename": "D014_2023-12-01_baseline-transvaginal-pelvic-ultrasound.pdf",
+      "download": "/static/maya/documents/2023/D014_2023-12-01_baseline-transvaginal-pelvic-ultrasound.pdf",
+      "sha256": "adb495d9a3fc9e2dd12101a383018d546f8739c8a6eb849fff5076f5f893cfdc",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Baseline fertility evaluation; cycle day 4, LMP November 28. Consent documented for transvaginal imaging.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What fertility investigations are documented so far? Separate suspected conditions from confirmed findings",
+      "milestone": false
+    },
+    {
+      "document_id": "D015",
+      "date": "2023-12-20",
+      "title": "Mid-luteal progesterone",
+      "filename": "D015_2023-12-20_mid-luteal-progesterone.pdf",
+      "download": "/static/maya/documents/2023/D015_2023-12-20_mid-luteal-progesterone.pdf",
+      "sha256": "47677a5c381b40fa56c6ef1c8c9ce06bf164b6c5793ec3ab38d5bcea6c6491c9",
+      "year": "2023",
+      "chapter": "Fertility evaluation",
+      "chapter_summary": "Maya seeks advice while trying to conceive",
+      "story": "Menstrual start November 28; urinary LH surge December 12 reported by patient. Sample obtained eight days after LH surge, approximately one week before expected next menses.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "Mid-luteal progesterone: what result was documented and which fertility investigations are still pending? Cite the records",
+      "milestone": true
+    },
+    {
+      "document_id": "D016",
+      "date": "2024-01-12",
+      "title": "Reproductive endocrinology consultation",
+      "filename": "D016_2024-01-12_reproductive-endocrinology-consultation.pdf",
+      "download": "/static/maya/documents/2024/D016_2024-01-12_reproductive-endocrinology-consultation.pdf",
+      "sha256": "bcc08d3cbb72699e8d8ec82d20b8a20497ad2ae8ed2e9eeef6f01a4eec2de582",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Dr Elara Vale, Example Orchard Family Practice",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D017",
+      "date": "2024-02-01",
+      "title": "Hysterosalpingogram",
+      "filename": "D017_2024-02-01_hysterosalpingogram.pdf",
+      "download": "/static/maya/documents/2024/D017_2024-02-01_hysterosalpingogram.pdf",
+      "sha256": "4bcc023d7f69818ea627b0707782d93d3ddf5db002414e3be99895e49f7d9ea4",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Infertility assessment. Cycle day 9, LMP January 24; urine pregnancy test negative today.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D018",
+      "date": "2024-02-16",
+      "title": "Fertility treatment decision",
+      "filename": "D018_2024-02-16_fertility-treatment-decision.pdf",
+      "download": "/static/maya/documents/2024/D018_2024-02-16_fertility-treatment-decision.pdf",
+      "sha256": "07fac4801f712ec4532d59568622369aefd772ab93bb25d955976695ada1d53f",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Dr Elara Vale",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D019",
+      "date": "2024-05-17",
+      "title": "Pre-IVF infectious screening and CBC",
+      "filename": "D019_2024-05-17_pre-ivf-infectious-screening-and-cbc.pdf",
+      "download": "/static/maya/documents/2024/D019_2024-05-17_pre-ivf-infectious-screening-and-cbc.pdf",
+      "sha256": "dc2caa9fce57ba5c90bc5076993064419ede7dae9bfb1c2dd2cfb0c8efed072f",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Consent documented for infectious screening. Rubella IgG supports immunity; negative screens do not establish lifetime absence of infection.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D020",
+      "date": "2024-05-24",
+      "title": "Ovarian stimulation medication orders",
+      "filename": "D020_2024-05-24_ovarian-stimulation-medication-orders.pdf",
+      "download": "/static/maya/documents/2024/D020_2024-05-24_ovarian-stimulation-medication-orders.pdf",
+      "sha256": "644e2a1bcfc6a81f59388124bae5b276b288a5ec9b8025f08c999a75f24e656a",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Antagonist cycle, SYN-IVF-01. Start medications only after baseline clearance.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D021",
+      "date": "2024-06-02",
+      "title": "IVF baseline scan and clearance",
+      "filename": "D021_2024-06-02_ivf-baseline-scan-and-clearance.pdf",
+      "download": "/static/maya/documents/2024/D021_2024-06-02_ivf-baseline-scan-and-clearance.pdf",
+      "sha256": "f214203067794a414e1f2bde731b9399c37ec94cafccb799f4d38ae58d6a59ac",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Cycle day 2, LMP June 1. SYN-IVF-01 antagonist protocol.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D022",
+      "date": "2024-06-07",
+      "title": "Stimulation day 6 monitoring",
+      "filename": "D022_2024-06-07_stimulation-day-6-monitoring.pdf",
+      "download": "/static/maya/documents/2024/D022_2024-06-07_stimulation-day-6-monitoring.pdf",
+      "sha256": "02ce5551e73002cbfa69d045e301a42dafec610310ef73aa1a532167d1acb059",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Transvaginal follicle tracking with consent. SYN-IVF-01.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D023",
+      "date": "2024-06-10",
+      "title": "Stimulation day 9 monitoring",
+      "filename": "D023_2024-06-10_stimulation-day-9-monitoring.pdf",
+      "download": "/static/maya/documents/2024/D023_2024-06-10_stimulation-day-9-monitoring.pdf",
+      "sha256": "62d020d074fb9b8afb6a8aad6fa0f1239124fdc0bcaea598a485232ff22dd90f",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Right follicles 19, 18, 17, 16, 15, 13 mm; left 19, 18, 17, 16, 15, 13 mm. Endometrium 9.1 mm.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D024",
+      "date": "2024-06-11",
+      "title": "Trigger confirmation and retrieval instructions",
+      "filename": "D024_2024-06-11_trigger-confirmation-and-retrieval-instructions.pdf",
+      "download": "/static/maya/documents/2024/D024_2024-06-11_trigger-confirmation-and-retrieval-instructions.pdf",
+      "sha256": "a2ec51bc300aa636bcd61d122e4487878b077fb26695dae78ef925556bc7ae30",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Patient administered final cetrorelix this morning and leuprolide acetate 4 mg SC at 21:30. Last gonadotropins taken June 10.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D025",
+      "date": "2024-06-13",
+      "title": "Transvaginal oocyte retrieval",
+      "filename": "D025_2024-06-13_transvaginal-oocyte-retrieval.pdf",
+      "download": "/static/maya/documents/2024/D025_2024-06-13_transvaginal-oocyte-retrieval.pdf",
+      "sha256": "14fdb6ef42378aef0a6dffafa8d4f39ec5ee265e4076b3b60d0c5a80de2762d1",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "SYN-IVF-01. Two identifiers and consent checked.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D026",
+      "date": "2024-06-14",
+      "title": "Day 1 fertilization report",
+      "filename": "D026_2024-06-14_day-1-fertilization-report.pdf",
+      "download": "/static/maya/documents/2024/D026_2024-06-14_day-1-fertilization-report.pdf",
+      "sha256": "4f2bdb2d6ef4e1ea912fd787a674d7827c8c67f63efaab1f522efe19b1ffb9d7",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "SYN-IVF-01, retrieval June 13. Twelve oocytes retrieved; ten mature (MII), two immature (one MI, one GV).",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D027",
+      "date": "2024-06-19",
+      "title": "Final embryo culture and cryopreservation report",
+      "filename": "D027_2024-06-19_final-embryo-culture-and-cryopreservation-report.pdf",
+      "download": "/static/maya/documents/2024/D027_2024-06-19_final-embryo-culture-and-cryopreservation-report.pdf",
+      "sha256": "6bfa845e9217eaf432ad763761b15c1b820df87d7ed3fcdb83ad796c9de56f76",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "SYN-IVF-01: 12 retrieved, 10 mature, 8 normally fertilized. Four blastocysts cryopreserved in total.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Cryopreservation report: give the numbers of retrieved oocytes, mature oocytes, normally fertilized oocytes and frozen blastocysts with source links",
+      "milestone": true
+    },
+    {
+      "document_id": "D028",
+      "date": "2024-06-25",
+      "title": "Post-retrieval review",
+      "filename": "D028_2024-06-25_post-retrieval-review.pdf",
+      "download": "/static/maya/documents/2024/D028_2024-06-25_post-retrieval-review.pdf",
+      "sha256": "df0deeb6dce5373f8fc4fad1c1bdbdc062d06c0b47dc5f249ccd95c2e6d54370",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Bloating resolved; withdrawal bleed began June 20 and ended June 24. No fever, severe pain or breathing symptoms.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D029",
+      "date": "2024-10-25",
+      "title": "Frozen embryo transfer preparation orders",
+      "filename": "D029_2024-10-25_frozen-embryo-transfer-preparation-orders.pdf",
+      "download": "/static/maya/documents/2024/D029_2024-10-25_frozen-embryo-transfer-preparation-orders.pdf",
+      "sha256": "cd4ceae52b60b431010cde0fa4772bc7dcf457d3d61d28db98a3eec02df097a1",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Programmed single frozen transfer of day-5 embryo SYN-E01, subject to lining and pregnancy-test clearance. Last spontaneous bleeding October 27 is expected based on tracking; actual start must be confirmed before estradiol.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D030",
+      "date": "2024-10-29",
+      "title": "Frozen transfer baseline clearance",
+      "filename": "D030_2024-10-29_frozen-transfer-baseline-clearance.pdf",
+      "download": "/static/maya/documents/2024/D030_2024-10-29_frozen-transfer-baseline-clearance.pdf",
+      "sha256": "eb33742302b17e2972efacdd26146aa0cf9bfa7866f0f29f8d200ca64dea4638",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Menstrual bleeding began October 27, cycle day 3 today. Serum beta-hCG <1 IU/L.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D031",
+      "date": "2024-11-08",
+      "title": "Frozen transfer endometrial assessment",
+      "filename": "D031_2024-11-08_frozen-transfer-endometrial-assessment.pdf",
+      "download": "/static/maya/documents/2024/D031_2024-11-08_frozen-transfer-endometrial-assessment.pdf",
+      "sha256": "1c6fbefdfb80a4afade4eb3efb41175caa1edb71a1db6d89994de78472fd5f2a",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Endometrium 8.6 mm, trilaminar; no cavity fluid. Ovaries quiescent.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D032",
+      "date": "2024-11-15",
+      "title": "Single frozen blastocyst transfer",
+      "filename": "D032_2024-11-15_single-frozen-blastocyst-transfer.pdf",
+      "download": "/static/maya/documents/2024/D032_2024-11-15_single-frozen-blastocyst-transfer.pdf",
+      "sha256": "7d1efdc44b2b475ee810e6bc626a917aaa6de77d9c9dc06ff1843f2ef145bbfd",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "SYN-FET-01. Two identifiers checked with patient and embryology witnesses Ari Quill and Rena Elm.",
+      "notebooks": [
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        },
+        {
+          "template_id": "reproductive-health--ivf",
+          "name": "IVF"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D033",
+      "date": "2024-11-25",
+      "title": "Post-transfer serum beta-hCG",
+      "filename": "D033_2024-11-25_post-transfer-serum-beta-hcg.pdf",
+      "download": "/static/maya/documents/2024/D033_2024-11-25_post-transfer-serum-beta-hcg.pdf",
+      "sha256": "b77a202b5cde574e48b441c5321ef5d300d918cd232628c4ba0458918ce13c80",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Positive biochemical pregnancy test at 10 days after day-5 transfer. This value does not establish pregnancy location, viability or number.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D034",
+      "date": "2024-11-27",
+      "title": "Repeat serum beta-hCG",
+      "filename": "D034_2024-11-27_repeat-serum-beta-hcg.pdf",
+      "download": "/static/maya/documents/2024/D034_2024-11-27_repeat-serum-beta-hcg.pdf",
+      "sha256": "a23c58cdf4d31f0cfa343752a33ac8cd30244089e066d1a88004149fd9d6df6e",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "Beta-hCG increased from 286 IU/L on November 25 to 642 IU/L today. Rise is compatible with early pregnancy; viability and location require ultrasound.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Reconstruct the IVF counts and pregnancy dating from the uploaded records with source links",
+      "milestone": false
+    },
+    {
+      "document_id": "D035",
+      "date": "2024-12-13",
+      "title": "Early pregnancy viability ultrasound",
+      "filename": "D035_2024-12-13_early-pregnancy-viability-ultrasound.pdf",
+      "download": "/static/maya/documents/2024/D035_2024-12-13_early-pregnancy-viability-ultrasound.pdf",
+      "sha256": "9cf7b257d8157d3adea613f1b139448b766d86d29e9260cc5a5cf1caa53ab75d",
+      "year": "2024",
+      "chapter": "IVF treatment",
+      "chapter_summary": "One retrieval cycle leads to a single frozen transfer",
+      "story": "ART dating: day-5 transfer November 15; gestation 6+5; EDD August 3, 2025. Dating retained.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Viability ultrasound: state the embryo transfer date, gestational age, estimated due date and documented pregnancy findings with source links",
+      "milestone": true
+    },
+    {
+      "document_id": "D036",
+      "date": "2025-01-06",
+      "title": "Initial prenatal consultation",
+      "filename": "D036_2025-01-06_initial-prenatal-consultation.pdf",
+      "download": "/static/maya/documents/2025/D036_2025-01-06_initial-prenatal-consultation.pdf",
+      "sha256": "9f8a399b65df771b99a171d00e3082d1fac12bfdc63a95fc7be6cbb126d300d9",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "G1P0, gestation 10+1 by day-5 FET November 15. EDD August 3.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D037",
+      "date": "2025-01-08",
+      "title": "Initial prenatal laboratory panel",
+      "filename": "D037_2025-01-08_initial-prenatal-laboratory-panel.pdf",
+      "download": "/static/maya/documents/2025/D037_2025-01-08_initial-prenatal-laboratory-panel.pdf",
+      "sha256": "b90d30f47656ac65502c9d2fa4ed3b2481bb08477bae1dc38d932e8e6a1d27a4",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "O positive; antibody screen negative. Rh immune globulin is not indicated for this RhD-positive patient.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D038",
+      "date": "2025-01-15",
+      "title": "Cell-free DNA prenatal screening",
+      "filename": "D038_2025-01-15_cell-free-dna-prenatal-screening.pdf",
+      "download": "/static/maya/documents/2025/D038_2025-01-15_cell-free-dna-prenatal-screening.pdf",
+      "sha256": "4b95189c8a1d8c50da3c064925abea15899fbc409911fc70e5efc4c3d2e26e91",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Maternal blood collected January 8 at 10+3. Singleton pregnancy following frozen embryo transfer; maternal age at EDD 32.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D039",
+      "date": "2025-01-24",
+      "title": "First-trimester obstetric ultrasound",
+      "filename": "D039_2025-01-24_first-trimester-obstetric-ultrasound.pdf",
+      "download": "/static/maya/documents/2025/D039_2025-01-24_first-trimester-obstetric-ultrasound.pdf",
+      "sha256": "0246222a2e5eade44dd422240132377af1e550836ea94ff6ccd8bc4d7636793e",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "ART gestation 12+5, EDD August 3, 2025. Transabdominal examination.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D040",
+      "date": "2025-02-14",
+      "title": "Prenatal visit at 15+5",
+      "filename": "D040_2025-02-14_prenatal-visit-at-15-5.pdf",
+      "download": "/static/maya/documents/2025/D040_2025-02-14_prenatal-visit-at-15-5.pdf",
+      "sha256": "2e71545d00d3448c77ff272f918159d42774924ec9cd7a39b118318e1d2fad4c",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Nausea improving; no bleeding or fluid loss. Mild constipation since starting prenatal vitamin; no abdominal tenderness.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D041",
+      "date": "2025-03-14",
+      "title": "Detailed fetal anatomy ultrasound",
+      "filename": "D041_2025-03-14_detailed-fetal-anatomy-ultrasound.pdf",
+      "download": "/static/maya/documents/2025/D041_2025-03-14_detailed-fetal-anatomy-ultrasound.pdf",
+      "sha256": "8f479039671e10baac76c499c20246fcfbbbb7ec3b593d3d70d1d91287e05f7d",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Gestation 19+5 by ART; EDD August 3. Transabdominal detailed fetal survey.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Fetal anatomy ultrasound: summarize its findings and distinguish prenatal screening results from confirmed diagnoses with source links",
+      "milestone": true
+    },
+    {
+      "document_id": "D042",
+      "date": "2025-04-11",
+      "title": "Prenatal visit at 23+5",
+      "filename": "D042_2025-04-11_prenatal-visit-at-23-5.pdf",
+      "download": "/static/maya/documents/2025/D042_2025-04-11_prenatal-visit-at-23-5.pdf",
+      "sha256": "c857f04277a5d8797ac09e513fefb382fb5cc05ce70351a81968e6ee05db75e7",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Fetal movements present. No bleeding, fluid leakage, headache or visual symptoms.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D043",
+      "date": "2025-05-02",
+      "title": "Glucose challenge and hematology",
+      "filename": "D043_2025-05-02_glucose-challenge-and-hematology.pdf",
+      "download": "/static/maya/documents/2025/D043_2025-05-02_glucose-challenge-and-hematology.pdf",
+      "sha256": "7ffa91a13b741547f06893ac3a7291e11bc129b2d58c3d86a56d07d563ac6877",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Nonfasting 50 g oral glucose challenge; specimen obtained one hour after dose. Result below 7.8 mmol/L screening threshold, no OGTT indicated by this result.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D044",
+      "date": "2025-05-05",
+      "title": "Iron treatment in pregnancy",
+      "filename": "D044_2025-05-05_iron-treatment-in-pregnancy.pdf",
+      "download": "/static/maya/documents/2025/D044_2025-05-05_iron-treatment-in-pregnancy.pdf",
+      "sha256": "2f04ee579315ab579d84341423fea396c46d95b230bfe57a6b22d406b4128b38",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Iron deficiency with anemia: hemoglobin 103 g/L, ferritin 9 ug/L on May 2 at 26+5.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D045",
+      "date": "2025-05-16",
+      "title": "Prenatal review and Tdap",
+      "filename": "D045_2025-05-16_prenatal-review-and-tdap.pdf",
+      "download": "/static/maya/documents/2025/D045_2025-05-16_prenatal-review-and-tdap.pdf",
+      "sha256": "1bc9ad6d1a3525dca5bac05923a0a1107746c548bca7daf3ff72e4c513f945c7",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "At 28+5, taking alternate-day iron with no nausea so far. Fetal movements usual.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D046",
+      "date": "2025-06-13",
+      "title": "Pregnancy iron follow-up",
+      "filename": "D046_2025-06-13_pregnancy-iron-follow-up.pdf",
+      "download": "/static/maya/documents/2025/D046_2025-06-13_pregnancy-iron-follow-up.pdf",
+      "sha256": "f9a2a3bb934c7d7f7d25e574da5bcc5710cf79cee51f4e655a8987f83f6c9d66",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Hemoglobin improved from 103 to 112 g/L and ferritin from 9 to 22 ug/L after oral iron. Continue prescribed supplementation pending clinical review.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D047",
+      "date": "2025-06-13",
+      "title": "Third-trimester growth ultrasound",
+      "filename": "D047_2025-06-13_third-trimester-growth-ultrasound.pdf",
+      "download": "/static/maya/documents/2025/D047_2025-06-13_third-trimester-growth-ultrasound.pdf",
+      "sha256": "6b309611e6010251adea567fa4829f3376f4ea69cff66f4823a3ad60467f1754",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "IVF pregnancy growth assessment, 32+5 by ART, EDD August 3. Transabdominal examination.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D048",
+      "date": "2025-06-27",
+      "title": "Prenatal visit at 34+5",
+      "filename": "D048_2025-06-27_prenatal-visit-at-34-5.pdf",
+      "download": "/static/maya/documents/2025/D048_2025-06-27_prenatal-visit-at-34-5.pdf",
+      "sha256": "2cf75271db1c554c9413bc051d503ab9a2322a0efe11e6b5aa56695e0eabe3ac",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "No new symptoms; normal fetal movements. Mild dependent ankle swelling resolves overnight, no headache or visual change.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D049",
+      "date": "2025-07-11",
+      "title": "Prenatal visit and GBS collection",
+      "filename": "D049_2025-07-11_prenatal-visit-and-gbs-collection.pdf",
+      "download": "/static/maya/documents/2025/D049_2025-07-11_prenatal-visit-and-gbs-collection.pdf",
+      "sha256": "c644ec17a0059f7415fbb6f8cb24b6824d55157c318651493c8c780a4426e45d",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "At 36+5, fetal movements usual, no fluid loss or bleeding. Occasional painless tightenings.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D050",
+      "date": "2025-07-13",
+      "title": "Group B streptococcus culture",
+      "filename": "D050_2025-07-13_group-b-streptococcus-culture.pdf",
+      "download": "/static/maya/documents/2025/D050_2025-07-13_group-b-streptococcus-culture.pdf",
+      "sha256": "e56301a183842bd2d843ee0c8a03f24241ebe6425313c979bb5d99ebae7f6ae3",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Group B streptococcus not isolated from vaginal-rectal swab collected July 11. Result applies to this collection; intrapartum decisions also depend on risk factors.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D051",
+      "date": "2025-07-25",
+      "title": "Prenatal visit at 38+5",
+      "filename": "D051_2025-07-25_prenatal-visit-at-38-5.pdf",
+      "download": "/static/maya/documents/2025/D051_2025-07-25_prenatal-visit-at-38-5.pdf",
+      "sha256": "945485e8f94d2ec1352c1d3bcbffa972cb7faded49ffedba02291e854fd73a5a",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Normal movements, intermittent Braxton Hicks tightenings. No bleeding, fluid loss, persistent headache or visual symptoms.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "reproductive-health--fertility",
+          "name": "Fertility"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D052",
+      "date": "2025-07-29",
+      "title": "Labour and vaginal delivery record",
+      "filename": "D052_2025-07-29_labour-and-vaginal-delivery-record.pdf",
+      "download": "/static/maya/documents/2025/D052_2025-07-29_labour-and-vaginal-delivery-record.pdf",
+      "sha256": "103b3d6c07b01c84a0b31c4e3117e1a3e373f9e836b2056e719cbd9421c5e974",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Admitted July 29 at 02:10 with regular painful contractions, G1P0 at 39+2 by ART, EDD August 3. Cervix 5 cm/90%/-1.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "pregnancy-postpartum--birth-preparation",
+          "name": "Birth Preparation"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D053",
+      "date": "2025-07-30",
+      "title": "Post-delivery CBC",
+      "filename": "D053_2025-07-30_post-delivery-cbc.pdf",
+      "download": "/static/maya/documents/2025/D053_2025-07-30_post-delivery-cbc.pdf",
+      "sha256": "500f53c214534c66885e26882525d24a6184d5d1053b2d3f6534c6c83bde21d4",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Collected on postpartum day 1. Mild anemia following delivery; stable clinically with no ongoing heavy bleeding.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--pregnancy",
+          "name": "Pregnancy"
+        },
+        {
+          "template_id": "pregnancy-postpartum--birth-preparation",
+          "name": "Birth Preparation"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D054",
+      "date": "2025-07-31",
+      "title": "Maternal hospital discharge summary",
+      "filename": "D054_2025-07-31_maternal-hospital-discharge-summary.pdf",
+      "download": "/static/maya/documents/2025/D054_2025-07-31_maternal-hospital-discharge-summary.pdf",
+      "sha256": "2ecc4c8b9596cf9f57e0b00ebe0b47fc2d01997f0ae1e2d498768cbee6ffe658",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Admission July 29, discharge July 31. Term IVF singleton pregnancy delivered at 39+2 on July 29 at 11:42.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--postpartum-recovery",
+          "name": "Postpartum Recovery"
+        },
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        }
+      ],
+      "question": "Maternal hospital discharge: state delivery date, gestational age, mode, infant weight and maternal recovery findings with source links",
+      "milestone": true
+    },
+    {
+      "document_id": "D055",
+      "date": "2025-08-05",
+      "title": "Postpartum nurse telephone review",
+      "filename": "D055_2025-08-05_postpartum-nurse-telephone-review.pdf",
+      "download": "/static/maya/documents/2025/D055_2025-08-05_postpartum-nurse-telephone-review.pdf",
+      "sha256": "1a2ff0b3db8cab2f1b7e898894df5ef24c25e0a1921cd40acb314fcf59ad792c",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Postpartum day 7. Lochia decreasing, no fever or heavy bleeding.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--postpartum-recovery",
+          "name": "Postpartum Recovery"
+        },
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D056",
+      "date": "2025-09-09",
+      "title": "Six-week postpartum examination",
+      "filename": "D056_2025-09-09_six-week-postpartum-examination.pdf",
+      "download": "/static/maya/documents/2025/D056_2025-09-09_six-week-postpartum-examination.pdf",
+      "sha256": "39a618a60848ae42f9c66c00beb36c391b4c9f900175af3f26e505d05f515ba9",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "42 days after July 29 birth. G1P1.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--postpartum-recovery",
+          "name": "Postpartum Recovery"
+        },
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D057",
+      "date": "2025-10-03",
+      "title": "Pelvic health physiotherapy assessment",
+      "filename": "D057_2025-10-03_pelvic-health-physiotherapy-assessment.pdf",
+      "download": "/static/maya/documents/2025/D057_2025-10-03_pelvic-health-physiotherapy-assessment.pdf",
+      "sha256": "edc5b2e9674fb1bd4dddd329903282ac09cd84f6371f85201b32b21972f3fe09",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Small leakage with coughing and jogging since birth. No urgency, dysuria, hematuria or pelvic pain.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--postpartum-recovery",
+          "name": "Postpartum Recovery"
+        },
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D058",
+      "date": "2025-10-10",
+      "title": "Postpartum iron follow-up",
+      "filename": "D058_2025-10-10_postpartum-iron-follow-up.pdf",
+      "download": "/static/maya/documents/2025/D058_2025-10-10_postpartum-iron-follow-up.pdf",
+      "sha256": "b10407a80423348ca1f3c5c3d459a8568010df1c7884f55303b7b67be75d1e51",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Hemoglobin 125 g/L and ferritin 42 ug/L have recovered from postpartum hemoglobin 106 g/L on July 30. Review treatment duration with primary care.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D059",
+      "date": "2025-11-14",
+      "title": "Pelvic health progress review",
+      "filename": "D059_2025-11-14_pelvic-health-progress-review.pdf",
+      "download": "/static/maya/documents/2025/D059_2025-11-14_pelvic-health-progress-review.pdf",
+      "sha256": "f75969fb1bbf2a04ac19b230d0d41e34ffacb41a6fbbd2d283c48f3503d99a1a",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Rare leakage only with repeated cough; no leakage during walking or gentle exercise. Home practice comfortable.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--postpartum-recovery",
+          "name": "Postpartum Recovery"
+        },
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        }
+      ],
+      "question": "Summarize the pregnancy and delivery using the source records and distinguish screening from diagnosis",
+      "milestone": false
+    },
+    {
+      "document_id": "D060",
+      "date": "2025-12-05",
+      "title": "Primary-care postpartum and iron review",
+      "filename": "D060_2025-12-05_primary-care-postpartum-and-iron-review.pdf",
+      "download": "/static/maya/documents/2025/D060_2025-12-05_primary-care-postpartum-and-iron-review.pdf",
+      "sha256": "09c4edcd94e59d5c5e448f57584e895d141ce9278a32ed3cb0cf1d73758b48d4",
+      "year": "2025",
+      "chapter": "Pregnancy and postpartum",
+      "chapter_summary": "Maya receives prenatal care and gives birth",
+      "story": "Breastfeeding; infant currently four months old. Infant feeding guidance remains with the infant care team.",
+      "notebooks": [
+        {
+          "template_id": "pregnancy-postpartum--postpartum-recovery",
+          "name": "Postpartum Recovery"
+        },
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        }
+      ],
+      "question": "Postpartum iron review: state current ferritin, hemoglobin and the documented iron treatment decision with source links",
+      "milestone": true
+    },
+    {
+      "document_id": "D061",
+      "date": "2026-01-16",
+      "title": "Routine care and HPV screening collection",
+      "filename": "D061_2026-01-16_routine-care-and-hpv-screening-collection.pdf",
+      "download": "/static/maya/documents/2026/D061_2026-01-16_routine-care-and-hpv-screening-collection.pdf",
+      "sha256": "97b342ba84e5265474f62763b2beb4b1a43980b300357a949c6bbbaa41582ff5",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "First postpartum menstrual period began January 12, ended January 16; light to moderate flow. No postcoital or intermenstrual bleeding.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D062",
+      "date": "2026-01-21",
+      "title": "Primary cervical HPV screening result",
+      "filename": "D062_2026-01-21_primary-cervical-hpv-screening-result.pdf",
+      "download": "/static/maya/documents/2026/D062_2026-01-21_primary-cervical-hpv-screening-result.pdf",
+      "sha256": "af6afb8895874de88b4f7ba4563c0e2def740587a39de327fab62175e65d6fe0",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Clinician-collected cervical liquid-based sample, collected January 16. Valid assay controls.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D063",
+      "date": "2026-03-20",
+      "title": "Menstrual return follow-up",
+      "filename": "D063_2026-03-20_menstrual-return-follow-up.pdf",
+      "download": "/static/maya/documents/2026/D063_2026-03-20_menstrual-return-follow-up.pdf",
+      "sha256": "e7e17448edc1152554b11f98bb592240a94d4105f84577cd90119ff2a3a4e11d",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Weaned January 31. Menstrual starts January 12, February 15 and March 19: intervals 34 and 32 days.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D064",
+      "date": "2026-06-12",
+      "title": "Fatigue and menstrual health visit",
+      "filename": "D064_2026-06-12_fatigue-and-menstrual-health-visit.pdf",
+      "download": "/static/maya/documents/2026/D064_2026-06-12_fatigue-and-menstrual-health-visit.pdf",
+      "sha256": "df7e7e32a3df81fce3b6a85626b5f5ec21fa47b644e04579fbe42327e7c3b42d",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Mild recurrent fatigue since returning to work. Natural cycles now 29-32 days, 4-5 bleeding days.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D065",
+      "date": "2026-06-15",
+      "title": "Fatigue laboratory investigation",
+      "filename": "D065_2026-06-15_fatigue-laboratory-investigation.pdf",
+      "download": "/static/maya/documents/2026/D065_2026-06-15_fatigue-laboratory-investigation.pdf",
+      "sha256": "7188c2126fd724f9e70826f6f849bb840b1c497971754ed950745dfd87812646",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Ferritin below range with hemoglobin within adult female range. Findings support recurrent iron deficiency without anemia.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D066",
+      "date": "2026-06-19",
+      "title": "Recurrent iron deficiency treatment",
+      "filename": "D066_2026-06-19_recurrent-iron-deficiency-treatment.pdf",
+      "download": "/static/maya/documents/2026/D066_2026-06-19_recurrent-iron-deficiency-treatment.pdf",
+      "sha256": "7d4fcea5fd13a1e5ae4459b29ee8fd93948257b3dc524fabc8e6fe0fa65d28e2",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "June 15 ferritin 13 ug/L and hemoglobin 122 g/L confirm iron deficiency without anemia. No evidence supplied for thyroid disease or major blood loss.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D067",
+      "date": "2026-09-18",
+      "title": "Repeat CBC and ferritin",
+      "filename": "D067_2026-09-18_repeat-cbc-and-ferritin.pdf",
+      "download": "/static/maya/documents/2026/D067_2026-09-18_repeat-cbc-and-ferritin.pdf",
+      "sha256": "354829605a0273460ca55b91d095869ea0a8b2ec8da14f497d0f6d29502c4f47",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Ferritin increased from 13 ug/L on June 15 to 35 ug/L; hemoglobin from 122 to 129 g/L. Treatment response documented.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D068",
+      "date": "2026-09-25",
+      "title": "Iron response and preventive review",
+      "filename": "D068_2026-09-25_iron-response-and-preventive-review.pdf",
+      "download": "/static/maya/documents/2026/D068_2026-09-25_iron-response-and-preventive-review.pdf",
+      "sha256": "6167af0a84b893dd4737a2fcf3e69efa56259fb874d95673222268d6f659fd98",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Fatigue improved. Oral iron tolerated.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D069",
+      "date": "2026-12-11",
+      "title": "End-of-year iron assessment",
+      "filename": "D069_2026-12-11_end-of-year-iron-assessment.pdf",
+      "download": "/static/maya/documents/2026/D069_2026-12-11_end-of-year-iron-assessment.pdf",
+      "sha256": "f8370f2709cc9d596c382218d36f04f63e0581542fd68f709029463fc8d5f8e6",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Iron indices remain improved during replacement. Compare September 18 hemoglobin 129 g/L and ferritin 35 ug/L.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "blood-health--blood-health",
+          "name": "Blood Health"
+        }
+      ],
+      "question": "What are Maya's current care priorities and which treatments have ended? Cite dates and records",
+      "milestone": false
+    },
+    {
+      "document_id": "D070",
+      "date": "2026-12-18",
+      "title": "Annual longitudinal care review",
+      "filename": "D070_2026-12-18_annual-longitudinal-care-review.pdf",
+      "download": "/static/maya/documents/2026/D070_2026-12-18_annual-longitudinal-care-review.pdf",
+      "sha256": "ba0fb9e83fec2c9e08973fab874b9c07d7eb1f1d591200980e2064dc718db2ab",
+      "year": "2026",
+      "chapter": "Routine care",
+      "chapter_summary": "Maya returns to menstrual and preventive care",
+      "story": "Well, regular natural cycles, no fatigue or urinary leakage. G1P1 after single IVF pregnancy and July 29, 2025 vaginal birth.",
+      "notebooks": [
+        {
+          "template_id": "preventive-care--preventive-care",
+          "name": "Preventive Care"
+        },
+        {
+          "template_id": "reproductive-health--menstrual-health",
+          "name": "Menstrual Health"
+        }
+      ],
+      "question": "Annual longitudinal care review: state the latest ferritin and the iron treatment plan including the last-dose date with source links",
+      "milestone": true
+    }
+  ],
+  "chapters": [
+    {
+      "year": "2022",
+      "title": "Routine health",
+      "summary": "Maya tracks her periods and investigates fatigue"
+    },
+    {
+      "year": "2023",
+      "title": "Fertility evaluation",
+      "summary": "Maya seeks advice while trying to conceive"
+    },
+    {
+      "year": "2024",
+      "title": "IVF treatment",
+      "summary": "One retrieval cycle leads to a single frozen transfer"
+    },
+    {
+      "year": "2025",
+      "title": "Pregnancy and postpartum",
+      "summary": "Maya receives prenatal care and gives birth"
+    },
+    {
+      "year": "2026",
+      "title": "Routine care",
+      "summary": "Maya returns to menstrual and preventive care"
+    }
+  ]
+}

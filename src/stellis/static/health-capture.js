@@ -48,7 +48,10 @@ async function open(action=null,options={}) {
     const notebook=el('select');notebook.append(new Option('General health history',''),...books.map(b=>new Option(b.name,b.id)));notebook.value=notebookId || '';
     field(body,'Notebook',notebook);
     const content=el('div',null,'capture-content');body.append(content);
-    const done=(text,target)=>saved(body,text,target);
+    const done=(text,target,record=null)=>{
+      saved(body,text,target);
+      if(record) body.append(window.StellisDocumentView.dateReview(record));
+    };
     if(action==='reading') {
       const paint=()=>{const entry=el('div');content.replaceChildren(entry);window.StellisTrends.entryForm(entry,notebook.value,()=>done('Reading saved','/trends')).catch(e=>status.textContent=e.message);};
       notebook.addEventListener('change',paint);paint();
@@ -89,7 +92,17 @@ function upload(host,notebook,photo,done) {
       const result=await window.StellisRecordUpload.uploadFile(file.files[0],book);
       if(!['added','duplicate'].includes(result.outcome))throw new Error(result.message);
       const record=result.record;const target=(result.kind==='audio'?'/conversation/':'/document/')+encodeURIComponent(record.id);
-      if(!photo || measure==='document'){done(result.outcome==='duplicate'?'Record already uploaded':'Record saved',target);return;}
+      if(!photo || measure==='document'){
+        let reviewed=record;
+        if(result.kind==='document' && record.status==='needs_text') {
+          status.textContent='Reading text';
+          try {reviewed=await api('/documents/'+encodeURIComponent(record.id)+'/pages/1/read',{method:'POST'});}
+          catch { /* The saved record retains Read text and its retry status. */ }
+        }
+        if(!host.isConnected)return;
+        done(result.outcome==='duplicate'?'Record already uploaded':'Record saved',target,
+          result.kind==='document'?reviewed:null);return;
+      }
       status.textContent='Reading photo';
       let extracted;
       try {extracted=await api('/photo-readings/'+encodeURIComponent(record.id)+'/extract?measure='+measure,{method:'POST'});}

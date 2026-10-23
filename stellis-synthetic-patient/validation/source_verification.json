@@ -1,0 +1,93 @@
+[
+  {
+    "reference_id": "jsl-easy",
+    "url": "https://raw.githubusercontent.com/JohnSnowLabs/pdf-deid-dataset/main/PDF_Original/Easy/PDF_Deid_Deidentification_0.pdf",
+    "verified": true,
+    "sha256": "4045742093b3f45efdca3b8230c37f6ad3d94bb067bfaf95f09552ab3b6180d9",
+    "matches_research": true
+  },
+  {
+    "reference_id": "rca-note",
+    "url": "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0010_progress_note_COVID_PNEUMONIA_Green.pdf",
+    "verified": true,
+    "sha256": "17fb5056d5d84f7a8d2997e61844b88dea0d3994f001de16fef18e48021e7bfc",
+    "matches_research": true
+  },
+  {
+    "reference_id": "rca-letter",
+    "url": "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0006_referral_letter_COLON_CA_Powell.pdf",
+    "verified": true,
+    "sha256": "7c2e178c0b08d2b161afd744e94b1d648b2bd4b3b0587161b0498e547cee2f90",
+    "matches_research": true
+  },
+  {
+    "reference_id": "rca-rx",
+    "url": "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0001_prescription_DEPRESSION_GAD_Edwards.pdf",
+    "verified": true,
+    "sha256": "ed59cbab8195cc23d409ea59377993624b1e4343eef04e9b492641af6ec4d808",
+    "matches_research": true
+  },
+  {
+    "reference_id": "rca-image",
+    "url": "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0005_imaging_report_POLYTRAUMA_Foster.pdf",
+    "verified": true,
+    "sha256": "f00cb798ae9da0c9fbfece2b3ddcd3d1080c9c3f141694ec6e0f4d8275f6c04e",
+    "matches_research": true
+  },
+  {
+    "reference_id": "rca-procedure",
+    "url": "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0035_anaesthetic_record_CHOLELITHIASIS_Morris.pdf",
+    "verified": true,
+    "sha256": "95b3be073bb4abfd4b0d2c52931f760974a577afb8165b6f7d610e1ee6392a56",
+    "matches_research": true
+  },
+  {
+    "reference_id": "rca-discharge",
+    "url": "https://huggingface.co/datasets/RootCauseAnalytics/synthetic-australian-medical-documents-sample/resolve/main/pdfs/0033_discharge_summary_CAP_PNEUMONIA_Khan.pdf",
+    "verified": true,
+    "sha256": "e4440e57f61ff764f039a84f53710910fd9acbe2b6af73e71f9ad55991ea642b",
+    "matches_research": true
+  },
+  {
+    "reference_id": "fert-assessment",
+    "url": "https://apjoppkptzdaztmprijk.supabase.co/storage/v1/object/public/public_bucket/sample-reports/myfertility-report-sample.pdf",
+    "verified": true,
+    "sha256": "09d5970025b7caf312b87cae955dc7aa1a099830da8e4b1634e695b3274ae4aa",
+    "matches_research": true
+  },
+  {
+    "reference_id": "lab-pap",
+    "url": "https://files.labcorp.com/testmenu-d8/sample_reports/193000.pdf",
+    "verified": true,
+    "sha256": "815345178d226b883b16e26d8e80fae61f1d48ca3c254cdac4a3b749c7023976",
+    "matches_research": true
+  },
+  {
+    "reference_id": "lab-prenatal",
+    "url": "https://files.labcorp.com/testmenu-d8/sample_reports/144053.pdf",
+    "verified": true,
+    "sha256": "00e90b0bd874be2ff3ebabcb6fd7d5060fb5be05159fe0d1407ac9060ceaa94a",
+    "matches_research": true
+  },
+  {
+    "reference_id": "prenatal-marker",
+    "url": "https://pathofast.com/report_pdfs_new/double-marker-test.pdf",
+    "verified": true,
+    "sha256": "3ea0e1e603a5fbf7d46502bac12435ae087500c895f678e767534d19f8f97c03",
+    "matches_research": true
+  },
+  {
+    "reference_id": "embryology-demo",
+    "url": "https://myembryoiq.com/assets/sample-report.pdf",
+    "verified": true,
+    "sha256": "6dc389b5c2cce87c026cbc3d51344f5b9312f6d7add45caa2ba5103ddef14d36",
+    "matches_research": true
+  },
+  {
+    "reference_id": "nipt-demo",
+    "url": "https://gc-genome.com/wp-content/uploads/2023/09/GCG_G-NIPT_SR_v1.pdf",
+    "verified": true,
+    "sha256": "5d93fc331f861565dfa6574130f5abe5b1e2dc2657dcc461f5470b28a18aee4c",
+    "matches_research": true
+  }
+]

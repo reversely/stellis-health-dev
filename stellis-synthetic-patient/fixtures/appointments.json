@@ -1,0 +1,1272 @@
+[
+  {
+    "appointment_id": "APT-D001",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Routine primary-care consultation",
+    "date": "2022-01-18",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D001"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2022-01-04",
+        "status": "scheduled",
+        "scheduled_date": "2022-01-18",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D003",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Iron results review and cervical examination",
+    "date": "2022-02-02",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D003"
+    ],
+    "episode_id": "iron",
+    "schedule_history": [
+      {
+        "changed_on": "2022-01-19",
+        "status": "scheduled",
+        "scheduled_date": "2022-02-02",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D005",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Iron tolerability telephone review",
+    "date": "2022-02-16",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "telephone",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D005"
+    ],
+    "episode_id": "iron",
+    "schedule_history": [
+      {
+        "changed_on": "2022-02-02",
+        "status": "scheduled",
+        "scheduled_date": "2022-02-16",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D007",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Iron repletion follow-up",
+    "date": "2022-08-02",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D007"
+    ],
+    "episode_id": "iron",
+    "schedule_history": [
+      {
+        "changed_on": "2022-07-19",
+        "status": "scheduled",
+        "scheduled_date": "2022-08-02",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D008",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Preconception and immunization visit",
+    "date": "2022-12-06",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D008"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2022-11-22",
+        "status": "scheduled",
+        "scheduled_date": "2022-12-06",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D009",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Upper respiratory symptoms",
+    "date": "2023-02-10",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D009"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2023-01-27",
+        "status": "scheduled",
+        "scheduled_date": "2023-02-10",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D010",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Fertility concerns in primary care",
+    "date": "2023-09-19",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D010"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2023-09-05",
+        "status": "scheduled",
+        "scheduled_date": "2023-09-19",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D011",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Referral for fertility assessment",
+    "date": "2023-10-03",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D011"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2023-09-19",
+        "status": "scheduled",
+        "scheduled_date": "2023-10-03",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D012",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Fertility intake and menstrual history",
+    "date": "2023-11-14",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-07",
+    "document_ids": [
+      "D012"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2023-10-31",
+        "status": "scheduled",
+        "scheduled_date": "2023-11-14",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D014",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Baseline transvaginal pelvic ultrasound",
+    "date": "2023-12-01",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-04",
+    "provider_id": "SYN-PROV-04",
+    "document_ids": [
+      "D014"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2023-11-14",
+        "status": "scheduled",
+        "scheduled_date": "2023-11-30",
+        "time": "14:00"
+      },
+      {
+        "changed_on": "2023-11-20",
+        "status": "rescheduled",
+        "scheduled_date": "2023-12-01",
+        "time": "10:00",
+        "reason": "Clinic scheduling change"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D016",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Reproductive endocrinology consultation",
+    "date": "2024-01-12",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D016"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2023-12-29",
+        "status": "scheduled",
+        "scheduled_date": "2024-01-12",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D017",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Hysterosalpingogram",
+    "date": "2024-02-01",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-04",
+    "provider_id": "SYN-PROV-04",
+    "document_ids": [
+      "D017"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2024-01-18",
+        "status": "scheduled",
+        "scheduled_date": "2024-02-01",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D018",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Fertility treatment decision",
+    "date": "2024-02-16",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D018"
+    ],
+    "episode_id": "fertility",
+    "schedule_history": [
+      {
+        "changed_on": "2024-02-02",
+        "status": "scheduled",
+        "scheduled_date": "2024-02-16",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D020",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Ovarian stimulation medication orders",
+    "date": "2024-05-24",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D020"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-05-10",
+        "status": "scheduled",
+        "scheduled_date": "2024-05-24",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D021",
+    "patient_id": "SYN-MAYA-001",
+    "title": "IVF baseline scan and clearance",
+    "date": "2024-06-02",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D021"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-05-19",
+        "status": "scheduled",
+        "scheduled_date": "2024-06-02",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D022",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Stimulation day 6 monitoring",
+    "date": "2024-06-07",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D022"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-05-24",
+        "status": "scheduled",
+        "scheduled_date": "2024-06-07",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D023",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Stimulation day 9 monitoring",
+    "date": "2024-06-10",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D023"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-05-27",
+        "status": "scheduled",
+        "scheduled_date": "2024-06-10",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D024",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Trigger confirmation and retrieval instructions",
+    "date": "2024-06-11",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "telephone",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-07",
+    "document_ids": [
+      "D024"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-05-28",
+        "status": "scheduled",
+        "scheduled_date": "2024-06-11",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D025",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Transvaginal oocyte retrieval",
+    "date": "2024-06-13",
+    "start_time": "09:30",
+    "end_time": "10:00",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D025"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-05-30",
+        "status": "scheduled",
+        "scheduled_date": "2024-06-13",
+        "time": "09:30"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D028",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Post-retrieval review",
+    "date": "2024-06-25",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D028"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-06-11",
+        "status": "scheduled",
+        "scheduled_date": "2024-06-25",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D029",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Frozen embryo transfer preparation orders",
+    "date": "2024-10-25",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D029"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-10-11",
+        "status": "scheduled",
+        "scheduled_date": "2024-10-25",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D030",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Frozen transfer baseline clearance",
+    "date": "2024-10-29",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D030"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-10-15",
+        "status": "scheduled",
+        "scheduled_date": "2024-10-29",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D031",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Frozen transfer endometrial assessment",
+    "date": "2024-11-08",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D031"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-10-25",
+        "status": "scheduled",
+        "scheduled_date": "2024-11-08",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D032",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Single frozen blastocyst transfer",
+    "date": "2024-11-15",
+    "start_time": "09:00",
+    "end_time": "09:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-03",
+    "provider_id": "SYN-PROV-03",
+    "document_ids": [
+      "D032"
+    ],
+    "episode_id": "ivf",
+    "schedule_history": [
+      {
+        "changed_on": "2024-11-01",
+        "status": "scheduled",
+        "scheduled_date": "2024-11-15",
+        "time": "09:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D035",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Early pregnancy viability ultrasound",
+    "date": "2024-12-13",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-04",
+    "provider_id": "SYN-PROV-04",
+    "document_ids": [
+      "D035"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2024-11-29",
+        "status": "scheduled",
+        "scheduled_date": "2024-12-13",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D036",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Initial prenatal consultation",
+    "date": "2025-01-06",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D036"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2024-12-23",
+        "status": "scheduled",
+        "scheduled_date": "2025-01-06",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D039",
+    "patient_id": "SYN-MAYA-001",
+    "title": "First-trimester obstetric ultrasound",
+    "date": "2025-01-24",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-04",
+    "provider_id": "SYN-PROV-04",
+    "document_ids": [
+      "D039"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-01-10",
+        "status": "scheduled",
+        "scheduled_date": "2025-01-24",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D040",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal visit at 15+5",
+    "date": "2025-02-14",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D040"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-01-31",
+        "status": "scheduled",
+        "scheduled_date": "2025-02-14",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D041",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Detailed fetal anatomy ultrasound",
+    "date": "2025-03-14",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-04",
+    "provider_id": "SYN-PROV-04",
+    "document_ids": [
+      "D041"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-02-14",
+        "status": "scheduled",
+        "scheduled_date": "2025-03-13",
+        "time": "10:00"
+      },
+      {
+        "changed_on": "2025-02-28",
+        "status": "rescheduled",
+        "scheduled_date": "2025-03-14",
+        "time": "10:00",
+        "reason": "Patient work conflict"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D042",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal visit at 23+5",
+    "date": "2025-04-11",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D042"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-03-28",
+        "status": "scheduled",
+        "scheduled_date": "2025-04-11",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D044",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Iron treatment in pregnancy",
+    "date": "2025-05-05",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D044"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-04-21",
+        "status": "scheduled",
+        "scheduled_date": "2025-05-05",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D045",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal review and Tdap",
+    "date": "2025-05-16",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D045"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-05-02",
+        "status": "scheduled",
+        "scheduled_date": "2025-05-16",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D047",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Third-trimester growth ultrasound",
+    "date": "2025-06-13",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-04",
+    "provider_id": "SYN-PROV-04",
+    "document_ids": [
+      "D047"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-05-30",
+        "status": "scheduled",
+        "scheduled_date": "2025-06-13",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D048",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal visit at 34+5",
+    "date": "2025-06-27",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D048"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-06-13",
+        "status": "scheduled",
+        "scheduled_date": "2025-06-27",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D049",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal visit and GBS collection",
+    "date": "2025-07-11",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D049"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-06-27",
+        "status": "scheduled",
+        "scheduled_date": "2025-07-11",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D051",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal visit at 38+5",
+    "date": "2025-07-25",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D051"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-07-11",
+        "status": "scheduled",
+        "scheduled_date": "2025-07-25",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D052",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Labour and vaginal delivery record",
+    "date": "2025-07-29",
+    "start_time": "02:10",
+    "end_time": "12:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-06",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D052"
+    ],
+    "episode_id": "delivery",
+    "schedule_history": [
+      {
+        "changed_on": "2025-07-15",
+        "status": "scheduled",
+        "scheduled_date": "2025-07-29",
+        "time": "02:10"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D054",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Maternal hospital discharge summary",
+    "date": "2025-07-31",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-06",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D054"
+    ],
+    "episode_id": "postpartum",
+    "schedule_history": [
+      {
+        "changed_on": "2025-07-17",
+        "status": "scheduled",
+        "scheduled_date": "2025-07-31",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D055",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Postpartum nurse telephone review",
+    "date": "2025-08-05",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "telephone",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-07",
+    "document_ids": [
+      "D055"
+    ],
+    "episode_id": "postpartum",
+    "schedule_history": [
+      {
+        "changed_on": "2025-07-22",
+        "status": "scheduled",
+        "scheduled_date": "2025-08-05",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D056",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Six-week postpartum examination",
+    "date": "2025-09-09",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D056"
+    ],
+    "episode_id": "postpartum",
+    "schedule_history": [
+      {
+        "changed_on": "2025-08-26",
+        "status": "scheduled",
+        "scheduled_date": "2025-09-09",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D057",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Pelvic health physiotherapy assessment",
+    "date": "2025-10-03",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-07",
+    "provider_id": "SYN-PROV-08",
+    "document_ids": [
+      "D057"
+    ],
+    "episode_id": "postpartum",
+    "schedule_history": [
+      {
+        "changed_on": "2025-09-19",
+        "status": "scheduled",
+        "scheduled_date": "2025-10-03",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D059",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Pelvic health progress review",
+    "date": "2025-11-14",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-07",
+    "provider_id": "SYN-PROV-08",
+    "document_ids": [
+      "D059"
+    ],
+    "episode_id": "postpartum",
+    "schedule_history": [
+      {
+        "changed_on": "2025-10-31",
+        "status": "scheduled",
+        "scheduled_date": "2025-11-14",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D060",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Primary-care postpartum and iron review",
+    "date": "2025-12-05",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D060"
+    ],
+    "episode_id": "postpartum",
+    "schedule_history": [
+      {
+        "changed_on": "2025-11-21",
+        "status": "scheduled",
+        "scheduled_date": "2025-12-05",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D061",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Routine care and HPV screening collection",
+    "date": "2026-01-16",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D061"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2026-01-02",
+        "status": "scheduled",
+        "scheduled_date": "2026-01-16",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D063",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Menstrual return follow-up",
+    "date": "2026-03-20",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D063"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2026-03-06",
+        "status": "scheduled",
+        "scheduled_date": "2026-03-20",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D064",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Fatigue and menstrual health visit",
+    "date": "2026-06-12",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D064"
+    ],
+    "episode_id": "iron",
+    "schedule_history": [
+      {
+        "changed_on": "2026-05-29",
+        "status": "scheduled",
+        "scheduled_date": "2026-06-12",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D066",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Recurrent iron deficiency treatment",
+    "date": "2026-06-19",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D066"
+    ],
+    "episode_id": "iron",
+    "schedule_history": [
+      {
+        "changed_on": "2026-06-05",
+        "status": "scheduled",
+        "scheduled_date": "2026-06-19",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D068",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Iron response and preventive review",
+    "date": "2026-09-25",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D068"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2026-09-11",
+        "status": "scheduled",
+        "scheduled_date": "2026-09-25",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-D070",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Annual longitudinal care review",
+    "date": "2026-12-18",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "completed",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-01",
+    "provider_id": "SYN-PROV-01",
+    "document_ids": [
+      "D070"
+    ],
+    "episode_id": "routine",
+    "schedule_history": [
+      {
+        "changed_on": "2026-12-04",
+        "status": "scheduled",
+        "scheduled_date": "2026-12-18",
+        "time": "10:00"
+      }
+    ]
+  },
+  {
+    "appointment_id": "APT-CANCEL-01",
+    "patient_id": "SYN-MAYA-001",
+    "title": "Prenatal review if undelivered",
+    "date": "2025-07-31",
+    "start_time": "10:00",
+    "end_time": "10:30",
+    "timezone": "America/Toronto",
+    "status": "cancelled",
+    "mode": "in_person",
+    "facility_id": "SYN-FAC-05",
+    "provider_id": "SYN-PROV-05",
+    "document_ids": [
+      "D051",
+      "D052"
+    ],
+    "episode_id": "pregnancy",
+    "schedule_history": [
+      {
+        "changed_on": "2025-07-25",
+        "status": "scheduled",
+        "scheduled_date": "2025-07-31",
+        "time": "10:00"
+      },
+      {
+        "changed_on": "2025-07-29",
+        "status": "cancelled",
+        "reason": "Delivery occurred July 29"
+      }
+    ]
+  }
+]

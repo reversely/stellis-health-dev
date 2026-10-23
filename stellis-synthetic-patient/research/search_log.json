@@ -1,0 +1,55 @@
+[
+  {
+    "category": "cervical screening",
+    "queries": [
+      "pap smear sample report pdf dummy",
+      "cytology sample report pdf labcorp"
+    ],
+    "outcome": "Accepted Labcorp 193000 test-account sample"
+  },
+  {
+    "category": "prenatal",
+    "queries": [
+      "prenatal sample report filetype:pdf",
+      "ultrasound pregnancy DUMMY PATIENT"
+    ],
+    "outcome": "Accepted Pathofast double-marker dummy report. GC Genome supplemental only."
+  },
+  {
+    "category": "embryology",
+    "queries": [
+      "embryology sample report",
+      "embryology report fictional",
+      "IVF report dummy pdf"
+    ],
+    "outcome": "MorphIQ Jane/John/Dr Doe demonstration inspected, supplemental only; FCI Jane Doe sample identified but embryo-image provenance unverified, excluded."
+  },
+  {
+    "category": "ultrasound and HSG",
+    "queries": [
+      "obstetric ultrasound sample report pdf",
+      "follicular monitoring report pdf sample",
+      "ultrasound report sample fictitious",
+      "site:img.hod.report/sample-report pregnancy"
+    ],
+    "outcome": "RCA fully synthetic imaging accepted as generic reference. HOD dummy sources return HTTP 403 locally. FLABS pregnancy and HSG vendor examples use inconsistent male patient header and lack explicit synthetic provenance, rejected. Astraia sample contains clinical images with unverified provenance, rejected."
+  },
+  {
+    "category": "delivery and postpartum",
+    "queries": [
+      "delivery discharge summary fictional pdf",
+      "postpartum discharge summary sample pdf",
+      "birth discharge summary synthetic",
+      "maternity discharge summary example filetype:pdf"
+    ],
+    "outcome": "Specialized templates and quality standards found, but no verified synthetic populated PDF. Use RCA synthetic discharge and procedure references with explicit limitation."
+  },
+  {
+    "category": "excluded datasets",
+    "outcome": "MIMIC-derived, de-identified, real case reports and transcription samples excluded; synthetic questions over real patient records do not meet this task."
+  },
+  {
+    "category": "other vendor samples",
+    "outcome": "Dr.Lably Pap sample not accepted: real-report claim and no explicit synthetic provenance. Labcorp prenatal sample accepted after all seven pages visually reviewed; raster tables noted. Vision Chips sample TLS hostname mismatch, not verified."
+  }
+]

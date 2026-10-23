@@ -140,3 +140,9 @@
 .agent-followup input {min-width:0;flex:1 1 200px}
 .agent-followup button,.agent-followup input {min-height:44px}
 .agent-followup > a {display:inline-flex;align-items:center;min-height:44px}
+
+@media (max-width: 1000px) {
+  .agent-composer :is(button, textarea, select) {
+    scroll-margin-block: calc(88px + env(safe-area-inset-bottom));
+  }
+}

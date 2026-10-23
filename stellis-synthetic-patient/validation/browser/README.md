@@ -1,0 +1,13 @@
+# Maya workflow verification
+
+The delivery run started with an isolated empty workspace. Playwright uploaded all 70 actual corpus PDFs through the shared file picker, asserted the proposed encounter date before confirming it, and verified each saved file digest and date through the guide. Notebook templates were approved through the existing catalogue and selected in the upload dialog. A final API check confirms all 70 persisted dates and primary notebook associations.
+
+Eight milestones exercised Documents and Notebook timeline filters, opened the source record, and sent a question through the existing composer to the configured assistant. Replies contain working document citations. The recorded IVF answer contains 12 retrieved, 10 mature, 8 normally fertilized and 4 frozen blastocysts. Pregnancy dating and delivery figures are present in the recorded replies.
+
+Live answers are not perfect. `answer_review.json` records an incorrect last-dose date in D070 and ambiguous wording linking the transfer date to the scan's gestational age in D035. The PDFs and ground truth retain the correct dates. These findings remain open model-quality issues and are not represented as passed clinical-answer validation.
+
+`maya-walkthrough.mp4` contains the actual paced browser run. It has no synthetic replacement replies or fabricated app state. `workflow_results.json` contains the questions, replies and citations. `layout_results.json` covers 42 states across 360, 390, 768, 1024, 1280, 1440 and 1920 pixels in both themes: expanded guide, collapsed guide with chat and shared upload date review. Geometry checks report zero failures, warnings or page errors. Overlays are audited separately from the intentionally obscured page. Send was checked for pointer access after normal page scrolling. Close and reload were checked to ensure the guide stays closed.
+
+The app Python suite passed 561 tests with four skips and 123 subtests; all 200 JavaScript tests passed. Corpus validation passed 541 checks. All 13 reference URLs downloaded successfully with matching research hashes. Embedded PDF text was used in this browser run. Real optical recognition and physical microphone hardware were not tested here. No hosted deployment is asserted.
+
+Reproduction scripts are in this directory's `scripts` folder and in the repository's `tests/browser` folder. Run them from the repository root against a disposable app with the required Playwright module and browser paths. Set STELLIS_MAYA_WORKFLOW=1 for real inference and STELLIS_MAYA_PACE_MS=400 for the paced recording. The corpus generator has no network dependency for ordinary rebuilds.

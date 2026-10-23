@@ -1,0 +1,41 @@
+{
+  "transcript_id": "TX-D003",
+  "synthetic": true,
+  "patient_id": "SYN-MAYA-001",
+  "document_id": "D003",
+  "appointment_id": "APT-D003",
+  "date": "2022-02-02",
+  "source": "Original scripted fictional dialogue; no recording or real transcript used",
+  "turns": [
+    {
+      "speaker": "Maya Chen",
+      "text": "I feel tired after work. My periods seem normal for me.",
+      "start_ms": 0,
+      "end_ms": 12000
+    },
+    {
+      "speaker": "Dr Elara Vale",
+      "text": "Your ferritin is 11 and your hemoglobin is 124. This supports low iron stores without anemia.",
+      "start_ms": 12000,
+      "end_ms": 24000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "Should I take iron every day?",
+      "start_ms": 24000,
+      "end_ms": 36000
+    },
+    {
+      "speaker": "Dr Elara Vale",
+      "text": "For this course take the 300 mg ferrous sulfate tablet every other day. It contains 60 mg elemental iron. Tell me if nausea or constipation makes it hard to continue.",
+      "start_ms": 36000,
+      "end_ms": 48000
+    },
+    {
+      "speaker": "Maya Chen",
+      "text": "I will record the dose and bring up any side effects.",
+      "start_ms": 48000,
+      "end_ms": 60000
+    }
+  ]
+}

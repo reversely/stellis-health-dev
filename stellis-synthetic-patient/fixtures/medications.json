@@ -1,0 +1,145 @@
+[
+  {
+    "adjustments": [
+      {
+        "date": "2022-02-16",
+        "detail": "Move dose to evening with food because of mild nausea; same dose and frequency"
+      }
+    ],
+    "dose": "300 mg tablet (60 mg elemental iron)",
+    "end": "2022-08-01",
+    "frequency": "every other day",
+    "medication_id": "MED-IRON-1",
+    "name": "Ferrous sulfate",
+    "reason": "Iron deficiency without anemia",
+    "route": "oral",
+    "start": "2022-02-02"
+  },
+  {
+    "dose": "400 micrograms",
+    "end": "2024-10-31",
+    "frequency": "daily",
+    "medication_id": "MED-FOLATE",
+    "name": "Folic acid",
+    "reason": "Preconception supplementation",
+    "route": "oral",
+    "start": "2022-12-01"
+  },
+  {
+    "adjustments": [
+      {
+        "date": "2024-06-07",
+        "detail": "Reduce nightly dose after monitoring",
+        "dose": "150 IU"
+      }
+    ],
+    "dose": "225 IU",
+    "end": "2024-06-10",
+    "frequency": "nightly",
+    "medication_id": "MED-FSH",
+    "name": "Follitropin alfa",
+    "reason": "Ovarian stimulation",
+    "route": "subcutaneous",
+    "start": "2024-06-02"
+  },
+  {
+    "dose": "75 IU",
+    "end": "2024-06-10",
+    "frequency": "nightly",
+    "medication_id": "MED-HMG",
+    "name": "Menotropins",
+    "reason": "Ovarian stimulation",
+    "route": "subcutaneous",
+    "start": "2024-06-02"
+  },
+  {
+    "dose": "0.25 mg",
+    "end": "2024-06-11",
+    "frequency": "daily",
+    "medication_id": "MED-ANT",
+    "name": "Cetrorelix",
+    "reason": "Prevent premature LH surge",
+    "route": "subcutaneous",
+    "start": "2024-06-07"
+  },
+  {
+    "dose": "4 mg",
+    "end": "2024-06-11",
+    "frequency": "once at 21:30",
+    "medication_id": "MED-TRIGGER",
+    "name": "Leuprolide acetate",
+    "reason": "Final oocyte maturation; retrieval 36 hours later",
+    "route": "subcutaneous",
+    "start": "2024-06-11"
+  },
+  {
+    "dose": "2 mg",
+    "end": "2025-01-04",
+    "frequency": "three times daily",
+    "medication_id": "MED-E2",
+    "name": "Estradiol",
+    "reason": "Programmed frozen transfer and early pregnancy support",
+    "route": "oral",
+    "start": "2024-10-29"
+  },
+  {
+    "dose": "50 mg",
+    "end": "2025-01-04",
+    "frequency": "daily at 09:00",
+    "medication_id": "MED-P4",
+    "name": "Progesterone in oil",
+    "reason": "Programmed frozen transfer and early pregnancy support",
+    "route": "intramuscular",
+    "start": "2024-11-10"
+  },
+  {
+    "dose": "one tablet containing folic acid 1 mg and iron 27 mg",
+    "end": "2026-01-31",
+    "frequency": "daily",
+    "medication_id": "MED-PRENATAL",
+    "name": "Prenatal multivitamin",
+    "reason": "Pregnancy and lactation",
+    "route": "oral",
+    "start": "2024-11-01"
+  },
+  {
+    "dose": "300 mg tablet (60 mg elemental iron)",
+    "end": "2025-12-05",
+    "frequency": "every other day, apart from prenatal vitamin",
+    "medication_id": "MED-IRON-2",
+    "name": "Ferrous sulfate",
+    "reason": "Recurrent iron deficiency with anemia during pregnancy",
+    "route": "oral",
+    "start": "2025-05-05"
+  },
+  {
+    "dose": "400 mg",
+    "end": "2025-08-03",
+    "frequency": "every 6 hours as needed for perineal pain, maximum 1200 mg/day",
+    "medication_id": "MED-IBU",
+    "name": "Ibuprofen",
+    "reason": "Postpartum pain; patient stopped after three days",
+    "route": "oral",
+    "start": "2025-07-31"
+  },
+  {
+    "dose": "500-1000 mg",
+    "end": "2025-08-03",
+    "frequency": "every 8 hours as needed, maximum 3000 mg/day",
+    "medication_id": "MED-APAP",
+    "name": "Acetaminophen",
+    "reason": "Postpartum pain; actual stop August 3, seven-day supply originally prescribed",
+    "route": "oral",
+    "start": "2025-07-31"
+  },
+  {
+    "dose": "300 mg tablet (60 mg elemental iron)",
+    "end": "2026-12-18",
+    "frequency": "every other day",
+    "medication_id": "MED-IRON-3",
+    "name": "Ferrous sulfate",
+    "reason": "Recurrent iron deficiency without anemia",
+    "route": "oral",
+    "start": "2026-06-19"
+  }
+]

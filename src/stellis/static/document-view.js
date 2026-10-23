@@ -155,6 +155,53 @@ function pageControls(section, host, record, page, onChanged) {
   if (actions.childElementCount) section.append(actions, status);
 }
 
+/** Reuses the shared capture form for an evidence-backed encounter date. */
+function dateReview(record, onSaved = () => {}) {
+  const dom = root.StellisDom;
+  const form = dom.el('form', null, 'capture-form document-date-review');
+  const field = dom.el('label', null, 'capture-field');
+  field.append(dom.el('span', 'Encounter date'));
+  const input = dom.el('input'); input.type = 'date'; input.required = true;
+  input.setAttribute('aria-label', 'Encounter date');
+  const suggestion = record.date_suggestion || {candidates: []};
+  input.value = record.record_date || suggestion.date || '';
+  field.append(input); form.append(field);
+  if (!record.record_date && suggestion.status === 'ambiguous') {
+    const choiceLabel = dom.el('label', null, 'capture-field');
+    choiceLabel.append(dom.el('span', 'Detected dates'));
+    const choices = dom.el('select'); choices.setAttribute('aria-label', 'Detected dates');
+    choices.append(new Option('Choose a date', ''), ...suggestion.candidates.map((item, i) =>
+      new Option(`${item.date} ${item.role} on page ${item.page}`, String(i))));
+    choices.addEventListener('change', () => {
+      if (choices.value !== '') input.value = suggestion.candidates[Number(choices.value)].date;
+    });
+    choiceLabel.append(choices); form.append(choiceLabel);
+  }
+  const evidence = dom.el('p', null, 'document-empty');
+  const selected = suggestion.candidates.find(item => item.date === input.value);
+  evidence.textContent = record.record_date ? 'Confirmed encounter date' : selected ?
+    `From page ${selected.page}: ${selected.quote}` :
+    record.status === 'needs_text' ? 'Read the page text to find its encounter date' : 'Choose the encounter date from the record';
+  const status = dom.el('p'); status.role = 'status';
+  const save = dom.button(record.record_date ? 'Save date' : 'Confirm date', 'coach-button is-primary');
+  save.type = 'submit';
+  form.append(evidence, status, save);
+  form.addEventListener('submit', async event => {
+    event.preventDefault(); save.disabled = true; status.textContent = '';
+    try {
+      const updated = await dom.api(`/documents/${encodeURIComponent(record.id)}`, {
+        method: 'PATCH', json: {record_date: input.value}
+      });
+      Object.assign(record, updated); evidence.textContent = 'Confirmed encounter date';
+      status.textContent = 'Date confirmed'; save.textContent = 'Save date';
+      onSaved(updated);
+      window.dispatchEvent(new Event('health-capture-saved'));
+    } catch (error) { status.textContent = error.message; }
+    finally { save.disabled = false; }
+  });
+  return form;
+}
+
 /**
  * Renders the full document page and scrolls to the requested page.
  * @param {!Element} host
@@ -181,7 +228,8 @@ function render(host, record, page, onDelete, onChanged = null) {
   remove.addEventListener('click', () => onDelete(record, remove));
   const actions = dom.el('div', null, 'document-actions');
   actions.append(open, remove);
-  head.append(dom.el('h2', record.title, 'document-title'), meta, actions);
+  head.append(dom.el('h2', record.title, 'document-title'), meta, actions,
+      dateReview(record, () => { meta.firstChild.textContent = describe(record); }));
 
   const slot = dom.el('div', null, 'document-slot');
   const body = dom.el('div');
@@ -196,6 +244,7 @@ function render(host, record, page, onDelete, onChanged = null) {
 }
 
 const exported = {
+  dateReview,
   render,
   renderPages,
   fileUrl,

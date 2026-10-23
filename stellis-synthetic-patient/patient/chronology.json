@@ -1,0 +1,987 @@
+[
+  {
+    "event_id": "EV-D001",
+    "date": "2022-01-18",
+    "recorded_date": "2022-01-18",
+    "document_id": "D001",
+    "title": "Routine primary-care consultation",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": []
+  },
+  {
+    "event_id": "EV-D002",
+    "date": "2022-01-21",
+    "recorded_date": "2022-01-21",
+    "document_id": "D002",
+    "title": "CBC, ferritin and thyroid results",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D001"
+    ]
+  },
+  {
+    "event_id": "EV-D003",
+    "date": "2022-02-02",
+    "recorded_date": "2022-02-02",
+    "document_id": "D003",
+    "title": "Iron results review and cervical examination",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D002"
+    ]
+  },
+  {
+    "event_id": "EV-D004",
+    "date": "2022-02-07",
+    "recorded_date": "2022-02-07",
+    "document_id": "D004",
+    "title": "Cervical cytology",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D003"
+    ]
+  },
+  {
+    "event_id": "EV-D005",
+    "date": "2022-02-16",
+    "recorded_date": "2022-02-16",
+    "document_id": "D005",
+    "title": "Iron tolerability telephone review",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D003",
+      "D004"
+    ]
+  },
+  {
+    "event_id": "EV-D006",
+    "date": "2022-05-20",
+    "recorded_date": "2022-05-20",
+    "document_id": "D006",
+    "title": "Iron treatment follow-up",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D002",
+      "D005"
+    ]
+  },
+  {
+    "event_id": "EV-D007",
+    "date": "2022-08-02",
+    "recorded_date": "2022-08-02",
+    "document_id": "D007",
+    "title": "Iron repletion follow-up",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D006"
+    ]
+  },
+  {
+    "event_id": "EV-D008",
+    "date": "2022-12-06",
+    "recorded_date": "2022-12-06",
+    "document_id": "D008",
+    "title": "Preconception and immunization visit",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D004",
+      "D007"
+    ]
+  },
+  {
+    "event_id": "EV-D009",
+    "date": "2023-02-10",
+    "recorded_date": "2023-02-10",
+    "document_id": "D009",
+    "title": "Upper respiratory symptoms",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": []
+  },
+  {
+    "event_id": "EV-D010",
+    "date": "2023-09-19",
+    "recorded_date": "2023-09-19",
+    "document_id": "D010",
+    "title": "Fertility concerns in primary care",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D008"
+    ]
+  },
+  {
+    "event_id": "EV-D011",
+    "date": "2023-10-03",
+    "recorded_date": "2023-10-03",
+    "document_id": "D011",
+    "title": "Referral for fertility assessment",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D006",
+      "D010"
+    ]
+  },
+  {
+    "event_id": "EV-D012",
+    "date": "2023-11-14",
+    "recorded_date": "2023-11-14",
+    "document_id": "D012",
+    "title": "Fertility intake and menstrual history",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D011"
+    ]
+  },
+  {
+    "event_id": "EV-D013",
+    "date": "2023-11-30",
+    "recorded_date": "2023-11-30",
+    "document_id": "D013",
+    "title": "Baseline fertility endocrine panel",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D012"
+    ]
+  },
+  {
+    "event_id": "EV-D014",
+    "date": "2023-12-01",
+    "recorded_date": "2023-12-01",
+    "document_id": "D014",
+    "title": "Baseline transvaginal pelvic ultrasound",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D012",
+      "D013"
+    ]
+  },
+  {
+    "event_id": "EV-D015",
+    "date": "2023-12-20",
+    "recorded_date": "2023-12-20",
+    "document_id": "D015",
+    "title": "Mid-luteal progesterone",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D013"
+    ]
+  },
+  {
+    "event_id": "EV-D016",
+    "date": "2024-01-12",
+    "recorded_date": "2024-01-12",
+    "document_id": "D016",
+    "title": "Reproductive endocrinology consultation",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D011",
+      "D013",
+      "D014",
+      "D015"
+    ]
+  },
+  {
+    "event_id": "EV-D017",
+    "date": "2024-02-01",
+    "recorded_date": "2024-02-01",
+    "document_id": "D017",
+    "title": "Hysterosalpingogram",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D016"
+    ]
+  },
+  {
+    "event_id": "EV-D018",
+    "date": "2024-02-16",
+    "recorded_date": "2024-02-16",
+    "document_id": "D018",
+    "title": "Fertility treatment decision",
+    "episode_id": "fertility",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D016",
+      "D017"
+    ]
+  },
+  {
+    "event_id": "EV-D019",
+    "date": "2024-05-17",
+    "recorded_date": "2024-05-17",
+    "document_id": "D019",
+    "title": "Pre-IVF infectious screening and CBC",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D018"
+    ]
+  },
+  {
+    "event_id": "EV-D020",
+    "date": "2024-05-24",
+    "recorded_date": "2024-05-24",
+    "document_id": "D020",
+    "title": "Ovarian stimulation medication orders",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D018",
+      "D019"
+    ]
+  },
+  {
+    "event_id": "EV-D021",
+    "date": "2024-06-02",
+    "recorded_date": "2024-06-02",
+    "document_id": "D021",
+    "title": "IVF baseline scan and clearance",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D020"
+    ]
+  },
+  {
+    "event_id": "EV-D022",
+    "date": "2024-06-07",
+    "recorded_date": "2024-06-07",
+    "document_id": "D022",
+    "title": "Stimulation day 6 monitoring",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D021"
+    ]
+  },
+  {
+    "event_id": "EV-D023",
+    "date": "2024-06-10",
+    "recorded_date": "2024-06-10",
+    "document_id": "D023",
+    "title": "Stimulation day 9 monitoring",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D022"
+    ]
+  },
+  {
+    "event_id": "EV-D024",
+    "date": "2024-06-11",
+    "recorded_date": "2024-06-11",
+    "document_id": "D024",
+    "title": "Trigger confirmation and retrieval instructions",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D023"
+    ]
+  },
+  {
+    "event_id": "EV-D025",
+    "date": "2024-06-13",
+    "recorded_date": "2024-06-13",
+    "document_id": "D025",
+    "title": "Transvaginal oocyte retrieval",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D024"
+    ]
+  },
+  {
+    "event_id": "EV-D026",
+    "date": "2024-06-14",
+    "recorded_date": "2024-06-14",
+    "document_id": "D026",
+    "title": "Day 1 fertilization report",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D025"
+    ]
+  },
+  {
+    "event_id": "EV-D027",
+    "date": "2024-06-19",
+    "recorded_date": "2024-06-19",
+    "document_id": "D027",
+    "title": "Final embryo culture and cryopreservation report",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D026"
+    ]
+  },
+  {
+    "event_id": "EV-D028",
+    "date": "2024-06-25",
+    "recorded_date": "2024-06-25",
+    "document_id": "D028",
+    "title": "Post-retrieval review",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D025",
+      "D027"
+    ]
+  },
+  {
+    "event_id": "EV-D029",
+    "date": "2024-10-25",
+    "recorded_date": "2024-10-25",
+    "document_id": "D029",
+    "title": "Frozen embryo transfer preparation orders",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D027",
+      "D028"
+    ]
+  },
+  {
+    "event_id": "EV-D030",
+    "date": "2024-10-29",
+    "recorded_date": "2024-10-29",
+    "document_id": "D030",
+    "title": "Frozen transfer baseline clearance",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D029"
+    ]
+  },
+  {
+    "event_id": "EV-D031",
+    "date": "2024-11-08",
+    "recorded_date": "2024-11-08",
+    "document_id": "D031",
+    "title": "Frozen transfer endometrial assessment",
+    "episode_id": "ivf",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D030"
+    ]
+  },
+  {
+    "event_id": "EV-D032",
+    "date": "2024-11-15",
+    "recorded_date": "2024-11-15",
+    "document_id": "D032",
+    "title": "Single frozen blastocyst transfer",
+    "episode_id": "ivf",
+    "gestational_age": {
+      "days": 19,
+      "weeks": 2,
+      "remaining_days": 5,
+      "display": "2+5"
+    },
+    "prior_document_ids": [
+      "D027",
+      "D031"
+    ]
+  },
+  {
+    "event_id": "EV-D033",
+    "date": "2024-11-25",
+    "recorded_date": "2024-11-25",
+    "document_id": "D033",
+    "title": "Post-transfer serum beta-hCG",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 29,
+      "weeks": 4,
+      "remaining_days": 1,
+      "display": "4+1"
+    },
+    "prior_document_ids": [
+      "D032"
+    ]
+  },
+  {
+    "event_id": "EV-D034",
+    "date": "2024-11-27",
+    "recorded_date": "2024-11-27",
+    "document_id": "D034",
+    "title": "Repeat serum beta-hCG",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 31,
+      "weeks": 4,
+      "remaining_days": 3,
+      "display": "4+3"
+    },
+    "prior_document_ids": [
+      "D033"
+    ]
+  },
+  {
+    "event_id": "EV-D035",
+    "date": "2024-12-13",
+    "recorded_date": "2024-12-13",
+    "document_id": "D035",
+    "title": "Early pregnancy viability ultrasound",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 47,
+      "weeks": 6,
+      "remaining_days": 5,
+      "display": "6+5"
+    },
+    "prior_document_ids": [
+      "D032",
+      "D034"
+    ]
+  },
+  {
+    "event_id": "EV-D036",
+    "date": "2025-01-06",
+    "recorded_date": "2025-01-06",
+    "document_id": "D036",
+    "title": "Initial prenatal consultation",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 71,
+      "weeks": 10,
+      "remaining_days": 1,
+      "display": "10+1"
+    },
+    "prior_document_ids": [
+      "D035"
+    ]
+  },
+  {
+    "event_id": "EV-D037",
+    "date": "2025-01-08",
+    "recorded_date": "2025-01-08",
+    "document_id": "D037",
+    "title": "Initial prenatal laboratory panel",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 73,
+      "weeks": 10,
+      "remaining_days": 3,
+      "display": "10+3"
+    },
+    "prior_document_ids": [
+      "D036"
+    ]
+  },
+  {
+    "event_id": "EV-D038",
+    "date": "2025-01-15",
+    "recorded_date": "2025-01-15",
+    "document_id": "D038",
+    "title": "Cell-free DNA prenatal screening",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 80,
+      "weeks": 11,
+      "remaining_days": 3,
+      "display": "11+3"
+    },
+    "prior_document_ids": [
+      "D036",
+      "D037"
+    ]
+  },
+  {
+    "event_id": "EV-D039",
+    "date": "2025-01-24",
+    "recorded_date": "2025-01-24",
+    "document_id": "D039",
+    "title": "First-trimester obstetric ultrasound",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 89,
+      "weeks": 12,
+      "remaining_days": 5,
+      "display": "12+5"
+    },
+    "prior_document_ids": [
+      "D035",
+      "D038"
+    ]
+  },
+  {
+    "event_id": "EV-D040",
+    "date": "2025-02-14",
+    "recorded_date": "2025-02-14",
+    "document_id": "D040",
+    "title": "Prenatal visit at 15+5",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 110,
+      "weeks": 15,
+      "remaining_days": 5,
+      "display": "15+5"
+    },
+    "prior_document_ids": [
+      "D037",
+      "D038",
+      "D039"
+    ]
+  },
+  {
+    "event_id": "EV-D041",
+    "date": "2025-03-14",
+    "recorded_date": "2025-03-14",
+    "document_id": "D041",
+    "title": "Detailed fetal anatomy ultrasound",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 138,
+      "weeks": 19,
+      "remaining_days": 5,
+      "display": "19+5"
+    },
+    "prior_document_ids": [
+      "D039",
+      "D040"
+    ]
+  },
+  {
+    "event_id": "EV-D042",
+    "date": "2025-04-11",
+    "recorded_date": "2025-04-11",
+    "document_id": "D042",
+    "title": "Prenatal visit at 23+5",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 166,
+      "weeks": 23,
+      "remaining_days": 5,
+      "display": "23+5"
+    },
+    "prior_document_ids": [
+      "D041"
+    ]
+  },
+  {
+    "event_id": "EV-D043",
+    "date": "2025-05-02",
+    "recorded_date": "2025-05-02",
+    "document_id": "D043",
+    "title": "Glucose challenge and hematology",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 187,
+      "weeks": 26,
+      "remaining_days": 5,
+      "display": "26+5"
+    },
+    "prior_document_ids": [
+      "D042"
+    ]
+  },
+  {
+    "event_id": "EV-D044",
+    "date": "2025-05-05",
+    "recorded_date": "2025-05-05",
+    "document_id": "D044",
+    "title": "Iron treatment in pregnancy",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 190,
+      "weeks": 27,
+      "remaining_days": 1,
+      "display": "27+1"
+    },
+    "prior_document_ids": [
+      "D043"
+    ]
+  },
+  {
+    "event_id": "EV-D045",
+    "date": "2025-05-16",
+    "recorded_date": "2025-05-16",
+    "document_id": "D045",
+    "title": "Prenatal review and Tdap",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 201,
+      "weeks": 28,
+      "remaining_days": 5,
+      "display": "28+5"
+    },
+    "prior_document_ids": [
+      "D043",
+      "D044"
+    ]
+  },
+  {
+    "event_id": "EV-D046",
+    "date": "2025-06-13",
+    "recorded_date": "2025-06-13",
+    "document_id": "D046",
+    "title": "Pregnancy iron follow-up",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 229,
+      "weeks": 32,
+      "remaining_days": 5,
+      "display": "32+5"
+    },
+    "prior_document_ids": [
+      "D043",
+      "D044",
+      "D045"
+    ]
+  },
+  {
+    "event_id": "EV-D047",
+    "date": "2025-06-13",
+    "recorded_date": "2025-06-13",
+    "document_id": "D047",
+    "title": "Third-trimester growth ultrasound",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 229,
+      "weeks": 32,
+      "remaining_days": 5,
+      "display": "32+5"
+    },
+    "prior_document_ids": [
+      "D041",
+      "D045"
+    ]
+  },
+  {
+    "event_id": "EV-D048",
+    "date": "2025-06-27",
+    "recorded_date": "2025-06-27",
+    "document_id": "D048",
+    "title": "Prenatal visit at 34+5",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 243,
+      "weeks": 34,
+      "remaining_days": 5,
+      "display": "34+5"
+    },
+    "prior_document_ids": [
+      "D046",
+      "D047"
+    ]
+  },
+  {
+    "event_id": "EV-D049",
+    "date": "2025-07-11",
+    "recorded_date": "2025-07-11",
+    "document_id": "D049",
+    "title": "Prenatal visit and GBS collection",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 257,
+      "weeks": 36,
+      "remaining_days": 5,
+      "display": "36+5"
+    },
+    "prior_document_ids": [
+      "D048"
+    ]
+  },
+  {
+    "event_id": "EV-D050",
+    "date": "2025-07-13",
+    "recorded_date": "2025-07-13",
+    "document_id": "D050",
+    "title": "Group B streptococcus culture",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 259,
+      "weeks": 37,
+      "remaining_days": 0,
+      "display": "37+0"
+    },
+    "prior_document_ids": [
+      "D049"
+    ]
+  },
+  {
+    "event_id": "EV-D051",
+    "date": "2025-07-25",
+    "recorded_date": "2025-07-25",
+    "document_id": "D051",
+    "title": "Prenatal visit at 38+5",
+    "episode_id": "pregnancy",
+    "gestational_age": {
+      "days": 271,
+      "weeks": 38,
+      "remaining_days": 5,
+      "display": "38+5"
+    },
+    "prior_document_ids": [
+      "D050"
+    ]
+  },
+  {
+    "event_id": "EV-D052",
+    "date": "2025-07-29",
+    "recorded_date": "2025-07-29",
+    "document_id": "D052",
+    "title": "Labour and vaginal delivery record",
+    "episode_id": "delivery",
+    "gestational_age": {
+      "days": 275,
+      "weeks": 39,
+      "remaining_days": 2,
+      "display": "39+2"
+    },
+    "prior_document_ids": [
+      "D032",
+      "D037",
+      "D050",
+      "D051"
+    ]
+  },
+  {
+    "event_id": "EV-D053",
+    "date": "2025-07-30",
+    "recorded_date": "2025-07-30",
+    "document_id": "D053",
+    "title": "Post-delivery CBC",
+    "episode_id": "delivery",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D046",
+      "D052"
+    ]
+  },
+  {
+    "event_id": "EV-D054",
+    "date": "2025-07-31",
+    "recorded_date": "2025-07-31",
+    "document_id": "D054",
+    "title": "Maternal hospital discharge summary",
+    "episode_id": "postpartum",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D052",
+      "D053"
+    ]
+  },
+  {
+    "event_id": "EV-D055",
+    "date": "2025-08-05",
+    "recorded_date": "2025-08-05",
+    "document_id": "D055",
+    "title": "Postpartum nurse telephone review",
+    "episode_id": "postpartum",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D054"
+    ]
+  },
+  {
+    "event_id": "EV-D056",
+    "date": "2025-09-09",
+    "recorded_date": "2025-09-09",
+    "document_id": "D056",
+    "title": "Six-week postpartum examination",
+    "episode_id": "postpartum",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D052",
+      "D054",
+      "D055"
+    ]
+  },
+  {
+    "event_id": "EV-D057",
+    "date": "2025-10-03",
+    "recorded_date": "2025-10-03",
+    "document_id": "D057",
+    "title": "Pelvic health physiotherapy assessment",
+    "episode_id": "postpartum",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D056"
+    ]
+  },
+  {
+    "event_id": "EV-D058",
+    "date": "2025-10-10",
+    "recorded_date": "2025-10-10",
+    "document_id": "D058",
+    "title": "Postpartum iron follow-up",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D053",
+      "D056"
+    ]
+  },
+  {
+    "event_id": "EV-D059",
+    "date": "2025-11-14",
+    "recorded_date": "2025-11-14",
+    "document_id": "D059",
+    "title": "Pelvic health progress review",
+    "episode_id": "postpartum",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D057"
+    ]
+  },
+  {
+    "event_id": "EV-D060",
+    "date": "2025-12-05",
+    "recorded_date": "2025-12-05",
+    "document_id": "D060",
+    "title": "Primary-care postpartum and iron review",
+    "episode_id": "postpartum",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D058",
+      "D059",
+      "D027",
+      "D032"
+    ]
+  },
+  {
+    "event_id": "EV-D061",
+    "date": "2026-01-16",
+    "recorded_date": "2026-01-16",
+    "document_id": "D061",
+    "title": "Routine care and HPV screening collection",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D004",
+      "D060"
+    ]
+  },
+  {
+    "event_id": "EV-D062",
+    "date": "2026-01-21",
+    "recorded_date": "2026-01-21",
+    "document_id": "D062",
+    "title": "Primary cervical HPV screening result",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D061"
+    ]
+  },
+  {
+    "event_id": "EV-D063",
+    "date": "2026-03-20",
+    "recorded_date": "2026-03-20",
+    "document_id": "D063",
+    "title": "Menstrual return follow-up",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D061",
+      "D062"
+    ]
+  },
+  {
+    "event_id": "EV-D064",
+    "date": "2026-06-12",
+    "recorded_date": "2026-06-12",
+    "document_id": "D064",
+    "title": "Fatigue and menstrual health visit",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D060",
+      "D063"
+    ]
+  },
+  {
+    "event_id": "EV-D065",
+    "date": "2026-06-15",
+    "recorded_date": "2026-06-15",
+    "document_id": "D065",
+    "title": "Fatigue laboratory investigation",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D064"
+    ]
+  },
+  {
+    "event_id": "EV-D066",
+    "date": "2026-06-19",
+    "recorded_date": "2026-06-19",
+    "document_id": "D066",
+    "title": "Recurrent iron deficiency treatment",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D065"
+    ]
+  },
+  {
+    "event_id": "EV-D067",
+    "date": "2026-09-18",
+    "recorded_date": "2026-09-18",
+    "document_id": "D067",
+    "title": "Repeat CBC and ferritin",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D065",
+      "D066"
+    ]
+  },
+  {
+    "event_id": "EV-D068",
+    "date": "2026-09-25",
+    "recorded_date": "2026-09-25",
+    "document_id": "D068",
+    "title": "Iron response and preventive review",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D062",
+      "D067",
+      "D032"
+    ]
+  },
+  {
+    "event_id": "EV-D069",
+    "date": "2026-12-11",
+    "recorded_date": "2026-12-11",
+    "document_id": "D069",
+    "title": "End-of-year iron assessment",
+    "episode_id": "iron",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D067",
+      "D068"
+    ]
+  },
+  {
+    "event_id": "EV-D070",
+    "date": "2026-12-18",
+    "recorded_date": "2026-12-18",
+    "document_id": "D070",
+    "title": "Annual longitudinal care review",
+    "episode_id": "routine",
+    "gestational_age": null,
+    "prior_document_ids": [
+      "D052",
+      "D062",
+      "D069"
+    ]
+  }
+]
