@@ -92,3 +92,8 @@ Primary task actions acknowledge pointer presses at scale 0.97 over 120ms. Keybo
 ## Health catalogue
 
 Add Notebook opens a searchable catalogue shared by onboarding and the workspace. Approved health collections appear in their four groupings. Each option shows its curated name and scope; recommendations quote the editable intake notes. People can select several templates or create a custom notebook within an approved collection. Creation requires Add notebooks. MedlinePlus attribution stays available in the catalogue footer. Navigation shows collections containing active notebooks. Notebook settings retain user names and descriptions and support reassignment and archiving. Add Notebook includes restoration of archived notebooks. Existing legacy organization remains intact until the person changes it.
+
+
+## Onboarding speech recovery
+
+The call distinguishes Listening, Hearing you and Processing your answer. Done speaking uses the existing button style and appears while the microphone can accept an answer. The minimized call hides this control with its other detailed controls. Unclear recognition shows a repeat-or-type action; an accepted answer clears that message. Voice failures retain the call and its typed answer field.

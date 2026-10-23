@@ -5,6 +5,7 @@ where each answer ends, Moonshine transcribes it, and the agent's reply is
 spoken one clause or sentence at a time. Kitten CPU speech is the default;
 operators can select local or Nebius Chatterbox. Recognition and activity
 detection remain local; Chatterbox receives only the reply text.
+Audio capture follows the deployment debug-data setting.
 
 Each turn logs how long each stage took, without any content.
 """
@@ -61,6 +62,9 @@ VOICE = 3
 DENVER_VOICE = 0
 THREADS = 2
 MAX_FRAME_BYTES = 64_000
+RECOGNITION_TIMEOUT_S = 15
+SYNTHESIS_TIMEOUT_S = 15
+MAX_QUEUED_ANSWERS = 2
 # An answer that repeats this share of the agent's words is its own echo.
 ECHO_OVERLAP = 0.6
 # Speech recognition invents words for noise and for the agent's voice from
@@ -268,6 +272,9 @@ class Call:
         self.turn = 0
         self.timings: dict[int, dict[str, float]] = {}
         self.ended = False
+        self.detecting = False
+        self.recognizing: asyncio.Task | None = None
+        self.answers = asyncio.Queue(maxsize=MAX_QUEUED_ANSWERS)
 
     async def start(self) -> None:
         state = self.script.load()
@@ -285,18 +292,74 @@ class Call:
             return
         samples = np.frombuffer(frame, dtype="<i2").astype(np.float32) / 32768
         self.pending = np.concatenate([self.pending, samples])
-        while len(self.pending) >= VAD_WINDOW:
+        while self.vad is not None and len(self.pending) >= VAD_WINDOW:
             window, self.pending = self.pending[:VAD_WINDOW], self.pending[VAD_WINDOW:]
             self.vad.accept_waveform(window)
             self._remember(window)
             await self._check_barge_in()
-            while not self.vad.empty():
-                segment = self._with_pre_roll(self.vad.front.start, len(self.vad.front.samples))
-                self.vad.pop()
-                self.speech_started = self.speech_sample = None
-                ended_at = time.perf_counter() - END_SILENCE_S
-                overlap, self.overlap_s = self.overlap_s, 0.0
+            detected = self.vad.is_speech_detected()
+            if detected != self.detecting:
+                self.detecting = detected
+                if not self._busy():
+                    await self.send_json({'type':'state', 'state':'hearing' if detected else 'listening'})
+            await self._drain_segments()
+
+    async def _drain_segments(self, ended_at: float | None = None) -> None:
+        while self.vad is not None and not self.vad.empty():
+            segment = self._with_pre_roll(self.vad.front.start, len(self.vad.front.samples))
+            self.vad.pop()
+            self.speech_started = self.speech_sample = None
+            finished = ended_at if ended_at is not None else time.perf_counter() - END_SILENCE_S
+            overlap, self.overlap_s = self.overlap_s, 0.0
+            await self._queue_answer(segment, finished, overlap)
+
+    async def _listening_state(self) -> None:
+        await self.send_json({'type':'state', 'state':'hearing' if self.detecting else 'listening'})
+
+    async def _queue_answer(self, segment: np.ndarray, ended_at: float, overlap: float) -> None:
+        if self.answers.full():
+            await self.send_json({'type':'error', 'message':'Please wait for this answer to finish'})
+            return
+        self.answers.put_nowait((segment, ended_at, overlap))
+        if self.recognizing is None or self.recognizing.done():
+            self.recognizing = asyncio.create_task(self._recognize_answers())
+
+    async def _recognize_answers(self) -> None:
+        # Recognition runs outside the receive loop so End and typed answers stay usable.
+        while not self.answers.empty() and self.engine is not None:
+            segment, ended_at, overlap = self.answers.get_nowait()
+            try:
                 await self._answer_audio(segment, ended_at, overlap)
+            except Exception:
+                _log.exception('Call answer processing failed')
+                await self._voice_failed()
+
+    async def finish_answer(self) -> None:
+        """Flushes speech when the person confirms that their answer is finished."""
+        if self.vad is None or not self.detecting:
+            return
+        detector = self.vad
+        detector.flush()
+        await self._drain_segments(time.perf_counter())
+        detector.reset()
+        self.history = np.zeros(0, dtype=np.float32)
+        self.pending = np.zeros(0, dtype=np.float32)
+        self.history_start = 0
+        self.speech_started = self.speech_sample = None
+        self.overlap_s = 0.0
+        self.detecting = False
+        await self.send_json({'type':'state', 'state':'transcribing'})
+
+    async def _voice_failed(self) -> None:
+        # A timed-out native worker can still hold the shared engine lock.
+        # This call uses text for the remainder rather than queue more work behind it.
+        self.engine = self.vad = None
+        self.detecting = False
+        while not self.answers.empty():
+            self.answers.get_nowait()
+        await self.send_json({'type':'mic', 'ok':False})
+        await self.send_json({'type':'error', 'message':'Type your answer below to continue this call'})
+        await self.send_json({'type':'state', 'state':'typing'})
 
     def _remember(self, window: np.ndarray) -> None:
         self.history = np.concatenate([self.history, window])
@@ -334,7 +397,11 @@ class Call:
             self.checking = asyncio.create_task(self._confirm_barge_in(segment))
 
     async def _confirm_barge_in(self, segment: np.ndarray) -> None:
-        text = await asyncio.to_thread(self.engine.transcribe, segment)
+        try:
+            text = await asyncio.wait_for(asyncio.to_thread(self.engine.transcribe, segment), RECOGNITION_TIMEOUT_S)
+        except Exception:
+            _log.warning('Barge-in recognition failed', exc_info=True)
+            return
         if len(text.split()) >= 2 and not is_echo(text, self.speaking) and self._busy():
             self.barged_in = True
             await self._interrupt()
@@ -360,10 +427,20 @@ class Call:
     async def _answer_audio(self, segment: np.ndarray, ended_at: float, overlap: float = 0.0) -> None:
         seconds = len(segment) / SAMPLE_RATE
         started_at = ended_at - seconds
-        text = await asyncio.to_thread(self.engine.transcribe, segment)
+        if not self._busy():
+            await self.send_json({'type':'state', 'state':'transcribing'})
+        try:
+            text = await asyncio.wait_for(asyncio.to_thread(self.engine.transcribe, segment), RECOGNITION_TIMEOUT_S)
+        except Exception:
+            _log.warning('Answer recognition failed', exc_info=True)
+            await self._voice_failed()
+            return
         stt_done = time.perf_counter()
         await asyncio.to_thread(debug_data.save_answer_audio, segment, SAMPLE_RATE, text)
         if not self._is_answer(text, seconds, overlap):
+            if not self._busy() and overlap < MAX_OVERLAP_S and not is_echo(text, self.speaking):
+                await self.send_json({'type':'error', 'message':'Please repeat your answer or type it below'})
+                await self._listening_state()
             return
         # An answer that starts before the agent speaks again, or soon after
         # the last one ends, is the rest of the last one: the agent drops the
@@ -388,6 +465,11 @@ class Call:
 
     async def text(self, text: str) -> None:
         """A typed answer, handled like a spoken one."""
+        if self.recognizing is not None and not self.recognizing.done():
+            self.recognizing.cancel()
+            await asyncio.gather(self.recognizing, return_exceptions=True)
+        while not self.answers.empty():
+            self.answers.get_nowait()
         now = time.perf_counter()
         await self._answer(text, {"speech_end": now, "stt_done": now}, False)
 
@@ -444,7 +526,7 @@ class Call:
                 # An interrupted reply keeps only the pieces that started playing.
                 now = time.perf_counter()
                 self.script.add_agent_turn(" ".join(piece for piece, start in spoken if not cut or start <= now))
-        await self.send_json({"type": "state", "state": "listening"})
+        await self._listening_state()
         if any(intake.END_MARK in piece for piece, _ in spoken):
             self.ended = True
             await self.send_json({"type": "ended"})
@@ -454,7 +536,7 @@ class Call:
             await self._say(piece, 0)
         if record:
             self.script.add_agent_turn(" ".join(pieces))
-        await self.send_json({"type": "state", "state": "listening"})
+        await self._listening_state()
 
     async def _say(self, piece: str, turn: int) -> float:
         """Sends one piece of speech; returns when its audio starts playing."""
@@ -467,12 +549,14 @@ class Call:
         audio = rate = None
         if self.engine is not None and self.speaker:
             try:
-                audio, rate = await asyncio.to_thread(self.engine.speak, text)
+                audio, rate = await asyncio.wait_for(asyncio.to_thread(self.engine.speak, text), SYNTHESIS_TIMEOUT_S)
             except Exception as exc:
-                # Keep the reply visible without silently changing speech providers.
-                _log.warning("Call speech failed: %s", type(exc).__name__)
-                await self.send_json({"type": "error", "message":
-                                      "Speech is unavailable. You can continue by text."})
+                _log.warning('Call synthesis failed: %s', type(exc).__name__)
+                self.speaker = False
+                if isinstance(exc, TimeoutError) and call_tts.backend() == 'cpu':
+                    await self._voice_failed()
+                else:
+                    await self.send_json({'type':'error', 'message':'Speech is unavailable for this call'})
         stages = self.timings.get(turn)
         if stages is not None and "first_audio" not in stages:
             stages["first_audio"] = time.perf_counter()
@@ -525,6 +609,8 @@ class Call:
         kind = data.get("type")
         if kind == "text":
             await self.text(str(data.get("text", "")))
+        elif kind == "finish_answer":
+            await self.finish_answer()
         elif kind == "speaker":
             self.speaker = bool(data.get("on"))
         elif kind == "playing" and isinstance(data.get("turn"), int):
@@ -534,11 +620,13 @@ class Call:
             # than estimated, for example after a stall.
             self.speaking_until = 0.0
             self.played_until = min(self.played_until, time.perf_counter())
+            if self.detecting and not self._busy():
+                await self._listening_state()
         elif kind == "interrupt":
             await self._interrupt()
 
     async def close(self) -> None:
-        tasks = [t for t in (self.replying, self.notes, self.checking) if t is not None]
+        tasks = [t for t in (self.replying, self.notes, self.checking, self.recognizing) if t is not None]
         for task in tasks:
             if not task.done():
                 task.cancel()

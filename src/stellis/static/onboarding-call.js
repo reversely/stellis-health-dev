@@ -11,6 +11,8 @@ const STATUS = {
   ready: 'Ready when you are',
   connecting: 'Connecting',
   listening: 'Listening',
+  hearing: 'Hearing you',
+  transcribing: 'Processing your answer',
   thinking: 'Thinking',
   speaking: 'Speaking',
   typing: 'Type your answers below',
@@ -70,6 +72,10 @@ function render(scene, kit) {
   typeSend.type = 'submit';
   typeForm.append(typeInput, typeSend);
   typeForm.hidden = true;
+  const doneSpeaking = node('button', 'Done speaking', 'call-finish');
+  doneSpeaking.type = 'button';
+  doneSpeaking.hidden = true;
+  doneSpeaking.addEventListener('click', () => call?.finishAnswer());
   const mute = control('microphone', 'Mute');
   const sound = control('volume', 'Speaker');
   const hangUp = control('phone-off', 'End');
@@ -78,7 +84,7 @@ function render(scene, kit) {
   controls.append(mute, sound, hangUp);
   controls.hidden = true;
   panel.append(
-      shrink, face, name, status, timer, caption, startButton, typeForm,
+      shrink, face, name, status, timer, caption, startButton, doneSpeaking, typeForm,
       controls);
 
   // The notepad, with the transcript behind it.
@@ -147,6 +153,7 @@ function render(scene, kit) {
   function setStatus(key) {
     status.textContent = STATUS[key];
     panel.dataset.state = key;
+    doneSpeaking.hidden = mute.disabled || !['listening', 'hearing'].includes(key);
   }
 
   function tick() {
@@ -261,6 +268,7 @@ function render(scene, kit) {
       case 'mic':
         if (!message.ok) {
           mute.disabled = true;
+          doneSpeaking.hidden = true;
           setStatus('typing');
         }
         break;
@@ -281,6 +289,7 @@ function render(scene, kit) {
         }
         break;
       case 'heard':
+        kit.error('');
         // A continued answer drops the reply the agent had started to it.
         transcript.querySelector(`[data-agent-turn="${message.turn}"]`)
             ?.remove();
@@ -323,6 +332,7 @@ function render(scene, kit) {
     setStatus(key);
     caption.textContent = '';
     controls.hidden = true;
+    doneSpeaking.hidden = true;
     typeForm.hidden = true;
     startButton.hidden = key === 'ended';
     startButton.querySelector('span').textContent = 'Call again';

@@ -17,7 +17,7 @@
  * @param {{path: (string|undefined), listen: (boolean|undefined)}=} options
  *     The call's WebSocket path, by default the intake call's, and whether
  *     to ask for the microphone; a call by text alone never asks.
- * @return {!Object} Controls: setMuted, setSpeaker, sendText, end.
+ * @return {!Object} Controls: setMuted, setSpeaker, finishAnswer, sendText, end.
  */
 function start(
     onEvent, {path = '/api/v1/intake/call', listen: useMic = true} = {}) {
@@ -130,6 +130,10 @@ function start(
       } else {
         onEvent({type: 'caption', text: message.text, turn: message.turn});
       }
+    } else if (message.type === 'mic' && !message.ok) {
+      for (const track of stream?.getTracks() || []) track.stop();
+      worklet?.disconnect();
+      personLevel = 0;
     } else if (message.type === 'stop') {
       stopSpeech();
     } else if (message.type === 'ended') {
@@ -172,6 +176,9 @@ function start(
     setSpeaker(value) {
       output.gain.value = value ? 1 : 0;
       send({type: 'speaker', on: value});
+    },
+    finishAnswer() {
+      send({type: 'finish_answer'});
     },
     /** @param {string} text */
     sendText(text) {

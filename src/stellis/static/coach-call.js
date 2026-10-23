@@ -13,6 +13,8 @@
 const STATUS = {
   connecting: 'Connecting',
   listening: 'Listening',
+  hearing: 'Hearing you',
+  transcribing: 'Processing your answer',
   thinking: 'Thinking',
   speaking: 'Speaking',
   typing: 'Chat',

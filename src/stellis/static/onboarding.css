@@ -363,7 +363,7 @@
 .setup-call.is-minimised .call-name {
   font-size: 18px;
 }
-.setup-call.is-minimised :is(.call-caption, .call-type, .call-start, .call-timer) {
+.setup-call.is-minimised :is(.call-caption, .call-type, .call-start, .call-timer, .call-finish) {
   display: none;
 }
 .setup-call.is-minimised .call-shrink {
