@@ -106,7 +106,7 @@ def list_pages(notebook_id: str | None = None) -> list[dict[str, object]]:
     if notebook_id == "none":
         where += " AND notebook_id IS NULL"
     elif notebook_id is not None:
-        where, args = where + " AND notebook_id = ?", (notebook_id,)
+        where, args = where + " AND (notebook_id = ? OR EXISTS (SELECT 1 FROM notebook_record_links l WHERE l.notebook_id = ? AND l.source_id = 'page:' || pages.id))", (notebook_id,notebook_id)
     with storage.connect() as conn:
         rows = conn.execute(f"SELECT id, title, notebook_id, created_at, updated_at FROM pages WHERE {where} "
                             "ORDER BY updated_at DESC, created_at DESC", args).fetchall()
@@ -219,6 +219,11 @@ def by_notebook() -> dict[str, list[dict[str, object]]]:
         rows = conn.execute("SELECT id, title, updated_at, notebook_id FROM pages "
                             "WHERE notebook_id IS NOT NULL AND trashed_at IS NULL ORDER BY updated_at DESC").fetchall()
         tags = page_tags(conn)
+    with storage.connect() as conn:
+        linked = conn.execute("""SELECT p.id,p.title,p.updated_at,l.notebook_id FROM notebook_record_links l
+            JOIN pages p ON l.source_id = 'page:' || p.id WHERE p.trashed_at IS NULL
+            AND (p.notebook_id IS NULL OR p.notebook_id != l.notebook_id)""").fetchall()
+    rows = list(rows) + list(linked)
     groups: dict[str, list[dict[str, object]]] = {}
     for row in rows:
         groups.setdefault(str(row["notebook_id"]), []).append(

@@ -12,3 +12,5 @@ docs/progress/
 # Local worktrees and OCR verification artifacts.
 /.agents/worktrees/
 /.agents/ocr-runtime/
+
+/.agents/catalogue-runtime/

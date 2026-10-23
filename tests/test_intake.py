@@ -297,102 +297,24 @@ class PlanTest(IntakeTestCase):
 
 
 class NotebookProposalTest(IntakeTestCase):
-    def test_notebooks_come_from_the_call_with_goals_and_empty_records(self):
-        intake.save_notes(script_notes(6), 0)
-        result = asyncio.run(intake.propose_notebooks())
-        self.assertEqual([(g["notebook_name"], g["kind"]) for g in result["groups"]],
-                         [("Weight maintenance", "objective"), ("Diabetes", "condition")])
-        self.assertEqual(result["groups"][0]["goal"], "Keep the weight off")
-        self.assertEqual(result["groups"][0]["items"], [])
-        self.assertEqual(result["groups"][0]["problem"], "")
+    def test_catalogue_recommendations_use_reviewed_intake_notes(self):
+        intake.save_notes([{"heading":"Goals","items":["Improve nutrition"]}],0)
+        result=asyncio.run(intake.propose_notebooks())
+        self.assertIn("nutrition--nutrition",[g["template_id"] for g in result["groups"]])
+        self.assertTrue(all(g["evidence"] for g in result["groups"]))
 
-    def test_names_that_break_the_naming_rules(self):
-        for name in ("Weight and knees", "Diabetes & heart", "Knees, hips", "Lab results",
-                     "Medical issues", "long-term  health"):
-            self.assertTrue(intake.name_problem(name), name)
-        for name in ("Diabetes", "Knee replacement recovery", "IVF cycle 2", "Thyroid investigation"):
-            self.assertEqual(intake.name_problem(name), "", name)
-
-    def test_a_name_that_breaks_a_rule_goes_back_to_the_model_once(self):
-        intake.save_notes(script_notes(6), 0)
-        asked = []
-
-        async def model(instructions, context, schema, max_tokens):
-            asked.append(context)
-            name = "Weight and knees" if len(asked) == 1 else "Weight maintenance"
-            return {"groups": [{"notebook": name, "kind": "objective", "reason": "", "goal": "",
-                                "items": []}], "question": "", "reply": ""}
-
-        with patch.object(intake, "complete_json", model):
-            result = asyncio.run(intake.propose_notebooks())
-        self.assertEqual(result["groups"][0]["notebook_name"], "Weight maintenance")
-        self.assertIn("Weight and knees: Name one subject", asked[1]["request"])
-
-        async def stubborn(instructions, context, schema, max_tokens):
-            return {"groups": [{"notebook": "Lab results", "items": []}]}
-
-        with patch.object(intake, "complete_json", stubborn):
-            result = asyncio.run(intake.propose_notebooks())
-        self.assertEqual(result["groups"][0]["problem"],
-                         "Name the subject of these records, not their type")
-
-    def test_a_request_revises_the_layout_and_keeps_the_persons_names(self):
-        intake.save_notes(script_notes(6), 0)
-        layout = [{"notebook_name": "Knees and hips", "kind": "objective", "goal": "",
-                   "items": [], "named_by_person": True},
-                  {"notebook_name": "Diabetes", "kind": "condition", "goal": "", "items": []}]
-        seen = {}
-
-        async def model(instructions, context, schema, max_tokens):
-            seen.update(context)
-            return {"groups": [{"notebook": "Knees and hips", "kind": "objective", "items": []},
-                               {"notebook": "Blood sugar", "kind": "condition", "items": []}],
-                    "question": "", "reply": "I renamed Diabetes to Blood sugar."}
-
-        with patch.object(intake, "complete_json", model):
-            result = asyncio.run(intake.propose_notebooks("Call diabetes blood sugar", layout))
-        self.assertEqual(seen["request"], "Call diabetes blood sugar")
-        self.assertEqual(seen["named_by_person"], ["knees and hips"])
-        self.assertEqual(seen["layout"][1], {"notebook": "Diabetes", "kind": "condition",
-                                             "goal": "", "items": []})
-        self.assertEqual(result["reply"], "I renamed Diabetes to Blood sugar.")
-        # The person's own name stands, though it joins two subjects.
-        self.assertEqual([(g["named_by_person"], g["problem"]) for g in result["groups"]],
-                         [(True, ""), (False, "")])
-
-    def test_the_endpoint_takes_a_request_and_refuses_an_empty_one(self):
-        from fastapi import testclient
-        from stellis import server
-        intake.save_notes(script_notes(6), 0)
-        with testclient.TestClient(server.app) as client:
-            first = client.post("/api/v1/intake/notebooks")
-            empty = client.post("/api/v1/intake/notebooks", json={"request": " ", "layout": []})
-        self.assertEqual(first.json()["groups"][1]["notebook_name"], "Diabetes")
-        self.assertEqual(empty.status_code, 400)
-
-    def test_a_revision_needs_a_short_request(self):
+    def test_a_revision_requires_catalogue_selection(self):
         with self.assertRaises(ValueError):
-            asyncio.run(intake.propose_notebooks("", []))
-        with self.assertRaises(ValueError):
-            asyncio.run(intake.propose_notebooks("x" * (intake.MAX_REQUEST + 1), []))
+            asyncio.run(intake.propose_notebooks("Make new names", []))
 
-    def test_a_goal_becomes_a_to_do_in_the_notebook(self):
+    def test_a_goal_becomes_a_to_do_after_template_approval(self):
         auth.register("denver", "correct horse battery staple")
-        account = auth.account_id_for_username("denver")
-        onboarding.choose(account, [], "review")
-        onboarding.complete(account, record_groups=[
-            {"notebook_name": "Weight maintenance", "items": [], "agents": [], "goal": "Keep the weight off"}])
-        book = next(b for b in notebooks.list_notebooks() if b["name"] == "Weight maintenance")
-        goals = next(p for p in pages.list_pages(book["id"]) if p["title"] == "Goals")
-        # Saving a page gives each to-do an ID after its text.
-        self.assertTrue(pages.get(goals["id"])["markdown"].startswith("- [ ] Keep the weight off"))
-
-    def test_groups_without_records_are_dropped_unless_kept(self):
-        items = [sorting.Item("document", "d1", "Lab results", "2026-04-02")]
-        reply = json.dumps({"groups": [{"notebook": "Goals", "items": []},
-                                       {"notebook": "Labs", "items": [1]}]})
-        self.assertEqual([g["notebook_name"] for g in sorting.parse_groups(reply, items, {})], ["Labs"])
-        self.assertEqual(len(sorting.parse_groups(reply, items, {}, keep_empty=True)), 2)
+        account=auth.account_id_for_username("denver")
+        onboarding.choose(account,[],"review")
+        result=onboarding.complete(account,record_groups=[{"template_id":"nutrition--weight-management","items":[],"goal":"Keep the weight off"}])
+        book=result['created'][0]
+        goal=next(p for p in pages.list_pages(book['notebook_id']) if p['title']=='Goals')
+        self.assertTrue(pages.get(goal['id'])['markdown'].startswith('- [ ] Keep the weight off'))
 
 
 class EchoTest(unittest.TestCase):

@@ -1,4 +1,4 @@
-"""Project notebooks: named, coloured folders. A conversation belongs to at most one notebook."""
+"""Named notebook workspaces with primary destinations and shared record links."""
 
 from __future__ import annotations
 
@@ -84,12 +84,17 @@ def summary_points(conversation_ids: list[str]) -> dict[str, dict[str, object]]:
 def list_notebooks() -> list[dict[str, object]]:
     """List notebooks with their conversations newest first and the latest meeting's progress."""
     with storage.connect() as conn:
-        books = [dict(row) for row in conn.execute("""SELECT n.id, n.name, n.color, n.created_at, n.collection_id, n.todo_list,
+        books = [dict(row) for row in conn.execute("""SELECT n.id, n.name, n.color, n.created_at, n.collection_id, n.todo_list, n.template_id, n.description, n.catalogue_version, n.archived_at, n.capabilities_json, n.recommendation_evidence_json,
             c.todo_list AS collection_todo_list FROM notebooks n LEFT JOIN collections c ON c.id = n.collection_id
-            ORDER BY n.created_at""")]
+            WHERE n.archived_at IS NULL ORDER BY n.created_at""")]
         rows = conn.execute("""SELECT id, title, duration_ms, created_at, recorded_at, notebook_id FROM conversations
             WHERE notebook_id IS NOT NULL AND trashed_at IS NULL
             ORDER BY COALESCE(recorded_at, created_at) DESC, created_at DESC""").fetchall()
+    with storage.connect() as conn:
+        linked = conn.execute("""SELECT l.notebook_id, c.id, c.title, c.duration_ms, c.created_at, c.recorded_at
+            FROM notebook_record_links l JOIN conversations c ON l.source_id = 'conversation:' || c.id
+            WHERE c.trashed_at IS NULL AND (c.notebook_id IS NULL OR c.notebook_id != l.notebook_id)""").fetchall()
+    rows = list(rows) + list(linked)
     from stellis import pages
     page_groups = pages.by_notebook()
     members: dict[str, list[dict[str, object]]] = {}
@@ -144,11 +149,23 @@ def create(name: str, color: str | None = None) -> dict[str, object]:
 
 
 def update(notebook_id: str, *, name: str | None = None, color: str | None = None,
-           todo_list: str | None = None) -> dict[str, object]:
+           todo_list: str | None = None, description: str | None = None,
+           archived: bool | None = None, capabilities: list[str] | None = None) -> dict[str, object]:
     with storage.connect() as conn:
         row = conn.execute("SELECT id, name, color, created_at, todo_list FROM notebooks WHERE id = ?", (notebook_id,)).fetchone()
         if row is None:
             raise LookupError("Notebook not found")
+        if capabilities is not None:
+            from stellis import notebook_health
+            if any(key not in notebook_health.OPTIONAL for key in capabilities):
+                raise ValueError("Choose registered notebook features")
+            conn.execute("UPDATE notebooks SET capabilities_json = ? WHERE id = ?", (json.dumps(list(dict.fromkeys(capabilities))),notebook_id))
+        if description is not None:
+            if len(description) > 1000:
+                raise ValueError("Keep the description under 1000 characters")
+            conn.execute("UPDATE notebooks SET description = ? WHERE id = ?", (description.strip(), notebook_id))
+        if archived is not None:
+            conn.execute("UPDATE notebooks SET archived_at = ? WHERE id = ?", (_now() if archived else None, notebook_id))
         if todo_list is not None and todo_list not in suggestions.NOTEBOOK_TODO_LIST:
             raise ValueError("Choose inherit, on, or off for the to-do list")
         setting = todo_list if todo_list is not None else str(row["todo_list"])

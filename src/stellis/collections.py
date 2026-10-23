@@ -1,4 +1,4 @@
-"""Collections: optional, non-nesting groups of notebooks. A notebook belongs to at most one collection."""
+"""Approved health collections and preserved legacy notebook groups."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def _name(value: str) -> str:
 def list_collections() -> list[dict[str, object]]:
     """List collections by creation, each with its notebook IDs in notebook creation order."""
     with storage.connect() as conn:
-        rows = [dict(row) for row in conn.execute("SELECT id, name, color, created_at, todo_list FROM collections ORDER BY created_at, rowid")]
+        rows = [dict(row) for row in conn.execute("SELECT id, name, color, created_at, todo_list, taxonomy_id FROM collections ORDER BY created_at, rowid")]
         members = conn.execute("SELECT id, collection_id FROM notebooks WHERE collection_id IS NOT NULL ORDER BY created_at, rowid")
         by_collection: dict[str, list[str]] = {}
         for row in members:
@@ -49,12 +49,14 @@ def create(name: str, color: str | None = None) -> dict[str, object]:
 def update(collection_id: str, *, name: str | None = None, color: str | None = None,
            todo_list: str | None = None) -> dict[str, object]:
     with storage.connect() as conn:
-        row = conn.execute("SELECT id, name, color, created_at, todo_list FROM collections WHERE id = ?", (collection_id,)).fetchone()
+        row = conn.execute("SELECT id, name, color, created_at, todo_list, taxonomy_id FROM collections WHERE id = ?", (collection_id,)).fetchone()
         if row is None:
             raise LookupError("Collection not found")
         if todo_list is not None and todo_list not in suggestions.COLLECTION_TODO_LIST:
             raise ValueError("Choose on or off for the to-do list")
         setting = todo_list if todo_list is not None else str(row["todo_list"])
+        if row["taxonomy_id"] and name is not None and name != row["name"]:
+            raise ValueError("Health collection names come from the catalogue")
         value = _name(name) if name is not None else str(row["name"])
         tint = _color(color, 0) if color is not None else str(row["color"])
         try:
@@ -77,6 +79,9 @@ def delete(collection_id: str) -> bool:
 
 def assign_notebook(notebook_id: str, collection_id: str | None) -> dict[str, object]:
     with storage.connect() as conn:
+        from stellis import health_catalogue
+        if collection_id and health_catalogue.collection(collection_id):
+            collection_id = health_catalogue.ensure_collection(conn, collection_id)
         if collection_id is not None and conn.execute("SELECT 1 FROM collections WHERE id = ?", (collection_id,)).fetchone() is None:
             raise LookupError("Collection not found")
         if not conn.execute("UPDATE notebooks SET collection_id = ? WHERE id = ?", (collection_id, notebook_id)).rowcount:

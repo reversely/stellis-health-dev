@@ -1,0 +1,16 @@
+{
+  "/health-catalogue": {
+    "runs": 30,
+    "median_ms": 8.6,
+    "p95_ms": 11.6,
+    "response_bytes": 71415,
+    "added_model_calls": 0
+  },
+  "/health-catalogue/recommendations": {
+    "runs": 30,
+    "median_ms": 15.4,
+    "p95_ms": 24.2,
+    "response_bytes": 1920,
+    "added_model_calls": 0
+  }
+}

@@ -611,3 +611,13 @@
 
 /* Match the bare dashboard theme control despite onboarding button defaults. */
 .onboarding-page #setup-theme { width:44px; height:44px; padding:0; border:0; background:transparent; }
+
+.setup-collection { min-width: 0; }
+.setup-collection h2 { overflow-wrap: anywhere; }
+.setup-collection .setup-record-book { margin-block: .75rem; }
+.setup-record-book select { max-width: 100%; font-size: 1rem; }
+.setup-collection .setup-record-book { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.setup-record-book > *, .setup-book-name { min-width: 0; }
+.setup-record-book .setup-book-name > label { display: grid; min-width: 0; }
+.setup-record-book select { width: 100%; min-width: 0; box-sizing: border-box; }
+.setup-group-choice .setup-book-input { flex: 1 1 0; width: 0; min-width: 0; }

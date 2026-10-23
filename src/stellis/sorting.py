@@ -1,9 +1,9 @@
 """Sorting unsorted records into notebooks.
 
 A person can drop all their files in one place. The model then proposes
-notebooks for the documents and recordings that have none, using each record's
+registered notebooks for documents and recordings without associations, using each record's
 title, date and opening text, and the person reviews the proposal before any
-record moves. Nothing is stored until the person applies a group.
+record is linked. Nothing is stored until the person applies a group.
 """
 
 from __future__ import annotations
@@ -71,12 +71,15 @@ class Item:
 
 def unsorted() -> list[Item]:
     """Lists documents and recordings in no notebook, oldest first."""
-    loose = [item for item in documents.list_all() if not item["notebook_id"]]
-    first_pages = {
-        str(page["document_id"]): str(page["text"])
-        for page in documents.all_pages([str(item["id"]) for item in loose])
-        if page["number"] == 1
-    }
+    with storage.connect() as conn:
+        linked = {r[0] for r in conn.execute('SELECT source_id FROM notebook_record_links')}
+    loose = [item for item in documents.list_all() if not item["notebook_id"] and 'document:'+str(item['id']) not in linked]
+    # Recommendations need only opening excerpts, not every page of each PDF.
+    with storage.connect() as conn:
+        documents._create_tables(conn)
+        first_pages = {str(row['document_id']):str(row['text']) for row in conn.execute(
+            "SELECT document_id, substr(text,1,?) AS text FROM document_pages WHERE page_number = 1",
+            (EXCERPT_CHARS,))}
     items = [
         Item(
             "document", str(item["id"]), str(item["title"]),
@@ -89,7 +92,7 @@ def unsorted() -> list[Item]:
         Item("recording", str(row["id"]), str(row["title"]),
              str(row["recorded_at"] or row["created_at"])[:10])
         for row in storage.list_conversations()
-        if not row["notebook_id"]
+        if not row["notebook_id"] and "conversation:"+str(row["id"]) not in linked
     ]
     return sorted(items, key=lambda item: item.date)
 
@@ -190,6 +193,18 @@ async def suggest() -> dict[str, object]:
     except agent_gateway.GatewayError as exc:
         raise SortingError(str(exc)) from exc
     groups = parse_groups(reply, items, notebook_ids)
+    from stellis import health_catalogue
+    registered = {t['display_name'].casefold():t for t in health_catalogue.configuration()['templates']}
+    valid = []
+    for group in groups:
+        if group['notebook_id']:
+            valid.append(group)
+            continue
+        entry = registered.get(group['notebook_name'].casefold())
+        if entry:
+            group.update(template_id=entry['template_id'],collection_id=entry['collection_id'],notebook_name=entry['display_name'])
+            valid.append(group)
+    groups = valid
     taken = {(item["kind"], item["id"])
              for group in groups
              for item in group["items"]}
@@ -203,7 +218,11 @@ def _find_or_create(name: str) -> str:
     for book in notebooks.list_notebooks():
         if str(book["name"]).casefold() == name.casefold():
             return str(book["id"])
-    return str(notebooks.create(name)["id"])
+    from stellis import health_catalogue
+    entry = next((t for t in health_catalogue.configuration()['templates'] if t['display_name'].casefold() == name.casefold()),None)
+    if entry is None:
+        raise ValueError('Choose a notebook from Add Notebook')
+    return str(health_catalogue.activate([{'template_id':entry['template_id']}])[0]['id'])
 
 
 def move(kind: str, item_id: str, notebook_id: str | None) -> None:
@@ -252,7 +271,10 @@ def apply(notebook_name: str,
     moved, failed = 0, []
     for item in items:
         try:
-            move(str(item.get("kind")), str(item.get("id")), notebook_id)
+            kind = {'document':'document','recording':'conversation'}.get(item.get('kind'))
+            if kind is None:
+                raise ValueError('Choose a document or a recording')
+            notebook_sources.link(notebook_id, kind+':'+str(item.get('id')))
             moved += 1
         except (LookupError, ValueError) as exc:
             failed.append({

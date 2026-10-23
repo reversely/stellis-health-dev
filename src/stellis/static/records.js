@@ -165,6 +165,7 @@ class RecordsPage {
     const name = /** @type {!HTMLInputElement} */ (dom.el('input'));
     name.value = group.notebook_name;
     name.maxLength = 80;
+    name.readOnly = true;
     name.setAttribute('aria-label', 'Notebook name');
     const tag = dom.el(
         'span', group.notebook_id ? 'Existing notebook' : 'New notebook',

@@ -42,7 +42,7 @@ def reopen(account_id):
     with _LOCK:
         state = _read()
         if not auth.needs_onboarding(account_id) and not state.get("editing"):
-            state.update(step="welcome", editing=True, uses=[], task_choices={}, scan=None)
+            state.update(step="welcome", editing=True, uses=[], task_choices={}, scan=None, notebook_choices=None)
             _save(state)
             from stellis import intake
             intake.reset()
@@ -55,15 +55,16 @@ def _require(account_id):
 
 
 def status(account_id):
+    from stellis import health_catalogue
     state = _read()
     defaults = {book['name'].lower():book['todo_enabled'] for book in notebooks.list_notebooks()}
     inherited = {group['name'].lower():group['todo_list']=='on' for group in collections.list_collections()}
-    return {**state, "task_defaults":defaults, "collection_task_defaults":inherited, "required":available(account_id), "catalog":USES,
+    return {**state, "health_catalogue":health_catalogue.configuration(), "task_defaults":defaults, "collection_task_defaults":inherited, "required":available(account_id), "catalog":USES,
             "proposals":[item for item in USES if item["id"] in state["uses"]], "runtime":runtime_settings.status(),
             "managed":runtime_profile.shared_provider_keys()}
 
 
-def choose(account_id, uses, step, task_choices=None):
+def choose(account_id, uses, step, task_choices=None, notebook_choices=None):
     _require(account_id)
     if any(item not in {entry["id"] for entry in USES} for item in uses):
         raise ValueError("Choose a listed use")
@@ -72,10 +73,15 @@ def choose(account_id, uses, step, task_choices=None):
                 not isinstance(key, str) or not 1 <= len(key) <= 100 or type(value) is not bool
                 for key, value in task_choices.items()):
             raise ValueError("Choose whether each notebook suggests tasks")
+    if notebook_choices is not None:
+        if len(json.dumps(notebook_choices)) > 200_000:
+            raise ValueError("The notebook selection is too large")
     with _LOCK:
         state = _read(); state.update(uses=list(dict.fromkeys(uses)),step=step)
         if task_choices is not None:
             state['task_choices'] = dict(task_choices)
+        if notebook_choices is not None:
+            state['notebook_choices'] = notebook_choices
         _save(state)
     return status(account_id)
 
@@ -95,7 +101,7 @@ async def check(account_id):
     return status(account_id)
 
 
-MAX_RECORD_GROUPS = 5
+MAX_RECORD_GROUPS = 100
 HEALTH_COLLECTION = "Health"
 
 
@@ -153,24 +159,43 @@ def complete(account_id, proposal_id=None, group_ids=None, record_groups=None):
             if item.get("sources"):
                 onboarding_sources.file_sources(book["id"],item["sources"])
             created.append({"notebook_id":book["id"], "name":book["name"]})
-        if record_groups:
-            from stellis import sorting
-            health = next((c for c in collections.list_collections()
-                           if c["name"].casefold() == HEALTH_COLLECTION.casefold()), None)
-            if health is None:
-                health = collections.create(HEALTH_COLLECTION)
+        from stellis import health_catalogue, notebook_sources
+        # Validate the complete selection before creating any notebook.
         for group in record_groups:
-            filed = sorting.apply(group.get("notebook_name", ""), group.get("items", []),
-                                  group.get("notebook_id"))
-            book = notebooks.update(filed["notebook_id"],
-                                    todo_list="on" if group.get("suggest_tasks") else "off")
-            if not group.get("notebook_id"):
-                collections.assign_notebook(book["id"], health["id"])
+            if group.get("notebook_id"):
+                if not notebooks.exists(group["notebook_id"]):
+                    raise LookupError("Notebook not found")
+            elif group.get("template_id"):
+                if health_catalogue.template(group["template_id"]) is None:
+                    raise ValueError("Choose a listed notebook template")
+            else:
+                notebooks._name(group.get("notebook_name", ""))
+                if health_catalogue.collection(group.get("collection_id")) is None:
+                    raise ValueError("Choose a listed health collection")
+        new_groups = [g for g in record_groups if not g.get("notebook_id")]
+        selected = iter(health_catalogue.activate([{
+            "template_id":g.get("template_id"), "collection_id":g.get("collection_id"),
+            "name":g.get("notebook_name", ""), "description":g.get("description", "")
+        } for g in new_groups]) if new_groups else [])
+        for group in record_groups:
+            identifier = group.get("notebook_id") or next(selected)["id"]
+            if group.get('notebook_id') and group.get('collection_changed'):
+                collections.assign_notebook(identifier, group.get('collection_id'))
+            book = notebooks.update(identifier, todo_list="on" if group.get("suggest_tasks") else "off")
+            linked, failed = 0, []
+            for item in group.get("items", []):
+                prefix = {"recording":"conversation", "document":"document", "note":"page"}.get(item["kind"])
+                if prefix is None:
+                    raise ValueError("Choose an existing record")
+                try:
+                    notebook_sources.link(identifier, prefix+":"+item["id"])
+                    linked += 1
+                except (LookupError, ValueError) as exc:
+                    failed.append({**item, "error":str(exc)})
             if group.get("goal", "").strip():
                 goal = " ".join(group["goal"].split())
-                pages.create("Goals", book["id"], f"- [ ] {goal}\n")
-            created.append({"notebook_id": book["id"], "name": book["name"],
-                            "filed": filed["moved"]})
+                pages.create("Goals", identifier, f"- [ ] {goal}\n")
+            created.append({"notebook_id":identifier,"name":book["name"],"filed":linked,"failed":failed})
         agents.list_agents()  # Stellis answers in each new notebook.
         state.update(step="complete",created=created,editing=False); _save(state)
         auth.complete_onboarding(account_id)

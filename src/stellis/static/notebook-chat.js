@@ -312,6 +312,7 @@ class NotebookChat {
     root.StellisAddSource.open({
       book: this.book,
       count: this.sources.length,
+      sourceIds: this.sources.map(source => source.id),
       limit: this.limit,
       trigger: this.addButton,
       onRecord: this.options.onRecord,
