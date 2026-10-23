@@ -986,56 +986,35 @@ async function reloadLibrary() {
   homeTodos?.refresh();
 }
 function renderConversationList() {
-  // Selected tag pills keep the entries carrying any of them; Untagged keeps those with none.
-  const filtering = railTags.size > 0;
-  const keep = ids => !filtering || ids.some(id => railTags.has(id)) || (railTags.has('untagged') && !ids.length);
-  const conversations = libraryConversations.filter(item => keep(item.category_ids));
-  const pages = libraryPages.filter(page => keep(page.category_ids || []));
-  const known = new Set(libraryNotebooks.map(book => book.id));
-  const entries = (notebookId) => [
-    ...conversations.filter(item => notebookId ? item.notebook_id === notebookId : !known.has(item.notebook_id))
-      .map(item => ({at: capturedAt(item), row: () => railConversation(item)})),
-    ...pages.filter(page => page.notebook_id === notebookId)
-      .map(page => ({at: page.updated_at, row: () => railPage(page)})),
-    ...(filtering || !notebookId ? [] : libraryDocuments)
-      .filter((item) => item.notebook_id === notebookId)
-      .map((item) => ({at: item.record_date || item.created_at, row: () => railDocument(item)}))]
-    .sort((a, b) => new Date(b.at) - new Date(a.at));
-  const notebookBranch = book => {
-    const items = entries(book.id);
-    return filtering && !items.length ? null : railBranch({key: `notebook:${book.id}`, count: items.length, node: book,
-      name: railLink(book), lead: railDot(book.color), children: items.map(entry => entry.row()),
-      draggable: NOTEBOOK_DRAG, accepts: {[CONVERSATION_DRAG]: id => moveConversation(conversationById(id), book),
-        [PAGE_DRAG]: id => movePage(pageById(id), book)}, move: () => openMoveNotebookToCollection(book)});
+  const notebookRow = book => {
+    const row = document.createElement('div'); row.className = 'rail-node rail-notebook';
+    row.append(railDot(book.color), railLink(book));
+    row.draggable = true;
+    row.addEventListener('dragstart', event => {event.dataTransfer.setData(NOTEBOOK_DRAG,book.id);event.dataTransfer.effectAllowed='move';});
+    acceptDrops(row, {[CONVERSATION_DRAG]:id=>moveConversation(conversationById(id),book), [PAGE_DRAG]:id=>movePage(pageById(id),book)});
+    return row;
   };
-  const placed = new Set(libraryCollections.flatMap(collection => collection.notebook_ids));
   const byId = new Map(libraryNotebooks.map(book => [book.id, book]));
-  const branches = libraryCollections.map(collection => {
-    const children = collection.notebook_ids.map(id => byId.get(id)).filter(Boolean).map(notebookBranch).filter(Boolean);
-    return !children.length ? null : railBranch({key: `collection:${collection.id}`, name: railLabel(collection.name),
-      lead: railIcon('folder', collection.color), count: children.length, children,
-      accepts: {[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id), collection)}});
-  });
-  const loose = libraryNotebooks.filter(book => !placed.has(book.id)).map(notebookBranch).filter(Boolean);
-  if (loose.length)
-    branches.push(railBranch({key: 'group:notebooks', name: railLabel('Notebooks'), lead: railIcon('notebook'), count: loose.length,
-      children: loose, accepts: {[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id), null)}}));
-  const unfiled = entries(null);
-  if (unfiled.length || !filtering)
-    branches.push(railBranch({key: 'group:none', name: railLabel('No notebook'), lead: railIcon('inbox'), count: unfiled.length,
-      children: unfiled.map(entry => entry.row()), accepts: {[CONVERSATION_DRAG]: id => moveConversation(conversationById(id), null),
-        [PAGE_DRAG]: id => movePage(pageById(id), null)}}));
-  list.replaceChildren(...branches.filter(Boolean));
-  if (!libraryConversations.length && !libraryPages.length && !filtering) {
+  const placed = new Set();
+  const branches = [];
+  for (const collection of libraryCollections) {
+    const books = collection.notebook_ids.map(id => byId.get(id)).filter(Boolean);
+    if (!books.length) continue;
+    books.forEach(book => placed.add(book.id));
+    branches.push(railBranch({key:'collection:'+collection.id, name:railLabel(collection.name),
+      lead:railIcon('folder',collection.color), count:books.length, children:books.map(notebookRow),
+      accepts:{[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id),collection)}}));
+  }
+  branches.push(...libraryNotebooks.filter(book => !placed.has(book.id)).map(notebookRow));
+  list.replaceChildren(...branches);
+  if (!branches.length) {
     const empty = document.createElement('p'); empty.className = 'recent-empty';
-    empty.textContent = 'Record or import your first conversation'; list.prepend(empty);
-  } else if (filtering && !branches.some(Boolean)) {
-    const empty = document.createElement('p'); empty.className = 'recent-empty'; empty.textContent = 'No conversations with these tags';
-    list.prepend(empty);
+    empty.textContent = 'Add a notebook to organize your health records'; list.append(empty);
   }
   renderRecent();
+  window.StellisNavigation?.refresh();
   clearTimeout(libraryJobTimer);
-  if (conversations.some(item => ['queued', 'running'].includes(item.processing_job?.state)))
+  if (libraryConversations.some(item => ['queued','running'].includes(item.processing_job?.state)))
     libraryJobTimer = setTimeout(refreshLibraryJobs, 3000);
 }
 const conversationById = id => libraryConversations.find(item => item.id === id);
@@ -1054,25 +1033,18 @@ function railLink(book) {
   const link = document.createElement('a'); link.className = 'rail-name'; link.textContent = book.name;
   link.href = `/notebook/${encodeURIComponent(book.id)}`; return link;
 }
-function moveButton(label, open) {
-  const button = document.createElement('button'); button.type = 'button'; button.className = 'rail-move';
-  button.setAttribute('aria-label', `Move ${label} to…`); button.title = 'Move to…'; button.append(icon('arrows-move'));
-  button.addEventListener('click', open); return button;
-}
-function railBranch({key, name, lead, count, children = [], accepts, draggable, node, move}) {
+function railBranch({key, name, lead, count, children = [], accepts}) {
   const collapsed = !railOpen(key);
   const branch = document.createElement('div'); branch.className = 'rail-branch';
   const head = document.createElement('div'); head.className = 'rail-node';
   const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'rail-toggle';
-  toggle.setAttribute('aria-expanded', String(!(collapsed && !railTags.size))); toggle.append(icon('chevron-right'));
+  toggle.setAttribute('aria-expanded', String(!collapsed)); toggle.append(icon('chevron-right'));
   toggle.setAttribute('aria-label', `${collapsed ? 'Expand' : 'Collapse'} ${name.textContent}`);
   const total = document.createElement('small'); total.textContent = count;
   head.append(toggle, lead, name, total);
-  if (move) head.append(moveButton(name.textContent, move));
-  const body = document.createElement('div'); body.className = 'rail-children'; body.hidden = collapsed && !railTags.size;
+  const body = document.createElement('div'); body.className = 'rail-children'; body.hidden = collapsed;
   body.append(...children);
   const flip = () => {
-    // A tag filter opens every branch, so matches never hide; the stored choice returns when it clears.
     railChoices.set(key, !railOpen(key));
     try { localStorage.setItem(RAIL_STATE_KEY, JSON.stringify(Object.fromEntries(railChoices))); } catch {}
     toggle.setAttribute('aria-expanded', String(railOpen(key)));
@@ -1082,55 +1054,8 @@ function railBranch({key, name, lead, count, children = [], accepts, draggable, 
   toggle.addEventListener('click', flip);
   if (name.tagName !== 'A') name.addEventListener('click', flip);
   branch.append(head, body);
-  if (draggable) {
-    head.draggable = true;
-    head.addEventListener('dragstart', event => { event.dataTransfer.setData(draggable, node.id); event.dataTransfer.effectAllowed = 'move'; head.classList.add('dragging'); });
-    head.addEventListener('dragend', () => head.classList.remove('dragging'));
-  }
   acceptDrops(branch, accepts);
   return branch;
-}
-function railConversation(item) {
-  const wrap = document.createElement('div'); wrap.className = 'recent-item';
-  const row = recentRow(item); row.prepend(railIcon('microphone'));
-  wrap.append(row, moveButton(item.title, () => openMoveConversation(item)));
-  return wrap;
-}
-/**
- * Renders a document in a notebook's rail branch; it opens the document page.
- * @param {!Object} item A document without its pages.
- * @return {!Element}
- */
-function railDocument(item) {
-  const wrap = document.createElement('div');
-  wrap.className = 'recent-item';
-  const row = document.createElement('a');
-  row.className = 'recent-row recent-page';
-  row.href = `/document/${encodeURIComponent(item.id)}`;
-  const title = document.createElement('strong');
-  title.textContent = item.title;
-  const date = document.createElement('time');
-  date.dateTime = item.record_date || item.created_at;
-  date.textContent = shortDate(date.dateTime);
-  const line = document.createElement('small');
-  line.append(date);
-  row.append(railIcon('file'), title, line);
-  wrap.append(row);
-  return wrap;
-}
-function railPage(page) {
-  const wrap = document.createElement('div'); wrap.className = 'recent-item';
-  const row = document.createElement('div'); row.className = 'recent-row recent-page'; row.tabIndex = 0; row.draggable = true;
-  const title = document.createElement('strong'); title.textContent = page.title;
-  const date = document.createElement('time'); date.dateTime = page.updated_at; date.textContent = shortDate(page.updated_at);
-  const line = document.createElement('small'); line.append(date);
-  row.append(railIcon('file-text'), title, line);
-  row.addEventListener('click', () => openNote(page.id));
-  row.addEventListener('keydown', event => { if (event.key === 'Enter') openNote(page.id); });
-  row.addEventListener('dragstart', event => { event.dataTransfer.setData(PAGE_DRAG, page.id); event.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging'); });
-  row.addEventListener('dragend', () => row.classList.remove('dragging'));
-  wrap.append(row, moveButton(page.title, () => openMovePage(page)));
-  return wrap;
 }
 async function refreshLibraryJobs() {
   if (listView.hidden) return;
@@ -2760,6 +2685,7 @@ async function route() {
   else if (location.pathname.match(/^\/notebook\/([^/]+)$/))
     await showNotebook(decodeURIComponent(location.pathname.split('/')[2]));
   else await showList();
+  window.StellisNavigation?.refresh();
 }
 /**
  * Uploads a PDF or image from the Import dialog and opens it.

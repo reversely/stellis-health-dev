@@ -59,7 +59,9 @@
     content.append(selectedList,list,status,footer);
     dialog.append(title,searchLabel,content,actions);
     document.body.append(dialog);
-    dialog.addEventListener('close', () => {dialog.remove(); trigger?.focus();}, {once:true});
+    dialog.addEventListener('close', () => {dialog.remove();
+      const target = trigger?.getClientRects().length ? trigger : document.getElementById('open-notebooks');
+      target?.focus();}, {once:true});
     dialog.showModal();
     try {
       const [catalogue, recommendations] = await Promise.all([
