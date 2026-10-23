@@ -2,9 +2,9 @@
 
 The browser streams 16 kHz microphone audio over a WebSocket. Silero VAD finds
 where each answer ends, Moonshine transcribes it, and the agent's reply is
-spoken with Kitten TTS one clause or sentence at a time, so speech starts
-before the reply is complete. All three run on this machine through
-sherpa-onnx; audio is never stored.
+spoken one clause or sentence at a time. Kitten CPU speech is the default;
+operators can select local or Nebius Chatterbox. Recognition and activity
+detection remain local; Chatterbox receives only the reply text.
 
 Each turn logs how long each stage took, without any content.
 """
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stellis import debug_data, intake, storage
+from stellis import call_tts, debug_data, intake, storage
 
 _log = logging.getLogger(__name__)
 
@@ -176,6 +176,8 @@ class Engine:
 
     def speak(self, text: str, voice: int = VOICE) -> tuple[bytes, int]:
         """Returns 16-bit mono PCM and its sample rate."""
+        if call_tts.backend() != "cpu" and voice == VOICE:
+            return call_tts.speak(text)
         with self._lock:
             audio = self.tts.generate(text, sid=voice, speed=1.0)
         pcm = np.clip(np.asarray(audio.samples, dtype=np.float32), -1, 1)
@@ -464,7 +466,13 @@ class Call:
         self.speaking_turn = turn
         audio = rate = None
         if self.engine is not None and self.speaker:
-            audio, rate = await asyncio.to_thread(self.engine.speak, text)
+            try:
+                audio, rate = await asyncio.to_thread(self.engine.speak, text)
+            except Exception as exc:
+                # Keep the reply visible without silently changing speech providers.
+                _log.warning("Call speech failed: %s", type(exc).__name__)
+                await self.send_json({"type": "error", "message":
+                                      "Speech is unavailable. You can continue by text."})
         stages = self.timings.get(turn)
         if stages is not None and "first_audio" not in stages:
             stages["first_audio"] = time.perf_counter()
