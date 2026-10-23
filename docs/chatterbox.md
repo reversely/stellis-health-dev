@@ -1,5 +1,7 @@
 # Call speech backends
 
+For the running, integrated app with microphone recognition and Chatterbox output on new ports 8840 and 8841, see [the GN100 runtime](chatterbox-local-runtime.md). The standalone server described below supplies synthesis only.
+
 Calls use Kitten on CPU by default. Operators can switch generated replies to a local Chatterbox server or a future Nebius endpoint. Speech recognition and activity detection keep their existing on-device models. The selection applies to intake, coach and tour calls after restarting the app and account processes. There is no automatic provider fallback.
 
 | `STELLIS_TTS_BACKEND` | Speech location | Required configuration |
