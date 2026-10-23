@@ -64,8 +64,13 @@ def search_sources(query: str, notebook_id: str | None = None, limit: int = 30) 
         conn.executemany("""INSERT INTO source_fts
             (source_type, source_id, notebook_id, title, body, target, start_ms)
             VALUES (?, ?, ?, ?, ?, ?, ?)""", documents)
-        scope = " AND notebook_id = ?" if notebook_id is not None else ""
-        parameters: tuple[object, ...] = (expression, notebook_id, limit) if notebook_id is not None else (expression, limit)
+        scope = """ AND (notebook_id = ? OR EXISTS (SELECT 1 FROM notebook_record_links l
+            WHERE l.notebook_id = ? AND l.source_id =
+            CASE source_fts.source_type WHEN 'document' THEN 'document:' || source_fts.source_id
+            WHEN 'page' THEN 'page:' || source_fts.source_id
+            WHEN 'note' THEN 'conversation:' || source_fts.source_id
+            WHEN 'passage' THEN 'conversation:' || substr(source_fts.target, 15, 36) END))""" if notebook_id is not None else ""
+        parameters: tuple[object, ...] = (expression, notebook_id, notebook_id, limit) if notebook_id is not None else (expression, limit)
         rows = conn.execute(f"""SELECT source_type, source_id, title,
             snippet(source_fts, 4, '[', ']', '…', 48) AS excerpt,
             target, start_ms, bm25(source_fts, 0, 0, 0, 3, 1) AS rank

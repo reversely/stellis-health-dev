@@ -290,18 +290,11 @@ class AddSourceDialog {
    * @return {!Promise<void>}
    */
   async move(kind, id) {
-    const path = encodeURIComponent(id);
-    if (kind === 'document') {
-      await this.dom.api(`/documents/${path}`, {
-        method: 'PATCH',
-        json: {notebook_id: this.book.id, move: true},
-      });
-      return;
-    }
-    const collection = kind === 'note' ? 'pages' : 'conversations';
-    await this.dom.api(
-        `/${collection}/${path}/notebook`,
-        {method: 'PUT', json: {notebook_id: this.book.id}});
+    const api = this.dom.api;
+    const prefix = {recording:'conversation',note:'page',document:'document'}[kind];
+    await api(`/notebooks/${encodeURIComponent(this.book.id)}/links`, {
+      method:'POST', json:{source_id:prefix+':'+id}
+    });
   }
 
   /**
@@ -414,7 +407,9 @@ class AddSourceDialog {
             .then(([conversations, notes, documents, books]) => {
               this.notebookNames =
                   new Map(books.notebooks.map((item) => [item.id, item.name]));
-              this.items = toCandidates(conversations, notes, documents);
+              const linked = new Set(this.options.sourceIds || []);
+              const prefixes={recording:'conversation',note:'page',document:'document'};
+              this.items = toCandidates(conversations, notes, documents).filter(item=>!linked.has(prefixes[item.kind]+':'+item.id));
               this.paintRecords();
               this.paintCount();
             })

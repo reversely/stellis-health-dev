@@ -105,6 +105,19 @@ def connect() -> Iterator[sqlite3.Connection]:
         conn.execute("ALTER TABLE collections ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'off'")
     if "todo_list" not in {row["name"] for row in conn.execute("PRAGMA table_info(notebooks)")}:
         conn.execute("ALTER TABLE notebooks ADD COLUMN todo_list TEXT NOT NULL DEFAULT 'inherit'")
+    for column, definition in (("template_id", "TEXT"), ("description", "TEXT NOT NULL DEFAULT ''"),
+                               ("catalogue_version", "INTEGER"), ("archived_at", "TEXT"),
+                               ("capabilities_json", "TEXT"), ("recommendation_evidence_json", "TEXT NOT NULL DEFAULT '[]'")):
+        if column not in {row["name"] for row in conn.execute("PRAGMA table_info(notebooks)")}:
+            conn.execute(f"ALTER TABLE notebooks ADD COLUMN {column} {definition}")
+    if "taxonomy_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(collections)")}:
+        conn.execute("ALTER TABLE collections ADD COLUMN taxonomy_id TEXT")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS collection_taxonomy ON collections(taxonomy_id) WHERE taxonomy_id IS NOT NULL")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS notebook_template ON notebooks(template_id) WHERE template_id IS NOT NULL")
+    conn.execute("""CREATE TABLE IF NOT EXISTS notebook_record_links (
+        notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+        source_id TEXT NOT NULL, evidence_json TEXT NOT NULL DEFAULT '[]',
+        PRIMARY KEY (notebook_id, source_id))""")
     conn.execute("""CREATE TABLE IF NOT EXISTS agents (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
         role TEXT NOT NULL, instructions TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,

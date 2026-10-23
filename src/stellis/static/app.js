@@ -1006,12 +1006,12 @@ function renderConversationList() {
   const byId = new Map(libraryNotebooks.map(book => [book.id, book]));
   const branches = libraryCollections.map(collection => {
     const children = collection.notebook_ids.map(id => byId.get(id)).filter(Boolean).map(notebookBranch).filter(Boolean);
-    return filtering && !children.length ? null : railBranch({key: `collection:${collection.id}`, name: railLabel(collection.name),
+    return !children.length ? null : railBranch({key: `collection:${collection.id}`, name: railLabel(collection.name),
       lead: railIcon('folder', collection.color), count: children.length, children,
       accepts: {[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id), collection)}});
   });
   const loose = libraryNotebooks.filter(book => !placed.has(book.id)).map(notebookBranch).filter(Boolean);
-  if (loose.length || (libraryCollections.length && !filtering))
+  if (loose.length)
     branches.push(railBranch({key: 'group:notebooks', name: railLabel('Notebooks'), lead: railIcon('notebook'), count: loose.length,
       children: loose, accepts: {[NOTEBOOK_DRAG]: id => moveNotebook(byId.get(id), null)}}));
   const unfiled = entries(null);
@@ -4181,7 +4181,7 @@ function renderNotebooks() {
   const sections = groups.map(item => group(item.name, item.color, item.books, item.kind));
   const create = document.createElement('button'); create.type = 'button'; create.className = 'notebook-new';
   const label = document.createElement('span');
-  label.textContent = libraryNotebooks.length ? 'New notebook' : 'Start a notebook for each project';
+  label.textContent = 'Add Notebook';
   create.append(icon('plus'), label);
   create.addEventListener('click', () => openNotebookDialog());
   sections[sections.length - 1].querySelector('.notebook-grid').append(create);
@@ -4198,8 +4198,7 @@ function renderNotebooks() {
   window.StellisNotebookWork?.home();
 }
 
-const notebookDialog = document.querySelector('#notebook-dialog');
-// One colour control for both notebook dialogs: preset swatches plus a custom #RRGGBB field with a native picker.
+// Notebook settings offer preset swatches and a custom colour with a native picker.
 // The text field holds the value; the swatches and the picker write to it.
 let colourPickers = 0;
 function colourPicker(host, selected) {
@@ -4231,28 +4230,8 @@ function colourPicker(host, selected) {
   set(selected);
   return {value: () => text.value.trim().toUpperCase(), valid: () => window.StellisNotebookItems.isHexColour(text.value.trim())};
 }
-let createColour = null;
-function openNotebookDialog() {
-  document.querySelector('#notebook-name-input').value = '';
-  document.querySelector('#notebook-form-status').textContent = '';
-  createColour = colourPicker(document.querySelector('#notebook-swatches'), notebookPalette[libraryNotebooks.length % notebookPalette.length]);
-  notebookDialog.showModal();
-}
-document.querySelector('#new-notebook').addEventListener('click', () => openNotebookDialog());
-document.querySelector('#notebook-cancel').addEventListener('click', () => notebookDialog.close());
-document.querySelector('#notebook-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  const status = document.querySelector('#notebook-form-status');
-  if (!createColour.valid()) { status.textContent = 'Enter the colour as #RRGGBB'; return; }
-  const save = document.querySelector('#notebook-save'); save.disabled = true;
-  try {
-    await json(await fetch(`${API}/notebooks`, {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:document.querySelector('#notebook-name-input').value, color:createColour.value()})}));
-    notebookDialog.close();
-    await showList();
-  } catch (error) { status.textContent = error.message; }
-  finally { save.disabled = false; }
-});
+function openNotebookDialog() { window.StellisHealthCatalogue.open(); }
+document.querySelector('#new-notebook').addEventListener('click', openNotebookDialog);
 
 const notebookAddDialog = document.querySelector('#notebook-add-dialog');
 async function openNotebookAdd(notebook) {
@@ -4444,6 +4423,7 @@ async function showNotebook(id) {
   notebookTodos?.destroy?.();
   notebookTodos = mountTodos(document.querySelector('#notebook-todos'), {scope: id, onChange: refreshNotebookItems});
   await loadNotebookItems(notebook);
+  window.StellisNotebookHealth?.mount(document.querySelector('#notebook-health'), notebook.id).catch(() => {});
   window.StellisHealthPillars?.notebook(document.querySelector('#notebook-pillars'), notebook, showNotebookTab);
   await Promise.all([
     window.StellisNotebookChat.mount(document.querySelector('#notebook-chat'), notebook,
@@ -4505,20 +4485,35 @@ function fillTodoOptions(notebook, collection, value) {
   select.replaceChildren(...options.map(([key, label]) => new Option(label, key)));
   select.value = options.some(([key]) => key === value) ? value : 'inherit';
 }
-function openNotebookSettings(notebook) {
+async function openNotebookSettings(notebook) {
   document.querySelector('#notebook-settings-name').value = notebook.name;
   document.querySelector('#notebook-settings-status').textContent = '';
   settingsColour = colourPicker(document.querySelector('#notebook-settings-colour'), notebook.color);
   const current = libraryCollections.find(item => item.notebook_ids.includes(notebook.id));
   const select = document.querySelector('#notebook-settings-collection');
-  select.replaceChildren(new Option('No collection', ''), ...libraryCollections.map(item => new Option(item.name, item.id)));
-  select.value = current?.id || '';
+  const catalogue = await fetch(`${API}/health-catalogue`).then(json);
+  const options = new Map(catalogue.collections.map(c => [c.collection_id, c.display_name]));
+  for (const c of libraryCollections) if (!c.taxonomy_id) options.set(c.id, c.name);
+  select.replaceChildren(...[...options].map(([id,name]) => new Option(name,id)));
+  document.querySelector('#notebook-settings-description').value = notebook.description || '';
+  document.querySelector('#notebook-settings-archive').checked = false;
+  const features = document.querySelector('#notebook-settings-features');
+  features.replaceChildren();
+  const legend = document.createElement('legend'); legend.textContent = 'Features'; features.append(legend);
+  const enabled = JSON.parse(notebook.capabilities_json || 'null');
+  for (const [key, title] of Object.entries({timeline:'Timeline',trends:'Measurements',check_ins:'Check-ins',intervention_history:'Intervention history'})) {
+    const label=document.createElement('label');const input=document.createElement('input');
+    input.type='checkbox';input.value=key;input.checked=enabled === null || enabled.includes(key);
+    label.append(input,document.createTextNode(title)); features.append(label);
+  }
+
+  select.value = current?.taxonomy_id || current?.id || 'fitness';
   fillTodoOptions(notebook, current, notebook.todo_list);
   notebookSettingsDialog.showModal();
 }
 document.querySelector('#notebook-settings-collection').addEventListener('change', event => {
   const todo = document.querySelector('#notebook-settings-todo');
-  fillTodoOptions(activeNotebook(), libraryCollections.find(item => item.id === event.target.value), todo.value);
+  fillTodoOptions(activeNotebook(), libraryCollections.find(item => item.id === event.target.value || item.taxonomy_id === event.target.value), todo.value);
 });
 document.querySelector('#notebook-edit').addEventListener('click', () => { const notebook = activeNotebook(); if (notebook) openNotebookSettings(notebook); });
 document.querySelector('#notebook-settings-cancel').addEventListener('click', () => notebookSettingsDialog.close());
@@ -4530,12 +4525,16 @@ document.querySelector('#notebook-settings-form').addEventListener('submit', asy
   const post = (path, method, body) => fetch(`${API}${path}`, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(json);
   try {
     await post(`/notebooks/${encodeURIComponent(notebook.id)}`, 'PATCH', {name: document.querySelector('#notebook-settings-name').value,
-      color: settingsColour.value(), todo_list: document.querySelector('#notebook-settings-todo').value});
+      color: settingsColour.value(), todo_list: document.querySelector('#notebook-settings-todo').value,
+      description: document.querySelector('#notebook-settings-description').value,
+      archived: document.querySelector('#notebook-settings-archive').checked,
+      capabilities:[...document.querySelectorAll('#notebook-settings-features input:checked')].map(input=>input.value)});
     const wanted = document.querySelector('#notebook-settings-collection').value || null;
     const current = libraryCollections.find(item => item.notebook_ids.includes(notebook.id))?.id || null;
     if (wanted !== current) await post(`/notebooks/${encodeURIComponent(notebook.id)}/collection`, 'PUT', {collection_id: wanted});
     notebookSettingsDialog.close();
-    await showNotebook(notebook.id);
+    if (document.querySelector('#notebook-settings-archive').checked) await showList();
+    else await showNotebook(notebook.id);
   } catch (error) { status.textContent = error.message; }
   finally { save.disabled = false; }
 });
@@ -4587,21 +4586,7 @@ document.querySelector('#move-notebook-form').addEventListener('submit', async e
     if (!listView.hidden) await reloadLibrary();
   } catch (error) { document.querySelector('#move-notebook-status').textContent = error.message; }
 });
-// New collection: an inline name field at the foot of the sidebar.
-const newCollectionButton = document.querySelector('#new-collection');
-const newCollectionForm = document.querySelector('#new-collection-form');
-const newCollectionName = document.querySelector('#new-collection-name');
-function closeNewCollection() { newCollectionForm.hidden = true; newCollectionButton.hidden = false; newCollectionName.value = ''; }
-newCollectionButton.addEventListener('click', () => { newCollectionButton.hidden = true; newCollectionForm.hidden = false; newCollectionName.focus(); });
-newCollectionName.addEventListener('keydown', event => { if (event.key === 'Escape') closeNewCollection(); });
-newCollectionName.addEventListener('blur', () => { if (!newCollectionName.value.trim()) closeNewCollection(); });
-newCollectionForm.addEventListener('submit', async event => {
-  event.preventDefault();
-  try {
-    const created = await json(await fetch(`${API}/collections`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:newCollectionName.value})}));
-    closeNewCollection(); setStatus(`Created the collection ${created.name}`, true); await reloadLibrary();
-  } catch (error) { setStatus(error.message); }
-});
+document.querySelector('#new-collection').addEventListener('click', openNotebookDialog);
 // The To-dos widget is one component: Home mounts it beside the other widgets, the To-dos page gives it the full width,
 // and a notebook page passes its notebook ID as the scope.
 let homeTodos = null; let pageTodos = null;

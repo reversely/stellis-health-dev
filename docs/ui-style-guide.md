@@ -88,3 +88,7 @@ The Home setup card reports the shared speech-model installer. Waiting state off
 Use motion for changes the person requests. Menus enter over 160ms from their trigger; dialogs and backdrops enter together over 220ms and leave over 180ms. The call panel enters over 200ms with 8px of travel. Newly opened forms use 220ms with 4px of travel. Use `cubic-bezier(0.22, 1, 0.36, 1)` for these transitions.
 
 Primary task actions acknowledge pointer presses at scale 0.97 over 120ms. Keyboard interactions are immediate. Reduced-motion preferences remove scale and travel while retaining short opacity and colour fades. Avoid broad page entrances, decorative loops and animated row arrivals. Theme changes apply in one frame.
+
+## Health catalogue
+
+Add Notebook opens a searchable catalogue shared by onboarding and the workspace. Approved health collections appear in their four groupings. Each option shows its curated name and scope; recommendations quote the editable intake notes. People can select several templates or create a custom notebook within an approved collection. Creation requires Add notebooks. MedlinePlus attribution stays available in the catalogue footer. Navigation shows collections containing active notebooks. Notebook settings retain user names and descriptions and support reassignment and archiving. Add Notebook includes restoration of archived notebooks. Existing legacy organization remains intact until the person changes it.

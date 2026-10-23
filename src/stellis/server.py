@@ -832,6 +832,7 @@ class OnboardingChoices(BaseModel):
     uses: list[str] = Field(default_factory=list, max_length=8)
     step: Literal["welcome", "call", "records", "uses", "review"] = "review"
     task_choices: dict[str, StrictBool] | None = None
+    notebook_choices: list[dict] | None = Field(default=None, max_length=100)
 
 
 @api.get("/onboarding")
@@ -844,7 +845,10 @@ def onboarding_state(request: Request):
 def onboarding_choices(choices: OnboardingChoices, request: Request):
     from stellis import onboarding
     try:
-        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.task_choices)
+        if choices.notebook_choices is not None:
+            for group in choices.notebook_choices:
+                OnboardingRecordGroup.model_validate(group)
+        return onboarding.choose(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)), choices.uses, choices.step, choices.task_choices, choices.notebook_choices)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -872,6 +876,10 @@ class OnboardingRecordItem(BaseModel):
 class OnboardingRecordGroup(BaseModel):
     notebook_name: str = Field(default="", max_length=80)
     notebook_id: str | None = Field(default=None, max_length=100)
+    template_id: str | None = Field(default=None, max_length=100)
+    collection_id: str | None = Field(default=None, max_length=100)
+    description: str = Field(default="", max_length=1000)
+    collection_changed: StrictBool = False
     items: list[OnboardingRecordItem] = Field(default_factory=list, max_length=120)
     suggest_tasks: StrictBool = False
     goal: str = Field(default="", max_length=200)
@@ -880,7 +888,7 @@ class OnboardingRecordGroup(BaseModel):
 class OnboardingFinish(BaseModel):
     proposal_id: str | None = Field(default=None, max_length=80)
     group_ids: list[str] = Field(default_factory=list, max_length=8)
-    record_groups: list[OnboardingRecordGroup] = Field(default_factory=list, max_length=5)
+    record_groups: list[OnboardingRecordGroup] = Field(default_factory=list, max_length=100)
 
 
 class OnboardingRead(BaseModel):
@@ -1197,9 +1205,73 @@ class NotebookCreate(BaseModel):
     color: str | None = None
 
 
+class CatalogueSelection(BaseModel):
+    template_id: str | None = Field(default=None, max_length=100)
+    collection_id: str | None = Field(default=None, max_length=100)
+    name: str = Field(default="", max_length=80)
+    description: str = Field(default="", max_length=1000)
+
+
+class CatalogueActivation(BaseModel):
+    selections: list[CatalogueSelection] = Field(min_length=1, max_length=100)
+
+
+class RecordLink(BaseModel):
+    source_id: str = Field(min_length=1, max_length=150)
+
+
+@api.get("/notebooks/{notebook_id}/health")
+def notebook_health_context(notebook_id: str):
+    from stellis import notebook_health
+    try:
+        return notebook_health.context(notebook_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@api.get("/health-catalogue")
+def health_catalogue_view():
+    from stellis import health_catalogue
+    return health_catalogue.view()
+
+
+@api.get("/health-catalogue/recommendations")
+def health_catalogue_recommendations():
+    from stellis import health_catalogue
+    return health_catalogue.recommend()
+
+
+@api.post("/health-catalogue/activate")
+def health_catalogue_activate(request: CatalogueActivation):
+    from stellis import health_catalogue
+    try:
+        return {"notebooks":health_catalogue.activate([s.model_dump() for s in request.selections])}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api.post("/notebooks/{notebook_id}/links")
+def link_notebook_record(notebook_id: str, request: RecordLink):
+    try:
+        return notebook_sources.link(notebook_id, request.source_id)
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 400, detail=str(exc)) from exc
+
+
+@api.delete("/notebooks/{notebook_id}/links")
+def unlink_notebook_record(notebook_id: str, request: RecordLink):
+    try:
+        return notebook_sources.unlink(notebook_id, request.source_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 class NotebookUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     color: str | None = None
+    description: str | None = Field(default=None, max_length=1000)
+    archived: StrictBool | None = None
+    capabilities: list[str] | None = Field(default=None, max_length=10)
     todo_list: Literal["inherit", "on", "off"] | None = None
 
 
@@ -1375,7 +1447,7 @@ def create_notebook(request: NotebookCreate) -> dict[str, object]:
 @api.patch("/notebooks/{notebook_id}")
 def update_notebook(notebook_id: str, request: NotebookUpdate) -> dict[str, object]:
     try:
-        return notebooks.update(notebook_id, name=request.name, color=request.color, todo_list=request.todo_list)
+        return notebooks.update(notebook_id, name=request.name, color=request.color, todo_list=request.todo_list, description=request.description, archived=request.archived, capabilities=request.capabilities)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

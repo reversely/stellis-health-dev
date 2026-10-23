@@ -29,7 +29,7 @@ class ParseGroupsTest(unittest.TestCase):
         reply = json.dumps({
             "groups": [
                 {
-                    "notebook": "  Weight and nutrition ",
+                    "notebook": "  Nutrition ",
                     "reason": "Dietitian visits",
                     "items": [1, 2, 9, "3"]
                 },
@@ -55,7 +55,7 @@ class ParseGroupsTest(unittest.TestCase):
                            [item["id"]
                             for item in group["items"]])
                           for group in groups],
-                         [("Weight and nutrition", None, ["d1", "d2"]),
+                         [("Nutrition", None, ["d1", "d2"]),
                           ("Heart care", "nb-1", ["d3"])])
         self.assertEqual(groups[0]["reason"], "Dietitian visits")
 
@@ -86,7 +86,7 @@ class SortingApiTest(unittest.TestCase):
     def test_suggest_sends_titles_and_opening_text(self):
         reply = json.dumps(
             {"groups": [{
-                "notebook": "Weight and nutrition",
+                "notebook": "Nutrition",
                 "items": [1, 2]
             }]})
         turn = mock.AsyncMock(return_value=(reply, "session"))
@@ -114,7 +114,7 @@ class SortingApiTest(unittest.TestCase):
 
         response = self.client.post("/api/v1/records/sort/apply",
                                     json={
-                                        "notebook_name": "Weight and nutrition",
+                                        "notebook_name": "Nutrition",
                                         "items": dietitian
                                     })
 
@@ -125,7 +125,7 @@ class SortingApiTest(unittest.TestCase):
         self.assertEqual(len(self.unsorted()), 50 - len(dietitian))
         again = self.client.post("/api/v1/records/sort/apply",
                                  json={
-                                     "notebook_name": "weight AND nutrition",
+                                     "notebook_name": "nutrition",
                                      "items": []
                                  }).json()
         self.assertEqual(again["notebook_id"], body["notebook_id"])

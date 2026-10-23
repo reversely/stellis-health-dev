@@ -62,8 +62,8 @@ def _read_conversations(conn, notebook_id: str) -> list[dict[str, object]]:
         LEFT JOIN transcripts t ON t.conversation_id = c.id
         LEFT JOIN (SELECT DISTINCT conversation_id FROM recording_sessions) r
             ON r.conversation_id = c.id
-        WHERE c.notebook_id = ? AND c.trashed_at IS NULL""",
-        (notebook_id,)).fetchall()
+        WHERE (c.notebook_id = ? OR EXISTS (SELECT 1 FROM notebook_record_links l WHERE l.notebook_id = ? AND l.source_id = 'conversation:' || c.id)) AND c.trashed_at IS NULL""",
+        (notebook_id, notebook_id)).fetchall()
     return [{
         "id":
             "conversation:" + row["id"],
@@ -82,8 +82,8 @@ def _read_notes(conn, notebook_id: str) -> list[dict[str, object]]:
     rows = conn.execute(
         """
         SELECT id, title, created_at FROM pages
-        WHERE notebook_id = ? AND trashed_at IS NULL""",
-        (notebook_id,)).fetchall()
+        WHERE (notebook_id = ? OR EXISTS (SELECT 1 FROM notebook_record_links l WHERE l.notebook_id = ? AND l.source_id = 'page:' || pages.id)) AND trashed_at IS NULL""",
+        (notebook_id, notebook_id)).fetchall()
     return [{
         "id": "page:" + row["id"],
         "type": "note",
@@ -187,4 +187,32 @@ def save_selection(notebook_id: str,
         conn.executemany(
             "INSERT INTO notebook_source_exclusions (notebook_id, source_id) "
             "VALUES (?, ?)", rows)
+    return list_sources(notebook_id)
+
+
+def link(notebook_id: str, source_id: str, evidence=None):
+    """Associates an existing account-local source without moving or copying it."""
+    import json
+    kind, separator, identifier = source_id.partition(':')
+    table = {'document':'documents', 'conversation':'conversations', 'page':'pages'}.get(kind)
+    if not separator or table is None:
+        raise ValueError('Choose an existing record')
+    if kind == 'document':
+        documents.list_all()
+    require_room(notebook_id, source_id)
+    with storage.connect() as conn:
+        _require_notebook(conn, notebook_id)
+        condition = '' if kind == 'document' else ' AND trashed_at IS NULL'
+        if conn.execute(f'SELECT 1 FROM {table} WHERE id = ?'+condition, (identifier,)).fetchone() is None:
+            raise LookupError('Record not found')
+        conn.execute('INSERT OR IGNORE INTO notebook_record_links (notebook_id,source_id,evidence_json) VALUES (?,?,?)',
+                     (notebook_id, source_id, json.dumps(evidence or [])))
+    return list_sources(notebook_id)
+
+
+def unlink(notebook_id: str, source_id: str):
+    """Removes an additional association and preserves the source record."""
+    with storage.connect() as conn:
+        _require_notebook(conn, notebook_id)
+        conn.execute('DELETE FROM notebook_record_links WHERE notebook_id = ? AND source_id = ?', (notebook_id,source_id))
     return list_sources(notebook_id)

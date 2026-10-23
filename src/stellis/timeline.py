@@ -86,7 +86,13 @@ def entries(notebook_id: str | None = None,
     }
     items = [item for kind in kinds for item in readers[kind]()]
     if notebook_id is not None:
-        items = [item for item in items if item["notebook_id"] == notebook_id]
+        with storage.connect() as conn:
+            linked = {r[0] for r in conn.execute('SELECT source_id FROM notebook_record_links WHERE notebook_id = ?', (notebook_id,))}
+        def belongs(item):
+            path = str(item['target']).split('?')[0].split('#')[0]
+            prefix = 'document:' if path.startswith('/document/') else 'conversation:'
+            return item['notebook_id'] == notebook_id or prefix+path.rsplit('/',1)[-1] in linked
+        items = [item for item in items if belongs(item)]
     order = {kind: index for index, kind in enumerate(KINDS)}
     items.sort(key=lambda item: (item["date"], -order[item["kind"]]),
                reverse=True)

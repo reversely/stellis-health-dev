@@ -8,10 +8,16 @@
   const main = document.querySelector('#setup-main');
   const error = document.querySelector('#setup-error');
   /** Proposed notebooks from records; more would overwhelm a first run. */
-  const MAX_NOTEBOOKS = 5;
+  const MAX_NOTEBOOKS = 100;
   let state;
   let taskChoices = {};
   let saves = Promise.resolve();
+  let reviewLayout = null;
+  let reviewSaveTimer = null;
+  function scheduleReviewSave() {
+    clearTimeout(reviewSaveTimer);
+    reviewSaveTimer = setTimeout(() => save('review').catch(e => {error.textContent=e.message;}),300);
+  }
   /** The call step, while it is on screen. */
   let callStep = null;
   /** Records added during this setup, newest last. */
@@ -72,10 +78,12 @@
   }
 
   function save(step) {
+    clearTimeout(reviewSaveTimer);
     const payload = {
       uses: [],
       step,
       task_choices: structuredClone(taskChoices),
+      notebook_choices: reviewLayout ? structuredClone(reviewLayout.groups) : undefined,
     };
     saves = saves.catch(() => {}).then(async () => {
       state = await api('/onboarding', 'PUT', payload);
@@ -357,19 +365,6 @@
     return {groups, unsorted: result.unsorted || []};
   }
 
-  /** The layout as POST /intake/notebooks reads it, for a revision. */
-  function layoutRequest(layout) {
-    return layout.groups.filter((group) => group.include)
-        .map((group) => ({
-               notebook_name: group.notebook_name,
-               kind: group.kind || '',
-               goal: group.goal || '',
-               items:
-                   group.items.map((item) => ({kind: item.kind, id: item.id})),
-               named_by_person: Boolean(group.named_by_person),
-             }));
-  }
-
   /**
    * One record in the layout, with a select that moves it to another
    * notebook or out of every notebook.
@@ -421,7 +416,23 @@
     head.append(choose);
     const problem = node('p', group.problem || '', 'setup-problem');
     problem.hidden = !group.problem;
-    head.append(problem);
+    const collectionLabel = node('label', 'Collection');
+    const collectionSelect = node('select');
+    for (const entry of state.health_catalogue?.collections || []) {
+      collectionSelect.add(new Option(entry.display_name, entry.collection_id));
+    }
+    if (group.collection_id && ![...collectionSelect.options].some(o=>o.value===group.collection_id)) collectionSelect.add(new Option(group.collection_name || 'Current collection',group.collection_id));
+    collectionSelect.value = group.collection_id || 'fitness';
+    group.collection_id = collectionSelect.value;
+    collectionLabel.append(collectionSelect);
+    collectionSelect.addEventListener('change', () => {
+      group.collection_id = collectionSelect.value;
+      group.collection_changed = true;
+      group.template_id = null;
+      group.named_by_person = true;
+      changed(true);
+    });
+    head.append(problem, collectionLabel);
     if (group.reason) head.append(node('p', group.reason, 'setup-hint'));
     const goalLabel = node('label', null, 'setup-goal');
     goalLabel.append(icon('target'), node('span', 'Goal'));
@@ -454,15 +465,18 @@
     name.addEventListener('input', () => {
       group.notebook_name = name.value.trim();
       group.named_by_person = group.notebook_name !== group.proposed_name;
+      if (group.named_by_person) group.template_id = null;
       // A name the person chose replaces Stellis's check of the old name.
       problem.hidden = true;
       changed(false);
     });
     goal.addEventListener('input', () => {
       group.goal = goal.value.trim();
+      changed(false);
     });
     tasksInput.addEventListener('change', () => {
       group.suggest_tasks = tasksInput.checked;
+      changed(false);
     });
     return {card, name};
   }
@@ -479,66 +493,7 @@
     return card;
   }
 
-  /**
-   * The box where the person asks Stellis to change the layout in their
-   * own words, with Stellis's answer and an undo for its last change.
-   */
-  function changeBox({ask, undo}) {
-    const box = node('form', null, 'setup-change');
-    const label = node('label', null, 'setup-change-label');
-    label.append(icon('sparkles'), node('span', 'Ask for changes'));
-    const input = node('input', null, 'setup-change-input');
-    input.id = 'setup-change-input';
-    label.htmlFor = input.id;
-    input.maxLength = 500;
-    input.placeholder =
-        'Rename Diabetes to Blood sugar, or split a notebook in two';
-    const submit = node('button', 'Update', 'primary');
-    submit.type = 'submit';
-    const row = node('div', null, 'setup-change-row');
-    row.append(input, submit);
-    const answer = node('p', '', 'setup-change-answer');
-    answer.role = 'status';
-    const back = button('Undo', undo);
-    back.hidden = true;
-    const foot = node('div', null, 'setup-change-foot');
-    foot.append(answer, back);
-    box.append(label, row, foot);
-    box.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const request = input.value.trim();
-      if (!request) {
-        input.focus();
-        return;
-      }
-      submit.disabled = true;
-      answer.textContent = 'Updating your notebooks';
-      try {
-        await ask(request);
-        input.value = '';
-      } catch (e) {
-        answer.textContent = e.message;
-      } finally {
-        submit.disabled = false;
-      }
-    });
-    return {
-      box,
-      say(text, canUndo) {
-        answer.textContent = text;
-        back.hidden = !canUndo;
-      },
-      setBusy(busy) {
-        submit.disabled = busy;
-        input.disabled = busy;
-      },
-    };
-  }
-
-  /**
-   * Step 4: notebooks proposed from the call and the records, laid out as
-   * folders. The person edits them directly or asks Stellis for changes.
-   */
+  /** Shows catalogue recommendations for the person to review and edit. */
   function reviewScreen(scene) {
     const title = node('h1', 'Review your notebooks');
     const subtitle = node('p', 'Reading your notes and records', 'setup-hint');
@@ -548,8 +503,6 @@
     const grid = node('div', null, 'setup-grid setup-plan');
     const tree = document.querySelector('#setup-tree');
     let layout = {groups: [], unsorted: []};
-    /** Layouts before each of Stellis's changes, newest last. */
-    const history = [];
     const reviewed = () =>
         layout.groups.filter((group) => group.include && group.notebook_name);
     const finish = button('Open workspace', async () => {
@@ -559,6 +512,10 @@
         record_groups: reviewed().map(
             (group) => ({
               notebook_name: group.notebook_name,
+              template_id: group.template_id || null,
+              collection_id: group.collection_id,
+              collection_changed: Boolean(group.collection_changed),
+              description: group.description || "",
               notebook_id: group.notebook_name === group.proposed_name ?
                   group.notebook_id :
                   null,
@@ -571,54 +528,22 @@
       location.assign(state.editing ? '/' : '/?tour=1');
     }, 'primary');
     finish.disabled = true;
-    const add = button('Add a notebook', () => {
-      layout.groups.push({
-        notebook_name: '',
-        proposed_name: '',
-        kind: '',
-        reason: '',
-        goal: '',
-        items: [],
-        include: true,
-        named_by_person: true,
-        suggest_tasks: true,
+    const add = button('Add Notebook', async () => {
+      await window.StellisHealthCatalogue.open({
+        selected:layout.groups.map(g => g.template_id),
+        onSelect(selections) {
+          for (const selection of selections) layout.groups.push({
+            ...selection, notebook_name:selection.name, proposed_name:selection.name,
+            kind:'', reason:'', goal:selection.goal || '', items:selection.items || [], include:true,
+            named_by_person:!selection.template_id, suggest_tasks:false
+          });
+          paint();
+        }
       });
-      paint();
-      grid.querySelectorAll('.setup-book-input')[layout.groups.length - 1]
-          ?.focus();
     });
+    add.disabled = true;
     add.prepend(icon('folder-plus'));
     add.classList.add('setup-add-book');
-    const change = changeBox({
-      async ask(request) {
-        change.setBusy(true);
-        try {
-          const result = await api('/intake/notebooks', 'POST', {
-            request,
-            layout: layoutRequest(layout),
-          });
-          history.push(structuredClone(layout));
-          layout = layoutFrom(result, layout);
-          paint();
-          change.say(
-              [
-                result.reply || 'Stellis updated your notebooks.',
-                result.question
-              ].filter(Boolean)
-                  .join(' '),
-              true);
-        } finally {
-          change.setBusy(false);
-        }
-      },
-      undo() {
-        layout = history.pop() || layout;
-        paint();
-        change.say('Your notebooks are back as they were.', history.length > 0);
-      },
-    });
-    change.box.hidden = true;
-
     /** Lists the notebooks and their record counts in the side rail. */
     function paintTree() {
       const groups = reviewed();
@@ -630,11 +555,11 @@
       tree.replaceChildren();
       if (!groups.length) return;
       const branch = node('div', null, 'setup-tree-group');
-      branch.append(node('strong', 'Health'));
+      branch.append(node('strong', 'Notebooks'));
       for (const group of groups) {
         const leaf = node('div', null, 'setup-tree-leaf');
         leaf.append(
-            icon('folder'), node('span', group.notebook_name),
+            icon('folder'), node('span', (state.health_catalogue?.collections.find(c => c.collection_id === group.collection_id)?.display_name || '') + ' / ' + group.notebook_name),
             node('small', String(group.items.length)));
         branch.append(leaf);
       }
@@ -670,31 +595,43 @@
                 option.textContent = group.notebook_name || 'New notebook';
               }
               paintTree();
+              reviewLayout = layout; scheduleReviewSave();
             },
           }));
-      grid.replaceChildren(...cards.map((entry) => entry.card));
+      grid.replaceChildren();
+      for (const collection of state.health_catalogue?.collections || []) {
+        const indexes = layout.groups.map((g,i) => g.collection_id === collection.collection_id ? i : -1).filter(i => i >= 0);
+        if (!indexes.length) continue;
+        const section = node('section', null, 'setup-collection');
+        section.append(node('h2', collection.display_name));
+        for (const index of indexes) section.append(cards[index].card);
+        grid.append(section);
+      }
       if (layout.unsorted.length) grid.append(notFiledCard(layout, move));
       add.hidden = layout.groups.length >= MAX_NOTEBOOKS;
       paintTree();
+      reviewLayout = layout;
+      scheduleReviewSave();
     }
 
     const actions = node('div', null, 'setup-actions');
     actions.append(finish, button('Back', () => go('records')));
-    scene.append(head, change.box, grid, add, actions);
+    scene.append(head, grid, add, actions);
     api('/intake/notebooks', 'POST')
         .then((result) => {
           layout = layoutFrom(result, null);
+          if (state.notebook_choices) layout.groups = state.notebook_choices;
+          reviewLayout = layout;
           subtitle.textContent = layout.groups.length ?
               'Check each name, goal and record before anything is filed' :
               'Stellis sorts records you add later from Records';
-          if (result.question) change.say(result.question, false);
-          change.box.hidden = false;
         })
         .catch((e) => {
           subtitle.textContent = e.message;
         })
         .finally(() => {
           finish.disabled = false;
+          add.disabled = false;
           paint();
         });
   }

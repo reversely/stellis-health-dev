@@ -114,13 +114,13 @@ class RecordSetupTest(unittest.TestCase):
     def test_record_groups_become_notebooks_where_stellis_answers(self):
         onboarding.choose(self.account, [], 'review')
         result = onboarding.complete(self.account, record_groups=[
-            {'notebook_name': 'Diabetes care', 'items': [], 'suggest_tasks': True},
-            {'notebook_name': 'Physiotherapy', 'items': [], 'suggest_tasks': False},
+            {'notebook_name': 'Diabetes care', 'collection_id':'hormonal-metabolic-health', 'items': [], 'suggest_tasks': True},
+            {'notebook_name': 'Physiotherapy', 'collection_id':'fitness', 'items': [], 'suggest_tasks': False},
         ])
         self.assertFalse(auth.needs_onboarding(self.account))
         diabetes = next(b for b in result['created'] if b['name'] == 'Diabetes care')
         self.assertIn(diabetes['notebook_id'], [n['notebook_id'] for n in agents.assistant()['notebooks']])
-        self.assertIn('Health', [c['name'] for c in collections.list_collections()])
+        self.assertIn('Hormonal & Metabolic Health', [c['name'] for c in collections.list_collections()])
         book = next(b for b in notebooks.list_notebooks() if b['name'] == 'Diabetes care')
         self.assertTrue(book['todo_enabled'])
 

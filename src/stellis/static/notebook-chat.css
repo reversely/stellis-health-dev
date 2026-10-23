@@ -653,3 +653,8 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* An empty thread needs no floating composer over its introductory text. */
+.nb-chat:has(.nb-messages > .nb-empty:only-child) .nb-composer {
+  position: static;
+}

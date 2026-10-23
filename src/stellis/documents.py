@@ -327,8 +327,8 @@ def list_all(notebook_id: str | None = None) -> list[dict[str, object]]:
         One dict per document. Documents without a record date sort by upload
         time.
     """
-    where, arguments = ("WHERE notebook_id = ?",
-                        (notebook_id,)) if notebook_id else ("", ())
+    where, arguments = ("WHERE (notebook_id = ? OR EXISTS (SELECT 1 FROM notebook_record_links l WHERE l.notebook_id = ? AND l.source_id = 'document:' || documents.id))",
+                        (notebook_id, notebook_id)) if notebook_id else ("", ())
     with storage.connect() as conn:
         _create_tables(conn)
         rows = conn.execute(
