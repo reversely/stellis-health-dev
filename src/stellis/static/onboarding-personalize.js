@@ -4,17 +4,25 @@
 function render(scene, kit) {
   const {node, api, button} = kit;
   scene.classList.add('setup-personalize');
-  let state, call, voice = false, field, editor, selected = new Set(), busy = false, typing = 0, candidate = null, motion;
+  let state, call, voice = false, field, editor, selected = new Set(), busy = false, typing = 0, candidate = null, motion, textMode = false, epoch = 0, confirmRequested = false, fieldEdited = false;
   const header = node('div', null, 'profile-header');
   const back = button('Back', () => previous(), 'profile-back');
   const voiceButton = button('Use microphone', () => {
     voice = !voice;
+    textMode = false; chat.hidden = true; textButton.textContent = 'Text Stellis'; textButton.setAttribute('aria-expanded','false');
     voiceButton.textContent = voice ? 'Microphone on' : 'Use microphone';
     voiceButton.setAttribute('aria-pressed', String(voice));
-    if (voice) startVoice(); else stopVoice();
+    if (voice) startCall(); else stopCall();
   });
   voiceButton.setAttribute('aria-pressed', 'false');
-  header.append(back, voiceButton);
+  const textButton = button('Text Stellis', () => {
+    textMode = !textMode; voice = false;
+    voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
+    chat.hidden = !textMode; textButton.textContent = textMode ? 'Close chat' : 'Text Stellis'; textButton.setAttribute('aria-expanded',String(textMode));
+    if (textMode) {startCall(); messageInput.focus();} else stopCall();
+  });
+  textButton.setAttribute('aria-expanded','false');
+  header.append(back, textButton, voiceButton);
   const body = node('div', null, 'profile-body');
   const status = node('p', '', 'profile-status');
   status.setAttribute('role', 'status');
@@ -22,30 +30,61 @@ function render(scene, kit) {
   const next = button('Continue', () => confirm(), 'primary');
   const skip = button('Skip', () => confirm(true));
   actions.append(next, skip);
-  scene.append(header, body, status, actions);
+  const chat = node('section', null, 'profile-chat'); chat.hidden = true;
+  chat.setAttribute('aria-label','Conversation with Stellis');
+  const transcript = node('div', null, 'profile-transcript');
+  transcript.setAttribute('role','log'); transcript.setAttribute('aria-live','polite');
+  const composer = node('form', null, 'profile-composer');
+  const messageInput = node('input'); messageInput.maxLength = 2000;
+  messageInput.setAttribute('aria-label','Message Stellis'); messageInput.placeholder = 'Your answer or question';
+  const send = node('button', 'Send'); send.type = 'submit'; send.disabled = true;
+  composer.append(messageInput, send); chat.append(transcript, composer);
+  composer.addEventListener('submit', e => {
+    e.preventDefault(); const text = messageInput.value.trim();
+    if (!text || !call || send.disabled || busy) return;
+    fieldEdited = false; call.sendText(text); messageInput.value = ''; send.disabled = true;
+  });
+  scene.append(header, body, status, chat, actions);
+  function line(role, text) {
+    const row = node('p', null, 'profile-message');
+    row.append(node('strong', role === 'person' ? 'You' : 'Stellis'), node('span',text));
+    transcript.append(row); transcript.scrollTop = transcript.scrollHeight;
+  }
+  function lockReply(locked) {
+    next.disabled = skip.disabled = locked || busy;
+    send.disabled = locked || busy || !field || !call;
+  }
 
-  function stopVoice() { if (call) call.end(); call = null; }
-  function startVoice() {
-    stopVoice();
-    call = root.StellisIntakeCall.start(event, {
+  function stopCall() { ++epoch; if (call) call.end(); call = null; send.disabled = true; confirmRequested = false; lockReply(false); }
+  function startCall() {
+    stopCall();
+    const active = epoch; lockReply(true);
+    call = root.StellisIntakeCall.start(message => {if (active === epoch) event(message);}, {
+      listen:voice,
       path:'/api/v1/onboarding/profile/call?field=' + encodeURIComponent(field?.id || 'complete')
     });
   }
   function event(message) {
+    if (message.type === 'say') {line('agent',message.text); lockReply(true);}
+    else if (message.type === 'heard') line('person',message.text);
+    else if (message.type === 'state' && ['listening','hearing'].includes(message.state)) {
+      lockReply(false);
+      if (confirmRequested) {confirmRequested = false; confirm();}
+    }
     if (message.type === 'action' && message.action === 'profile_answer' && message.field === field?.id) {
-      fill(message.value);
-      status.textContent = message.value ? 'Is that right?' : 'Enter or choose your answer';
+      if (!fieldEdited) fill(message.value);
+      status.textContent = fieldEdited ? 'Check your edited answer' : message.value ? 'Is that right?' : 'Enter or choose your answer';
       next.textContent = 'Yes, continue';
     } else if (message.type === 'action' && message.action === 'profile_confirm' && message.field === field?.id) {
-      confirm();
+      confirmRequested = true;
     } else if (message.type === 'mic' && !message.ok) {
       status.textContent = 'Microphone unavailable';
     } else if (message.type === 'error') {
       status.textContent = message.message;
     } else if (message.type === 'ended') {
-      call = null; voice = false; voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
+      call = null; lockReply(false); voice = false; textMode = false; textButton.textContent = 'Text Stellis'; textButton.setAttribute('aria-expanded',String(!chat.hidden)); voiceButton.textContent = 'Use microphone'; voiceButton.setAttribute('aria-pressed','false');
     } else if (message.type === 'closed') {
-      status.textContent = 'Connection lost';
+      lockReply(false); send.disabled = true; status.textContent = 'Connection lost';
     }
   }
   function value() { return field.kind === 'multiple' ? [...selected] : candidate ?? editor.value.trim(); }
@@ -75,7 +114,7 @@ function render(scene, kit) {
     }
   }
   async function show(id, speak = true) {
-    ++typing; candidate = null; stopVoice(); body.replaceChildren(); status.textContent = ''; choices = null;
+    ++typing; candidate = null; fieldEdited = false; stopCall(); body.replaceChildren(); status.textContent = ''; choices = null;
     motion?.cancel();
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) motion = body.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'cubic-bezier(0.22, 1, 0.36, 1)'});
     field = state.fields.find(item => item.id === id);
@@ -84,7 +123,7 @@ function render(scene, kit) {
     back.disabled = field?.id === 'name';
     if (!field) {
       body.append(node('h1', "You're all set"), node('p', 'Review the notebooks suggested from your interests'));
-      if (voice && speak) startVoice();
+      if ((voice || textMode) && speak) startCall();
       return;
     }
     body.append(node('h1', field.question));
@@ -100,7 +139,7 @@ function render(scene, kit) {
       editor.setAttribute('aria-label', field.question);
       if (field.id === 'name') editor.autocomplete = 'given-name';
       if (field.id === 'birth_date') editor.autocomplete = 'bday';
-      editor.addEventListener('input', () => {++typing; candidate = null; next.textContent = 'Continue'; paintChoices();});
+      editor.addEventListener('input', () => {++typing; candidate = null; fieldEdited = true; next.textContent = 'Continue'; paintChoices();});
       editor.addEventListener('keydown', e => {if (e.key === 'Enter' && field.kind !== 'long') {e.preventDefault();confirm();}});
       body.append(editor);
     }
@@ -111,7 +150,7 @@ function render(scene, kit) {
         const id = typeof choice === 'string' ? choice : choice.id;
         const label = typeof choice === 'string' ? choice : choice.label;
         const option = button(label, () => {
-          ++typing; candidate = null;
+          ++typing; candidate = null; fieldEdited = true;
           if (field.kind === 'multiple') {if (selected.has(id)) selected.delete(id); else selected.add(id);}
           else editor.value = id;
           paintChoices();
@@ -125,7 +164,7 @@ function render(scene, kit) {
       const details = node('details', null, 'profile-library');
       details.append(node('summary', 'Search health library'));
       details.append(root.StellisIntakeLibrary.render({node,api,category:field.library,onSelect(item) {
-        ++typing; candidate = null;
+        ++typing; candidate = null; fieldEdited = true;
         const text = field.id === 'goals' ? item.detail : item.label;
         if (!editor.value.includes(text)) editor.value = [editor.value,text].filter(Boolean).join('\n');
         editor.focus();
@@ -133,13 +172,13 @@ function render(scene, kit) {
       body.append(details);
     }
     if (editor && field.kind !== 'multiple') editor.focus({preventScroll:true});
-    if (voice && speak) startVoice();
+    if ((voice || textMode) && speak) startCall();
   }
   async function confirm(skipped = false) {
     if (busy) return;
-    if (!field) {stopVoice(); await kit.next(); return;}
+    if (!field) {stopCall(); await kit.next(); return;}
     if (field.kind === 'date' && !skipped && !editor.checkValidity()) {editor.reportValidity(); return;}
-    busy = true; next.disabled = skip.disabled = voiceButton.disabled = true;
+    busy = true; next.disabled = skip.disabled = voiceButton.disabled = textButton.disabled = true; send.disabled = true;
     body.inert = true;
     status.textContent = 'Saving';
     try {
@@ -147,8 +186,10 @@ function render(scene, kit) {
       await show(state.step);
     } catch(e) {status.textContent = e.message;}
     finally {
-      busy = false; body.inert = false; next.disabled = skip.disabled = voiceButton.disabled = false;
-      if (field) (field.kind === 'multiple' ? choices?.firstElementChild : editor)?.focus({preventScroll:true});
+      busy = false; body.inert = false; voiceButton.disabled = textButton.disabled = false;
+      if (!call) lockReply(false);
+      if (textMode) messageInput.focus({preventScroll:true});
+      else if (field) (field.kind === 'multiple' ? choices?.firstElementChild : editor)?.focus({preventScroll:true});
     }
   }
   function previous() {
@@ -158,7 +199,7 @@ function render(scene, kit) {
     if (previous) show(previous.id); else kit.back();
   }
   api('/onboarding/profile').then(loaded => {state = loaded;show(state.complete ? 'name' : state.step,false);}).catch(e=>kit.error(e.message));
-  return {leave() {++typing; stopVoice();}};
+  return {leave() {++typing; stopCall();}};
 }
 root.StellisOnboardingPersonalize = {render};
 })(window);

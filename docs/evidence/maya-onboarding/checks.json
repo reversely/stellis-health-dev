@@ -1,0 +1,49 @@
+{
+  "checks": [
+    {
+      "check": "Corrected name only saved after Yes",
+      "pass": true
+    },
+    {
+      "check": "gender stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "period stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "birth_date stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "conditions stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "medicines stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "Four clarifications and a pause do not advance or end setup",
+      "pass": true
+    },
+    {
+      "check": "interests stays unconfirmed",
+      "pass": true
+    },
+    {
+      "check": "Reason and next action with goodbye before completion",
+      "pass": true
+    },
+    {
+      "check": "Explicit notebook creation and reload preserve selection",
+      "pass": true
+    }
+  ],
+  "browser_errors": [],
+  "scope": "Synthetic Maya at January 2022 intake, before iron treatment or later fertility/pregnancy outcomes",
+  "record_checks": 70,
+  "milestone_answers": 8,
+  "clinical_failures": 4
+}

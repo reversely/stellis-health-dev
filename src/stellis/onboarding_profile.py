@@ -126,6 +126,7 @@ def candidate(field, text):
     """Parse an editable speech candidate without confirming or persisting it."""
     text = text.strip().strip(".!?, ")
     if field == "name":
+        text = re.sub(r"^(?:hi|hello|hey)[,!]?\s*", "", text, flags=re.I)
         return re.sub(r"^(?:my name is|call me|i am|i'm|it's|this is|actually)\s+", "", text, flags=re.I)[:100]
     if field == "interests":
         aliases = {"wellness": ["wellness", "general health"], "fitness": ["fitness", "exercise", "movement"], "emotional-wellbeing": ["emotional", "mental health", "stress"]}
@@ -198,23 +199,50 @@ class VoiceField:
         pass
 
     async def reply(self, timings):
-        normalized = self.last.casefold().strip(" .!?,")
+        normalized = self.last.casefold().strip(" .!,")
         if self.field == "complete":
             yield FINISH
             yield intake.END_MARK
             return
-        if normalized.startswith(("what options", "what do you mean", "why do you need", "can you give examples")):
+        from stellis.call_lifecycle import wants_end
+        if wants_end(self.last):
+            yield "We can pause setup here. Your confirmed answers are saved. Return to setup when you're ready to continue. Goodbye."
+            yield intake.END_MARK
+            return
+        if normalized.startswith(("please wait", "wait", "give me a moment", "one moment", "i need a moment")):
+            yield "Take your time. You can continue when you're ready."
+            return
+        help_request = normalized.endswith('?') or normalized.startswith((
+            "what options", "what do you mean", "why do you need", "can you give examples",
+            "what do you usually offer", "what counts", "i'm not sure", "i don't know"))
+        if help_request and self.field in {"goals", "medicines", "conditions"}:
+            explanations = {
+                "goals": "You can work on movement, sleep, nutrition, stress, appointments or symptoms. Choose several goals or write your own.",
+                "medicines": "Medicines include prescriptions, over-the-counter products and supplements. Search a generic or brand name in the health library. You can edit the name or add it later.",
+                "conditions": "You can include a diagnosed condition or a concern you want to discuss. Search health topics for examples, or leave this unspecified. I won't assume you have a diagnosis.",
+            }
+            yield explanations[self.field]
+            return
+        if help_request:
             options = BY_ID[self.field].get("choices", [])
             labels = [choice if isinstance(choice, str) else choice["label"] for choice in options]
             yield ("You can choose " + ", ".join(labels) + ". You can also skip this question.") if labels else "You can answer in your own words or skip this question."
             return
         if self.value is not None and normalized in {"yes", "yes that's right", "that's right", "correct", "right"}:
+            yield "Thank you."
             yield {"action": "profile_confirm", "field": self.field}
             return
         if self.value is not None and normalized in {"no", "no that's wrong", "not right"}:
             self.value = None
             yield "You can correct the field or tell me your answer again."
             return
-        self.value = candidate(self.field, self.last)
+        value = candidate(self.field, self.last)
+        if BY_ID[self.field]["kind"] == "choice" and value not in BY_ID[self.field]["choices"]:
+            yield "You can choose " + ", ".join(BY_ID[self.field]["choices"]) + ". You can also skip this question."
+            return
+        if self.field in {"birth_date", "interests"} and not value:
+            yield "Please enter or choose your answer in the field. You can also skip this question."
+            return
+        self.value = value
         yield {"action": "profile_answer", "field": self.field, "value": self.value, "heard": self.last}
         yield "Is that right? You can correct the field before continuing."
