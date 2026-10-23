@@ -1,6 +1,6 @@
 # Corpus validation
 
-Result: PASS. 541 checks passed; 0 failed. 70 PDFs, 70 pages.
+Result: PASS. 543 checks passed; 0 failed. 70 PDFs, 70 pages.
 
 ## Automated checks
 

@@ -37,15 +37,16 @@ def build(root, facts, manifests):
     appointments=[]
     # Result-only documents have no invented face-to-face appointment.
     for d in facts['documents']:
-        if d['document_type'] in {'lab','cytology','screen','embryology'}:continue
+        if d['document_type'] in {'lab','cytology','screen','embryology','discharge'}:continue
         aid='APT-'+d['document_id']
         local_time='09:30' if d['document_id']=='D025' else '09:00' if d['document_id']=='D032' else '02:10' if d['document_id']=='D052' else '10:00'
         end_time='10:00' if d['document_id']=='D025' else '09:30' if d['document_id']=='D032' else '12:30' if d['document_id']=='D052' else '10:30'
         booked=(date.fromisoformat(d['clinical_date'])-timedelta(days=14)).isoformat()
-        history=[dict(changed_on=booked,status='scheduled',scheduled_date=d['clinical_date'],time=local_time)]
+        booked={'D009':d['clinical_date'],'D024':d['clinical_date'],'D025':'2024-06-11','D032':'2024-11-08','D052':d['clinical_date'],'D055':'2025-07-31'}.get(d['document_id'],booked)
+        history=[dict(changed_on=booked,status='arrived' if d['document_id']=='D052' else 'scheduled',scheduled_date=d['clinical_date'],time=local_time)]
         if d['document_id']=='D014':history=[dict(changed_on='2023-11-14',status='scheduled',scheduled_date='2023-11-30',time='14:00'),dict(changed_on='2023-11-20',status='rescheduled',scheduled_date='2023-12-01',time='10:00',reason='Clinic scheduling change')]
         if d['document_id']=='D041':history=[dict(changed_on='2025-02-14',status='scheduled',scheduled_date='2025-03-13',time='10:00'),dict(changed_on='2025-02-28',status='rescheduled',scheduled_date='2025-03-14',time='10:00',reason='Patient work conflict')]
-        appointments.append(dict(appointment_id=aid,patient_id=facts['patient']['patient_id'],title=d['title'],date=d['clinical_date'],start_time=local_time,end_time=end_time,timezone='America/Toronto',status='completed',mode='telephone' if d['document_id'] in {'D005','D024','D055'} else 'in_person',facility_id=facts['facilities'][d['facility_key']]['facility_id'],provider_id=facts['providers'][d['provider_key']]['provider_id'],document_ids=[d['document_id']],episode_id=d['episode_id'],schedule_history=history))
+        appointments.append(dict(appointment_id=aid,patient_id=facts['patient']['patient_id'],title=d['title'],date=d['clinical_date'],start_time=local_time,end_time=end_time,timezone='America/Toronto',status='completed',mode='unscheduled_hospital_admission' if d['document_id']=='D052' else 'telephone' if d['document_id'] in {'D005','D024','D055'} else 'in_person',facility_id=facts['facilities'][d['facility_key']]['facility_id'],provider_id=facts['providers'][d['provider_key']]['provider_id'],document_ids=[d['document_id']],episode_id=d['episode_id'],schedule_history=history))
     appointments.append(dict(appointment_id='APT-CANCEL-01',patient_id=facts['patient']['patient_id'],title='Prenatal review if undelivered',date='2025-07-31',start_time='10:00',end_time='10:30',timezone='America/Toronto',status='cancelled',mode='in_person',facility_id=facts['facilities']['ob']['facility_id'],provider_id=facts['providers']['ob']['provider_id'],document_ids=['D051','D052'],episode_id='pregnancy',schedule_history=[dict(changed_on='2025-07-25',status='scheduled',scheduled_date='2025-07-31',time='10:00'),dict(changed_on='2025-07-29',status='cancelled',reason='Delivery occurred July 29')]))
     dump(root/'fixtures/appointments.json',appointments)
     transcripts={

@@ -188,6 +188,7 @@ def validate(facts, manifests, ledger_hash):
     check('minimum_document_count',len(docs)>=40,f'{len(docs)} individual PDFs')
     check('unique_document_ids',len(ids)==len(docs),'Unique stable IDs')
     check('canonical_ledger_unchanged',digest(ROOT/'patient/canonical_facts.json')==ledger_hash,'Renderer and ground truth share fixed SHA-256')
+    check('canonical_lock_matches',ledger_hash==(ROOT/'patient/ledger.sha256').read_text().split()[0],'Canonical ledger matches its stored lock')
     check('five_year_coverage',{d['clinical_date'][:4] for d in docs}==set(map(str,range(2022,2027))),'2022-2026')
     check('transfer_due_date',date.fromisoformat(facts['pregnancy']['transfer_date'])+timedelta(days=261)==date.fromisoformat(facts['pregnancy']['estimated_due_date']),'Day-5 embryo: transfer +261 days')
     check('transfer_gestational_age',(date.fromisoformat(facts['pregnancy']['transfer_date'])-date.fromisoformat(facts['pregnancy']['art_equivalent_lmp'])).days==19,'Transfer GA 2+5')
@@ -245,6 +246,8 @@ def validate(facts, manifests, ledger_hash):
     check('cycle_intervals',all(x['start_date']<=x['bleeding_end_date']<x['cycle_end_date'] for x in c),'Bleeding and cycle boundaries ordered')
     check('cycle_continuity',all(x['next_start_date'] is None or x['cycle_length_days']==(date.fromisoformat(x['next_start_date'])-date.fromisoformat(x['start_date'])).days for x in c),'Lengths reflect next actual start, not next tracked row')
     appts=read_json(ROOT/'fixtures/appointments.json');aids={a['appointment_id'] for a in appts}
+    admission=next(a for a in appts if a['appointment_id']=='APT-D052')
+    check('spontaneous_admission_not_prescheduled',admission['mode']=='unscheduled_hospital_admission' and admission['schedule_history'][0]['changed_on']==admission['date'] and admission['schedule_history'][0]['status']=='arrived','Spontaneous labour arrival is recorded on admission rather than booked beforehand')
     check('appointment_links',all(set(a['document_ids'])<=ids for a in appts),'Appointment records resolve to documents')
     check('appointment_scheduling_history',any(len(a['schedule_history'])>1 for a in appts) and any(a['status']=='cancelled' for a in appts),'Rescheduling and cancellation represented separately')
     gt=read_json(ROOT/'ground_truth/documents.json');check('ground_truth_coverage',{x['document_id'] for x in gt}==ids,'One record per PDF')

@@ -6304,9 +6304,7 @@
       }
     ],
     "procedures": [],
-    "appointment_ids": [
-      "APT-D054"
-    ],
+    "appointment_ids": [],
     "care_episode_ids": [
       "postpartum"
     ],
