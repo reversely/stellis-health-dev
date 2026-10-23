@@ -160,6 +160,16 @@ class TrendsPage {
       this.measures =
           (await this.dom.api('/readings')).measures.map(dailyTotals);
       this.paint();
+      if (!this.linkOpened) {
+        this.linkOpened = true;
+        const query = new URLSearchParams(root.location.search);
+        const key = query.get('measure') || query.get('log');
+        if (this.measures.some(measure => measure.key === key)) {
+          const target = this.cards.querySelector('[data-measure="'+key+'"]');
+          if (query.has('log')) target?.querySelector('[data-log]')?.click();
+          target?.scrollIntoView({block:'start'});
+        }
+      }
     } catch (error) {
       this.status.textContent = error.message;
     }
@@ -215,6 +225,7 @@ class TrendsPage {
     const dom = this.dom;
     const chartApi = root.StellisTrendChart;
     const card = dom.el('section', null, 'trend-card');
+    card.dataset.measure = measure.key;
     const titleId = `trend-${measure.key}`;
     card.setAttribute('aria-labelledby', titleId);
     const latest = measure.points[measure.points.length - 1];
@@ -322,6 +333,7 @@ class TrendsPage {
     const add = dom.button(
         cameraMeasure ? 'Log manually' : 'Add a reading',
         cameraMeasure ? 'trend-manual' : 'trend-add');
+    add.dataset.log = measure.key;
     const tableButton = dom.button('Show table');
     tableButton.setAttribute('aria-expanded', 'false');
     const table = this.table(measure);
@@ -503,11 +515,13 @@ class TrendsPage {
     card.append(title);
     for (const measure of measures) {
       const row = dom.el('div', null, 'trend-start-row');
+      row.dataset.measure = measure.key;
       row.append(dom.el('span', measure.label, 'trend-start-name'));
       const cameraMeasure = root.StellisCameraPulse?.MEASURE_KEYS.includes(measure.key);
       const add = dom.button(
           cameraMeasure ? 'Log manually' : 'Add a reading',
           cameraMeasure ? 'trend-manual' : 'trend-add');
+      add.dataset.log = measure.key;
       add.setAttribute(
           'aria-label', cameraMeasure ?
               `Log ${measure.label.toLowerCase()} manually` :

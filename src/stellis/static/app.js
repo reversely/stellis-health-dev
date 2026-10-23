@@ -14,6 +14,11 @@ const skipSilenceStatus = document.querySelector('#skip-silence-status');
 let silenceSpans = [];
 let silenceScanTimer = null;
 let manualSeekUntil = 0;
+// Deferred UI modules must finish before an initial route uses their exports.
+const modulesReady = new Promise(resolve => {
+  if (document.readyState === 'complete') resolve();
+  else document.addEventListener('DOMContentLoaded', resolve, {once:true});
+});
 const API = '/api/v1';
 const conversationMore = document.querySelector('#conversation-more');
 for (const menu of [conversationMore, document.querySelector('#library-more'), document.querySelector('#record-more'), document.querySelector('#notebook-more')]) {
@@ -940,8 +945,9 @@ async function showList() {
   renderCategoryGroups();
   // Tag cards wait for the first conversation; an empty account sees none.
   document.querySelector('#list-view [data-widget="tags"]')?.toggleAttribute('hidden', !libraryConversations.length);
-  window.StellisHealthPillars?.home(document.querySelector('#home-pillars'));
-  window.StellisGoals?.home(document.querySelector('#home-goals'));
+  document.querySelector('#home-pillars').hidden = true;
+  window.StellisHealthDashboard?.mount(document.querySelector('#health-dashboard'), {books:libraryNotebooks, collections:libraryCollections});
+  window.StellisGoals?.home(document.querySelector('#home-goals'), document.querySelector('#dashboard-notifications'));
   watchSetup();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
   const automation = await json(await fetch(`${API}/categories/automation`));
@@ -953,7 +959,7 @@ async function showList() {
   captureControls();
   if (document.querySelector('#library-search-input').value.trim().length >= 2)
     await submitLibrarySearch(new Event('submit'));
-  window.StellisCalendar?.refresh();
+  if (document.querySelector('#dashboard-tools').open) window.StellisCalendar?.refresh();
 }
 // The Home sidebar is the file structure: collections hold notebooks, notebooks hold meetings and notes.
 const RAIL_STATE_KEY = 'stellis-rail-open';
@@ -2727,6 +2733,7 @@ async function showVocabulary(section = null) {
   captureControls();
 }
 async function route() {
+  await modulesReady;
   const match = location.pathname.match(/^\/conversation\/([^/]+)$/);
   if ((pendingTranscriptEdits.size || pendingCleanEdits.size) && (!match || decodeURIComponent(match[1]) !== activeConversationId)) {
     if (!window.confirm('Discard unsaved transcript changes and leave this conversation?')) {
@@ -4786,6 +4793,7 @@ async function showTimeline() {
   const view = await showRailPage(
       'timeline-page', 'Timeline', '#timeline-view', 'rail-timeline');
   await window.StellisTimeline.mount(view, libraryNotebooks);
+  healthHistoryViews(view, 'timeline');
 }
 
 /** Shows the cited summary of the person's health. */
@@ -4807,6 +4815,7 @@ async function showRecords() {
   const view = await showRailPage(
       'records-page', 'Records', '#records-view', 'rail-records');
   await window.StellisRecords.mount(view, reloadLibrary);
+  healthHistoryViews(view, 'records');
 }
 
 async function showAgentChat() {
@@ -5038,15 +5047,41 @@ function applyWidgets() {
 }
 function saveWidgets() { try { localStorage.setItem(WIDGETS_KEY, JSON.stringify([...hiddenWidgets])); } catch {} }
 const widgetsDialog = document.querySelector('#widgets-dialog');
-document.querySelector('#edit-widgets').addEventListener('click', () => {
-  document.querySelector('#widgets-list').replaceChildren(...HOME_WIDGETS.map(([id, name, glyph]) => {
-    const label = document.createElement('label'); label.className = 'category-checkbox widget-option';
-    const box = document.createElement('input'); box.type = 'checkbox'; box.checked = !hiddenWidgets.has(id);
-    box.addEventListener('change', () => { if (box.checked) hiddenWidgets.delete(id); else hiddenWidgets.add(id); saveWidgets(); applyWidgets(); });
-    label.append(box, icon(glyph), document.createTextNode(name)); return label;
-  }));
-  widgetsDialog.showModal();
-});
+document.querySelector('#edit-widgets').addEventListener('click', () => {document.querySelector('#library-more').open = false; window.StellisHealthDashboard?.customize();});
 document.querySelector('#close-widgets').addEventListener('click', () => widgetsDialog.close());
 applyWidgets();
 route().catch(error => setStatus(error.message));
+
+// Dashboard actions reuse the existing capture and notebook flows.
+for (const [source,target] of [['dashboard-note','home-new-note'],['dashboard-record','home-record'],['dashboard-import','home-import'],['dashboard-notebook','new-notebook']]) {
+  document.getElementById(source).addEventListener('click', () => {
+    document.querySelector('.dashboard-add-menu').open = false;
+    document.getElementById(target).click();
+  });
+}
+document.getElementById('dashboard-call').addEventListener('click', () => window.StellisCoachCall?.open({kind:'general', onAction: () => {
+  if (location.pathname === '/') {
+    window.StellisHealthDashboard?.mount(document.querySelector('#health-dashboard'), {books:libraryNotebooks, collections:libraryCollections});
+    window.StellisGoals?.home(document.querySelector('#home-goals'), document.querySelector('#dashboard-notifications'));
+  }
+}}));
+document.getElementById('dashboard-goal').addEventListener('click', () => {
+  document.querySelector('.dashboard-add-menu').open = false;
+  document.getElementById('dashboard-tools').open = true;
+  document.querySelector('#home-goals .coach-form')?.scrollIntoView({block:'start'});
+  document.querySelector('#home-goals .coach-form input')?.focus();
+});
+
+function healthHistoryViews(view, active) {
+  const nav = document.createElement('nav'); nav.className = 'dashboard-history-links';
+  nav.setAttribute('aria-label', 'Health history views');
+  for (const [key,label] of [['timeline','Timeline'],['records','Records']]) {
+    const link = document.createElement('a'); link.href = '/'+key; link.textContent = label;
+    if (active === key) link.setAttribute('aria-current', 'page');
+    nav.append(link);
+  }
+  view.prepend(nav);
+}
+document.querySelector('#dashboard-tools').addEventListener('toggle', () => {
+  if (document.querySelector('#dashboard-tools').open) window.StellisCalendar?.refresh();
+});

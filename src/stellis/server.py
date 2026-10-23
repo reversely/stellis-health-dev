@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
+from stellis import dashboard, notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -2084,6 +2084,22 @@ def apply_sorting(request: SortGroup):
 def move_record(kind: str, item_id: str, request: RecordMove):
     _agent_result(lambda: sorting.move(kind, item_id, request.notebook_id))
     return {"kind": kind, "id": item_id, "notebook_id": request.notebook_id}
+
+
+class DashboardChoices(BaseModel):
+    notebooks: list[str] = Field(max_length=3)
+    measurements: list[str] = Field(max_length=3)
+    care_contexts: list[str] = Field(max_length=3)
+
+
+@api.get("/dashboard/preferences")
+def dashboard_preferences():
+    return dashboard.preferences()
+
+
+@api.put("/dashboard/preferences")
+def save_dashboard_preferences(request: DashboardChoices):
+    return _agent_result(lambda: dashboard.save(request.model_dump()))
 
 
 @api.get("/summary")
