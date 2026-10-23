@@ -14,7 +14,7 @@ flowchart LR
     Facts --> Views
 ```
 
-Notebook rows retain template identity, description, version, archive state, optional feature preferences and recommendation evidence. `notebook_record_links` provides additional notebook associations without copying records. Primary notebook fields remain compatible with recording destinations and explicit moves. Source listings, notebook projections, contextual search and timelines include the additional associations. Existing titles and collections survive migration. The health view derives facts and measurement points from associated documents. Registered capabilities activate only when supported data exists; no new clinical assessment engine is introduced. See [health catalogue](health-catalogue.md).
+Notebook rows retain template identity, description, version, archive state, optional feature preferences and recommendation evidence. `notebook_record_links` provides additional notebook associations without copying records. Primary notebook fields remain compatible with recording destinations and explicit moves. Source listings, notebook projections, contextual search and timelines include the additional associations. Existing titles and collections survive migration. The health view derives facts from associated documents and projects confirmed readings and entered appointments through shared account-local stores. Registered capabilities activate only when supported data exists; no new clinical assessment engine is introduced. See [health catalogue](health-catalogue.md).
 
 # Current architecture (development)
 
@@ -23,6 +23,27 @@ Notebook rows retain template identity, description, version, archive state, opt
 `health-dashboard.js` composes five previews from the existing summary, accepted facts, readings, timeline, calendar and saved-task APIs. Account-local `dashboard_preferences` stores up to three notebook IDs, measurement keys and active-care notebook IDs through `GET` and `PUT /dashboard/preferences`. Validation rejects unavailable IDs and duplicate or oversized selections; archived notebooks disappear from previews without changing their records.
 
 The dashboard retains original source links and does not generate clinical claims. Calendar appointments, dated records and saved plans keep separate status labels. Calendar loading proceeds separately from local data. The initial browser route waits for deferred UI modules before using their exports. Full detail pages and legacy capture/review controls remain available. See [dashboard evidence](evidence/121/README.md).
+
+## Global health capture
+
+`health-capture.js` serves the toolbar, mobile Add slot and Ask Stellis composer with one contextual dialog. Uploads, recording, manual readings and check-ins reuse their existing services. `POST /photo-readings/{document_id}/extract?measure=...` reads a retained image through the existing bounded OCR service and returns candidate values without saving readings. `POST /photo-readings` validates the reviewed unit, converts to canonical units and saves through `readings.add`. Readings retain optional notebook and source-document foreign keys and a unique capture retry key. Confirmation serializes its identity check and insert in one transaction. Source deletion clears the link while retaining the value. Temperature joins the registered measures.
+
+`GET` and `POST /care-events` plus `DELETE /care-events/{id}` manage account-local scheduled or planned appointments. Events retain timezone-aware start times, notes and optional notebooks. Timeline adds reading and event projections; notebook health projects entered readings and appointments alongside accepted source facts. Upcoming uses event status as entered and preserves calendar provenance. Capture dialogs render source text through text nodes.
+
+```mermaid
+flowchart LR
+    Add[Global Add and Ask Stellis] --> Context[Notebook or general history]
+    Context --> Existing[Upload recording manual entry and check-ins]
+    Context --> Photo[Original image and bounded OCR]
+    Photo --> Review[Candidate review and correction]
+    Review --> Readings[Confirmed readings with retry identity]
+    Context --> Events[Scheduled or planned appointments]
+    Readings --> Views[Trends Timeline My Health and notebooks]
+    Events --> Views
+    Existing --> Views
+```
+
+See [capture evidence](evidence/123/README.md).
 
 ## Health navigation
 
