@@ -29,10 +29,24 @@
       }
       details.append(list);host.append(details);
     }
+    if(context.active_features.includes('care_schedule')) {
+      const details=el('details');details.append(el('summary','Appointments'));
+      const list=el('ul');
+      for(const item of context.care_schedule) {
+        const row=el('li');const a=el('a',item.title+' '+new Date(item.starts_at).toLocaleString());a.href=item.target;
+        row.append(a,el('span',' '+(item.status==='scheduled'?'Scheduled':'Planned')));list.append(row);
+      }
+      details.append(list);host.append(details);
+    }
     if(context.active_features.includes('trends')) {
       const details=el('details');details.append(el('summary','Measurements'));
       const list=el('ul');
-      for(const point of context.measurements) list.append(el('li',[point.time,point.measure,point.value,point.value2,point.unit].filter(x=>x!=null).join(' ')));
+      for(const point of context.measurements) {
+        const value=[point.value,point.value2].filter(v=>v!=null).join('/');
+        const row=el('li');row.append(el('span',[new Date(point.time).toLocaleDateString(),point.label,value,point.unit].join(' ')));
+        if(point.target){const source=el('a',' Source');source.href=point.target;row.append(source);}
+        list.append(row);
+      }
       details.append(list);host.append(details);
     }
   }

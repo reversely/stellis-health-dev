@@ -1,4 +1,4 @@
-"""The health timeline: documents, recordings and accepted facts by date.
+"""The health timeline: sources, accepted facts, entered readings and events.
 
 Each entry sorts by its clinical date: a document's record date, a
 recording's capture date and a fact's own date. Upload time counts only when a
@@ -7,11 +7,12 @@ record has no other date.
 
 from __future__ import annotations
 
+from stellis import care_events, readings
 from stellis import documents
 from stellis import health_facts
 from stellis import storage
 
-KINDS = ("document", "recording", "fact")
+KINDS = ("document", "recording", "fact", "reading", "event")
 
 
 def _date(*values: object) -> str:
@@ -59,6 +60,19 @@ def _facts() -> list[dict[str, object]]:
     } for fact in health_facts.accepted()]
 
 
+def _readings():
+    return [{'kind':'reading', 'date':str(p['time'])[:10],
+             'title':readings.MEASURES[p['measure']].label,
+             'detail':' / '.join(str(v) for v in (p['value'],p['value2']) if v is not None)+' '+readings.MEASURES[p['measure']].unit,
+             'source':p['title'], 'target':p['target'] or '/trends?measure='+p['measure'],
+             'notebook_id':p['notebook_id']} for p in readings.stored_points()]
+
+
+def _events():
+    return [{**item, 'kind':'event', 'date':item['starts_at'][:10],
+             'detail':item['status'].capitalize(), 'source':'You'} for item in care_events.list_all()]
+
+
 def entries(notebook_id: str | None = None,
             kinds: tuple[str, ...] = KINDS) -> list[dict[str, object]]:
     """Lists timeline entries, newest clinical date first.
@@ -78,11 +92,13 @@ def entries(notebook_id: str | None = None,
     """
     unknown = set(kinds) - set(KINDS)
     if unknown:
-        raise ValueError("Choose documents, recordings or facts")
+        raise ValueError("Choose a timeline filter")
     readers = {
         "document": _documents,
         "recording": _recordings,
         "fact": _facts,
+        "reading": _readings,
+        "event": _events,
     }
     items = [item for kind in kinds for item in readers[kind]()]
     if notebook_id is not None:

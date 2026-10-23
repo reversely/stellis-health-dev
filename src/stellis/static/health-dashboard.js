@@ -36,7 +36,8 @@ function upcoming(meetings, entries, groups, now = new Date()) {
     target:'/'+(group.source.kind === 'page' ? 'page' : 'conversation')+'/'+encodeURIComponent(group.source.id),
   })));
   const stamp = value => new Date(value.length === 10 ? value+'T00:00:00' : value).getTime();
-  return [...scheduled, ...dated, ...planned].sort((a,b) => stamp(a.date)-stamp(b.date));
+  const entered = entries.filter(item=>item.kind==='event' && Date.parse(item.starts_at)>now.getTime()).map(item=>({...item,date:item.starts_at,status:item.status === 'scheduled'?'Scheduled':'Planned',source:'You'}));
+  return [...scheduled, ...dated, ...planned, ...entered].sort((a,b) => stamp(a.date)-stamp(b.date));
 }
 
 /** Uses the current data order unless the person saved an explicit selection. */

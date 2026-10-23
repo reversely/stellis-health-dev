@@ -19,3 +19,11 @@ test('selections retain explicit order and omit unavailable notebooks',()=>{
  assert.deepEqual(selected([{id:'b'},{id:'a'}],['a','deleted','b']),[{id:'a'},{id:'b'}]);
  assert.deepEqual(selected([{id:'a'}],[]),[]);
 });
+test('entered appointments preserve planned status and exclude elapsed starts',()=>{
+ const events=upcoming([], [
+  {kind:'event',title:'My plan',starts_at:'2026-10-24T10:00:00Z',status:'planned',target:'/?event=one'},
+  {kind:'event',title:'My appointment',starts_at:'2026-10-25T10:00:00Z',status:'scheduled',target:'/?event=two'},
+  {kind:'event',title:'Past appointment',starts_at:'2026-10-22T10:00:00Z',status:'scheduled',target:'/?event=three'},
+ ],[],new Date('2026-10-23T12:00:00Z'));
+ assert.deepEqual(events.map(e=>[e.title,e.status,e.target]),[['My plan','Planned','/?event=one'],['My appointment','Scheduled','/?event=two']]);
+});

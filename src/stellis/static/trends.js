@@ -420,6 +420,8 @@ class TrendsPage {
             value2: measure.paired ? Number(data.get('value2')) : null,
             taken_at: new Date(String(data.get('taken_at'))).toISOString(),
             note: String(data.get('note') || ''),
+            notebook_id: this.notebookId || null,
+            capture_id: this.captureId || null,
           },
         });
         this.status.textContent = `${measure.label} saved`;
@@ -555,6 +557,22 @@ function mount(host) {
 }
 
 const exported = {
+  async entryForm(host, notebookId, saved) {
+    const measures = (await root.StellisDom.api('/readings')).measures;
+    const select = document.createElement('select'); select.setAttribute('aria-label','Measurement');
+    for (const m of measures) select.add(new Option(m.label,m.key));
+    const body = document.createElement('div'); host.append(select,body);
+    const controller = Object.create(TrendsPage.prototype);
+    Object.assign(controller,{dom:root.StellisDom, notebookId, status:document.createElement('p'), load:saved});
+    const paint = () => {
+      controller.captureId = root.crypto.randomUUID();
+      const form = controller.form(measures.find(m=>m.key===select.value),()=>host.closest('dialog').close());
+      form.querySelector('.trend-save').classList.add('coach-button','is-primary');
+      form.querySelector('button:not(.trend-save)').classList.add('coach-button','is-quiet');
+      body.replaceChildren(form);
+    };
+    select.addEventListener('change',paint); paint();
+  },
   RANGES,
   dailyTotals,
   summaryText,
