@@ -841,6 +841,27 @@ def onboarding_state(request: Request):
     return onboarding.status(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)))
 
 
+@api.get("/onboarding/profile")
+def onboarding_profile_state():
+    from stellis import onboarding_profile
+    return onboarding_profile.status()
+
+
+class ProfileAnswer(BaseModel):
+    field: str = Field(max_length=40)
+    value: str | list[str] | None = None
+
+
+@api.put("/onboarding/profile")
+def onboarding_profile_answer(answer: ProfileAnswer, request: Request):
+    from stellis import onboarding_profile
+    try:
+        return onboarding_profile.save(auth.current_account_id(request.cookies.get(auth.COOKIE_NAME)),
+                                       answer.field, answer.value)
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @api.put("/onboarding")
 def onboarding_choices(choices: OnboardingChoices, request: Request):
     from stellis import onboarding
@@ -959,6 +980,13 @@ class IntakeAnswer(BaseModel):
 def intake_state():
     from stellis import intake, intake_voice
     return {**intake.load(), "voice": intake_voice.status(), "agent_name": intake.AGENT_NAME}
+
+
+@api.get("/intake/library")
+def intake_library_search(category: Literal["goals", "health", "medicines"] = "goals",
+                          q: str = Query(default="", max_length=100)):
+    from stellis import intake_library
+    return intake_library.search(category, q)
 
 
 @api.put("/intake/notes")
@@ -1107,6 +1135,17 @@ async def _run_call(websocket: WebSocket, script) -> None:
 app.add_api_websocket_route("/api/v1/intake/call", intake_call)
 app.add_api_websocket_route("/api/v1/coach/call", coach_call)
 app.add_api_websocket_route("/api/v1/tour/call", tour_call)
+
+
+@app.websocket("/api/v1/onboarding/profile/call")
+async def profile_call(websocket: WebSocket):
+    from stellis import onboarding_profile
+    try:
+        script = onboarding_profile.VoiceField(websocket.query_params.get("field", "name"))
+    except ValueError:
+        await websocket.close(code=4400)
+        return
+    await _run_call(websocket, script)
 
 
 class MorningAnswer(BaseModel):

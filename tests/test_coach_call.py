@@ -126,7 +126,9 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
 
         pieces = await self.turn("No, that's all", Model([{"name": "end_call", "arguments": {}}]))
 
-        self.assertEqual(pieces, ["Have a nice day.", coach_call.END_MARK])
+        self.assertEqual(pieces[-1], coach_call.END_MARK)
+        self.assertIn("My Health", " ".join(pieces))
+        self.assertIn("Goodbye", " ".join(pieces))
 
     async def test_bad_tool_calls_do_nothing(self):
         await self.start("call", "10:00")
@@ -191,7 +193,7 @@ class CoachCallSocketTest(unittest.TestCase):
         self.assertEqual(actions[0]["values"]["title"], "Meditate 10 minutes")
         latest = self.client.get("/api/v1/coach", params={"today": TODAY, "now": "10:30"}).json()
         self.assertTrue(latest["latest"]["ended_at"])
-        self.assertEqual(latest["latest"]["turns"][-1]["text"], "Have a nice day.")
+        self.assertIn("Goodbye", latest["latest"]["turns"][-1]["text"])
         self.assertEqual(len(model.sent), 1)
         self.assertEqual(self.client.post("/api/v1/coach/morning",
                                           json={"day": TODAY, "answer": "declined"}).status_code, 200)

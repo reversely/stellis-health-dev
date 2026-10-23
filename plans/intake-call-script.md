@@ -1,10 +1,12 @@
 # Intake call script: Denver Lang
 
-This script is the acceptance script for O-01. The call follows a fixed plan: Stellis states the purpose of the call and asks three questions, one each about the person's goal, their conditions and medicines, and reminders. Stellis asks no follow-up questions: any answer completes its topic. After the third answer, Stellis sums up in one sentence, asks the person to press Continue, and ends the call. The person corrects anything in the notepad. The simulated call test (`tests/test_intake.py`) speaks Denver's lines through the real speech pipeline and checks the transcript, the notepad and the proposed notebooks against this script. The source is `tests/fixtures/intake_denver.json`.
+This synthetic script is one acceptance example for O-01. Stellis invites health goals and covers goals, health context and reminders through conversation. Topics complete only after sufficient information or an explicit skip. Questions and ambiguous replies can lead to useful clarification. The model completes topics explicitly and requests a closing handoff with a reason, the Add records action and a goodbye. A larger bounded turn budget triggers the same spoken handoff. The source is `tests/fixtures/intake_denver.json`.
+
+Guided setup starts with a confirmed name and personal preferences before suggesting notebooks. The optional health library offers goal categories, health topics and a local RxTerms medicine search. Selecting a term prepares an editable answer and does not confirm a diagnosis, medicine use or dose.
 
 ## Turn 1
 
-**Stellis:** Hi, I'm Stellis. I'll ask three quick questions, about your goal, your health and reminders, and take notes you can edit. First, what's the main health goal you'd like help with?
+**Stellis:** Hi, I'm Stellis. Let's talk about your health goals. I'll take notes you can edit. What would you like help with?
 
 **Denver:** Keeping the weight off. I've lost about eight kilos since April last year, and I'd like my knees to stop hurting on the stairs.
 
@@ -41,7 +43,7 @@ Notepad after this turn:
 
 ## Turn 4
 
-**Stellis:** Thanks, Denver. You want to keep the weight off and ease your knees, you manage diabetes and blood pressure, and you'd like a Monday weigh-in reminder. You can edit your notes, then press Continue to add your records.
+**Stellis:** We've covered your goals, health context and reminders. You can review your notes, then choose Add records to continue setup. Thanks for talking with me. Goodbye.
 
 The call ends after this turn.
 

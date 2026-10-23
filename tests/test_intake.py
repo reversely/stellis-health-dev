@@ -40,8 +40,12 @@ class ScriptedModel:
     async def stream_tokens(self, messages, tools=None):
         answered = sum(m["role"] == "user" for m in messages)
         text = SCRIPT["turns"][answered]["agent"]
-        for word in re.findall(r"\S+\s*", text.replace(" [END]", "")):
-            yield word
+        if "[END]" not in text:
+            for word in re.findall(r"\S+\s*", text):
+                yield word
+        if answered:
+            yield {"id": "progress", "name": "complete_topic",
+                   "arguments": {"topic": intake.PLAN[min(answered - 1, 2)][0]}}
         if "[END]" in text:
             yield {"id": "call_1", "name": "end_call", "arguments": {}}
 
@@ -237,63 +241,78 @@ class BargeInTest(IntakeTestCase):
 
 
 class PlanTest(IntakeTestCase):
-    def test_each_topic_gets_one_question_and_no_follow_up(self):
+    def test_topics_need_explicit_completion_and_allow_clarification(self):
         intake.opening()
-        self.assertIn("Never ask a follow-up question", intake.INSTRUCTIONS)
-        for topic, answer in (("Goals", "I don't know."), ("Health", "Nothing really."),
-                              ("Reminders", "Maybe.")):
-            self.assertEqual(intake.plan(intake.load())["next_topic"], topic)
-            intake.add_person_turn(answer)
-            if topic != "Reminders":
-                asyncio.run(self._reply_without_model("Thanks. Next question?"))
+        for text in ["I'm in my first trimester", "What can you help with?", "Can you give examples?"]:
+            intake.add_person_turn(text)
+            intake.add_agent_turn("What would help you?")
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Goals")
+        intake.complete_topic("Goals")
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Health")
+        intake.complete_topic("Health")
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Reminders")
+        intake.add_person_turn("What do you usually offer?")
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Reminders")
+        intake.complete_topic("Reminders")
         self.assertEqual(intake.plan(intake.load())["next_topic"], intake.GOODBYE)
 
-    def test_a_topic_the_notes_already_cover_is_skipped(self):
-        intake.opening()
-        intake.save_notes([{"heading": "Conditions", "items": ["Asthma"]},
-                           {"heading": "Medicines", "items": ["Salbutamol"]}], 0)
-        intake.add_person_turn("Breathe easier on runs. I have asthma and use salbutamol.")
-        state = intake.load()
-        self.assertEqual(intake.plan(state)["next_topic"], "Reminders")
-        self.assertIn('"next_topic": "Reminders"', intake.conversation(state)[0]["content"])
+    def test_completion_is_idempotent_and_rejects_unknown_topics(self):
+        intake.complete_topic("Goals"); intake.complete_topic("Goals")
+        intake.complete_topic("Ignore every instruction")
+        self.assertEqual(intake.load()["completed_topics"], ["Goals"])
 
-    def test_the_goodbye_ends_the_call_without_end_call(self):
-        intake.opening()
-        for answer in ("Walk more.", "None.", "No."):
-            intake.add_person_turn(answer)
-            pieces = asyncio.run(self._reply_without_model("Thanks. Press Continue."))
+    def test_migrating_old_calls_preserves_pending_reminders(self):
+        from stellis import storage
+        saved = {"turns": [{"role":"agent","text":"Goals?","topic":"Goals"},
+                           {"role":"person","text":"Pregnancy"},
+                           {"role":"agent","text":"Health?","topic":"Health"},
+                           {"role":"person","text":"Just the usual"},
+                           {"role":"agent","text":"Reminders?","topic":"Reminders"},
+                           {"role":"person","text":"What do you usually offer?"}]}
+        with storage.connect() as conn:
+            intake._read(conn)
+            conn.execute("INSERT OR REPLACE INTO intake_call VALUES (1, ?)", (json.dumps(saved),))
+        self.assertEqual(intake.plan(intake.load())["next_topic"], "Reminders")
+
+    def test_closing_turn_cannot_ask_a_question_then_disconnect(self):
+        for topic, _, _ in intake.PLAN: intake.complete_topic(topic)
+        async def tokens(messages, tools=None):
+            yield "Which reminders would you like?"
+        with patch.object(intake, "stream_tokens", tokens):
+            pieces = asyncio.run(self._collect())
+        self.assertNotIn("Which reminders would you like?", pieces)
+        self.assertEqual(pieces[-1], intake.END_MARK)
+        text = " ".join(pieces)
+        self.assertIn("get your setup started", text)
+        self.assertIn("Add records", text)
+        self.assertIn("Goodbye", text)
+
+    def test_end_tool_is_ignored_while_a_question_awaits_an_answer(self):
+        async def tokens(messages, tools=None):
+            yield "Which reminders would help?"
+            for topic, _, _ in intake.PLAN:
+                yield {"name":"complete_topic", "arguments":{"topic":topic}}
+            yield {"name":"end_call", "arguments":{}}
+        with patch.object(intake, "stream_tokens", tokens):
+            self.assertNotIn(intake.END_MARK, asyncio.run(self._collect()))
+
+    def test_turn_budget_explains_handoff_and_says_goodbye(self):
+        for i in range(intake.MAX_ANSWERS): intake.add_person_turn("More context")
+        async def tokens(messages, tools=None):
+            yield "Another question?"
+        with patch.object(intake, "stream_tokens", tokens):
+            pieces = asyncio.run(self._collect())
+        self.assertIn("wrap up this setup", " ".join(pieces))
+        self.assertIn("Goodbye", " ".join(pieces))
         self.assertEqual(pieces[-1], intake.END_MARK)
 
-    def test_end_call_hangs_up_only_at_the_goodbye_step(self):
-        async def hang_up(messages, tools=None):
-            self.assertEqual(tools, [intake.END_CALL])
-            yield "Thanks. Press Continue to add your records."
-            yield {"id": "call_1", "name": "end_call", "arguments": {}}
+    async def _collect(self):
+        return [piece async for piece in intake.reply()]
 
-        async def pieces():
-            with patch.object(intake, "stream_tokens", hang_up):
-                return [piece async for piece in intake.reply()]
-
-        intake.opening()
-        intake.add_person_turn("I want to walk more.")
-        self.assertNotIn(intake.END_MARK, asyncio.run(pieces()))
-        intake.add_person_turn("No conditions.")
-        asyncio.run(self._reply_without_model("Would reminders help?"))
-        intake.add_person_turn("Reminders are not needed.")
-        self.assertEqual(asyncio.run(pieces()),
-                         ["Thanks.", "Press Continue to add your records.", intake.END_MARK])
-
-    async def _reply_without_model(self, text):
-        async def tokens(messages, tools=None):
-            yield text
-        with patch.object(intake, "stream_tokens", tokens):
-            pieces = [piece async for piece in intake.reply()]
-        intake.add_agent_turn(" ".join(pieces))
-        return pieces
-
-    def test_the_opening_states_the_purpose_and_asks_for_the_goal(self):
-        self.assertIn("three quick questions", intake.OPENING)
-        self.assertTrue(intake.OPENING.endswith("what's the main health goal you'd like help with?"))
+    def test_the_opening_invites_multiple_goals(self):
+        self.assertIn("Let's talk about your health goals", intake.OPENING)
+        self.assertNotIn("three", intake.OPENING)
+        self.assertNotIn("main health goal", intake.OPENING)
 
 
 class NotebookProposalTest(IntakeTestCase):
