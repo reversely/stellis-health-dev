@@ -440,6 +440,8 @@
 }
 
 @media (max-width: 760px) {
+  /* Keep the composer below the log when the panels stack. */
+  .nb-composer { position: static; }
   .notebook-chat,
   .notebook-chat[data-sources='closed'] {
     grid-template-columns: minmax(0, 1fr);

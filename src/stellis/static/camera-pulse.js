@@ -1178,7 +1178,7 @@ const MEASURE_KEYS = Object.freeze(['pulse', 'breathing_rate', 'hrv']);
  */
 function logButton(onSaved, measures, className) {
   const dom = root.StellisDom;
-  const button = dom.button(null, className);
+  const button = dom.button(null, className + ' invert-button');
   button.append(dom.icon('camera'), dom.el('span', 'Log vital signs'));
   button.disabled = !supported();
   if (button.disabled) button.title = 'Camera access is unavailable in this browser';

@@ -12,7 +12,6 @@
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: var(--shadow);
-  animation: coach-arrive 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .coach-incoming-face {
   position: relative;
@@ -26,8 +25,7 @@
   inset: 0;
   border: 2px solid var(--accent-ink);
   border-radius: 50%;
-  opacity: 0;
-  animation: coach-ring 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  opacity: 0.35;
 }
 .coach-incoming-text {
   display: grid;
@@ -73,23 +71,6 @@
   color: var(--accent-ink);
   opacity: 0.85;
 }
-@keyframes coach-ring {
-  0% {
-    opacity: 0.7;
-    scale: 0.7;
-  }
-  100% {
-    opacity: 0;
-    scale: 1.15;
-  }
-}
-@keyframes coach-arrive {
-  from {
-    opacity: 0;
-    translate: 0 12px;
-  }
-}
-
 .coach-call-start {
   margin-left: auto;
 }
@@ -110,7 +91,6 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow);
-  animation: coach-arrive 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .coach-call-head {
   display: flex;
@@ -149,8 +129,8 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
@@ -168,9 +148,9 @@
   color: var(--accent-ink);
 }
 .coach-call-icon.is-end {
-  border-color: var(--failure);
-  background: var(--failure);
-  color: #fff;
+  border-color: var(--action-danger-fill);
+  background: var(--action-danger-fill);
+  color: var(--action-danger-ink);
 }
 .coach-call-icon[hidden] {
   display: none;

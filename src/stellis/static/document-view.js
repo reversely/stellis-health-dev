@@ -92,7 +92,7 @@ function pageControls(section, host, record, page, onChanged) {
     }
   };
   if (!page.text) {
-    const read = dom.button('Read text');
+    const read = dom.button('Read text', 'invert-button');
     read.addEventListener('click', async () => {
       read.disabled = true;
       status.textContent = 'Reading this page';
@@ -117,7 +117,7 @@ function pageControls(section, host, record, page, onChanged) {
       input.value = page.text;
       input.maxLength = 100000;
       input.rows = 10;
-      const save = dom.button('Save text');
+      const save = dom.button('Save text', 'invert-button');
       const cancel = dom.button('Cancel');
       const buttons = dom.el('div', null, 'document-actions');
       buttons.append(save, cancel);
