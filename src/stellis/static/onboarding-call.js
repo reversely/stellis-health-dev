@@ -2,20 +2,14 @@
  * @fileoverview Setup step 2: the intake call. The call panel shows the
  * agent, a timer and the call controls; the notepad beside it fills in as
  * the person talks and stays editable, with the transcript behind it. The
- * call can shrink to a floating card so the notes take the screen.
+ * call can shrink to a compact panel beside the notes.
  */
 (function(root) {
 'use strict';
 
-const STATUS = {
-  ready: 'Ready when you are',
-  connecting: 'Connecting',
-  listening: 'Listening',
-  thinking: 'Thinking',
-  speaking: 'Speaking',
-  typing: 'Type your answers below',
-  ended: 'Call ended. Press Continue to add your records.',
-  lost: "Sorry we couldn't reach the agent",
+const STATUS = {...root.StellisIntakeCall.STATUS,
+  typing:'Type your answers below',
+  ended:'Call ended. Press Continue to add your records.',
 };
 
 /**
@@ -70,6 +64,14 @@ function render(scene, kit) {
   typeSend.type = 'submit';
   typeForm.append(typeInput, typeSend);
   typeForm.hidden = true;
+  const doneSpeaking = node('button', 'Done speaking', 'call-finish');
+  doneSpeaking.type = 'button';
+  doneSpeaking.hidden = true;
+  doneSpeaking.addEventListener('click', () => call?.finishAnswer());
+  const retryReply = node('button', 'Retry reply', 'call-retry');
+  retryReply.type = 'button';
+  retryReply.hidden = true;
+  retryReply.addEventListener('click', () => call?.retryReply());
   const mute = control('microphone', 'Mute');
   const sound = control('volume', 'Speaker');
   const hangUp = control('phone-off', 'End');
@@ -78,7 +80,7 @@ function render(scene, kit) {
   controls.append(mute, sound, hangUp);
   controls.hidden = true;
   panel.append(
-      shrink, face, name, status, timer, caption, startButton, typeForm,
+      shrink, face, name, status, timer, caption, startButton, doneSpeaking, retryReply, typeForm,
       controls);
 
   // The notepad, with the transcript behind it.
@@ -145,8 +147,10 @@ function render(scene, kit) {
   }
 
   function setStatus(key) {
+    if (panel.dataset.state === 'ending' && !['ended','lost'].includes(key)) return;
     status.textContent = STATUS[key];
     panel.dataset.state = key;
+    doneSpeaking.hidden = mute.disabled || key !== 'hearing';
   }
 
   function tick() {
@@ -255,12 +259,14 @@ function render(scene, kit) {
         controls.hidden = false;
         typeForm.hidden = false;
         revision = message.revision;
+        mute.disabled = sound.disabled = !message.voice;
         paintNotes(message.notes);
         setStatus(message.voice ? 'listening' : 'typing');
         break;
       case 'mic':
         if (!message.ok) {
           mute.disabled = true;
+          doneSpeaking.hidden = true;
           setStatus('typing');
         }
         break;
@@ -276,11 +282,13 @@ function render(scene, kit) {
         // off by the person never appears there.
         caption.textContent = message.text;
         if (message.text) {
-          setStatus('speaking');
+          if (message.audio) setStatus('speaking');
           addLine('agent', message.text, message.turn);
         }
         break;
       case 'heard':
+        retryReply.hidden = true;
+        kit.error('');
         // A continued answer drops the reply the agent had started to it.
         transcript.querySelector(`[data-agent-turn="${message.turn}"]`)
             ?.remove();
@@ -294,11 +302,20 @@ function render(scene, kit) {
         const level = Math.min(
             1, (message.speaking ? message.agent : message.person) * 6);
         ring.style.setProperty('--level', level.toFixed(3));
-        if (!message.speaking && panel.dataset.state === 'speaking')
-          setStatus('listening');
         break;
       }
+      case 'retrying':
+        retryReply.hidden = true;
+        kit.error('');
+        transcript.querySelector(`[data-agent-turn="${message.turn}"]`)?.remove();
+        break;
+      case 'ending':
+        retryReply.hidden = true;
+        typeForm.hidden = true;
+        setStatus('ending');
+        break;
       case 'error':
+        retryReply.hidden = !message.retryable;
         kit.error(message.message);
         break;
       case 'ended':
@@ -323,12 +340,15 @@ function render(scene, kit) {
     setStatus(key);
     caption.textContent = '';
     controls.hidden = true;
+    retryReply.hidden = true;
+    doneSpeaking.hidden = true;
     typeForm.hidden = true;
     startButton.hidden = key === 'ended';
     startButton.querySelector('span').textContent = 'Call again';
     ring.style.setProperty('--level', '0');
     next.classList.toggle('is-next', key === 'ended');
-    await api('/intake/end', 'POST');
+    next.textContent = key === 'ended' ? 'Add records' : 'Continue';
+    try { await api('/intake/end', 'POST'); } catch (e) { kit.error(e.message); }
   }
 
   startButton.addEventListener('click', () => {
@@ -359,7 +379,7 @@ function render(scene, kit) {
     typeInput.value = '';
   });
 
-  /** Swaps between the full call and the floating card. */
+  /** Swaps between the full call and the compact panel. */
   function setMinimised(value) {
     const apply = () => {
       scene.classList.toggle('is-minimised', value);

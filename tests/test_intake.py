@@ -279,7 +279,7 @@ class PlanTest(IntakeTestCase):
         self.assertNotIn(intake.END_MARK, asyncio.run(pieces()))
         intake.add_person_turn("No conditions.")
         asyncio.run(self._reply_without_model("Would reminders help?"))
-        intake.add_person_turn("No, that's all.")
+        intake.add_person_turn("Reminders are not needed.")
         self.assertEqual(asyncio.run(pieces()),
                          ["Thanks.", "Press Continue to add your records.", intake.END_MARK])
 

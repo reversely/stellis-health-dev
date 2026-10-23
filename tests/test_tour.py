@@ -117,6 +117,18 @@ class TourSocketTest(unittest.TestCase):
         self.assertEqual(messages[1]["step"], "overview")
         self.assertTrue(messages[2]["text"].startswith("Hi again"))
 
+    def test_text_only_tour_skips_models_and_retains_origin_checks(self):
+        from stellis import intake_voice
+        from starlette.websockets import WebSocketDisconnect
+        with mock.patch.object(intake_voice, 'acquire') as acquire:
+            with self.client.websocket_connect('/api/v1/tour/call?voice=0') as socket:
+                self.assertFalse(socket.receive_json()['voice'])
+            acquire.assert_not_called()
+        with self.assertRaises(WebSocketDisconnect) as caught:
+            with self.client.websocket_connect('/api/v1/tour/call?voice=0', headers={'origin':'https://unrelated.invalid'}) as socket:
+                socket.receive_json()
+        self.assertEqual(caught.exception.code, 4401)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,6 +6,12 @@
  */
 (function(root) {
 'use strict';
+const STATUS = Object.freeze({
+  ready:'Ready when you are', connecting:'Connecting', listening:'Listening',
+  hearing:'Hearing you', transcribing:'Processing your answer', thinking:'Thinking',
+  speaking:'Speaking', ending:'Finishing the call', typing:'Type your answer below',
+  ended:'Call ended', lost:"The call disconnected",
+});
 
 /**
  * Starts a call.
@@ -17,12 +23,14 @@
  * @param {{path: (string|undefined), listen: (boolean|undefined)}=} options
  *     The call's WebSocket path, by default the intake call's, and whether
  *     to ask for the microphone; a call by text alone never asks.
- * @return {!Object} Controls: setMuted, setSpeaker, sendText, end.
+ * @return {!Object} Controls: setMuted, setSpeaker, finishAnswer, sendText, end.
  */
 function start(
     onEvent, {path = '/api/v1/intake/call', listen: useMic = true} = {}) {
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  const socket = new WebSocket(`${scheme}://${location.host}${path}`);
+  const address = new URL(path, location.origin);
+  if (!useMic) address.searchParams.set('voice', '0');
+  const socket = new WebSocket(`${scheme}://${location.host}${address.pathname}${address.search}`);
   socket.binaryType = 'arraybuffer';
   const context = new AudioContext();
   const output = context.createGain();
@@ -34,10 +42,16 @@ function start(
   let sources = [];
   let pending = null;
   let muted = false;
+  let speakerEnabled = true;
   let stream = null;
   let worklet = null;
   let personLevel = 0;
   let closed = false;
+  let finishing = false;
+  let voiceAvailable = true;
+  let finishRequested = false;
+  let finished = false;
+  let idleState = null;
   const timers = new Set();
 
   const later = (fn, ms) => {
@@ -61,7 +75,9 @@ function start(
           channelCount: 1
         },
       });
+      if (closed || finishing || !voiceAvailable) {stopMicrophone(); return;}
       await context.audioWorklet.addModule('/static/intake-mic.worklet.js');
+      if (closed || finishing || !voiceAvailable) {stopMicrophone(); return;}
       worklet = new AudioWorkletNode(context, 'stellis-mic');
       worklet.port.onmessage = ({data}) => {
         personLevel = muted ? 0 : data.level;
@@ -71,7 +87,9 @@ function start(
       context.createMediaStreamSource(stream).connect(worklet);
       onEvent({type: 'mic', ok: true});
     } catch {
-      onEvent({type: 'mic', ok: false});
+      voiceAvailable = false;
+      stopMicrophone();
+      if (!closed && !finishing) onEvent({type: 'mic', ok: false});
     }
   }
 
@@ -90,24 +108,45 @@ function start(
     sources.push(source);
     source.onended = () => {
       sources = sources.filter((item) => item !== source);
-      if (!sources.length) send({type: 'played'});
+      if (!sources.length) {
+        send({type: 'played'});
+        if (finishRequested) finishWhenDrained();
+        else if (idleState) {onEvent(idleState); idleState = null;}
+        else if (!finishing) onEvent({type:'state', state:'thinking'});
+      }
     };
     const wait = (at - context.currentTime) * 1000;
     later(() => {
-      onEvent({type: 'caption', text: piece.text, turn: piece.turn});
+      onEvent({type: 'caption', text: piece.text, turn: piece.turn, audio:true});
       if (piece.first) send({type: 'playing', turn: piece.turn});
     }, wait);
   }
 
+  function stopMicrophone() {
+    for (const track of stream?.getTracks() || []) track.stop();
+    worklet?.disconnect();
+    personLevel = 0;
+  }
+
+  function finishWhenDrained() {
+    if (!finishRequested || sources.length || closed || finished) return;
+    finished = true;
+    onEvent({type:'ended'});
+  }
+
   function stopSpeech() {
+    lastTurn = -1;
     for (const source of sources) {
       try {
+        source.onended = null;
         source.stop();
       } catch {
         // A source that already ended needs no stop.
       }
     }
     sources = [];
+    pending = null;
+    idleState = null;
     playhead = 0;
     for (const id of timers) clearTimeout(id);
     timers.clear();
@@ -116,34 +155,56 @@ function start(
 
   let lastTurn = -1;
   socket.onmessage = ({data}) => {
+    if (closed) return;
     if (data instanceof ArrayBuffer) {
       if (pending) play(data, pending);
       pending = null;
       return;
     }
     const message = JSON.parse(data);
+    if (message.type === 'ready') {
+      voiceAvailable = Boolean(message.voice);
+      if (useMic && voiceAvailable) listen();
+    }
     if (message.type === 'say') {
       const first = message.turn !== lastTurn;
       lastTurn = message.turn;
       if (message.audio) {
         pending = {...message, first};
       } else {
-        onEvent({type: 'caption', text: message.text, turn: message.turn});
+        onEvent({type: 'caption', text: message.text, turn: message.turn, audio:false});
       }
-    } else if (message.type === 'stop') {
+    } else if (message.type === 'retrying') {
       stopSpeech();
-    } else if (message.type === 'ended') {
-      const left = Math.max(0, playhead - context.currentTime) * 1000;
-      later(() => onEvent({type: 'ended'}), left + 400);
+    } else if (message.type === 'mic' && !message.ok) {
+      voiceAvailable = false;
+      stopMicrophone();
+    } else if (message.type === 'stop') {
+      if (!finishing) stopSpeech();
+    } else if (message.type === 'ending' || message.type === 'ended') {
+      if (!finishing) {
+        finishing = true;
+        stopMicrophone();
+        onEvent({type:'ending'});
+      }
+      if (message.type === 'ended') {
+        finishRequested = true;
+        finishWhenDrained();
+      }
       return;
+    } else if (message.type === 'state') {
+      if (finishing) return;
+      if (message.state === 'listening' || message.state === 'hearing') {
+        if (sources.length || pending) {idleState = message; return;}
+      } else idleState = null;
     }
     onEvent(message);
   };
   socket.onopen = () => {
-    if (useMic) listen();
+    send({type:'speaker', on:speakerEnabled && useMic});
   };
   socket.onclose = () => {
-    if (!closed) onEvent({type: 'closed'});
+    if (!closed && !finishing) onEvent({type: 'closed'});
   };
 
   const levels = new Uint8Array(meter.fftSize);
@@ -170,12 +231,19 @@ function start(
     },
     /** @param {boolean} value */
     setSpeaker(value) {
+      speakerEnabled = value;
       output.gain.value = value ? 1 : 0;
       send({type: 'speaker', on: value});
     },
+    retryReply() {
+      if (!finishing) send({type:'retry_reply'});
+    },
+    finishAnswer() {
+      send({type: 'finish_answer'});
+    },
     /** @param {string} text */
     sendText(text) {
-      send({type: 'text', text});
+      if (!finishing) send({type: 'text', text});
     },
     end() {
       closed = true;
@@ -188,5 +256,5 @@ function start(
   };
 }
 
-root.StellisIntakeCall = {start};
+root.StellisIntakeCall = {start, STATUS};
 })(window);

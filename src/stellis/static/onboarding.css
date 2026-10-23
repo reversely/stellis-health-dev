@@ -97,7 +97,7 @@
 .setup-record-book{grid-template-columns:1fr;gap:12px;padding:18px;border:1px solid var(--line);border-radius:12px;transition:opacity 150ms}.setup-record-book:first-of-type{border-top:1px solid var(--line)}.setup-record-book.is-left-out{opacity:.55}
 
 /* Intake call: a dark call panel beside the notepad on desktop, stacked on
-   phones. Minimised, the call becomes a floating card over the notes. */
+   phones. The compact call keeps the notes visible. */
 .setup-call {
   --call-bg: oklch(0.22 0.02 300);
   --call-ink: oklch(0.97 0.005 300);
@@ -116,6 +116,8 @@
   margin-top: 24px;
 }
 .call-panel {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   position: relative;
   display: grid;
   justify-items: center;
@@ -169,6 +171,7 @@
 }
 .onboarding-page .call-caption {
   min-height: 3.2em;
+  color: var(--call-ink);
   max-width: 34ch;
   margin: 8px 0 0;
   text-align: center;
@@ -234,10 +237,13 @@
 .call-type {
   display: flex;
   gap: 8px;
-  width: min(100%, 360px);
+  width: 100%;
+  max-width: 360px;
+  min-width: 0;
   margin-top: 8px;
 }
 .onboarding-page .call-type input {
+  width: 0;
   flex: 1;
   min-width: 0;
   border-color: color-mix(in oklch, var(--call-ink) 25%, transparent);
@@ -255,6 +261,7 @@
 
 /* Notepad. */
 .call-notepad {
+  min-width: 0;
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: 520px;
@@ -329,20 +336,19 @@
   color: var(--muted);
 }
 
-/* Minimised: notes take the screen; the call floats in a corner. */
+/* Keep the compact call in the layout so notes remain readable. */
 .setup-call.is-minimised .call-layout {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 .setup-call.is-minimised .call-panel {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 5;
+  position: static;
+  justify-self: end;
   grid-template-columns: auto 1fr auto;
   justify-items: start;
   align-items: center;
   gap: 4px 14px;
-  width: 340px;
+  width: min(340px, 100%);
+  box-sizing: border-box;
   min-height: 0;
   padding: 14px 16px;
   box-shadow: 0 18px 48px oklch(0 0 0 / 0.35);
@@ -363,7 +369,7 @@
 .setup-call.is-minimised .call-name {
   font-size: 18px;
 }
-.setup-call.is-minimised :is(.call-caption, .call-type, .call-start, .call-timer) {
+.setup-call.is-minimised :is(.call-caption, .call-type, .call-start, .call-timer, .call-finish, .call-retry) {
   display: none;
 }
 .setup-call.is-minimised .call-shrink {
@@ -386,6 +392,22 @@
 .setup-call.is-minimised .call-notepad {
   max-height: none;
   min-height: 60vh;
+}
+@media (min-width: 1100px) {
+  .setup-call.is-minimised .call-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
+  .setup-call.is-minimised .call-panel {
+    position: sticky;
+    top: 16px;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .setup-call.is-minimised .call-notepad {
+    grid-column: 1;
+    grid-row: 1;
+  }
 }
 ::view-transition-group(intake-call) {
   animation-duration: 260ms;
@@ -414,13 +436,14 @@
 
 @media (max-width: 760px) {
   .call-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
   .call-panel {
     min-height: 0;
     padding: 24px 16px;
   }
+  .setup-call:not(.is-minimised) .call-face { margin-top: 36px; }
   .call-face {
     width: 120px;
     height: 120px;
@@ -434,9 +457,6 @@
     left: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
     width: auto;
-  }
-  .setup-call.is-minimised .call-notepad {
-    margin-bottom: 150px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

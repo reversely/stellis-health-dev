@@ -192,6 +192,7 @@ class CoachCallSocketTest(unittest.TestCase):
         latest = self.client.get("/api/v1/coach", params={"today": TODAY, "now": "10:30"}).json()
         self.assertTrue(latest["latest"]["ended_at"])
         self.assertEqual(latest["latest"]["turns"][-1]["text"], "Have a nice day.")
+        self.assertEqual(len(model.sent), 1)
         self.assertEqual(self.client.post("/api/v1/coach/morning",
                                           json={"day": TODAY, "answer": "declined"}).status_code, 200)
 

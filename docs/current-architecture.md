@@ -485,3 +485,39 @@ flowchart LR
   Gateway -->|Other workspace requests| Workspace[Account workspace process]
   Workspace --> Models
 ```
+
+
+## Call recovery
+
+`intake_voice.Call` feeds completed speech segments into a bounded two-answer queue. A background task recognizes answers so the WebSocket receive loop continues handling mute, playback, typed answers and End. Recognition and synthesis each have a 15-second deadline. The model stream releases pending text and tool calls at `[DONE]` instead of awaiting HTTP closure. Reply generation allows 20 seconds for each speakable segment and 90 seconds in total. Retry reply regenerates the response to the saved answer rather than recording a duplicate answer. A failed voice operation switches that call to text; native workers may continue until their operation returns. Cancelling the async wait does not terminate native inference.
+
+The onboarding call distinguishes Listening, Hearing you and Processing your answer. Done speaking flushes the detector and resets its sample history. Unclear recognition asks the person to repeat or type an answer while echo rejection stays silent. A typed answer cancels pending recognition and clears queued answers. Existing accepted turns remain in the intake state. These safeguards also apply to calls that share the voice transport.
+
+```mermaid
+flowchart LR
+  Microphone --> Detector
+  Detector --> Queue[Two-answer queue]
+  Queue --> Recognition[Recognition task]
+  Controls[Call controls] --> Socket[Socket receive loop]
+  Socket --> Detector
+  Recognition --> Reply
+  Recognition -->|Failure or deadline| Text[Text fallback]
+```
+
+
+## Shared call completion and tour narration
+
+Intake, general calls, daily check-ins and the tour share the call transport, status labels and server completion path. Explicit whole-message requests to finish end intake and continuing calls deterministically. An ending event stops microphone capture and prevents further interruptions. The browser emits completion once after its queued audio sources finish, including when the socket closes during the goodbye. The server saves the script's end state once on completion or disconnect. Text-only calls skip voice-engine acquisition.
+
+Each registered tour action includes its title and fixed narration. The browser waits for the current target before enabling Next and shows Finish tour at the last stop. Tour navigation uses the registered text; questions alone use the language model. Registered public narration can reuse account-local WAV audio keyed by the speech route, voice and cache revision. Personal questions, answers and goals are outside this cache. A cache miss synthesizes audio with the selected backend. My Health includes an always-available Daily check-in action alongside Call Stellis.
+
+```mermaid
+flowchart LR
+  Ending[Server ending event] --> Capture[Stop microphone capture]
+  Ending --> Drain[Drain queued audio]
+  Drain --> Complete[One completion event]
+  Complete --> Next[Type-specific next action]
+  Tour[Registered tour step] --> Text[Title and narration]
+  Tour --> Cache[Public narration cache]
+  Question[User question] --> Model[Existing model route]
+```

@@ -1047,10 +1047,7 @@ async def coach_call(websocket: WebSocket) -> None:
     except ValueError:
         await websocket.close(code=4400)
         return
-    try:
-        await _run_call(websocket, script)
-    finally:
-        script.end()
+    await _run_call(websocket, script)
 
 
 async def tour_call(websocket: WebSocket) -> None:
@@ -1060,10 +1057,7 @@ async def tour_call(websocket: WebSocket) -> None:
         await websocket.close(code=4401)
         return
     await asyncio.to_thread(tour.begin)
-    try:
-        await _run_call(websocket, tour)
-    finally:
-        tour.end()
+    await _run_call(websocket, tour)
 
 
 async def _run_call(websocket: WebSocket, script) -> None:
@@ -1073,12 +1067,14 @@ async def _run_call(websocket: WebSocket, script) -> None:
         await websocket.close(code=4401)
         return
     await websocket.accept()
-    try:
-        engine = await asyncio.to_thread(intake_voice.acquire)
-    except Exception:  # Missing or unloadable models fall back to a typed call.
-        logging.getLogger(__name__).info("Call voice unavailable; the call runs by text")
-        engine = None
+    engine = None
+    if websocket.query_params.get('voice') != '0':
+        try:
+            engine = await asyncio.to_thread(intake_voice.acquire)
+        except Exception:  # Missing or unloadable models fall back to a typed call.
+            logging.getLogger(__name__).info("Call voice unavailable; the call runs by text")
     call = intake_voice.Call(websocket.send_json, websocket.send_bytes, engine, script)
+    call.speaker = websocket.query_params.get('voice') != '0'
     try:
         await call.start()
         while True:
@@ -1104,7 +1100,7 @@ async def _run_call(websocket: WebSocket, script) -> None:
             intake_voice.release()
         try:
             await websocket.close()
-        except RuntimeError:
+        except (RuntimeError, WebSocketDisconnect):
             pass
 
 
