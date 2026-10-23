@@ -17,7 +17,7 @@ const layoutAudit=process.env.STELLIS_TEST_LAYOUT_AUDIT?(await import(process.en
 const results=[];
 async function capture(state,selector) {
  if(!artifact)return;
- for(const theme of ['light','dark'])for(const width of [360,768,1024,1280,1920]) {
+ for(const theme of ['light','dark'])for(const width of [360,390,768,1024,1280,1440,1920]) {
   await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);await page.setViewportSize({width,height:1000});await page.locator(selector).evaluate(element=>element.scrollIntoView({block:'start'}));await page.waitForTimeout(500);
   if(layoutAudit)results.push({state,theme,width,...await page.evaluate(layoutAudit,{centerSelectors:[],ignoreSelectors:['#compact-nav','#rail-shader'],isNarrow:width<768})});
   await page.locator(selector).screenshot({path:`${artifact}/${state}-${theme}-${width}.png`});

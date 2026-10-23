@@ -34,7 +34,7 @@ async function screenshots(state) {
   if(!artifact)return;
   for(const theme of ['light','dark']) {
     await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
-    for(const width of [360,768,1024,1280,1920]) {
+    for(const width of [360,390,768,1024,1280,1440,1920]) {
       await page.setViewportSize({width,height:1000});
       await tracker.scrollIntoViewIfNeeded();
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${state} overflow at ${width}`);

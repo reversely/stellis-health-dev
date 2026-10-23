@@ -26,6 +26,7 @@ The cycle and calendar source came from the existing local main checkout. Onboar
 - `tests/browser/reproductive.mjs` checks logging, pack presets, doses, undo, reload, device removal and keyboard controls.
 - `tests/browser/calendar_views.mjs` checks one calendar, overlapping tracks, date selection and keyboard navigation.
 - Profile name, medicine results and multiple interests passed layout audit at 360, 390, 768, 1024, 1280, 1440 and 1920 pixels in light and dark themes with zero failures and warnings. Reports: `/tmp/stellis-profile-audit-{name,library,interests}-{light,dark}/report.md`; name dark used `/tmp/stellis-profile-audit-name/report.md`.
+- Tracker geometry ran 112 state/theme/width checks with zero failures. Three warnings report overlap with the existing fixed global Add button at the captured scroll position; this control belongs to the global capture toolbar. The report is `/tmp/stellis-integrated-cycle-shots/layout-report.json`.
 - A local medicine query measured 12.3 ms on first load and 3.3 ms warm on this machine; responses cap at 20 names. The browser debounces typing by 180 ms.
 
 Validation uses port 8842 and disposable accounts. The installed app uses port 8840 and the existing Chatterbox service on 8841. Both app and synthesis bind to loopback. See [runtime wiring](../../chatterbox-local-runtime.md).
