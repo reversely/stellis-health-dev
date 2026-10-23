@@ -10,11 +10,13 @@ const FILTERS = [
   {id: 'document', label: 'Documents'},
   {id: 'recording', label: 'Recordings'},
   {id: 'fact', label: 'Facts'},
+  {id: 'reading', label: 'Readings'},
+  {id: 'event', label: 'Appointments'},
 ];
 const ICONS = {
   document: 'file-text',
   recording: 'microphone',
-  fact: 'check'
+  fact: 'check', reading: 'activity', event: 'calendar'
 };
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',

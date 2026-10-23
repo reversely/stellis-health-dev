@@ -14,7 +14,7 @@ import datetime
 import re
 import uuid
 
-from stellis import health_facts
+from stellis import documents, health_facts
 from stellis import storage
 
 SOURCES = ("record", "self", "camera")
@@ -76,6 +76,7 @@ MEASURES = {
         Measure("sleep", "Sleep", "hours", 1, (0.5, 24), ("sleep",
                                                          "sleep duration"),
                 daily="sum"),
+        Measure("temperature", "Temperature", "°C", 1, (20, 50), ("temperature", "body temperature")),
         Measure("pain", "Pain", "of 10", 0, (0, 10), ("pain score",
                                                        "pain")),
     )
@@ -83,6 +84,7 @@ MEASURES = {
 
 
 def _create_table(conn) -> None:
+    documents._create_tables(conn)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS readings (
             id TEXT PRIMARY KEY,
@@ -94,6 +96,14 @@ def _create_table(conn) -> None:
             quality REAL,
             note TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL)""")
+
+    columns = {row['name'] for row in conn.execute('PRAGMA table_info(readings)')}
+    for name, definition in [('notebook_id','TEXT REFERENCES notebooks(id) ON DELETE SET NULL'),
+                             ('document_id','TEXT REFERENCES documents(id) ON DELETE SET NULL'),
+                             ('capture_id','TEXT')]:
+        if name not in columns:
+            conn.execute(f'ALTER TABLE readings ADD COLUMN {name} {definition}')
+    conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS reading_capture_id ON readings(capture_id) WHERE capture_id IS NOT NULL')
 
 
 def _now() -> str:
@@ -137,7 +147,8 @@ def add(measure_key: str,
         taken_at: str | None = None,
         source: str = "self",
         quality: float | None = None,
-        note: str = "") -> dict[str, object]:
+        note: str = "", *, notebook_id: str | None = None,
+        document_id: str | None = None, capture_id: str | None = None) -> dict[str, object]:
     """Stores a reading the person logged or the camera measured.
 
     Args:
@@ -148,6 +159,9 @@ def add(measure_key: str,
         source: "self" or "camera".
         quality: The camera's signal quality from 0 to 1, else None.
         note: An optional note of at most ``MAX_NOTE`` characters.
+        notebook_id: The selected active notebook or None for general history.
+        document_id: The source photo retained with a reviewed reading.
+        capture_id: A retry key for saving the same reviewed entry once.
 
     Returns:
         The stored reading as ``series`` lists it.
@@ -155,6 +169,9 @@ def add(measure_key: str,
     Raises:
         ValueError: A field is missing, out of range or malformed.
     """
+    notebook_id = notebook_id or None
+    document_id = document_id or None
+    capture_id = capture_id or None
     measure = _measure(measure_key)
     if source not in STORED_SOURCES:
         raise ValueError("Choose a self or camera reading")
@@ -172,16 +189,31 @@ def add(measure_key: str,
     note = " ".join(note.split())
     if len(note) > MAX_NOTE:
         raise ValueError(f"Keep the note under {MAX_NOTE} characters")
+    moment = _taken_at(taken_at)
     reading_id = str(uuid.uuid4())
     with storage.connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
         _create_table(conn)
+        if notebook_id and not conn.execute('SELECT id FROM notebooks WHERE id = ? AND archived_at IS NULL',(notebook_id,)).fetchone():
+            raise ValueError('Choose an available notebook')
+        if document_id and not conn.execute('SELECT id FROM documents WHERE id = ?',(document_id,)).fetchone():
+            raise LookupError('Source photo not found')
+        if capture_id:
+            previous = conn.execute('SELECT * FROM readings WHERE capture_id = ?',(capture_id,)).fetchone()
+            if previous:
+                fields = ('measure', 'value', 'value2', 'document_id', 'notebook_id', 'note', 'source')
+                values = (measure.key, value, value2, document_id, notebook_id, note, source)
+                changed = tuple(previous[field] for field in fields) != values
+                if changed or (taken_at is not None and previous['taken_at'] != moment):
+                    raise ValueError('This capture has already been saved with different values')
+                return _stored_point(previous)
         conn.execute(
             """
             INSERT INTO readings (id, measure, value, value2, taken_at,
-                source, quality, note, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (reading_id, measure.key, value, value2, _taken_at(taken_at),
-             source, quality, note, _now()))
+                source, quality, note, created_at, notebook_id, document_id, capture_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (reading_id, measure.key, value, value2, moment,
+             source, quality, note, _now(), notebook_id, document_id, capture_id))
         row = conn.execute("SELECT * FROM readings WHERE id = ?",
                            (reading_id,)).fetchone()
     return _stored_point(row)
@@ -210,8 +242,10 @@ def _stored_point(row) -> dict[str, object]:
         "source": row["source"],
         "quality": row["quality"],
         "note": row["note"],
-        "title": "Camera reading" if row["source"] == "camera" else "You",
-        "target": None,
+        "title": "Source photo" if row["document_id"] else "Camera reading" if row["source"] == "camera" else "You",
+        "notebook_id": row["notebook_id"],
+        "document_id": row["document_id"],
+        "target": "/document/" + row["document_id"] if row["document_id"] else None,
     }
 
 
@@ -387,3 +421,12 @@ def series() -> list[dict[str, object]]:
             "status": status(compared[-1], usual) if compared else "unknown",
         })
     return result
+
+
+def stored_points(notebook_id: str | None = None) -> list[dict]:
+    """Returns entered readings with their saved notebook and source links."""
+    with storage.connect() as conn:
+        _create_table(conn)
+        rows = conn.execute('SELECT * FROM readings') if notebook_id is None else conn.execute(
+            'SELECT * FROM readings WHERE notebook_id = ?', (notebook_id,))
+        return [_stored_point(row) for row in rows]

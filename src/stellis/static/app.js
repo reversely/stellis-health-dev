@@ -5011,3 +5011,16 @@ function healthHistoryViews(view, active) {
 document.querySelector('#dashboard-tools').addEventListener('toggle', () => {
   if (document.querySelector('#dashboard-tools').open) window.StellisCalendar?.refresh();
 });
+
+// Reuse the recording destination and its existing microphone lifecycle.
+window.startHealthRecording = notebookId => {
+  if (!capture) pendingNotebookId = notebookId || null;
+  document.querySelector('#record-button').click();
+};
+
+window.addEventListener('health-capture-saved', () => {
+  if (location.pathname === '/') window.StellisHealthDashboard?.mount(document.querySelector('#health-dashboard'), {books:libraryNotebooks,collections:libraryCollections});
+  const notebookId = location.pathname.match(/^\/notebook\/([^/]+)$/)?.[1];
+  if (notebookId) window.StellisNotebookHealth?.mount(document.querySelector('#notebook-health'), notebookId).catch(()=>{});
+  if (location.pathname === '/trends') window.StellisTrends?.mount(document.querySelector('#trends-view'));
+});

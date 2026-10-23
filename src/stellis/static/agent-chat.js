@@ -256,7 +256,9 @@
     send.disabled = !runtimeConfigured || !agent.enabled || section.running;
     if (!agent.enabled) state.textContent = 'Turn on this agent in Setup.';
     else if (!runtimeConfigured) state.textContent = 'Configure inference in Settings to reply.';
-    actions.append(state, send); form.append(actions);
+    const add = el('button', 'agent-capture-action', 'Add'); add.type = 'button'; add.setAttribute('aria-haspopup','dialog');
+    add.addEventListener('click',()=>window.StellisCapture.open(null,{notebookId:select.value || null}));
+    actions.append(state, add, send); form.append(actions);
     input.addEventListener('keydown', event => { if (!event.defaultPrevented && (event.metaKey || event.ctrlKey) && event.key === 'Enter' && !send.disabled) {event.preventDefault(); form.requestSubmit();} });
     form.addEventListener('submit', async event => {
       event.preventDefault(); if (send.disabled || !input.value.trim()) return;

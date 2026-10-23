@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import dashboard, notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
+from stellis import care_events, photo_readings, dashboard, notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
 app = FastAPI(title="Stellis Health", docs_url=None, redoc_url=None)
@@ -2129,6 +2129,8 @@ def health_timeline(notebook_id: str | None = None, kinds: str | None = None):
 
 
 class ReadingIn(BaseModel):
+    notebook_id: str | None = Field(default=None, max_length=80)
+    capture_id: str | None = Field(default=None, min_length=1, max_length=80)
     measure: str = Field(max_length=40)
     value: float
     value2: float | None = None
@@ -2147,7 +2149,56 @@ def list_readings():
 def add_reading(request: ReadingIn):
     return _agent_result(lambda: readings.add(
         request.measure, request.value, request.value2, request.taken_at,
-        request.source, request.quality, request.note))
+        request.source, request.quality, request.note,
+        notebook_id=request.notebook_id, capture_id=request.capture_id))
+
+
+class PhotoReadingIn(ReadingIn):
+    document_id: str = Field(max_length=80)
+    unit: str = Field(max_length=12)
+    capture_id: str = Field(min_length=1, max_length=80)
+
+
+@api.post("/photo-readings/{document_id}/extract")
+def photo_candidates(document_id: str, measure: str):
+    return _agent_result(lambda: photo_readings.extract(document_id, measure))
+
+
+@api.post("/photo-readings")
+def confirm_photo_reading(request: PhotoReadingIn):
+    def save():
+        record = documents.get(request.document_id)
+        if not record['media_type'].startswith('image/'):
+            raise ValueError('Choose a photo for a device reading')
+        value = photo_readings.normalize(request.measure, request.value, request.unit)
+        return readings.add(request.measure, value, request.value2, request.taken_at,
+                            note=request.note, notebook_id=request.notebook_id,
+                            document_id=request.document_id, capture_id=request.capture_id)
+    return _agent_result(save)
+
+
+class CareEventIn(BaseModel):
+    title: str = Field(min_length=1, max_length=180)
+    starts_at: str = Field(max_length=40)
+    status: str = Field(max_length=12)
+    notebook_id: str | None = Field(default=None, max_length=80)
+    note: str = Field(default='', max_length=1000)
+
+
+@api.get('/care-events')
+def list_care_events():
+    return {'events': care_events.list_all()}
+
+
+@api.post('/care-events')
+def add_care_event(request: CareEventIn):
+    return _agent_result(lambda: care_events.add(**request.model_dump()))
+
+
+@api.delete('/care-events/{identifier}')
+def delete_care_event(identifier: str):
+    _agent_result(lambda: care_events.delete(identifier))
+    return {'deleted': True}
 
 
 @api.delete("/readings/{reading_id}")
