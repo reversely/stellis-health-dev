@@ -485,3 +485,21 @@ flowchart LR
   Gateway -->|Other workspace requests| Workspace[Account workspace process]
   Workspace --> Models
 ```
+
+
+## Call recovery
+
+`intake_voice.Call` feeds completed speech segments into a bounded two-answer queue. A background task recognizes answers so the WebSocket receive loop continues handling mute, playback, typed answers and End. Recognition and synthesis each have a 15-second deadline. A failed voice operation switches that call to text; native workers may continue until their operation returns. Cancelling the async wait does not terminate native inference.
+
+The onboarding call distinguishes Listening, Hearing you and Processing your answer. Done speaking flushes the detector and resets its sample history. Unclear recognition asks the person to repeat or type an answer while echo rejection stays silent. A typed answer cancels pending recognition and clears queued answers. Existing accepted turns remain in the intake state. These safeguards also apply to calls that share the voice transport.
+
+```mermaid
+flowchart LR
+  Microphone --> Detector
+  Detector --> Queue[Two-answer queue]
+  Queue --> Recognition[Recognition task]
+  Controls[Call controls] --> Socket[Socket receive loop]
+  Socket --> Detector
+  Recognition --> Reply
+  Recognition -->|Failure or deadline| Text[Text fallback]
+```
