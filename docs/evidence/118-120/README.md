@@ -29,7 +29,7 @@ The layout audit covers 360, 390, 768, 1024, 1280, 1440 and 1920 pixels in both 
 - `.agents/catalogue-runtime/recovery/home-light/report.md`
 - `.agents/catalogue-runtime/recovery/home-dark/report.md`
 
-Popup audits exclude the page behind the floating call. Onboarding audits include the notes and compact call together. Decorative rail canvases are excluded. The checks include horizontal overflow, clipped text, overlap, target size and fixed popup control visibility. Screenshots were reviewed across widths and themes.
+Popup audits exclude the page behind the floating call. Onboarding audits include the notes and compact call together. Decorative rail canvases are excluded. The checks include horizontal overflow, clipped text, overlap, target size and fixed popup control visibility. Every final report has zero failures and zero warnings. Screenshots were reviewed across widths and themes. Popup screenshots use the viewport so the review includes the full control bar.
 
 ## Execution limits
 
