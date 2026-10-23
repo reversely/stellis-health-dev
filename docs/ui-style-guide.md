@@ -110,3 +110,8 @@ Calls share status labels and expose Retry reply after a preparation failure. Ad
 ## Onboarding call continuity
 
 The call panel beside the live Notes/Transcript notepad is the primary onboarding interface. Keep Start call visible at entry, with Text Stellis as an alternative. Preserve the avatar, live status/ring, timer, mute, speaker, end, answer-finish, retry and minimize/expand controls. New confirmed-answer fields belong inside Notes; they must not replace this call interface with a standalone questionnaire. Notes stay editable and confirmation remains explicit. Compact mode stays in the layout beside or above the notepad.
+
+
+## Period day logging
+
+The Cycle daily log follows the supplied Apple Health reference: weekday and date labels above pale vertical capsules, with coral circles for recorded flow. Each day is an accessible toggle that immediately saves `Had flow`; a second tap removes that observation. Save failures restore its prior state. Days save independently for consecutive taps. Keep detailed flow choices optional, week navigation and a date picker for history, and the existing shared Calendar projection.

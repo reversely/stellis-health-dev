@@ -18,7 +18,7 @@ def entries():
 def save(day, track_id, value):
     if date.fromisoformat(day) > date.today():
         raise ValueError('Choose today or an earlier day')
-    if track_id != 'periods' or value not in {None, 'No bleeding', 'Spotting', 'Light', 'Moderate', 'Heavy'}:
+    if track_id != 'periods' or value not in {None, 'Had flow', 'No bleeding', 'Spotting', 'Light', 'Moderate', 'Heavy'}:
         raise ValueError('Choose a listed flow status')
     with storage.connect() as connection:
         _table(connection)

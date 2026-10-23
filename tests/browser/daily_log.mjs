@@ -15,6 +15,26 @@ try {
   pack=await (await page.request.post(origin+api+'/reproductive/pill',{data:{name:'Daily prescribed pill',start:today,active:21,break_days:7,time:'09:00'}})).json();
   await page.goto(origin);
   const daily=page.locator('.tracker-daily');await daily.waitFor();
+  const circles=daily.locator('[data-log-day]');
+  const selectedDays=await circles.evaluateAll(nodes=>nodes.slice(0,3).map(node=>node.dataset.logDay));
+  // Separate days remain tappable while earlier writes are in flight.
+  await circles.nth(0).click();await circles.nth(1).click();await circles.nth(2).click();
+  await page.waitForFunction(()=>document.querySelectorAll('[data-log-day][aria-pressed="true"][aria-busy="false"]').length===3);
+  await page.reload();await daily.waitFor();
+  await daily.locator('[data-log-day][aria-pressed="true"]').nth(2).waitFor();
+  assert.equal(await daily.locator('[data-log-day][aria-pressed="true"]').count(),3);
+  await daily.screenshot({path:'/tmp/stellis-period-selected.png'});
+  for(const day of selectedDays){
+    const circle=daily.locator(`[data-log-day="${day}"]`);await circle.click();
+    await page.waitForFunction(day=>document.querySelector(`[data-log-day="${day}"]`)?.getAttribute('aria-busy')==='false',day);
+  }
+  assert.equal(await daily.locator('[data-log-day][aria-pressed="true"]').count(),0);
+  await page.route('**/api/v1/health/observations',route=>route.request().method()==='PUT'
+    ?route.fulfill({status:503,json:{detail:'Try again'}}):route.continue());
+  await circles.nth(0).click();
+  await page.getByRole('status').filter({hasText:'Try again'}).waitFor();
+  assert.equal(await circles.nth(0).getAttribute('aria-pressed'),'false');
+  await page.unroute('**/api/v1/health/observations');
   await daily.getByRole('button',{name:'Light',exact:true}).click();
   await daily.locator('.tracker-daily-logged').getByText('Light',{exact:true}).waitFor();
   await daily.getByRole('button',{name:'Taken',exact:true}).click();
@@ -38,7 +58,10 @@ try {
   assert.deepEqual(errors,[]);
   console.log('Daily logging, pill confirmation, persistence, undo and ten responsive theme checks passed');
 }finally{
-  await page.request.put(origin+api+'/health/observations',{data:{day:today,track_id:'periods',value:null}});
+  for(let offset=0;offset<7;offset++){
+    const day=new Date();day.setDate(day.getDate()-offset);
+    await page.request.put(origin+api+'/health/observations',{data:{day:day.toLocaleDateString('en-CA'),track_id:'periods',value:null}});
+  }
   if(pack?.id)await page.request.delete(origin+api+'/reproductive/'+pack.id);
   await page.request.put(origin+api+'/health/preferences',{data:original});
   await browser.close();

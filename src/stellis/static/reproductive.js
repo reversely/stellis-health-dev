@@ -30,6 +30,7 @@ function mount(host,options={}) {
   const instance=++nextId;
   let records=[], observations=[], referenceDay=currentDate(), current='period', busy=false;
   let selectedDose=new Map();
+  const pendingPeriodDays=new Map();
   const tabs=new Map();
   const status=createElement('p',null,'tracker-status');status.setAttribute('role','status');
   const reminders=createElement('div',null,'tracker-reminders');reminders.setAttribute('aria-live','polite');
@@ -121,18 +122,49 @@ function mount(host,options={}) {
     title.append(heading(referenceDay===currentDate()?'Today':formatDateLabel(referenceDay),
       referenceDay===currentDate()?formatDateLabel(referenceDay):null));
     if(referenceDay!==currentDate())title.append(createButton('Today',()=>{referenceDay=currentDate();paint();}));
+    const dateLabel=createElement('label','Log date','tracker-log-date');
+    const dateInput=createElement('input');dateInput.type='date';dateInput.value=referenceDay;dateInput.max=currentDate();
+    dateInput.addEventListener('change',()=>{if(dateInput.value&&dateInput.value<=currentDate()){referenceDay=dateInput.value;paint();}});
+    dateLabel.append(dateInput);title.append(dateLabel);
     daily.append(title);
-    const dates=createElement('div',null,'tracker-day-strip');dates.setAttribute('aria-label','Log date');
+    const navigation=createElement('div',null,'tracker-day-navigation');
+    navigation.append(createButton('Previous week',()=>{referenceDay=shiftCalendarDate(referenceDay,-7);paint();}));
+    const next=createButton('Next week',()=>{referenceDay=shiftCalendarDate(referenceDay,Math.min(7,daysBetween(currentDate(),referenceDay)));paint();});
+    next.disabled=referenceDay===currentDate();navigation.append(next);daily.append(navigation);
+    const dates=createElement('div',null,'tracker-day-strip');dates.setAttribute('aria-label','Log period days');
     for(let offset=-6;offset<=0;offset++) {
-      const day=shiftCalendarDate(currentDate(),offset);
-      const choice=createButton(null,()=>{referenceDay=day;paint();panel.querySelector(`[data-log-day="${day}"]`)?.focus();},'tracker-day-choice');
+      const day=shiftCalendarDate(referenceDay,offset);
+      const saved=observations.find(item=>item.day===day&&item.track_id==='periods');
+      const value=pendingPeriodDays.has(day)?pendingPeriodDays.get(day):saved?.value;
+      const hasFlow=Boolean(value&&value!=='No bleeding');
+      const choice=createButton(null,async()=>{
+        if(pendingPeriodDays.has(day))return;
+        const nextValue=hasFlow?null:'Had flow';
+        pendingPeriodDays.set(day,nextValue);paint();
+        panel.querySelector(`[data-log-day="${day}"]`)?.focus();
+        try {
+          await getDomHelpers().api('/health/observations',{method:'PUT',json:{day,track_id:'periods',value:nextValue}});
+          observations=observations.filter(item=>item.day!==day||item.track_id!=='periods');
+          if(nextValue)observations.push({day,track_id:'periods',value:nextValue});
+          status.textContent=`${formatDateLabel(day)} ${nextValue?'saved':'removed'}`;
+          options.onChange?.();
+        }catch(error){status.textContent=error.message;}
+        finally {
+          const focused=panel.querySelector('[data-log-day]:focus')?.dataset.logDay;
+          pendingPeriodDays.delete(day);paint();
+          if(focused)panel.querySelector(`[data-log-day="${focused}"]`)?.focus();
+        }
+      },'tracker-day-choice');
       const parsed=calendarDates.parseDate(day);
-      choice.append(createElement('span',parsed.toLocaleDateString([],{weekday:'short'})),createElement('strong',String(parsed.getDate())));
-      choice.dataset.logDay=day;choice.setAttribute('aria-label',formatDateLabel(day));choice.setAttribute('aria-pressed',String(day===referenceDay));
+      const capsule=createElement('span',null,'tracker-day-capsule');
+      capsule.append(createElement('span',null,'tracker-day-circle'));
+      choice.append(createElement('span',parsed.toLocaleDateString([],{weekday:'short'})),createElement('strong',String(parsed.getDate())),capsule);
+      choice.dataset.logDay=day;choice.setAttribute('aria-label',`${formatDateLabel(day)}: ${hasFlow?'Remove period':'Log period'}`);choice.setAttribute('aria-pressed',String(hasFlow));
+      choice.setAttribute('aria-busy',String(pendingPeriodDays.has(day)));
       if(day===currentDate())choice.setAttribute('aria-current','date');
       dates.append(choice);
     }
-    daily.append(dates);
+    daily.append(dates,createElement('p','Tap a circle to log a period. Tap again to undo.','tracker-muted'));
     const pending=createElement('div',null,'tracker-daily-pending');
     const logged=createElement('details',null,'tracker-daily-logged');
     const loggedSummary=createElement('summary','Logged');logged.append(loggedSummary);
@@ -167,7 +199,7 @@ function mount(host,options={}) {
       row.append(actions);
     }
     const flow=observations.find(item=>item.day===referenceDay&&item.track_id==='periods');
-    addItem('Period flow',flow?.value,['No bleeding','Spotting','Light','Moderate','Heavy'],value=>
+    addItem('Period flow',flow?.value,['Had flow','No bleeding','Spotting','Light','Moderate','Heavy'],value=>
       getDomHelpers().api('/health/observations',{method:'PUT',json:{day:referenceDay,track_id:'periods',value}}));
     for(const pack of entries('pill')) {
       const elapsed=daysBetween(referenceDay,pack.start);
