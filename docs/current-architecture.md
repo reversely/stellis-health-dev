@@ -1,3 +1,21 @@
+# Curated health organization
+
+The browser offers a versioned health catalogue from `health_catalogue.json` through `health_catalogue.py`. The catalogue registers 32 collections and notebook templates with stable IDs and MedlinePlus attribution. The existing intake agent extracts editable notes; a deterministic matcher proposes registered templates without another model request. People approve creation. Account-scoped setup state retains the reviewed selection. No CLM service is required.
+
+```mermaid
+flowchart LR
+    Intake[Editable intake notes] --> Catalogue[Versioned catalogue and deterministic matcher]
+    Catalogue --> Review[User selection and review]
+    Review --> Notebooks[Notebook identities and approved collections]
+    Notebooks --> Links[Shared record associations]
+    Links --> Records[Original documents conversations and notes]
+    Records --> Facts[Shared accepted clinical facts]
+    Links --> Views[Sources chat search and timeline]
+    Facts --> Views
+```
+
+Notebook rows retain template identity, description, version, archive state, optional feature preferences and recommendation evidence. `notebook_record_links` provides additional notebook associations without copying records. Primary notebook fields remain compatible with recording destinations and explicit moves. Source listings, notebook projections, contextual search and timelines include the additional associations. Existing titles and collections survive migration. The health view derives facts and measurement points from associated documents. Registered capabilities activate only when supported data exists; no new clinical assessment engine is introduced. See [health catalogue](health-catalogue.md).
+
 # Current architecture (development)
 
 ## Hosted document recognition and request timing
