@@ -13,6 +13,7 @@ Each turn logs how long each stage took, without any content.
 from __future__ import annotations
 
 import asyncio
+from contextlib import aclosing
 import hashlib
 import json
 import logging
@@ -27,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stellis import call_tts, debug_data, intake, storage
+from stellis import call_audio_cache, call_tts, debug_data, intake, storage
 
 _log = logging.getLogger(__name__)
 
@@ -64,6 +65,8 @@ THREADS = 2
 MAX_FRAME_BYTES = 64_000
 RECOGNITION_TIMEOUT_S = 15
 SYNTHESIS_TIMEOUT_S = 15
+REPLY_PIECE_TIMEOUT_S = 20
+REPLY_TIMEOUT_S = 90
 MAX_QUEUED_ANSWERS = 2
 # An answer that repeats this share of the agent's words is its own echo.
 ECHO_OVERLAP = 0.6
@@ -273,6 +276,8 @@ class Call:
         self.timings: dict[int, dict[str, float]] = {}
         self.ended = False
         self.detecting = False
+        self.retryable = False
+        self.script_ended = False
         self.recognizing: asyncio.Task | None = None
         self.answers = asyncio.Queue(maxsize=MAX_QUEUED_ANSWERS)
 
@@ -288,7 +293,7 @@ class Call:
 
     async def audio(self, frame: bytes) -> None:
         """Feeds microphone audio; a finished answer starts the agent's reply."""
-        if self.vad is None or not frame or len(frame) > MAX_FRAME_BYTES or len(frame) % 2:
+        if self.ended or self.vad is None or not frame or len(frame) > MAX_FRAME_BYTES or len(frame) % 2:
             return
         samples = np.frombuffer(frame, dtype="<i2").astype(np.float32) / 32768
         self.pending = np.concatenate([self.pending, samples])
@@ -402,7 +407,7 @@ class Call:
         except Exception:
             _log.warning('Barge-in recognition failed', exc_info=True)
             return
-        if len(text.split()) >= 2 and not is_echo(text, self.speaking) and self._busy():
+        if not self.ended and len(text.split()) >= 2 and not is_echo(text, self.speaking) and self._busy():
             self.barged_in = True
             await self._interrupt()
 
@@ -427,6 +432,10 @@ class Call:
     async def _answer_audio(self, segment: np.ndarray, ended_at: float, overlap: float = 0.0) -> None:
         seconds = len(segment) / SAMPLE_RATE
         started_at = ended_at - seconds
+        # Finish the earlier interruption check before starting a replacement reply.
+        # Its delayed result must not interrupt the reply to this same answer.
+        if self.checking is not None and not self.checking.done():
+            await self.checking
         if not self._busy():
             await self.send_json({'type':'state', 'state':'transcribing'})
         try:
@@ -465,9 +474,10 @@ class Call:
 
     async def text(self, text: str) -> None:
         """A typed answer, handled like a spoken one."""
-        if self.recognizing is not None and not self.recognizing.done():
-            self.recognizing.cancel()
-            await asyncio.gather(self.recognizing, return_exceptions=True)
+        pending = [task for task in (self.recognizing, self.checking) if task is not None and not task.done()]
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
         while not self.answers.empty():
             self.answers.get_nowait()
         now = time.perf_counter()
@@ -493,8 +503,10 @@ class Call:
                 text = self.script.add_person_turn(text)
         except ValueError as exc:
             await self.send_json({"type": "error", "message": str(exc)})
+            await self._listening_state()
             return
         self.turn = turn
+        self.retryable = False
         self.timings[turn] = timings
         self.discard_reply = False
         self.barged_in = False
@@ -502,34 +514,74 @@ class Call:
         self._refresh_notes()
         self.replying = asyncio.create_task(self._reply(turn))
 
+    async def retry_reply(self) -> None:
+        """Retries the reply while keeping the accepted answer exactly once."""
+        if self.ended or not self.retryable:
+            return
+        self.retryable = False
+        await self._interrupt()
+        self.script.drop_agent_reply()
+        now = time.perf_counter()
+        self.timings[self.turn] = {'speech_end':now, 'stt_done':now}
+        await self.send_json({'type':'retrying', 'turn':self.turn})
+        self.replying = asyncio.create_task(self._reply(self.turn))
+
+    async def _reply_pieces(self, timings):
+        stream = self.script.reply(timings)
+        try:
+            while True:
+                try:
+                    yield await asyncio.wait_for(anext(stream), REPLY_PIECE_TIMEOUT_S)
+                except StopAsyncIteration:
+                    break
+        finally:
+            await stream.aclose()
+
+    async def _reply_error(self, message: str) -> None:
+        self.retryable = True
+        await self.send_json({'type':'error', 'message':message, 'retryable':True})
+
     async def _reply(self, turn: int) -> None:
+        reply_started = time.perf_counter()
         await self.send_json({"type": "state", "state": "thinking"})
         # Each piece with the time its audio starts playing.
         spoken: list[tuple[str, float]] = []
         cut = False
         try:
-            async for piece in self.script.reply(self.timings[turn]):
-                if isinstance(piece, dict):
-                    await self.send_json({"type": "action", **piece})
-                    continue
-                spoken.append((piece, await self._say(piece, turn)))
+            async with asyncio.timeout(REPLY_TIMEOUT_S), aclosing(self._reply_pieces(self.timings[turn])) as replies:
+                async for piece in replies:
+                    if isinstance(piece, dict):
+                        await self.send_json({"type": "action", "turn":turn, **piece})
+                        continue
+                    if intake.END_MARK in piece:
+                        self.ended = True
+                        await self.send_json({'type':'ending'})
+                    spoken.append((piece, await self._say(piece, turn)))
+                    if self.ended:
+                        break
+            if not spoken:
+                raise intake.IntakeError('No reply arrived')
         except asyncio.CancelledError:
             cut = True
             raise
+        except TimeoutError:
+            _log.warning('Call reply timed out after %.3f seconds', time.perf_counter() - reply_started)
+            await self._reply_error('The reply timed out')
         except intake.IntakeError as exc:
-            await self.send_json({"type": "error", "message": str(exc)})
+            await self._reply_error(str(exc))
         except Exception:  # Any other failure ends the reply, not the call.
             _log.exception("Intake reply failed")
-            await self.send_json({"type": "error", "message": "The reply failed. Try saying that again."})
+            await self._reply_error("The reply failed")
         finally:
             if not self.discard_reply:
                 # An interrupted reply keeps only the pieces that started playing.
                 now = time.perf_counter()
                 self.script.add_agent_turn(" ".join(piece for piece, start in spoken if not cut or start <= now))
-        await self._listening_state()
-        if any(intake.END_MARK in piece for piece, _ in spoken):
-            self.ended = True
+        if self.ended:
+            await self._end_script()
             await self.send_json({"type": "ended"})
+        else:
+            await self._listening_state()
 
     async def _say_all(self, pieces: list[str], record: bool) -> None:
         for piece in pieces:
@@ -549,7 +601,9 @@ class Call:
         audio = rate = None
         if self.engine is not None and self.speaker:
             try:
-                audio, rate = await asyncio.wait_for(asyncio.to_thread(self.engine.speak, text), SYNTHESIS_TIMEOUT_S)
+                cache_key = getattr(self.script, 'speech_cache_key', lambda text: None)(text)
+                audio, rate = await asyncio.wait_for(
+                    asyncio.to_thread(call_audio_cache.speak, cache_key, text, self.engine.speak), SYNTHESIS_TIMEOUT_S)
             except Exception as exc:
                 _log.warning('Call synthesis failed: %s', type(exc).__name__)
                 self.speaker = False
@@ -607,7 +661,9 @@ class Call:
     async def message(self, data: dict) -> None:
         """Handles a JSON message from the browser."""
         kind = data.get("type")
-        if kind == "text":
+        if kind == "retry_reply":
+            await self.retry_reply()
+        elif kind == "text":
             await self.text(str(data.get("text", "")))
         elif kind == "finish_answer":
             await self.finish_answer()
@@ -625,9 +681,21 @@ class Call:
         elif kind == "interrupt":
             await self._interrupt()
 
+    async def _end_script(self) -> None:
+        if self.script_ended:
+            return
+        end = getattr(self.script, 'end', None)
+        try:
+            if end is not None:
+                await asyncio.to_thread(end)
+            self.script_ended = True
+        except Exception:
+            _log.exception('Call completion could not be saved')
+
     async def close(self) -> None:
         tasks = [t for t in (self.replying, self.notes, self.checking, self.recognizing) if t is not None]
         for task in tasks:
             if not task.done():
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        await self._end_script()

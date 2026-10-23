@@ -47,3 +47,7 @@ Fly cannot reach this machine through `127.0.0.1`: that address means the Fly ma
 - [Perth watermarking source](https://github.com/resemble-ai/Perth), pinned source revision `ff1c8ac55a976971245cdd53c18d6131ca00d993`
 
 The local runtime is an optional development installation. No new dependency or voice clip is bundled with Stellis. The reference uses the upstream built-in voice; no community voice pack or uploaded voice cloning is involved. The upstream watermarking implementation remains enabled. A distributable Chatterbox image would need its own complete dependency and model licence inventory.
+
+## Call deadlines and narration cache
+
+Calls bound each synthesis operation to 15 seconds and retain the reply as text when speech fails. Registered public tour narration reuses validated WAV audio inside each account's data directory. Personal questions and goals stay outside that cache. Set `STELLIS_TTS_CACHE_REVISION` to a new value when changing the model behind an unchanged endpoint or voice name. See [voice calls](voice-calls.md).

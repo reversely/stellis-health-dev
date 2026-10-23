@@ -66,6 +66,7 @@ REPLY_TOKENS = 220
 TITLE = "Intake call"
 
 _LOCK = threading.Lock()
+_END_LOCK = threading.Lock()
 # Sentence ends, except after titles such as "Dr." before a name.
 _SENTENCE = re.compile(r"(?<!\bDr\.)(?<!\bMr\.)(?<!\bMs\.)(?<!\bSt\.)(?<!\bMrs\.)(?<=[.?!])\s+")
 # The first clause is spoken as soon as it is complete, so the agent starts
@@ -254,7 +255,13 @@ def add_agent_turn(text: str) -> None:
 
 
 def end() -> dict[str, object]:
-    """Marks the call ended and saves its notes as the person's first note."""
+    """Marks the call ended and saves one note across concurrent completion requests."""
+    # Socket completion and the compatibility HTTP request can overlap.
+    with _END_LOCK:
+        return _end()
+
+
+def _end() -> dict[str, object]:
     state = _update(lambda state: state.update(ended_at=state["ended_at"] or _now()))
     debug_data.record("intake-calls", {"reason": "end", "call": state})
     markdown = notes_markdown(state["notes"], state["turns"])
@@ -408,9 +415,14 @@ async def stream_tokens(messages: list[dict[str, object]],
                 if response.status_code != 200:
                     raise IntakeError("The intake agent is unavailable. Try again.")
                 async for line in response.aiter_lines():
-                    if not line.startswith("data:") or line.strip() == "data: [DONE]":
+                    if not line.startswith("data:"):
                         continue
-                    data = json.loads(line[5:])
+                    payload = line[5:].strip()
+                    if not payload:
+                        continue
+                    if payload == '[DONE]':
+                        break
+                    data = json.loads(payload)
                     if data.get("usage"):
                         token_quota.record(data["usage"])
                     for choice in data.get("choices") or []:
@@ -480,6 +492,12 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str]:
     calls end_call: the call ends after its goodbye.
     """
     state = load()
+    from stellis.call_lifecycle import wants_end
+    last = next((t['text'] for t in reversed(state['turns']) if t['role']=='person'), '')
+    if wants_end(last):
+        yield "Thanks for sharing. Add your records when you're ready."
+        yield END_MARK
+        return
     step = plan(state)["next_topic"]
     must_end = step == GOODBYE
     _update(lambda current: current.__setitem__("asking", step))

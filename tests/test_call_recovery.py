@@ -31,7 +31,7 @@ class CallRecoveryTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.messages = []
         self.engine = SimpleNamespace(vad=lambda: Detector(), transcribe=lambda samples: '')
-        self.call = intake_voice.Call(AsyncMock(side_effect=self.messages.append), AsyncMock(), self.engine)
+        self.call = intake_voice.Call(AsyncMock(side_effect=self.messages.append), AsyncMock(), self.engine, SimpleNamespace(end=lambda:None))
 
     async def asyncTearDown(self):
         await self.call.close()
@@ -123,3 +123,64 @@ class CallRecoveryTest(unittest.IsolatedAsyncioTestCase):
         self.call.speaking_until = float('inf')
         await self.call.message({'type':'played'})
         self.assertEqual(self.messages[-1], {'type':'state','state':'hearing'})
+
+    async def test_thinking_timeout_allows_retry_without_another_person_turn(self):
+        replies = []
+        attempts = 0
+        async def reply(timings):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                await asyncio.sleep(30)
+            yield 'The retained answer is understood'
+        self.call.script = SimpleNamespace(reply=reply, add_agent_turn=replies.append,
+                                         drop_agent_reply=lambda:None, end=lambda:None)
+        self.call.engine = None
+        self.call.timings[1] = {'speech_end':time.perf_counter()}
+        self.call.turn = 1
+        with patch.object(intake_voice, 'REPLY_PIECE_TIMEOUT_S', .01):
+            await self.call._reply(1)
+        self.assertTrue(self.call.retryable)
+        self.assertTrue(any(m.get('retryable') for m in self.messages))
+        self.assertEqual(self.messages[-1]['state'], 'listening')
+        await self.call.retry_reply()
+        await self.call.replying
+        self.assertEqual(attempts, 2)
+        self.assertEqual(replies[-1], 'The retained answer is understood')
+        self.assertFalse(self.call.retryable)
+
+    async def test_natural_end_is_saved_once_and_ignores_more_microphone_audio(self):
+        from unittest.mock import Mock
+        async def reply(timings):
+            yield 'Goodbye.'
+            yield intake_voice.intake.END_MARK
+        save = Mock()
+        self.call.script = SimpleNamespace(reply=reply, add_agent_turn=lambda text:None, end=save)
+        self.call.engine = None
+        self.call.timings[1] = {}
+        await self.call._reply(1)
+        self.assertTrue(self.call.ended)
+        self.assertEqual([m['type'] for m in self.messages][-2:], ['ending','ended'])
+        await self.call.audio(np.ones(16000,dtype='<i2').tobytes())
+        await self.call.close()
+        save.assert_called_once()
+
+    async def test_delayed_barge_check_finishes_before_the_replacement_reply(self):
+        count = 0
+        def transcribe(samples):
+            nonlocal count
+            count += 1
+            if count == 1:
+                time.sleep(.03)
+            return 'Wait I forgot my inhaler'
+        self.engine.transcribe = transcribe
+        self.call._answer = AsyncMock()
+        self.call.speaking_until = float('inf')
+        self.call.speaking = 'An earlier reply'
+        self.call.checking = asyncio.create_task(self.call._confirm_barge_in(np.ones(1600)))
+        await asyncio.sleep(0)
+        with patch.object(intake_voice.debug_data, 'save_answer_audio'):
+            await self.call._answer_audio(np.ones(32000), time.perf_counter(), 2)
+        self.call._answer.assert_awaited_once()
+        self.assertTrue(self.call.checking.done())
+        self.assertTrue(self.call.barged_in)

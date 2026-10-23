@@ -10,19 +10,9 @@
 (function(root) {
 'use strict';
 
-const STATUS = {
-  connecting: 'Connecting',
-  listening: 'Listening',
-  hearing: 'Hearing you',
-  transcribing: 'Processing your answer',
-  thinking: 'Thinking',
-  speaking: 'Speaking',
-  typing: 'Chat',
-  ended: 'Call ended',
-  lost: "Sorry we couldn't reach the agent",
-};
+const STATUS = {...root.StellisIntakeCall.STATUS, typing:'Chat'};
 const TITLES = {
-  morning: 'Morning check-in',
+  morning: 'Daily check-in',
   call: 'Call with Stellis',
   tour: 'Tour with Stellis',
 };
@@ -112,9 +102,11 @@ function incoming(on) {
 
 let current = null;
 let target = null;
+let stepGeneration = 0;
 
 /** Removes the tour's highlight. */
 function clearTarget() {
+  stepGeneration++;
   target?.classList.remove('tour-target');
   target = null;
 }
@@ -125,24 +117,28 @@ function clearTarget() {
  * @param {string} selector
  */
 function showStep(path, selector) {
+  clearTarget();
+  const generation = stepGeneration;
+  if (!path.startsWith('/') || path.startsWith('//')) return Promise.resolve(false);
   if (location.pathname !== path) {
     history.pushState({}, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
-  clearTarget();
   const started = Date.now();
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  (function find() {
-    const found = document.querySelector(selector);
-    if (found?.checkVisibility()) {
-      target = found;
-      target.classList.add('tour-target');
-      target.scrollIntoView(
-          {block: 'start', behavior: still ? 'instant' : 'smooth'});
-    } else if (Date.now() - started < TOUR_WAIT_MS) {
-      setTimeout(find, 150);
-    }
-  })();
+  return new Promise(resolve => {
+    (function find() {
+      if (generation !== stepGeneration) {resolve(false); return;}
+      const found = document.querySelector(selector);
+      if (found?.checkVisibility()) {
+        target = found;
+        target.classList.add('tour-target');
+        target.scrollIntoView({block:'start', behavior:still ? 'instant' : 'smooth'});
+        resolve(true);
+      } else if (Date.now() - started < TOUR_WAIT_MS) setTimeout(find, 150);
+      else resolve(false);
+    })();
+  });
 }
 
 /** Offers the tour in the docked panel, after setup. */
@@ -155,7 +151,7 @@ function offerTour() {
   const title = dom.el('strong', 'Stellis is ready to show you around');
   title.id = 'coach-offer-title';
   who.append(
-      title, dom.el('span', 'A two-minute tour, by voice', 'coach-call-line'));
+      title, dom.el('span', 'Explore the app by voice', 'coach-call-line'));
   head.append(avatar(36), who);
   const actions = dom.el('div', null, 'coach-call-ended');
   const start = button('phone', 'Start tour', 'coach-button is-primary');
@@ -183,6 +179,7 @@ function open({kind, chat, onAction}) {
   const panel = dom.el('section', null, 'coach-call');
   panel.setAttribute('aria-label', TITLES[kind]);
   panel.dataset.state = 'connecting';
+  panel.dataset.kind = kind;
 
   const head = dom.el('div', null, 'coach-call-head');
   const face = dom.el('span', null, 'coach-call-face');
@@ -200,8 +197,18 @@ function open({kind, chat, onAction}) {
       button('phone-off', 'End call', 'coach-call-icon is-end', true);
   head.append(face, who, shrink, hangUp);
 
+  const stepCard = dom.el('section', null, 'coach-tour-step');
+  const stepTitle = dom.el('h3');
+  const stepNarration = dom.el('p');
+  stepCard.append(stepTitle, stepNarration);
+  stepCard.hidden = true;
   const log = dom.el('ol', null, 'coach-call-log');
   log.setAttribute('aria-live', 'polite');
+  const callBody = dom.el('div', null, 'coach-call-body');
+  callBody.tabIndex = 0;
+  callBody.setAttribute('role', 'region');
+  callBody.setAttribute('aria-label', 'Conversation');
+  callBody.append(stepCard, log);
 
   const foot = dom.el('form', null, 'coach-call-foot');
   const input = /** @type {!HTMLInputElement} */ (dom.el('input'));
@@ -214,9 +221,12 @@ function open({kind, chat, onAction}) {
   const sound = button('volume', 'Speaker off', 'coach-call-icon', true);
   mute.hidden = sound.hidden = chat;
   foot.append(mute, sound, input, send);
+  let next = null;
+  let stepReady = false;
   if (kind === 'tour') {
-    const next = dom.button('Next', 'coach-button is-primary');
-    next.addEventListener('click', () => call.sendText('Next'));
+    next = dom.button('Next', 'coach-button is-primary');
+    next.disabled = true;
+    next.addEventListener('click', () => {next.disabled = true; stepReady = false; call.sendText('Next');});
     foot.append(next);
     input.placeholder = 'Ask a question';
   }
@@ -224,7 +234,11 @@ function open({kind, chat, onAction}) {
   const ended = dom.el('div', null, 'coach-call-ended');
   const close = dom.button('Close', 'coach-button');
   const again = button('phone', 'Call again', 'coach-button');
-  ended.append(again, close);
+  const destination = dom.button('Go to My Health', 'coach-button is-primary');
+  destination.hidden = !['tour','morning'].includes(kind);
+  destination.addEventListener('click', () => {remove(); history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate'));});
+  if(kind === 'tour') again.lastChild.textContent = 'Restart tour';
+  ended.append(destination, again, close);
   ended.hidden = true;
 
   const heard = dom.el('p', null, 'coach-call-heard');
@@ -232,7 +246,14 @@ function open({kind, chat, onAction}) {
       chat ? 'Stellis can make mistakes. ' :
              'Speech recognition can mishear words. ',
       dom.accuracyNote(chat ? 'summaries' : 'speech', 'About accuracy'));
-  panel.append(head, log, foot, ended, heard);
+  const recovery = dom.el('div', null, 'coach-call-recovery');
+  const failure = dom.el('p'); failure.role = 'alert';
+  const retry = dom.button('Retry reply', 'coach-button'); retry.hidden = true;
+  const doneSpeaking = dom.button('Done speaking', 'coach-button'); doneSpeaking.hidden = true;
+  retry.addEventListener('click', () => call.retryReply());
+  doneSpeaking.addEventListener('click', () => call.finishAnswer());
+  recovery.append(failure, retry, doneSpeaking); recovery.hidden = true;
+  panel.append(head, callBody, recovery, foot, ended, heard);
   document.body.append(panel);
 
   let started = 0;
@@ -243,8 +264,12 @@ function open({kind, chat, onAction}) {
 
   function setStatus(key) {
     if (finished && key !== 'ended' && key !== 'lost') return;
+    if (panel.dataset.state === 'ending' && !['ended','lost'].includes(key)) return;
     panel.dataset.state = key;
     status.textContent = STATUS[key];
+    if (next) next.disabled = !stepReady || !['listening','typing','hearing'].includes(key);
+    doneSpeaking.hidden = chat || mute.hidden || key !== 'hearing';
+    recovery.hidden = !failure.textContent && retry.hidden && doneSpeaking.hidden;
   }
 
   /** Adds a line to the chat log; pieces of one reply join one bubble. */
@@ -265,12 +290,12 @@ function open({kind, chat, onAction}) {
       if (turn != null) item.dataset[selector] = String(turn);
       if (!existing) log.append(item);
     }
-    log.scrollTop = log.scrollHeight;
+    callBody.scrollTop = callBody.scrollHeight;
   }
 
   function addAction(text) {
     log.append(dom.el('li', text, 'is-action'));
-    log.scrollTop = log.scrollHeight;
+    callBody.scrollTop = callBody.scrollHeight;
   }
 
   function onEvent(message) {
@@ -302,11 +327,12 @@ function open({kind, chat, onAction}) {
         break;
       case 'caption':
         if (message.text) {
-          if (!chat && !mute.hidden) setStatus('speaking');
-          addLine('agent', message.text, message.turn);
+          if (message.audio) setStatus('speaking');
+          if (kind !== 'tour' || !stepNarration.textContent || !message.text.endsWith(stepNarration.textContent)) addLine('agent', message.text, message.turn);
         }
         break;
       case 'heard':
+        failure.textContent = ''; retry.hidden = true;
         // The Next button's own word needs no bubble.
         if (kind === 'tour' && message.text === 'Next') break;
         [...log.children]
@@ -317,7 +343,20 @@ function open({kind, chat, onAction}) {
       case 'action':
         if (message.action === 'show_step') {
           timer.textContent = `Step ${message.position} of ${message.total}`;
-          showStep(message.path, message.selector);
+          stepCard.hidden = false;
+          stepTitle.textContent = message.title || 'Tour';
+          stepNarration.textContent = message.message || '';
+          callBody.scrollTop = 0;
+          const step = message.step;
+          panel.dataset.step = step;
+          stepReady = false;
+          if (next) {next.disabled = true; next.textContent = message.position === message.total ? 'Finish tour' : 'Next';}
+          showStep(message.path, message.selector).then(found => {
+            if (!panel.isConnected || panel.dataset.step !== step) return;
+            stepReady = true;
+            if (!found) failure.textContent = 'This page is unavailable';
+            setStatus(panel.dataset.state);
+          });
         } else if (message.action === 'fill_goal') {
           addAction(`Filled in: ${message.values.title}`);
         } else if (message.action === 'logged') {
@@ -325,11 +364,22 @@ function open({kind, chat, onAction}) {
         }
         onAction(message);
         break;
+      case 'retrying':
+        failure.textContent = ''; retry.hidden = true;
+        [...log.children].find(item => item.dataset.agentTurn === String(message.turn))?.remove();
+        break;
+      case 'ending':
+        setStatus('ending');
+        foot.hidden = true;
+        recovery.hidden = true;
+        break;
       case 'error':
-        addAction(message.message);
+        failure.textContent = message.message;
+        retry.hidden = !message.retryable;
+        recovery.hidden = false;
         break;
       case 'ended':
-        finish('ended');
+        finish('ended', true);
         break;
       case 'closed':
         finish('lost');
@@ -345,7 +395,7 @@ function open({kind, chat, onAction}) {
   });
   call.setSpeaker(speaker);
 
-  function finish(key) {
+  function finish(key, completed = false) {
     if (finished) return;
     finished = true;
     call.end();
@@ -353,12 +403,15 @@ function open({kind, chat, onAction}) {
     clearTarget();
     setStatus(key);
     foot.hidden = true;
+    recovery.hidden = true;
     ended.hidden = false;
+    if (completed && kind === 'tour') status.textContent = 'Tour complete';
+    if (completed && kind === 'morning') status.textContent = 'Check-in complete';
     panel.classList.remove('is-minimised');
     shrink.setAttribute('aria-label', 'Minimise call');
     shrink.title = 'Minimise call';
     setGlyph(shrink, 'arrows-diagonal-minimize-2');
-    again.focus({preventScroll: true});
+    (destination.hidden ? close : destination).focus({preventScroll: true});
   }
 
   function remove() {

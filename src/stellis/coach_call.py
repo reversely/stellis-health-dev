@@ -388,7 +388,13 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str | 
     when Stellis ends the call.
     """
     state = load()
-    must_end = _answers(state) > MAX_ANSWERS
+    from stellis.call_lifecycle import wants_end
+    last = next((t['text'] for t in reversed(state['turns']) if t['role']=='person'), '')
+    if wants_end(last):
+        yield 'Your check-in is complete. Have a nice day.' if state['kind']=='morning' else 'Have a nice day.'
+        yield END_MARK
+        return
+    must_end = _answers(state) >= MAX_ANSWERS
     messages = conversation(state)
     calls: list[dict[str, object]] = []
     spoken = ending = False

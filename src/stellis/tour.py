@@ -20,6 +20,7 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import json
+import hashlib
 import re
 import threading
 from collections.abc import AsyncIterator
@@ -139,7 +140,8 @@ def show(index: int, sample: dict[str, str]) -> dict[str, object]:
     """The browser action that opens step ``index``'s page and highlights its control."""
     step = STEPS[index]
     return {"action": "show_step", "step": step.key, "path": step.path.format(**sample),
-            "selector": step.selector, "position": index + 1, "total": len(STEPS)}
+            "selector": step.selector, "position": index + 1, "total": len(STEPS),
+            "message":step.line, "title":step.key.replace("_", " ").title()}
 
 
 def opening_actions() -> list[dict[str, object]]:
@@ -149,9 +151,16 @@ def opening_actions() -> list[dict[str, object]]:
 
 def opening() -> str:
     """Records and returns the first line."""
-    text = "Hi again, it's Stellis. I'll show you around in about two minutes. " + STEPS[0].line
+    text = "Hi again, it's Stellis. " + STEPS[0].line
     _update(lambda state: state["turns"].append({"role": "agent", "text": text, "at": _now()}))
     return text
+
+
+def speech_cache_key(text: str) -> str | None:
+    """Allows caching only public fixed narration rather than personal questions or goals."""
+    lines = {step.line for step in STEPS}
+    lines.update({"Hi again, it's Stellis. " + STEPS[0].line, WAIT, 'Have a nice day.'})
+    return hashlib.sha256(text.encode()).hexdigest() if text in lines else None
 
 
 def _goals_line() -> str:
@@ -237,7 +246,8 @@ def end() -> dict[str, object]:
 
 def intent(text: str) -> str:
     """Reads what the person wants: "next", "stop" or "question"."""
-    if _STOP.search(text):
+    from stellis.call_lifecycle import wants_end
+    if wants_end(text) or _STOP.search(text):
         return "stop"
     if _NEXT.match(text.strip()) and len(text.split()) <= _NEXT_WORDS:
         return "next"
@@ -275,7 +285,8 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str | 
     following = state["step"] + 1
     if wanted == "stop" or following >= len(STEPS):
         yield {"action": "show_step", "step": "home", "path": "/", "selector": "#home-goals",
-               "position": len(STEPS), "total": len(STEPS)}
+               "position": len(STEPS), "total": len(STEPS),
+               "title":"Tour complete", "message":closing()}
         for piece in re.split(r"(?<=[.?!])\s+", closing()):
             yield piece
         yield END_MARK

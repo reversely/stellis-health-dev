@@ -354,7 +354,9 @@ function create(host) {
       const start = dom.button(null, 'coach-button coach-call-start');
       start.append(dom.icon('phone'), dom.el('span', 'Call Stellis'));
       start.addEventListener('click', () => call('call', false));
-      head.append(start);
+      const checkIn = dom.button('Daily check-in', 'coach-button');
+      checkIn.addEventListener('click', () => call('morning', false));
+      head.append(start, checkIn);
     }
     parts.push(head, vitalSigns(), overview());
     const goalsHead = dom.el('div', null, 'coach-section-head');

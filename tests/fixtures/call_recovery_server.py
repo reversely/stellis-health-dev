@@ -1,5 +1,5 @@
 """Loopback-only disposable server for synthetic call recovery browser checks."""
-import os,time
+import os,time,asyncio
 import tempfile
 os.environ.setdefault('STELLIS_DATA_DIR', tempfile.mkdtemp(prefix='stellis-call-recovery-'))
 os.environ['STELLIS_RUNTIME_PROFILE']='direct'
@@ -36,8 +36,35 @@ class Engine:
         level=float(np.max(np.abs(samples)))
         if level>.05:time.sleep(.2);raise RuntimeError('Synthetic recognition failure')
         return 'Manage my appointments' if level>.02 else ''
-    def speak(self,text):return np.zeros(640,dtype='<i2').tobytes(),16000
-async def reply(timings=None):yield 'Which appointments would you like to organize?'
+    def speak(self,text):
+        stats['synthesis_calls'] += 1
+        return np.zeros(640,dtype='<i2').tobytes(),16000
+original_reply = intake.reply
+attempts = {}
+stats = {'model_calls':0, 'synthesis_calls':0}
+async def reply(timings=None):
+    last = next((t['text'] for t in reversed(intake.load()['turns']) if t['role']=='person'), '')
+    if last == 'Test delayed reply':
+        attempts[last] = attempts.get(last, 0) + 1
+        if attempts[last] % 2:
+            await asyncio.sleep(2)
+        yield 'Your original answer is still saved.'
+        return
+    from stellis.call_lifecycle import wants_end
+    if wants_end(last):
+        async for piece in original_reply(timings):yield piece
+    else:yield 'Which appointments would you like to organize?'
+async def stream_tokens(messages, tools=None):
+    stats['model_calls'] += 1
+    yield 'You can keep relevant records in a notebook.'
+intake.stream_tokens = stream_tokens
+intake_voice.REPLY_PIECE_TIMEOUT_S = .5
+@server.app.post('/fixture/reset-intake')
+def reset_intake():
+    attempts.clear()
+    return intake.reset()
+@server.app.get('/fixture/counts')
+def counts():return stats
 async def notes():return intake.load()
 intake.reply=reply;intake.update_notes=notes
 intake_voice.acquire=lambda:Engine();intake_voice.release=lambda:None

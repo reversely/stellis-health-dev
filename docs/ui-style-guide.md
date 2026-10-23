@@ -96,4 +96,9 @@ Add Notebook opens a searchable catalogue shared by onboarding and the workspace
 
 ## Onboarding speech recovery
 
-The call distinguishes Listening, Hearing you and Processing your answer. Done speaking uses the existing button style and appears while the microphone can accept an answer. The minimized call hides this control with its other detailed controls. Unclear recognition shows a repeat-or-type action; an accepted answer clears that message. Voice failures retain the call and its typed answer field.
+The call distinguishes Listening, Hearing you and Processing your answer. Done speaking uses the existing button style and appears while the microphone can accept an answer. The minimized call hides this control with its other detailed controls. Its compact panel stays beside the notes on wide screens and above them on narrower screens so it cannot cover the notepad. Unclear recognition shows a repeat-or-type action; an accepted answer clears that message. Voice failures retain the call and its typed answer field.
+
+
+## Call and tour completion
+
+Calls share status labels and expose Retry reply after a preparation failure. Add records follows onboarding; Go to My Health follows a completed tour or check-in. My Health keeps Daily check-in beside Call Stellis. Each tour stage has a visible title and narration. The tour uses the selected surface behind its narration card to separate it from the page. Its conversation region scrolls while the header and controls remain visible. Phone message fields use 16-pixel text and occupy a separate row above the controls.

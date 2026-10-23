@@ -14,6 +14,7 @@ try {
   },theme);
   const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const login=await page.request.post(origin+'/api/v1/auth/login',{data:{username:process.env.STELLIS_TEST_USERNAME,password:process.env.STELLIS_TEST_PASSWORD}});assert.ok(login.ok());
+  await page.request.post(origin+'/fixture/reset-intake');
   await page.goto(origin+'/onboarding');await page.getByRole('button',{name:/^(Start|Continue) call$/}).click();
   const status=page.locator('.call-status');await page.waitForFunction(()=>document.querySelector('.call-status')?.textContent==='Listening');
   const before=(await (await page.request.get(origin+'/api/v1/intake')).json()).turns.filter(t=>t.role==='person').length;
@@ -33,8 +34,18 @@ try {
   do{turns=(await (await page.request.get(origin+'/api/v1/intake')).json()).turns;if(turns.some(t=>t.text==='Track <img src=x onerror=alert(1)> appointments'))break;await new Promise(r=>setTimeout(r,30));}while(Date.now()<deadline);
   assert.ok(turns.some(t=>t.text==='Track <img src=x onerror=alert(1)> appointments'));
   assert.equal(await page.locator('.call-transcript img').count(),0);
-  await page.getByRole('button',{name:'End',exact:true}).click();await page.getByText('Call ended. Press Continue to add your records.',{exact:true}).waitFor();
+  await page.getByRole('textbox',{name:'Your answer'}).fill('Test delayed reply');
+  await page.getByRole('button',{name:'Send',exact:true}).click();
+  await page.getByText('The reply timed out',{exact:true}).waitFor();
+  const countBeforeRetry=(await (await page.request.get(origin+'/api/v1/intake')).json()).turns.filter(t=>t.role==='person' && t.text==='Test delayed reply').length;
+  await page.getByRole('button',{name:'Retry reply',exact:true}).click();
+  await page.locator('.call-caption').filter({hasText:'Your original answer is still saved.'}).waitFor();
+  assert.equal((await (await page.request.get(origin+'/api/v1/intake')).json()).turns.filter(t=>t.role==='person' && t.text==='Test delayed reply').length,countBeforeRetry);
+  await page.getByRole('textbox',{name:'Your answer'}).fill("That's all");
+  await page.getByRole('button',{name:'Send',exact:true}).click();
+  await page.getByText('Call ended. Press Continue to add your records.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Add records',exact:true}).waitFor();
   assert.deepEqual(errors,[]);await context.close();
  }
- console.log('PASS: unclear speech, manual endpoint, recovered voice answer, text fallback and End at 390/1280 in both themes');
+ console.log('PASS: unclear speech, manual endpoint, recovered voice answer, text fallback, Thinking retry and natural completion at 390/1280 in both themes');
 }finally{await browser.close();}
