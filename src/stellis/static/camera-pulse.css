@@ -391,22 +391,9 @@ html[data-theme='dark'] .pulse-dialog {
   justify-content: center;
   gap: 8px;
   min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--ink);
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--surface);
-  font: inherit;
-  font-weight: 600;
 }
 .vital-signs-head .icon {
   width: 20px;
   height: 20px;
   flex: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .vital-signs-head button:enabled:hover {
-    background: color-mix(in oklch, var(--ink) 90%, var(--surface));
-  }
 }

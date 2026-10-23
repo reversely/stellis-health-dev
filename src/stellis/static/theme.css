@@ -844,12 +844,12 @@ html[data-theme='dark'] {
   --ink: #fff8ff;
   --muted: #DED5DE;
   --quiet: #C4B6C6;
-  --accent: #BAA18B;
-  --accent-strong: #DED0DA;
+  --accent: #FFFFFF;
+  --accent-strong: #E5E2E7;
   --accent-ink: #27222B;
   --selected: #38303D;
   --selection: #86798E;
-  --focus: #DED0DA;
+  --focus: #FFFFFF;
   --shadow: 0 16px 38px #2B2630A0;
   --waveform: #335C63;
   --check-bg: #fff8ff;
@@ -965,10 +965,10 @@ html[data-theme='dark'] body::before { display: none; }
     --line-soft: #5A4F60;
     --raised: #37303D;
     --input: #302A35;
-    --accent: #BAA18B;
-    --accent-strong: #CDBBA7;
+    --accent: #FFFFFF;
+    --accent-strong: #E5E2E7;
     --accent-ink: #27222B;
-    --focus: #BAA18B;
+    --focus: #FFFFFF;
     color: var(--ink);
   }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) .heading {
@@ -1072,8 +1072,7 @@ html[data-theme='dark'] body::before { display: none; }
   body.recording-page #recording-waveform { width: 100%; max-width: 320px; height: 36px; }
   body.recording-page .recording-actions { flex-wrap: wrap; gap: 8px; }
   body.recording-page .recording-actions button { min-height: 42px; }
-  body.recording-page .recording-actions #start-recording,
-  body.recording-page .recording-actions #stop-recording { background: #654654; border-color: #654654; color: #fff8ff; }
+  body.recording-page .recording-actions #stop-recording { background: var(--action-danger-fill); border-color: var(--action-danger-fill); color: var(--action-danger-ink); }
   body.recording-page .recording-ai {
     grid-column: 1;
     grid-row: 3;
@@ -1130,7 +1129,7 @@ html[data-theme='dark'] body::before { display: none; }
   body:is(:has(#list-view:not([hidden])), .agent-chat-page, .notebook-page, .timeline-page, .records-page, .summary-page, .trends-page) #vocabulary-panel { margin: 0 20px 30px; }
   body.recording-page .recording-panel { display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; border-radius: 0; }
   body.recording-page .recording-workspace-head { order: 0; display: grid; gap: 14px; margin: 0; padding: 25px 20px 18px; background: #27222B; }
-  body.recording-page .recording-workspace-head #back-from-recording { justify-self: start; color: #BAA18B; }
+  body.recording-page .recording-workspace-head #back-from-recording { justify-self: start; color: #FFFFFF; }
   body.recording-page .recording-workspace-head input { width: 100%; color: #F7F5F6; border-color: #605465; }
   body.recording-page #recording-import { justify-self: start; border: 1px solid #605465; border-radius: 9px; padding: 9px 16px; background: #37303D; color: #F7F5F6; }
   body.recording-page .recording-workspace-grid { order: 2; display: flex; flex-direction: column; gap: 0; }
@@ -1143,7 +1142,7 @@ html[data-theme='dark'] body::before { display: none; }
   body.recording-page #recording-waveform { width: 100%; max-width: 360px; height: 22px; }
   body.recording-page .recording-actions { width: 100%; justify-content: flex-start; }
   body.recording-page .recording-actions button { min-height: 42px; }
-  body.recording-page .recording-actions #start-recording, body.recording-page .recording-actions #stop-recording { background: #654654; border-color: #654654; color: #fff8ff; }
+  body.recording-page .recording-actions #stop-recording { background: var(--action-danger-fill); border-color: var(--action-danger-fill); color: var(--action-danger-ink); }
 }
 
 /* Keep live transport visible even when the rail is at its narrowest. */
@@ -2475,21 +2474,226 @@ html[data-theme='dark'] {
   --control-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F7F5F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
-#setup-retry {
-  justify-self: start;
-  min-height: 44px;
-  padding: 8px 14px;
-  border: 1px solid var(--ink);
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--surface);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
+#setup-retry { justify-self: start; }
 #setup-retry[hidden], #setup-progress[hidden] { display: none; }
+
+/* Shared task-action roles follow the established Record control. */
+:root {
+  --action-radius: 8px;
+  --action-fill: var(--accent);
+  --action-ink: var(--accent-ink);
+  --action-hover: var(--accent-strong);
+  --action-disabled-fill: var(--control-disabled-fill);
+  --action-disabled-ink: var(--control-disabled-ink);
+  --action-danger-fill: #654654;
+  --action-danger-ink: #F7F5F6;
+  --paper-action-fill: #4E4357;
+  --paper-action-ink: #FFFFFF;
+  --paper-action-hover: #42374D;
+  --paper-control-fill: #F0ECEF;
+  --paper-control-ink: #635B65;
+}
+.auth-card {
+  --action-fill: var(--paper-action-fill);
+  --action-ink: var(--paper-action-ink);
+  --action-hover: var(--paper-action-hover);
+  --action-disabled-fill: var(--paper-control-fill);
+  --action-disabled-ink: var(--paper-control-ink);
+}
+
+:root :is(.invert-button,
+  .coach-button.is-primary,
+  .trend-card .trend-add,
+  .trend-card .trend-save,
+  .pulse-dialog .pulse-primary,
+  .summary-view .summary-update,
+  .records-view .records-sort,
+  .records-view .records-file,
+  .facts .facts-find,
+  .settings-actions button:not(.danger-button),
+  .inference-route-editor button,
+  .vocab-entry button,
+  .dialog-actions button[type='submit'],
+  .onboarding-page button.primary,
+  .onboarding-page .call-start,
+  .agent-ask-form button,
+  .agent-identity-form button[type='submit'],
+  .agent-memory-add button,
+  .nb-input button[type='submit'],
+  .nb-add-paste button,
+  .artifact-actions button:first-child,
+  .auth-card form button) {
+  min-height: 44px;
+  border: 1px solid var(--action-fill);
+  border-radius: var(--action-radius);
+  background: var(--action-fill);
+  color: var(--action-ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-enter, ease-out),
+    border-color 120ms var(--ease-enter, ease-out),
+    color 120ms var(--ease-enter, ease-out),
+    scale 120ms var(--ease-enter, ease-out);
+}
+:root :is(.invert-button,
+  .coach-button.is-primary,
+  .trend-card .trend-add,
+  .trend-card .trend-save,
+  .pulse-dialog .pulse-primary,
+  .summary-view .summary-update,
+  .records-view .records-sort,
+  .records-view .records-file,
+  .facts .facts-find,
+  .settings-actions button:not(.danger-button),
+  .inference-route-editor button,
+  .vocab-entry button,
+  .dialog-actions button[type='submit'],
+  .onboarding-page button.primary,
+  .onboarding-page .call-start,
+  .agent-ask-form button,
+  .agent-identity-form button[type='submit'],
+  .agent-memory-add button,
+  .nb-input button[type='submit'],
+  .nb-add-paste button,
+  .artifact-actions button:first-child,
+  .auth-card form button):disabled {
+  border-color: var(--action-disabled-fill);
+  background: var(--action-disabled-fill);
+  color: var(--action-disabled-ink);
+  opacity: 1;
+  cursor: default;
+}
 @media (hover: hover) and (pointer: fine) {
-  #setup-retry:enabled:hover {
-    background: color-mix(in oklch, var(--ink) 90%, var(--surface));
+  :root :is(.invert-button,
+  .coach-button.is-primary,
+  .trend-card .trend-add,
+  .trend-card .trend-save,
+  .pulse-dialog .pulse-primary,
+  .summary-view .summary-update,
+  .records-view .records-sort,
+  .records-view .records-file,
+  .facts .facts-find,
+  .settings-actions button:not(.danger-button),
+  .inference-route-editor button,
+  .vocab-entry button,
+  .dialog-actions button[type='submit'],
+  .onboarding-page button.primary,
+  .onboarding-page .call-start,
+  .agent-ask-form button,
+  .agent-identity-form button[type='submit'],
+  .agent-memory-add button,
+  .nb-input button[type='submit'],
+  .nb-add-paste button,
+  .artifact-actions button:first-child,
+  .auth-card form button):enabled:hover {
+    border-color: var(--action-hover);
+    background: var(--action-hover);
+    color: var(--action-ink);
   }
+}
+:root .auth-card form button[type] { min-height: 48px; }
+
+body.recording-page .recording-actions #start-recording {
+  min-height: 44px;
+  border-radius: var(--action-radius);
+  background: var(--action-fill);
+  border-color: var(--action-fill);
+  color: var(--action-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  body.recording-page .recording-actions #start-recording:enabled:hover {
+    background: var(--action-hover);
+    border-color: var(--action-hover);
+  }
+}
+
+/* Incoming-call actions invert against the filled notification surface. */
+.coach-incoming {
+  --action-fill: var(--accent-ink);
+  --action-ink: var(--accent);
+  --action-hover: color-mix(in oklch, var(--accent-ink) 90%, var(--accent));
+}
+
+/* Dark actions use white pills; secondary surfaces retain their translucency. */
+html[data-theme='dark'] {
+  --action-radius: 999px;
+  --glass-fill: oklch(1 0 0 / .8);
+  --glass-ink: #2A252F;
+  --glass-hover: oklch(1 0 0 / .9);
+  --glass-line: oklch(1 0 0 / .45);
+  --glass-disabled-fill: oklch(1 0 0 / .12);
+  --glass-disabled-ink: oklch(1 0 0 / .55);
+}
+html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet), .trend-card .trend-cancel,
+  .pulse-dialog .pulse-secondary, .onboarding-page button.secondary,
+  .document-text-editor button:not(.invert-button), .auth-card) {
+  background: var(--glass-fill);
+  color: var(--glass-ink);
+  border-color: var(--glass-line);
+}
+html[data-theme='dark'] :is(.coach-button, .trend-card .trend-cancel,
+  .pulse-dialog .pulse-secondary, .onboarding-page button.secondary) {
+  border-radius: var(--action-radius);
+}
+html[data-theme='dark'] .auth-card {
+  --action-fill: var(--accent);
+  --action-ink: var(--accent-ink);
+  --action-hover: var(--accent-strong);
+  --action-disabled-fill: #BBB8BF;
+  --action-disabled-ink: #514B55;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet, [aria-pressed='true']),
+    .trend-card .trend-cancel, .pulse-dialog .pulse-secondary,
+    .onboarding-page button.secondary):enabled:hover {
+    background: var(--glass-hover);
+    color: var(--glass-ink);
+  }
+}
+
+/* White glass overlays sit above page content, with dark text for contrast. */
+html[data-theme='dark'] :is(dialog:not([data-stage='live']), .more-menu-items, .coach-call) {
+  --ink: #2A252F;
+  --muted: #514B55;
+  --quiet: #514B55;
+  --surface: #F7F5F6;
+  --input: #FFFFFF;
+  --raised: #E2DFE4;
+  --line: #9B949F;
+  --line-soft: #BBB5BF;
+  --selected: #D8D3DC;
+  --focus: #4E4357;
+  background: var(--glass-fill);
+  color: var(--ink);
+  border-color: var(--glass-line);
+  backdrop-filter: blur(12px);
+}
+
+@supports (appearance: base-select) {
+  html[data-theme='dark'] select::picker(select) {
+    background: var(--glass-fill);
+    color: var(--glass-ink);
+    backdrop-filter: blur(12px);
+  }
+  html[data-theme='dark'] select option { color: var(--glass-ink); }
+  html[data-theme='dark'] select option:checked { background: var(--glass-hover); }
+  html[data-theme='dark'] select option:focus-visible { outline-color: var(--glass-ink); }
+}
+
+.note-page .back-link { display: inline-flex; align-items: center; min-height: 44px; }
+
+html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet),
+  .trend-card .trend-cancel, .pulse-dialog .pulse-secondary,
+  .onboarding-page button.secondary):disabled {
+  background: var(--glass-disabled-fill);
+  color: var(--glass-disabled-ink);
+  border-color: transparent;
+  cursor: default;
+}
+
+html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page']) {
+  color: #514B55;
 }

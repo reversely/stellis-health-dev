@@ -315,10 +315,10 @@ html[data-theme='dark'] .home-goals {
   justify-content: center;
   justify-self: start;
   gap: 6px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--ink);
   font: inherit;

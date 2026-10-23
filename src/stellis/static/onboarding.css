@@ -39,11 +39,10 @@
 #setup-rail{position:fixed;inset:0 auto 0 0;width:240px;overflow:auto;background:radial-gradient(at 20% 15%,#495575,transparent 70%),radial-gradient(at 80% 75%,#547980,transparent 70%),#27222b;color:#fff;z-index:1}
 #setup-rail #rail-shader{display:block;position:absolute;inset:0;width:100%;height:100%;z-index:0}.setup-rail-content{position:relative;z-index:1;padding:28px 22px}.setup-rail-content .brand{color:#fff}.setup-rail-content .brand-mark{background:#fff}.setup-rail-content h2{margin-top:48px}.setup-rail-content p{font-size:13px;color:#ddd}.setup-tree-group{margin-top:24px}.setup-tree-group strong{font-weight:550}.setup-tree-group div{font-size:14px;margin:12px 0 12px 16px;color:#eee}
 .onboarding-review{padding-left:240px}.onboarding-review .setup-header{justify-content:flex-end}.onboarding-review .setup-header>.brand{display:none}
-.setup-scene{animation:setup-enter 220ms cubic-bezier(.32,.72,0,1)}
-@keyframes setup-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
 @media(max-width:1050px){.setup-uses{grid-template-columns:repeat(3,minmax(0,1fr))}.setup-grid{grid-template-columns:1fr}.setup-welcome{padding-inline:140px}.setup-orbit{width:100px}}
 @media(max-width:760px){.setup-header{padding:18px 20px}#setup-main{padding:24px 20px 48px}.setup-columns{grid-template-columns:1fr;gap:22px}.setup-uses{grid-template-columns:repeat(2,minmax(0,1fr))}.setup-welcome{padding:12px 0;min-height:0}.setup-orbit{position:static;width:auto;display:inline-grid;margin-top:30px}.setup-welcome{grid-template-columns:repeat(3,1fr);gap:12px}.welcome-copy{grid-column:1/-1}.setup-orbit:nth-of-type(n){inset:auto}.setup-orbit .icon{width:26px;height:26px}.onboarding-review{padding-left:0}#setup-rail{position:relative;width:auto;margin:0 20px;border-radius:12px}.setup-rail-content{padding:20px}.setup-rail-content>.brand,.setup-rail-content>h2{display:none}#setup-tree{display:flex;gap:24px;flex-wrap:wrap}.setup-tree-group{margin-top:8px}.onboarding-review .setup-header>.brand{display:flex}.onboarding-review .setup-header{justify-content:space-between}.setup-connection{grid-template-columns:1fr}.setup-connection>button{justify-self:start}.setup-connection input{width:100%;flex:1}.setup-runtime,.setup-connections,.setup-group{padding:18px}}
-@media(prefers-reduced-motion:reduce){.setup-scene{animation:none}}
+
 @media(min-width:761px) and (max-width:900px){.setup-welcome{padding:12px 0;min-height:0;grid-template-columns:repeat(3,1fr);gap:12px}.welcome-copy{grid-column:1/-1}.setup-orbit{position:static;width:auto;margin-top:30px}.setup-orbit:nth-of-type(n){inset:auto}}
 .setup-source-review{margin-top:32px;padding-top:28px;border-top:1px solid var(--line-soft)}
 .setup-source-review .setup-actions{margin:16px 0}.setup-source-status{min-height:26px}.setup-source-review progress{width:100%;height:8px;margin-bottom:20px}
@@ -104,7 +103,7 @@
   --call-ink: oklch(0.97 0.005 300);
   --call-muted: oklch(0.8 0.015 300);
   --call-live: oklch(0.72 0.12 196);
-  --call-end: oklch(0.6 0.19 25);
+  --call-end: var(--action-danger-fill);
 }
 .setup-call-head h1 {
   margin-bottom: 8px;
@@ -154,15 +153,7 @@
     scale 90ms linear,
     opacity 90ms linear;
 }
-.call-panel[data-state='thinking'] .call-ring {
-  animation: call-think 1.4s ease-in-out infinite;
-}
-@keyframes call-think {
-  50% {
-    scale: 1.12;
-    opacity: 0.6;
-  }
-}
+.call-panel[data-state='thinking'] .call-ring { opacity: 0.6; }
 .call-name {
   font: 300 28px/1.2 Piazzolla, serif;
 }
@@ -321,21 +312,6 @@
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line);
 }
-/* A line the notepad just wrote rises in and fades from highlighted. */
-.call-note li.is-new {
-  animation: call-note-in 900ms var(--ease-enter, ease-out);
-}
-@keyframes call-note-in {
-  from {
-    translate: 0 6px;
-    opacity: 0;
-    background: color-mix(in oklch, var(--call-live) 30%, transparent);
-  }
-  30% {
-    translate: 0 0;
-    opacity: 1;
-  }
-}
 .call-transcript {
   display: grid;
   align-content: start;
@@ -464,53 +440,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .call-ring,
-  .call-panel[data-state='thinking'] .call-ring {
-    animation: none;
-    transition: none;
-  }
-  .call-note li.is-new {
-    animation-name: call-note-fade;
-  }
-  @keyframes call-note-fade {
-    from {
-      opacity: 0;
-    }
-  }
-}
-
-/* Welcome: the goals and agents arrive one after another, then drift. */
-.setup-orbit {
-  animation:
-    setup-orbit-in 480ms var(--ease-enter, ease-out) both,
-    setup-orbit-drift 7s ease-in-out infinite alternate;
-  animation-delay:
-    calc(var(--orbit-index) * 70ms + (var(--orbit-side, 0) * 35ms)),
-    calc(var(--orbit-index) * -1.3s);
-}
-.setup-orbit[data-side='right'] {
-  --orbit-side: 1;
-}
-@keyframes setup-orbit-in {
-  from {
-    opacity: 0;
-    scale: 0.92;
-  }
-}
-@keyframes setup-orbit-drift {
-  to {
-    translate: 0 -6px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .setup-orbit {
-    animation: setup-orbit-fade 300ms both;
-  }
-  @keyframes setup-orbit-fade {
-    from {
-      opacity: 0;
-    }
-  }
+  .call-ring { scale: 1; opacity: 0.35; transition: none; }
 }
 
 /* The note under the notepad on how accurate speech recognition is. */
@@ -520,23 +450,13 @@
   font-size: 12px;
 }
 
-/* After the call hangs up, Continue is the next step. */
+/* Continue remains visible after the call ends. */
 .onboarding-page button.primary.is-next {
-  box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 30%, transparent);
-  animation: setup-next 1.6s cubic-bezier(0.22, 1, 0.36, 1) 2;
-}
-@keyframes setup-next {
-  50% {
-    box-shadow: 0 0 0 8px color-mix(in oklch, var(--accent) 15%, transparent);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .onboarding-page button.primary.is-next {
-    animation: none;
-  }
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 
-/* Review your notebooks: the layout, direct edits and change requests. */
+/* Notebook review keeps edits and change requests together. */
 .setup-change {
   display: grid;
   gap: 12px;

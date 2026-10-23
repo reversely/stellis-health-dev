@@ -2,7 +2,7 @@
 .agent-chat-view{max-width:1120px;margin:0 auto;padding:24px 0 80px}
 .agent-chat-view[hidden]{display:none}
 .agent-identity-form button[type=submit],.agent-memory-add button{min-height:44px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--accent-ink);padding:8px 16px;font-weight:650;cursor:pointer}
-.agent-chat-view button:hover{filter:brightness(1.08)}
+
 .agent-chat-view button:disabled{opacity:.5;cursor:default}
 .agent-chat-view :is(button,input,textarea):focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 #agent-chat-status{min-height:24px;color:var(--muted);font-size:14px}

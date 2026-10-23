@@ -155,14 +155,12 @@ function render(scene, kit) {
         `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   }
 
-  /** Paints the notes; lines not shown before rise into place. */
+  /** Paints the current notes while preserving an active edit. */
   function paintNotes(sections) {
     if (notes.contains(document.activeElement)) {
       deferred = sections;
       return;
     }
-    const before =
-        new Set([...notes.querySelectorAll('li')].map((li) => li.textContent));
     notes.replaceChildren();
     if (!sections.length) {
       notes.append(node(
@@ -176,7 +174,6 @@ function render(scene, kit) {
         const line = node('li', item);
         line.contentEditable = 'plaintext-only';
         line.spellcheck = true;
-        if (!before.has(item) && before.size) line.classList.add('is-new');
         list.append(line);
       }
       block.append(node('h3', section.heading), list);

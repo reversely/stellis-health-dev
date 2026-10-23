@@ -13,6 +13,14 @@ The project's own style guide and tokens win over every default here. On pages b
 light-enterprise-ui, its tokens and `references/motion.md` govern; colour roles and budgets come
 from colour-theory. Write every fix in the project's existing styling system.
 
+
+## Existing interface consistency
+
+- Match each new or revised control to an existing control with the same intent. Reuse its component class and its colour, shape, type, icon and interaction states.
+- Use semantic colour roles for primary actions, secondary actions, destructive actions, selected controls and status indicators. A palette token needs the correct role; valid tokens alone do not make an arbitrary fill/text combination consistent.
+- Define shared action states once. Extend the existing styling system when a component needs a different layout, and keep its palette and control geometry consistent with the reference.
+- Review changed controls together in both themes, including hover, keyboard focus and disabled states. A style sweep covers adjacent screens and shared controls as well as the reported example.
+
 ## Should it move
 
 - Used 100+ times a day, or triggered from the keyboard (shortcuts, arrow keys, command menu):

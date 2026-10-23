@@ -1,53 +1,24 @@
-/* Motion for changes the person causes: opening a page, a dialog, a form or
-   the next step of a flow. Rules: .claude/skills/frontend-and-motion. Pages
-   and panels fade only; dialogs and new content also travel or scale a
-   little. Under reduced motion only the fades remain. */
+/* Motion identifies user-triggered overlays and changes within a task. */
 :root {
   --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
-  --motion-page: 200ms;
   --motion-dialog: 220ms;
   --motion-exit: 180ms;
+  --motion-menu: 160ms;
+  --motion-call: 200ms;
   --motion-press: 120ms;
 }
 
-/* Pages: a view fades in when the rail opens it. */
-:is(
-    .settings-view,
-    .todos-view,
-    .timeline-view,
-    .records-view,
-    .summary-view,
-    .trends-view,
-    .agent-chat-view,
-    .note-view,
-    .document-view,
-    .notebook-view
-  ) {
-  transition: opacity var(--motion-page) var(--ease-enter);
-}
-@starting-style {
-  :is(
-      .settings-view,
-      .todos-view,
-      .timeline-view,
-      .records-view,
-      .summary-view,
-      .trends-view,
-      .agent-chat-view,
-      .note-view,
-      .document-view,
-      .notebook-view
-    ) {
-    opacity: 0;
-  }
-}
-
-/* Dialogs scale up from 0.96 on open and leave faster than they arrive.
-   Transitions with allow-discrete reverse cleanly when interrupted. */
+/* Keep the panel and backdrop together on entry and exit. */
 dialog {
   transition:
     opacity var(--motion-dialog) var(--ease-enter),
     scale var(--motion-dialog) var(--ease-enter),
+    overlay var(--motion-dialog) allow-discrete,
+    display var(--motion-dialog) allow-discrete;
+}
+dialog::backdrop {
+  transition:
+    opacity var(--motion-dialog) var(--ease-enter),
     overlay var(--motion-dialog) allow-discrete,
     display var(--motion-dialog) allow-discrete;
 }
@@ -56,219 +27,114 @@ dialog:not([open]) {
   scale: 0.96;
   transition-duration: var(--motion-exit);
 }
-@starting-style {
-  dialog[open] {
-    opacity: 0;
-    scale: 0.96;
-  }
-}
-dialog::backdrop {
-  transition:
-    opacity var(--motion-dialog) var(--ease-enter),
-    overlay var(--motion-dialog) allow-discrete,
-    display var(--motion-dialog) allow-discrete;
-}
 dialog:not([open])::backdrop {
   opacity: 0;
+  transition-duration: var(--motion-exit);
 }
 @starting-style {
-  dialog[open]::backdrop {
+  dialog[open] { opacity: 0; scale: 0.96; }
+  dialog[open]::backdrop { opacity: 0; }
+}
+
+/* Native pickers stay in the top layer until their short exit finishes. */
+@supports (appearance: base-select) {
+  select::picker(select) {
     opacity: 0;
+    translate: 0 4px;
+    transition:
+      opacity var(--motion-menu) var(--ease-enter),
+      translate var(--motion-menu) var(--ease-enter),
+      display var(--motion-menu) allow-discrete,
+      overlay var(--motion-menu) allow-discrete;
+  }
+  select:open::picker(select) { opacity: 1; translate: none; }
+  @starting-style {
+    select:open::picker(select) { opacity: 0; translate: 0 4px; }
   }
 }
 
-/* Steps inside a dialog or flow: each new screen's content rises 6px into
-   place, so the person sees what changed. */
-:is(.pulse-body, .summary-body) > *,
-:is(.trend-form, .trend-table-wrap):not([hidden]) {
-  transition:
-    opacity var(--motion-dialog) var(--ease-enter),
+/* Menus and the call panel appear beside their trigger or docking edge. */
+details[open] > .more-menu-items {
+  transform-origin: top right;
+  transition: opacity var(--motion-menu) var(--ease-enter),
+    scale var(--motion-menu) var(--ease-enter);
+}
+.coach-call {
+  transition: opacity var(--motion-call) var(--ease-enter),
+    translate var(--motion-call) var(--ease-enter);
+}
+@starting-style {
+  details[open] > .more-menu-items { opacity: 0; scale: 0.96; }
+  .coach-call { opacity: 0; translate: 0 8px; }
+}
+
+/* Forms and capture results enter only when the task creates them. */
+.pulse-body > *,
+:is(.trend-form, .document-text-editor, .trend-table-wrap, .setup-scene):not([hidden]) {
+  transition: opacity var(--motion-dialog) var(--ease-enter),
     translate var(--motion-dialog) var(--ease-enter);
 }
 @starting-style {
-  :is(.pulse-body, .summary-body) > *,
-  :is(.trend-form, .trend-table-wrap):not([hidden]) {
-    opacity: 0;
-    translate: 0 6px;
-  }
-}
-
-/* Capture progress: the ring fills at the pace of time, and each step
-   changes colour as it starts or finishes. */
-.pulse-ring {
-  transition: stroke-dasharray 300ms linear;
-}
-.pulse-step,
-.pulse-step-dot {
-  transition:
-    color 150ms var(--ease-enter),
-    background-color 150ms var(--ease-enter),
-    border-color 150ms var(--ease-enter);
-}
-
-/* Press feedback on the buttons that start or finish a task. */
-:is(
-    .pulse-dialog button,
-    .trend-add,
-    .trend-save,
-    .trend-open,
-    .welcome-actions button,
-    .summary-update
-  ) {
-  transition:
-    scale var(--motion-press) var(--ease-enter),
-    background-color var(--motion-press) var(--ease-enter),
-    border-color var(--motion-press) var(--ease-enter);
-}
-:is(
-    .pulse-dialog button,
-    .trend-add,
-    .trend-save,
-    .trend-open,
-    .welcome-actions button,
-    .summary-update
-  ):active:not(:disabled) {
-  scale: 0.97;
-}
-
-/* Older surfaces: links, tabs, menus, rows and cards answer hover and press
-   with colour and a small lift, and new rows arrive in place. */
-:is(
-    .rail-pin,
-    .rail-new-button,
-    .rail-toggle,
-    .recent-row,
-    .list-widget-row,
-    .todo-row,
-    .more-menu-items :is(button, a),
-    .view-tabs button,
-    .recording-view-tabs button,
-    .conversation-tabs button
-  ) {
-  transition:
-    background-color var(--motion-press) var(--ease-enter),
-    color var(--motion-press) var(--ease-enter),
-    border-color var(--motion-press) var(--ease-enter),
-    scale var(--motion-press) var(--ease-enter);
-}
-:is(
-    .rail-pin,
-    .rail-new-button,
-    .invert-button,
-    .icon-button,
-    .view-tabs button,
-    .notebook-hero-actions button
-  ):active:not(:disabled) {
-  scale: 0.97;
-}
-:is(.invert-button, .icon-button, .notebook-hero-actions button) {
-  transition:
-    scale var(--motion-press) var(--ease-enter),
-    background-color var(--motion-press) var(--ease-enter),
-    color var(--motion-press) var(--ease-enter);
-}
-/* Menus open from their trigger in the top right. */
-details[open] > .more-menu-items {
-  transform-origin: top right;
-  transition:
-    opacity 160ms var(--ease-enter),
-    scale 160ms var(--ease-enter);
-}
-@starting-style {
-  details[open] > .more-menu-items {
-    opacity: 0;
-    scale: 0.96;
-  }
-}
-/* Notebook and home cards lift toward the pointer. */
-:is(.notebook-card, .notebook-new) {
-  transition:
-    translate 150ms var(--ease-enter),
-    box-shadow 150ms var(--ease-enter),
-    outline-color 150ms ease-out,
-    scale 150ms ease-out;
-}
-@media (hover: hover) and (pointer: fine) {
-  :is(.notebook-card, .notebook-new):hover {
-    translate: 0 -2px;
-    box-shadow: var(--shadow);
-  }
-}
-/* A finished check-in fades its text as the box fills. */
-.todo-row .todo-text {
-  transition:
-    color 200ms var(--ease-enter),
-    opacity 200ms var(--ease-enter);
-}
-.todo-check input {
-  transition: scale var(--motion-press) var(--ease-enter);
-}
-.todo-check input:active {
-  scale: 0.9;
-}
-/* Rows a list adds after the person acts rise into place. */
-:is(.todo-row, .recent-row, .list-widget-row) {
-  transition-property: background-color, color, border-color, scale, opacity,
-    translate;
-}
-@starting-style {
-  :is(.todo-row, .list-widget-row) {
+  .pulse-body > *,
+  :is(.trend-form, .document-text-editor, .trend-table-wrap, .setup-scene):not([hidden]) {
     opacity: 0;
     translate: 0 4px;
   }
 }
-
-/* A theme switch changes colours at once. app.js sets this class for two
-   frames around the swap. */
-html.theme-swapping *,
-html.theme-swapping *::before,
-html.theme-swapping *::after {
-  transition: none !important;
+.pulse-ring { transition: stroke-dasharray 300ms linear; }
+.pulse-step, .pulse-step-dot {
+  transition: color 150ms var(--ease-enter),
+    background-color 150ms var(--ease-enter),
+    border-color 150ms var(--ease-enter);
 }
 
+/* Task starts and confirmations acknowledge a pointer press. */
+:is(.invert-button, .coach-button.is-primary, .pulse-primary, .trend-save,
+    .records-sort, .records-file, .summary-update) {
+  transition: scale var(--motion-press) var(--ease-enter),
+    background-color var(--motion-press) var(--ease-enter),
+    border-color var(--motion-press) var(--ease-enter);
+}
+:is(.invert-button, .coach-button.is-primary, .pulse-primary, .trend-save,
+    .records-sort, .records-file, .summary-update):enabled:active {
+  scale: 0.97;
+}
+
+/* Keyboard interaction stays immediate, including shortcut-opened overlays. */
+html[data-input='keyboard'] :is(button, a, input, select, dialog,
+    .more-menu-items, .coach-call, .trend-form, .document-text-editor,
+    .trend-table-wrap, .setup-scene, .pulse-body > *) {
+  transition-duration: 0s !important;
+  animation: none !important;
+}
+html[data-input='keyboard'] :is(button, a, input):active {
+  scale: 1 !important;
+  translate: none !important;
+}
+html[data-input='keyboard'] :is(#theme-toggle, #setup-theme):active { scale: 1; }
+html[data-input='keyboard'] dialog::backdrop,
+html[data-input='keyboard'] select::picker(select) { transition-duration: 0s; }
+
+/* Theme colours change in one frame. */
+html.theme-swapping *,
+html.theme-swapping *::before,
+html.theme-swapping *::after { transition: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
-  dialog,
-  dialog:not([open]) {
+  dialog, dialog:not([open]), .coach-call,
+  details[open] > .more-menu-items {
     scale: 1;
-  }
-  @starting-style {
-    dialog[open] {
-      scale: 1;
-    }
-    :is(.pulse-body, .summary-body) > *,
-    :is(.trend-form, .trend-table-wrap):not([hidden]) {
-      translate: none;
-    }
-  }
-  :is(
-      .pulse-dialog button,
-      .trend-add,
-      .trend-save,
-      .trend-open,
-      .welcome-actions button,
-      .summary-update
-    ):active:not(:disabled) {
-    scale: 1;
-  }
-  :is(
-      .rail-pin,
-      .rail-new-button,
-      .invert-button,
-      .icon-button,
-      .view-tabs button,
-      .notebook-hero-actions button,
-      .todo-check input
-    ):active {
-    scale: 1;
-  }
-  :is(.notebook-card, .notebook-new):hover {
     translate: none;
   }
+  :root :is(button, a, input):active { scale: 1 !important; translate: none !important; }
+  :root :is(#theme-toggle, #setup-theme):active { scale: 1; }
+  select::picker(select) { translate: none; }
+  .pulse-ring { transition: none; }
   @starting-style {
-    details[open] > .more-menu-items {
-      scale: 1;
-    }
-    :is(.todo-row, .list-widget-row) {
+    dialog[open], details[open] > .more-menu-items { scale: 1; }
+    .coach-call, select:open::picker(select),
+    .pulse-body > *,
+    :is(.trend-form, .document-text-editor, .trend-table-wrap, .setup-scene):not([hidden]) {
       translate: none;
     }
   }
