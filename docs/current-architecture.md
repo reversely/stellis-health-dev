@@ -81,6 +81,8 @@ Verification covers an isolated authenticated browser workspace and the built im
 
 ## Call speech routing
 
+The integrated GN100 reference runs the Health account gateway on loopback port 8840 and a separate Chatterbox GPU service on loopback port 8841. The gateway's private account processes use local Silero and Moonshine for microphone recognition, Nebius Token Factory for assistant replies, and the authenticated local Chatterbox endpoint for generated audio. Its account data and downloaded call models live under `~/.local/share/stellis-health-chatterbox`. A real browser fixture verified microphone PCM, recognized words, an assistant reply and scheduled audio playback. This runtime has its own services and preserves the earlier apps. [Runtime architecture and operation](chatterbox-local-runtime.md) records ports, source checkout, credentials and validation limits.
+
 `intake_voice.Engine` keeps the existing Moonshine recognition and Silero activity detection. Kitten CPU synthesis remains the default. The deployment-wide `STELLIS_TTS_BACKEND` setting selects `cpu`, `local` or `nebius` for generated assistant replies. Both Chatterbox routes use the cookbook's `tts-1` WAV API through `call_tts.py`, with separate URL/token configuration. Credentials stay on the server; generated reply text is sent to the selected speech service. There is no automatic cross-provider fallback. A failed synthesis preserves the text reply and reports speech unavailability.
 
 ```mermaid
