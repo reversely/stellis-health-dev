@@ -12,7 +12,9 @@ page.setDefaultTimeout(20000);
 const password='maya-synthetic-validation-only'; let registered=false;
 const pace=Number(process.env.STELLIS_MAYA_PACE_MS || 450);
 await page.addInitScript(()=>{
- window.mayaEvents=[]; const WS=window.WebSocket;
+ window.mayaEvents=[]; window.mayaAudioContexts=[]; const Audio=window.AudioContext;
+ window.AudioContext=class extends Audio {constructor(...args){super(...args);window.mayaAudioContexts.push(this);}};
+ const WS=window.WebSocket;
  window.WebSocket=class extends WS {
   constructor(...args){super(...args);const path=String(args[0]);this.addEventListener('message',event=>{if(typeof event.data==='string'){try{window.mayaEvents.push({at:Date.now(),path,direction:'received',...JSON.parse(event.data)})}catch{}}});}
   send(data){if(typeof data==='string'){try{const item=JSON.parse(data);if(item.type==='text')window.mayaEvents.push({at:Date.now(),path:this.url,direction:'sent',...item});}catch{}}return super.send(data);}
@@ -74,6 +76,7 @@ try {
  await page.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Review notebooks')?.disabled);
  assert(received.some(event=>event.type==='say'&&event.text.includes('Goodbye')&&event.text.includes('Review notebooks')));
  assert(received.some(event=>event.type==='ended'));
+ await page.waitForFunction(()=>window.mayaAudioContexts.length>0&&window.mayaAudioContexts.every(context=>context.state==='closed')); 
  checks.push({check:'Reason and next action with goodbye before completion',pass:true});
  await pause();const saved=await profile();
  const prefs=await(await context.request.get(origin+'/api/v1/health/preferences')).json();assert.equal(prefs.experiences_periods,true);
