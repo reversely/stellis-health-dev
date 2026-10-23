@@ -19,9 +19,9 @@ html[data-theme] .maya-story-head .coach-button { color:var(--demo-frame-ink); b
 .maya-story-actions { border-top:1px solid var(--line); }
 .maya-story-log { max-width:800px; margin:auto; }
 .maya-story-message p { white-space:normal; margin:10px 0 0; line-height:1.6; }
-.maya-story-message.agent-message-user { margin-left:48px; padding:16px 20px; }
-.maya-story-message.agent-message-agent { margin:20px 48px 24px 0; }
-.maya-story-tool { max-width:800px; margin:24px auto 0; }
+.maya-story-message.agent-message-user { margin:0 0 0 48px; padding:16px 20px; }
+.maya-story-message.agent-message-agent { margin:12px 48px 0 0; padding:12px 0 0; }
+.maya-story-tool { max-width:800px; margin:20px auto 0; }
 .maya-earlier-turns summary { min-height:44px; cursor:pointer; }
 .maya-story-timelines { margin:28px 0; }
 .maya-timeline-track { display:grid; grid-template-columns:72px 1fr; gap:12px; align-items:center; min-height:36px; }
@@ -67,3 +67,10 @@ html[data-theme] .maya-story-head .coach-button { color:var(--demo-frame-ink); b
 
 body.is-maya-demo #setup-card { display:none; }
 .maya-year-list .coach-button { white-space:normal; overflow-wrap:anywhere; }
+
+.maya-notebook-options { border:0; min-width:0; }
+.maya-notebook-options .catalogue-option { padding:16px 0; margin:0; cursor:pointer; }
+.maya-notebook-options .catalogue-option small { color:var(--muted); font-size:14px; line-height:1.5; }
+.maya-notebook-review .list-widget-head { flex-wrap:wrap; }
+.maya-notebook-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px 16px; margin-top:16px; }
+.maya-notebook-actions .coach-button { white-space:normal; }

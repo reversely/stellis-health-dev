@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "plain_date_labels": true,
+  "prefilled_dates": true,
+  "appointments_created": 0,
+  "notebook_rows_aligned": true,
+  "whole_row_selection": true,
+  "empty_selection_disabled": true,
+  "new_and_existing_notebooks": true,
+  "errors": []
+}
