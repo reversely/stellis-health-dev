@@ -1,8 +1,8 @@
 {
-  "about": "A full intake call for Denver Lang, the sample patient, following the call plan: one question each about the goal, health and reminders, with no follow-up questions, then a goodbye that ends the call. Each turn has both sides and the notepad after it. The simulated call test speaks Denver's lines and checks the transcript, the notes and the proposed notebooks against this script.",
+  "about": "A synthetic intake example with goals, health context and reminders. Topic completion is explicit and the final handoff includes a goodbye.",
   "turns": [
     {
-      "agent": "Hi, I'm Stellis. I'll ask three quick questions, about your goal, your health and reminders, and take notes you can edit. First, what's the main health goal you'd like help with?",
+      "agent": "Hi, I'm Stellis. Let's talk about your health goals. I'll take notes you can edit. What would you like help with?",
       "person": "Keeping the weight off. I've lost about eight kilos since April last year, and I'd like my knees to stop hurting on the stairs.",
       "notes": [
         {
@@ -87,7 +87,7 @@
       ]
     },
     {
-      "agent": "Thanks, Denver. You want to keep the weight off and ease your knees, you manage diabetes and blood pressure, and you'd like a Monday weigh-in reminder. You can edit your notes, then press Continue to add your records. [END]",
+      "agent": "I have enough to get your setup started. You can review your notes, then choose Add records to continue setup. Thanks for talking with me. Goodbye. [END]",
       "person": null,
       "notes": "same"
     }

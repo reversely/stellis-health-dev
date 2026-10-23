@@ -27,7 +27,7 @@ IntakeError = intake.IntakeError
 MAX_TEXT = intake.MAX_TEXT
 MAX_TURNS = 60
 # After this many answers Stellis wraps up; one answer later it ends the call.
-MAX_ANSWERS = 6
+MAX_ANSWERS = 20
 MORNING_START = "05:00"
 MORNING_END = "12:00"
 KINDS = ("morning", "call")
@@ -58,7 +58,7 @@ INSTRUCTIONS = """You are Stellis, a health coach in the Stellis Health app, on 
 How you talk:
 - Warm, encouraging and professional. Acknowledge what the person said in a few words.
 - Keep each turn under 40 words, in at most three sentences. This is speech: no lists, no markdown, no emojis.
-- Never ask a follow-up question about what the person said, and never ask for more detail. Act on what they said, and the only question you ask is whether there is anything else.
+- Ask a short clarification when it is needed to act on a request. Answer the person's questions and offer a next step.
 
 A morning check-in follows this order:
 1. Your first turn, already spoken, summarised today's appointments and reminders and asked how the person is doing.
@@ -391,19 +391,22 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str | 
     from stellis.call_lifecycle import wants_end
     last = next((t['text'] for t in reversed(state['turns']) if t['role']=='person'), '')
     if wants_end(last):
-        yield 'Your check-in is complete. Have a nice day.' if state['kind']=='morning' else 'Have a nice day.'
+        yield 'We can stop here. Close this panel to review your goals on My Health. Goodbye.'
         yield END_MARK
         return
     must_end = _answers(state) >= MAX_ANSWERS
     messages = conversation(state)
     calls: list[dict[str, object]] = []
     spoken = ending = False
+    written = []
     for tools in (TOOLS, [END_CALL]):
         made = []
         async for piece in _stream(messages, tools, timings):
             if isinstance(piece, str):
                 spoken = True
-                yield piece
+                if not must_end:
+                    written.append(piece)
+                    yield piece
                 continue
             result, action = run_tool(piece, state["context"])
             made.append({**piece, "result": result})
@@ -421,8 +424,8 @@ async def reply(timings: dict[str, float] | None = None) -> AsyncIterator[str | 
                     "name": call["name"], "arguments": json.dumps(call["arguments"])}}
                 for call in made]},
             *({"role": "tool", "tool_call_id": call["id"], "content": call["result"]} for call in made)]
-    if (ending or must_end) and not spoken:
-        yield "Have a nice day."
-    if ending or must_end:
+    if must_end or (ending and not any("?" in piece for piece in written)):
+        reason = "I'll wrap up here so you can review your goals." if must_end else "We've finished this check-in."
+        yield reason + " Close this panel to review your goals on My Health. Goodbye."
         yield END_MARK
     debug_data.record("coach-replies", {"calls": calls})

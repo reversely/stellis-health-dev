@@ -588,6 +588,12 @@ class Call:
             await self._say(piece, 0)
         if record:
             self.script.add_agent_turn(" ".join(pieces))
+        if getattr(self.script, "end_after_opening", False):
+            self.ended = True
+            await self.send_json({"type": "ending"})
+            await self._end_script()
+            await self.send_json({"type": "ended"})
+            return
         await self._listening_state()
 
     async def _say(self, piece: str, turn: int) -> float:

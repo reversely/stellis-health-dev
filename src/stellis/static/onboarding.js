@@ -109,8 +109,8 @@
     main.append(scene);
     if (state.step === 'welcome') {
       welcome(scene);
-    } else if (state.step === 'call') {
-      callStep = window.StellisOnboardingCall.render(scene, {
+    } else if ((state.step === 'call' || state.step === 'health')) {
+      callStep = window.StellisOnboardingPersonalize.render(scene, {
         api,
         node,
         icon,
@@ -119,7 +119,7 @@
         error: (text) => {
           error.textContent = text;
         },
-        next: () => go('records'),
+        next: () => go('review'),
         back: () => go('welcome'),
       });
     } else if (review) {
@@ -146,8 +146,7 @@
         node(
             'p',
             'Stellis answers health questions from your records and helps ' +
-                'with the goals you set. Start with a short call with ' +
-                'Stellis about your health.'),
+                'with the goals you set. Answer a few questions by typing or speaking.'),
         node(
             'p',
             state.runtime.local_inference ?
@@ -615,7 +614,7 @@
     }
 
     const actions = node('div', null, 'setup-actions');
-    actions.append(finish, button('Back', () => go('records')));
+    actions.append(finish, button('Back', () => go('call')));
     scene.append(head, grid, add, actions);
     api('/intake/notebooks', 'POST')
         .then((result) => {

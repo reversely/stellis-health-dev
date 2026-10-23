@@ -1,0 +1,16 @@
+.dashboard-calendar { grid-column: 1 / -1; --calendar-default: var(--ink); --calendar-muted: var(--muted); --calendar-accent: var(--focus); --calendar-cycle: var(--health-calendar-cycle); --health-calendar-cycle: oklch(.47 .09 355); }
+html[data-theme='dark'] .dashboard-calendar { --health-calendar-cycle: oklch(.8 .075 355); }
+.health-calendar-layout { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(200px,.7fr); gap: 32px; }
+.health-calendar-month,.health-calendar-agenda { min-width: 0; }
+.health-calendar-agenda h3 { font-size: 18px; font-weight: 600; line-height: 1.4; margin: 12px 0 16px; }
+.health-calendar-event { display: grid; gap: 6px; width: 100%; min-height: 60px; text-align: left; padding: 16px 0; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; color: var(--ink); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.health-calendar-event strong { font-size: 16px; font-weight: 600; }
+.health-calendar-event:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.health-calendar-status:empty { display: none; }
+.health-calendar-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.calendar-card[data-legacy-calendar] { display: none; }
+.dashboard-reproductive[hidden] { display: none; }
+.tracker-cycle-summary { display: grid; grid-template-columns: minmax(200px,.8fr) minmax(0,1.2fr); gap: 24px; align-items: start; }
+.tracker-cycle-summary > .health-cycle-figure { grid-row: 1 / span 3; }
+.tracker-cycle-summary > .tracker-footnote { margin-top: 0; }
+@media(max-width:640px) { .health-calendar-layout,.tracker-cycle-summary { display: flex; flex-direction: column; gap: 24px; } .health-calendar-month,.health-calendar-agenda { width: 100%; } }

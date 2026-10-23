@@ -76,6 +76,9 @@ class AccountGatewayTest(unittest.TestCase):
             created = owner.post("/api/v1/pages", json={"title": "Private owner note", "markdown": "Only owner"})
             self.assertEqual(created.status_code, 201)
             note_id = created.json()["id"]
+            owner.put("/api/v1/onboarding/profile", json={"field":"name", "value":"Owner name"}).raise_for_status()
+            self.assertEqual(owner.get("/api/v1/onboarding/profile").json()["answers"]["name"], "Owner name")
+            self.assertNotIn("name", second.get("/api/v1/onboarding/profile").json()["answers"])
             self.assertEqual(len(owner.get("/api/v1/pages").json()), 1)
             self.assertEqual(second.get("/api/v1/pages").json(), [])
             self.assertEqual(second.get(f"/api/v1/pages/{note_id}").status_code, 404)
@@ -163,6 +166,7 @@ class AccountGatewayTest(unittest.TestCase):
                 "/api/v1/coach/call?kind=call&today=2026-10-22&now=10:00&utc_offset=0",
                 "/api/v1/coach/call?kind=morning&today=2026-10-22&now=10:00&utc_offset=0",
                 "/api/v1/tour/call",
+                "/api/v1/onboarding/profile/call?field=name",
             ):
                 with self.subTest(path=path):
                     address = self.url.replace("http", "ws") + path

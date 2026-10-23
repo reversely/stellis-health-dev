@@ -8,7 +8,7 @@ from stellis import call_audio_cache, call_lifecycle, tour
 
 class EndIntentTest(unittest.TestCase):
     def test_explicit_endings_and_health_statements_stay_distinct(self):
-        for text in ["That's all", 'Nothing else thanks', 'Please end the call', "I'm done", 'Goodbye', "No, that's all"]:
+        for text in ["That's all", 'Nothing else thanks', 'Please end the call', "I'm done", 'Goodbye', "No, that's all", 'That is all, goodbye']:
             self.assertTrue(call_lifecycle.wants_end(text), text)
         for text in ['I want to stop smoking', "I'm done with chemotherapy", 'Thanks for explaining', 'Nothing else helps my pain']:
             self.assertFalse(call_lifecycle.wants_end(text), text)

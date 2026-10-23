@@ -37,9 +37,11 @@ try {
     await start.waitFor();
     const welcome = await style(start);
     await start.click();
+    await page.getByRole('button', {name: 'Continue', exact: true}).click();
     const call = page.getByRole('button', {name: 'Start call', exact: true});
     await call.waitFor();
     onboarding[theme] = [welcome, await style(call)];
+    await page.getByRole('button', {name: 'Back', exact: true}).click();
     await page.getByRole('button', {name: 'Back', exact: true}).click();
     await page.getByRole('heading', {name: 'Welcome to Stellis Health', exact: true}).waitFor();
   }

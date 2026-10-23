@@ -16,6 +16,15 @@
     <script src="/shared/snapshot-format.js" defer></script>
     <script src="/shared/notes-merge.js" defer></script>
     <script src="/shared/list-date.js" defer></script>
+    <script src="/shared/calendar-dates.js" defer></script>
+    <script src="/static/calendar-view.js" defer></script>
+    <link rel="stylesheet" href="/static/calendar-view.css" />
+    <script src="/static/health-cycles.js" defer></script>
+    <script src="/static/health-calendar.js" defer></script>
+    <link rel="stylesheet" href="/static/health-calendar.css" />
+    <script src="/static/health-preferences.js" defer></script>
+    <link rel="stylesheet" href="/static/health-preferences.css" />
+    <link rel="stylesheet" href="/static/health-cycles.css" />
     <script src="/shared/agent-avatar.js" defer></script>
     <script src="/shared/summary-text.js" defer></script>
     <script src="/shared/transcript-fillers.js" defer></script>
@@ -31,7 +40,7 @@
     <script src="/static/notebook-dom.js" defer></script>
     <script src="/static/notebook-viewer.js" defer></script>
     <script src="/static/notebook-add-source.js" defer></script>
-    <script src="/static/health-dashboard.js" defer></script><link rel="stylesheet" href="/static/health-dashboard.css" /><script src="/static/health-pillars.js" defer></script><script src="/static/intake-call.js" defer></script><script src="/static/coach-call.js" defer></script><script src="/static/maya-guide.js" defer></script><script src="/static/tour.js" defer></script><link rel="stylesheet" href="/static/coach-call.css" /><script src="/static/goals.js" defer></script><link rel="stylesheet" href="/static/goals.css" /><link rel="stylesheet" href="/static/accuracy.css" /><script src="/static/notebook-chat.js" defer></script>
+    <script src="/static/reproductive.js" defer></script><link rel="stylesheet" href="/static/reproductive.css" /><script src="/static/health-dashboard.js" defer></script><link rel="stylesheet" href="/static/health-dashboard.css" /><script src="/static/health-pillars.js" defer></script><script src="/static/intake-call.js" defer></script><script src="/static/coach-call.js" defer></script><script src="/static/maya-guide.js" defer></script><script src="/static/tour.js" defer></script><link rel="stylesheet" href="/static/coach-call.css" /><script src="/static/goals.js" defer></script><link rel="stylesheet" href="/static/goals.css" /><link rel="stylesheet" href="/static/accuracy.css" /><script src="/static/notebook-chat.js" defer></script>
     <script src="/static/document-view.js" defer></script>
     <script src="/static/health-facts.js" defer></script>
     <script src="/static/timeline.js" defer></script>
@@ -118,7 +127,7 @@
           <div class="home-columns">
             <div class="home-col home-col-left"><section id="home-todos" data-widget="todos" aria-label="Check-ins"></section></div>
             <div class="home-col home-col-right">
-          <section id="calendar-card" class="calendar-card" data-widget="coming-up" aria-labelledby="calendar-title" hidden>
+          <section id="calendar-card" class="calendar-card" data-legacy-calendar data-widget="coming-up" aria-labelledby="calendar-title" hidden>
             <div class="calendar-heading"><h2 id="calendar-title"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Coming up</span></h2><button id="calendar-refresh" class="icon-button" type="button" aria-label="Refresh meetings" title="Refresh meetings"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button><div class="calendar-views" role="group" aria-label="Meeting view"><button id="calendar-view-list" class="icon-button" type="button" aria-pressed="true" aria-label="List" title="List"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></button><button id="calendar-view-days" class="icon-button" type="button" aria-pressed="false" aria-label="Next 3 days" title="Next 3 days"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg></button></div></div>
             <p id="calendar-status" role="status" aria-live="polite"></p>
             <div id="calendar-meetings" class="calendar-meetings"></div>
@@ -170,6 +179,10 @@
         <section class="settings-section" aria-labelledby="settings-profile-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg><h3 id="settings-profile-title">Profile</h3></div>
           <form id="profile-form" class="settings-form"><label for="profile-name">Name</label><input id="profile-name" maxlength="100" autocomplete="name" /><label for="profile-email">Email</label><input id="profile-email" type="email" maxlength="254" autocomplete="email" /><div class="settings-actions"><button type="submit">Save profile</button><p id="profile-status" role="status" aria-live="polite"></p></div></form>
+        </section>
+        <section class="settings-section" aria-labelledby="settings-health-title">
+          <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><h3 id="settings-health-title">Health preferences</h3></div>
+          <form id="health-preferences-form" class="settings-form"><div class="health-preference-fields"></div><div class="settings-actions"><button type="submit">Save health preferences</button><p role="status" aria-live="polite"></p></div></form>
         </section>
         <section class="settings-section" aria-labelledby="settings-signin-title">
           <div class="settings-section-head"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg><h3 id="settings-signin-title">Sign-in</h3></div>

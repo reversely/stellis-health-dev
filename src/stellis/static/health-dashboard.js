@@ -17,28 +17,7 @@ const day = value => {
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}) : '';
 };
 let dialogId = 0;
-const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('-');
-
-/** Combines scheduled events with dated sources while preserving their status. */
-function upcoming(meetings, entries, groups, now = new Date()) {
-  const today = dateKey(now);
-  const scheduled = meetings.filter(item => item.all_day ? String(item.end).slice(0,10) > today : Date.parse(item.end || item.start) > now.getTime()).map(item => ({
-    title:item.title, date:item.start, allDay:item.all_day, notebook_id:item.notebook_id,
-    status:'Scheduled', source:({google:'Google Calendar',microsoft:'Outlook'}[item.provider] || 'Calendar'),
-    target:item.notebook_id ? '/notebook/'+encodeURIComponent(item.notebook_id) : '', meeting:item,
-  }));
-  const dated = entries.filter(item => item.kind === 'document' && item.date >= today).map(item => ({
-    ...item, status:'Dated record', source:item.title,
-  }));
-  const planned = groups.flatMap(group => group.items.filter(item => item.due_date >= today).map(item => ({
-    title:item.text, date:item.due_date + (item.due_time ? 'T'+item.due_time : ''),
-    notebook_id:group.source.notebook_id, status:'Planned', source:group.source.title,
-    target:'/'+(group.source.kind === 'page' ? 'page' : 'conversation')+'/'+encodeURIComponent(group.source.id),
-  })));
-  const stamp = value => new Date(value.length === 10 ? value+'T00:00:00' : value).getTime();
-  const entered = entries.filter(item=>item.kind==='event' && Date.parse(item.starts_at)>now.getTime()).map(item=>({...item,date:item.starts_at,status:item.status === 'scheduled'?'Scheduled':'Planned',source:'You'}));
-  return [...scheduled, ...dated, ...planned, ...entered].sort((a,b) => stamp(a.date)-stamp(b.date));
-}
+const dateKey = (date = new Date()) => root.StellisCalendarDates.formatDate(date);
 
 /** Uses the current data order unless the person saved an explicit selection. */
 function selected(items, keys, field = 'id') {
@@ -65,12 +44,14 @@ class Dashboard {
     const grid = el('div',null,'dashboard-grid');
     for (const [key,title,action] of [
       ['overview','Health Overview',link('Full summary','/summary')],
-      ['upcoming','Upcoming',button('View all',()=>this.schedule())],
+      ['upcoming','Calendar',link('Calendar settings','/settings')],
       ['notebooks','My Notebooks',button('View all',()=>this.notebooks())],
       ['measurements','Measurements',link('View all','/trends')],
+      ['reproductive','Cycle and contraception',el('span')],
       ['history','Health History',link('Explore','/timeline')],
     ]) {
-      const section = el('section',null,'dashboard-section dashboard-'+key);
+      const section = el('section',null,'dashboard-section dashboard-'+key+(key==='upcoming'?' dashboard-calendar':''));
+      if(key==='reproductive')section.hidden=true;
       const head = el('div',null,'dashboard-section-head');
       const titleNode = el('h2',title); titleNode.id = 'dashboard-'+key+'-title';
       section.setAttribute('aria-labelledby',titleNode.id); head.append(titleNode,action);
@@ -83,24 +64,16 @@ class Dashboard {
 
   async load() {
     const paths = {preferences:'/dashboard/preferences', summary:'/summary', facts:'/facts',
-      readings:'/readings', timeline:'/timeline', todos:'/todos?status=open'};
+      readings:'/readings', timeline:'/timeline', healthPreferences:'/health/preferences'};
     const request = (this.request || 0) + 1; this.request = request;
-    this.calendarPending = true;
-    const calendar = dom().api('/calendar/meetings').catch(() => null);
     const results = await Promise.allSettled(Object.values(paths).map(path => dom().api(path)));
     if (this.destroyed || this.request !== request) return;
     Object.keys(paths).forEach((key,i) => {this.data[key] = results[i].status === 'fulfilled' ? results[i].value : null;});
     this.preferences = this.data.preferences;
     this.entries = this.data.timeline?.entries || [];
     this.measures = (this.data.readings?.measures || []).map(root.StellisTrends.dailyTotals);
-    this.events = upcoming(this.data.calendar?.meetings || [], this.entries, this.data.todos?.groups || []);
     this.paint();
-    const meetings = await calendar;
-    if (this.destroyed || this.request !== request) return;
-    this.data.calendar = meetings; this.calendarPending = false;
-    this.events = upcoming(meetings?.meetings || [], this.entries, this.data.todos?.groups || []);
-    const body = this.sections.get('upcoming'); body.replaceChildren();
-    this.eventsList(body,this.events.slice(0,3));
+
   }
 
   empty(body, text, label, href) {
@@ -108,10 +81,22 @@ class Dashboard {
   }
 
   paint() {
+    this.calendarView?.destroy();this.tracker?.destroy();
     for (const body of this.sections.values()) body.replaceChildren();
     const prefs = this.preferences || {notebooks:[],measurements:[],care_contexts:[]};
     this.overview();
-    this.eventsList(this.sections.get('upcoming'),this.events.slice(0,3));
+    const periodsEnabled=this.data.healthPreferences?.experiences_periods===true;
+    const trackerHost=this.sections.get('reproductive');trackerHost.closest('section').hidden=!periodsEnabled;
+    this.tracker=periodsEnabled?root.StellisReproductive.mount(trackerHost,{onChange:()=>this.calendarView?.reload()}):null;
+    const calendarHost=this.sections.get('upcoming');
+    this.calendarView=root.StellisHealthCalendar.mount(calendarHost,{onSelectEvent:event=>{
+      if(event.source_type==='reproductive'&&this.tracker)this.tracker.openRecord(event.source_id);
+      else if(event.target)location.href=event.target;
+      else this.eventDetail({title:event.title,date:event.start||event.start_date,status:'Scheduled',source:event.kind,meeting:event.appointment});
+    }});
+    const calendarHeader=calendarHost.previousElementSibling;
+    calendarHeader.querySelector('[data-calendar-log]')?.remove();
+    if(periodsEnabled){const log=button('Log period',()=>this.tracker.createPeriod(this.calendarView.getSelectedDate()),'coach-button is-primary');log.dataset.calendarLog='';calendarHeader.append(log);}
     this.bookList(this.sections.get('notebooks'),selected(this.books,prefs.notebooks));
     this.measurements(selected(this.measures,prefs.measurements,'key'));
     const history = this.sections.get('history');
@@ -219,30 +204,6 @@ class Dashboard {
     body.append(grid);
   }
 
-  eventsList(body, events) {
-    if (!events.length && this.calendarPending) {
-      body.append(el('p','Loading upcoming events','dashboard-empty'));
-    } else if (!events.length) {
-      this.empty(body,'No upcoming events in your saved data','Calendar settings','/settings');
-    } else {
-      const list = el('ul',null,'dashboard-list');
-      for (const event of events) {
-        const row = el('li'); let when = day(event.date);
-        if (!event.allDay && String(event.date).includes('T')) when += ' '+new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-        row.append(el('time',when));
-        row.append(event.target ? link(event.title,event.target) : button(event.title,()=>this.eventDetail(event)));
-        const book = this.books.find(item=>item.id===event.notebook_id);
-        row.append(el('span',event.status+' — '+event.source,'dashboard-meta'));
-        if (book) row.append(link(book.name,'/notebook/'+encodeURIComponent(book.id),'dashboard-meta'));
-        list.append(row);
-      }
-      body.append(list);
-    }
-    if (this.calendarPending && events.length) body.append(el('p','Loading calendar events','dashboard-empty'));
-    else if (!this.calendarPending && (!this.data.calendar || this.data.calendar.errors?.length)) body.append(el('p','Calendar events could not load','dashboard-empty'));
-    if (!this.data.timeline || !this.data.todos) body.append(el('p','Some saved events could not load','dashboard-empty'));
-  }
-
   dialog(title) {
     const node = el('dialog',null,'dashboard-dialog');
     const opener = document.activeElement;
@@ -257,11 +218,11 @@ class Dashboard {
     },{once:true}); document.body.append(node); node.showModal();
     return node;
   }
-  schedule() {this.eventsList(this.dialog('Upcoming'),this.events);}
   notebooks() {this.bookList(this.dialog('My Notebooks'),this.books);}
   eventDetail(event) {
     const dialog = this.dialog(event.title); dialog.append(el('p',day(event.date)),el('p',event.status+' — '+event.source));
     if (event.meeting?.location) dialog.append(el('p',event.meeting.location));
+    if(event.meeting)for(const [label,method] of [['Notes','openNotes'],['Notebook','openNotebook'],['Record','recordMeeting']])dialog.append(button(label,()=>{dialog.close();root.StellisCalendar[method](event.meeting);}));
     dialog.append(link('Calendar settings','/settings'));
   }
 
@@ -296,9 +257,10 @@ class Dashboard {
 }
 let current;
 async function mount(host, library) {
-  if (current) current.destroyed=true;
+  if (current) {current.destroyed=true;current.calendarView?.destroy();current.tracker?.destroy();}
   current = new Dashboard(host,library); await current.load();
 }
-root.StellisHealthDashboard = {mount,customize:()=>current?.customize(),upcoming,selected};
-if (typeof module !== 'undefined') module.exports = {upcoming,selected};
+root.addEventListener?.('stellis:health-preferences-changed',()=>{if(current&&!current.destroyed)current.load();});
+root.StellisHealthDashboard = {mount,customize:()=>current?.customize(),selected};
+if (typeof module !== 'undefined') module.exports = {selected};
 })(typeof window !== 'undefined' ? window : globalThis);

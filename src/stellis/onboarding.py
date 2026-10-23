@@ -55,11 +55,11 @@ def _require(account_id):
 
 
 def status(account_id):
-    from stellis import health_catalogue
+    from stellis import health_catalogue, health_preferences
     state = _read()
     defaults = {book['name'].lower():book['todo_enabled'] for book in notebooks.list_notebooks()}
     inherited = {group['name'].lower():group['todo_list']=='on' for group in collections.list_collections()}
-    return {**state, "health_catalogue":health_catalogue.configuration(), "task_defaults":defaults, "collection_task_defaults":inherited, "required":available(account_id), "catalog":USES,
+    return {**state, "health_preferences":health_preferences.preferences(), "health_catalogue":health_catalogue.configuration(), "task_defaults":defaults, "collection_task_defaults":inherited, "required":available(account_id), "catalog":USES,
             "proposals":[item for item in USES if item["id"] in state["uses"]], "runtime":runtime_settings.status(),
             "managed":runtime_profile.shared_provider_keys()}
 

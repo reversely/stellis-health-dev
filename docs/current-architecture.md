@@ -24,6 +24,28 @@ Notebook rows retain template identity, description, version, archive state, opt
 
 The dashboard retains original source links and does not generate clinical claims. Calendar appointments, dated records and saved plans keep separate status labels. Calendar loading proceeds separately from local data. The initial browser route waits for deferred UI modules before using their exports. Full detail pages and legacy capture/review controls remain available. See [dashboard evidence](evidence/121/README.md).
 
+## Confirmed personal setup and shared tracking
+
+`onboarding_profile.py` defines the ordered personal questions and validates confirmed answers in account-local `onboarding_setup.state_json`. The browser animates one question into view and provides editable speech candidates through a dedicated authenticated `/onboarding/profile/call` WebSocket. The shared call transport uses local recognition and the selected synthesis backend; these field prompts and confirmation replies are deterministic and require no language model. Unconfirmed candidates stay in the call and browser. Confirmed names update the account profile. Confirmed conditions, medicines, plural goals and wellness interests project into editable intake notes for the existing catalogue matcher. Notebook creation still requires review and explicit confirmation.
+
+Period answers use `health_preferences.py`, shared with Settings and calendar source gating. Gender does not establish period status. Cycle interest adds a reviewable notebook suggestion; reproductive history comes from explicit logging through `reproductive_routes.py`. The account-local `reproductive_records` and `pill_doses` tables retain period, pill and device entries. Disabling tracking preserves those records. `calendar_sources.py` and `calendar.event_view` combine enabled tracking sources, dated records, plans and connected appointments into one calendar API. The shared month component and daily agenda render that projection. See [shared calendar architecture](shared-calendars.md).
+
+`intake_library.py` searches local goal categories, registered health templates and a bundled NLM RxTerms name snapshot. Search input stays on the account server; results cap at 20. Library selection prepares an editable answer. Free intake retains useful clarifications, completes topics explicitly and finishes with a reason, next action and goodbye. A bounded 20-answer budget supplies a final handoff. The browser drains queued audio before completion. [Acceptance evidence](evidence/personal-onboarding/README.md) describes the synthetic speech fixture and layout checks.
+
+```mermaid
+flowchart LR
+  Person[Typed or spoken answer] --> Candidate[Editable candidate]
+  Candidate --> Confirm[Explicit confirmation]
+  Confirm --> Profile[Account setup and name]
+  Confirm --> Preference[Shared period preference]
+  Profile --> Notes[Editable intake notes]
+  Notes --> Review[Catalogue notebook review]
+  Review --> Create[Confirmed notebook creation]
+  Preference --> Calendar[Unified calendar projection]
+  Logged[Explicit tracker entries] --> Calendar
+  Appointments[Appointments records and plans] --> Calendar
+```
+
 ## Global health capture
 
 `health-capture.js` serves the toolbar, mobile Add slot and Ask Stellis composer with one contextual dialog. Uploads, recording, manual readings and check-ins reuse their existing services. `POST /photo-readings/{document_id}/extract?measure=...` reads a retained image through the existing bounded OCR service and returns candidate values without saving readings. `POST /photo-readings` validates the reviewed unit, converts to canonical units and saves through `readings.add`. Readings retain optional notebook and source-document foreign keys and a unique capture retry key. Confirmation serializes its identity check and insert in one transaction. Source deletion clears the link while retaining the value. Temperature joins the registered measures.

@@ -4853,6 +4853,7 @@ async function showSettings() {
     document.querySelector('#account-username').value = profile.username;
     document.querySelector('#keep-debug-data').checked = profile.keep_debug_data;
   } else document.querySelector('#profile-status').textContent = 'Sign in with your own account to change these settings';
+  await window.StellisHealthPreferences.mountSettings();
   const names = terms.filter(term => term.kind === 'name').length;
   document.querySelector('#settings-vocabulary-count').textContent =
     `${names} ${names === 1 ? 'name' : 'names'} and ${terms.length - names} other ${terms.length - names === 1 ? 'term' : 'terms'}`;

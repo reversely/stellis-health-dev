@@ -6,7 +6,7 @@ _END = re.compile(
     r"(?:please )?(?:end|stop|finish) (?:the |this |our )?call|"
     r"(?:that(?:'s| is)|that was) (?:all|everything)|"
     r"(?:there(?:'s| is) )?nothing (?:else|more)|i (?:do not|don't) have anything else|i(?:'m| am) (?:done|finished))"
-    r"(?:[ ,]*(?:please|thanks|thank you|for now))*",
+    r"(?:[ ,]*(?:please|thanks|thank you|for now|goodbye|bye))*",
     re.IGNORECASE,
 )
 
