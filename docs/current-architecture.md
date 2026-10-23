@@ -48,6 +48,25 @@ OCR traces record timestamps, duration, page number and character count. Agent g
 
 Verification covers an isolated authenticated browser workspace and the built image under resource limits. It does not establish the deployed service revision. [OCR evidence](evidence/97/README.md) records tests, benchmarks and the reviewed licence sources. Issue #104 tracks the subsequent speech upgrade and stage timing.
 
+## Call speech routing
+
+`intake_voice.Engine` keeps the existing Moonshine recognition and Silero activity detection. Kitten CPU synthesis remains the default. The deployment-wide `STELLIS_TTS_BACKEND` setting selects `cpu`, `local` or `nebius` for generated assistant replies. Both Chatterbox routes use the cookbook's `tts-1` WAV API through `call_tts.py`, with separate URL/token configuration. Credentials stay on the server; generated reply text is sent to the selected speech service. There is no automatic cross-provider fallback. A failed synthesis preserves the text reply and reports speech unavailability.
+
+```mermaid
+flowchart LR
+  Call[Authenticated intake, coach or tour call] --> ASR[Existing local speech recognition]
+  ASR --> Reply[Assistant reply text]
+  Reply --> Route[Operator speech backend]
+  Route --> CPU[Kitten CPU default]
+  Route --> Local[Local Chatterbox WAV service]
+  Route --> Cloud[Nebius Chatterbox WAV endpoint]
+  CPU --> PCM[Mono PCM to call browser]
+  Local --> PCM
+  Cloud --> PCM
+```
+
+The optional local service runs original English Chatterbox on GB10 in an isolated environment, binds to loopback, requires a configured bearer token, serializes synthesis and warms up before accepting traffic. It is independent of the Fly image. The HTTP adapter bounds returned bytes and decoded duration, rejects redirects, and requires HTTPS except for local loopback. Local synthesis and authenticated API checks passed; remote Nebius synthesis and Fly-to-local routing remain unverified. See [configuration](chatterbox.md) and [measured evidence](evidence/chatterbox/README.md). The existing broader speech acceptance work remains in #104.
+
 ## Earlier development architecture
 
 The following sections preserve the earlier development runtime and its acceptance evidence. Issue #99 tracks reconciliation of that material and the broader health roadmap.

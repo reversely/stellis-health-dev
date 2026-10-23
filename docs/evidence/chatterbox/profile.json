@@ -1,0 +1,83 @@
+[
+  {
+    "threads": 20,
+    "run": 0,
+    "total": 2.7253,
+    "audio_seconds": 3.6,
+    "tokens": 2.0261,
+    "decoder": 0.5072,
+    "watermark": 0.1368
+  },
+  {
+    "threads": 20,
+    "run": 1,
+    "total": 1.7191,
+    "audio_seconds": 3.6,
+    "tokens": 1.354,
+    "decoder": 0.3376,
+    "watermark": 0.0269
+  },
+  {
+    "threads": 20,
+    "run": 2,
+    "total": 1.7258,
+    "audio_seconds": 3.6,
+    "tokens": 1.355,
+    "decoder": 0.3349,
+    "watermark": 0.0354
+  },
+  {
+    "threads": 4,
+    "run": 0,
+    "total": 1.7139,
+    "audio_seconds": 3.6,
+    "tokens": 1.3562,
+    "decoder": 0.335,
+    "watermark": 0.022
+  },
+  {
+    "threads": 4,
+    "run": 1,
+    "total": 1.7183,
+    "audio_seconds": 3.6,
+    "tokens": 1.3605,
+    "decoder": 0.3351,
+    "watermark": 0.0222
+  },
+  {
+    "threads": 4,
+    "run": 2,
+    "total": 1.7246,
+    "audio_seconds": 3.6,
+    "tokens": 1.364,
+    "decoder": 0.3369,
+    "watermark": 0.0231
+  },
+  {
+    "threads": 1,
+    "run": 0,
+    "total": 1.7215,
+    "audio_seconds": 3.6,
+    "tokens": 1.3587,
+    "decoder": 0.3352,
+    "watermark": 0.0269
+  },
+  {
+    "threads": 1,
+    "run": 1,
+    "total": 1.715,
+    "audio_seconds": 3.6,
+    "tokens": 1.3559,
+    "decoder": 0.3352,
+    "watermark": 0.0232
+  },
+  {
+    "threads": 1,
+    "run": 2,
+    "total": 1.7127,
+    "audio_seconds": 3.6,
+    "tokens": 1.3551,
+    "decoder": 0.3343,
+    "watermark": 0.0227
+  }
+]
