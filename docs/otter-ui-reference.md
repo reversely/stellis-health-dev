@@ -228,3 +228,11 @@ Implementation in progress: the existing shared avatar system supplies Maya and 
 Verified so far: backend all-year import/filing/reset tests preserve an ordinary workspace sentinel. Browser first-year native period and appointment saves, ZIP upload, extracted date confirmation, notebook creation, report opening and real cited chat reply pass. Overview geometry checks pass at 360, 390, 768, 1024, 1280, 1440 and 1920 pixels in both themes. The complete five-year walkthrough is now verified, including native milestone confirmation, postpartum tracking and one-action clear. Seventy overview/story/cycle/date/notebook states pass geometry checks in both themes. Evidence: `stellis-synthetic-patient/validation/yearly_story/report.md`. Final integration is tracked in #133.
 
 Post-merge server-log review found and corrected a concurrent reset/read race (#138). The regression coverage includes draining a held read, interrupting a pending reply and rejecting stale requests after clear. Repeated workflow evidence is retained alongside the earlier reply to expose model variability.
+
+## Maya notebook review and date terminology — 2026-10-23
+
+User reference: `docs/uirefs/image copy 2.png`. Observed: checkbox titles touch the controls, secondary counts lack a row structure and the approval action sits against the last option. The shared catalogue row layout was scoped to the catalogue dialog even though the story reused its option class. User also rejected “encounter date” as unclear and easily confused with scheduling an appointment.
+
+Implemented: reused the shared catalogue checkbox layout and existing list-widget rows, with aligned controls, quieter record counts, selected totals and clear New/Existing annotations. Story spacing is tighter; Continue waits for the actual review action. Patient-facing dates now say “Visit or test date” with “Confirm dates”; extracted values and page evidence remain prefilled. Candidate date types use plain labels. No appointment is created by date confirmation.
+
+Verified: 70 layout states at seven widths in both themes, whole-row checkbox interaction, zero-selection disabling, notebook filing/reuse, prefilled dates and the ordinary source-page date form. The browser asserts zero appointments before and after date confirmation. Evidence: `docs/evidence/maya-notebook-review/`.

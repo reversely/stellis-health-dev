@@ -35,7 +35,7 @@
         {
           "kind": "dates",
           "maya": "These are visits and tests from different days. I want them in the right order.",
-          "stellis": "The report text supplies the encounter dates for you to review."
+          "stellis": "The dates of your visits and tests are filled from the reports."
         },
         {
           "kind": "notebooks",
@@ -91,7 +91,7 @@
         {
           "kind": "dates",
           "maya": "Can we separate the test dates from the dates I reviewed them with the clinic?",
-          "stellis": "Review the encounter dates found in the report text."
+          "stellis": "Review the visit and test dates found in the reports."
         },
         {
           "kind": "notebooks",
@@ -134,7 +134,7 @@
         {
           "kind": "dates",
           "maya": "Some reports were written after the procedure. Please help me keep the clinical dates straight.",
-          "stellis": "Review the extracted encounter dates before adding this year to the timeline."
+          "stellis": "Review the visit and procedure dates filled from your reports."
         },
         {
           "kind": "notebooks",
@@ -189,7 +189,7 @@
         {
           "kind": "dates",
           "maya": "There are screening dates, visits, the birth and later follow-ups.",
-          "stellis": "Confirm the extracted encounter dates so the timeline preserves that sequence."
+          "stellis": "Confirm the dates filled from your reports."
         },
         {
           "kind": "notebooks",

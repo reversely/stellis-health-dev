@@ -16,7 +16,7 @@ try{
   if(turn.kind==='upload'){
    await story.getByLabel(`${year.year} demo ZIP`,{exact:true}).setInputFiles(`src/stellis/static/maya/years/maya-${year.year}.zip`);await story.getByText(`${year.record_count} demo records added /`,{exact:false}).waitFor();
   }else if(turn.kind==='dates'){
-   const values=await story.locator('input[type=date]').evaluateAll(nodes=>nodes.map(n=>n.value));assert(values.every(Boolean));await story.getByRole('button',{name:'Confirm encounter dates',exact:true}).click();await story.getByText('Encounter dates confirmed',{exact:true}).waitFor();
+   const values=await story.locator('input[type=date]').evaluateAll(nodes=>nodes.map(n=>n.value));assert(values.every(Boolean));await story.getByRole('button',{name:'Confirm dates',exact:true}).click();await story.getByText('Dates confirmed',{exact:true}).waitFor();
   }else if(turn.kind==='notebooks'){
    await story.getByRole('button',{name:'Add notebooks and file records',exact:true}).click();await story.getByText(/records filed/).waitFor();
   }else{

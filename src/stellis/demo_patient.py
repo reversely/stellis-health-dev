@@ -165,9 +165,9 @@ def confirm_dates(year: str, values: dict):
         try:
             date.fromisoformat(value)
         except (ValueError, TypeError) as exc:
-            raise ValueError('Confirm an encounter date for every record') from exc
+            raise ValueError('Confirm a visit or test date for every report') from exc
         if value != known[record['corpus_id']]['date']:
-            raise ValueError(f"Check the encounter date in {record['corpus_id']}")
+            raise ValueError(f"Check the visit or test date in {record['corpus_id']}")
     for record in data['documents']:
         documents.update(record['id'], record_date=values[record['id']])
     state = _state(); state['years'][year]['dates_confirmed'] = True; _save(state)
@@ -178,7 +178,7 @@ def file_records(year: str, selected: list[str]):
     data = review(year)
     allowed = {book['template_id'] for book in data['suggestions']}
     if not data['dates_confirmed']:
-        raise ValueError('Confirm encounter dates before filing records')
+        raise ValueError('Confirm report dates before filing records')
     if not selected or not set(selected) <= allowed:
         raise ValueError('Choose suggested notebooks for this year')
     health_catalogue.activate([{'template_id': identifier} for identifier in dict.fromkeys(selected)])

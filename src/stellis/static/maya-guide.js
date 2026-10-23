@@ -76,7 +76,7 @@ async function showYear(){
  log.append(message(true,turn.maya),message(false,turn.stellis));body.append(log);
  const tool=el('section',null,'maya-story-tool');tool.setAttribute('aria-label','Current action');body.append(tool);await renderTool(tool,turn,year);const error=el('p');error.dataset.storyStatus='';error.role='status';body.append(error);node.append(body);
  const actions=el('div',null,'maya-story-actions');
- actions.append(button('Check my action',async()=>{await refresh();if(await completed(turn)){progress.checked=true;save();showYear();}else notice('Complete the current action in the health interface');}));
+ if(!['upload','dates','notebooks'].includes(turn.kind))actions.append(button('Check my action',async()=>{await refresh();if(await completed(turn)){progress.checked=true;save();showYear();}else notice('Complete the current action in the health interface');}));
  const next=button(progress.turn===year.turns.length-1?'Next year':'Continue as Maya',async()=>{
   if(!await completed(turn)){notice('Complete the current action first');return;}
   progress.checked=false;
@@ -84,7 +84,7 @@ async function showYear(){
   else{progress.completed=[...new Set([...(progress.completed||[]),year.year])];if(progress.year<4){progress.year++;progress.turn=0;}else{save();showOverview();return;}}
   save();await showYear();
  },true);
- actions.append(next);if(progress.turn)actions.append(button('Previous situation',()=>{progress.turn--;save();showYear();}));node.append(actions);
+ next.disabled=['upload','dates','notebooks'].includes(turn.kind)&&!await completed(turn);actions.append(next);if(progress.turn)actions.append(button('Previous situation',()=>{progress.turn--;save();showYear();}));node.append(actions);
 }
 async function renderTool(host,turn,year){
  const controls=el('div',null,'document-actions');host.append(controls);
@@ -97,16 +97,32 @@ async function renderTool(host,turn,year){
   if(activeReview)host.append(el('p',`${activeReview.documents.length} demo records added / ${status.notebooks.length} notebooks`));
  }else if(turn.kind==='dates'){
   if(!activeReview){host.append(el('p','Upload this year’s ZIP first'));return;}
+  host.append(el('h3','Report dates'),el('p','These dates place your reports on the health timeline','dashboard-meta'));
   const form=el('form',null,'capture-form maya-date-review');const inputs=new Map();
-  for(const record of activeReview.documents){const label=el('label',null,'capture-field');label.append(el('span',record.title));const field=el('input');field.type='date';field.required=true;field.setAttribute('aria-label',record.corpus_id+' encounter date');field.value=record.record_date||record.date_suggestion.date||'';label.append(field);form.append(label);const quote=record.date_suggestion.candidates.find(c=>c.date===field.value);if(quote)form.append(el('small',`From page ${quote.page}: ${quote.quote}`));inputs.set(record.id,field);}
-  if(activeReview.dates_confirmed)host.append(el('p','Encounter dates confirmed'));
-  const save=button('Confirm encounter dates',()=>{},true);save.type='submit';form.append(save);form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{await api(`/demo/years/${year.year}/dates`,{method:'POST',json:{dates:Object.fromEntries([...inputs].map(([id,input])=>[id,input.value]))}});await showYear();}catch(error){notice(error.message);save.disabled=false;}});host.append(form);
+  for(const record of activeReview.documents){const label=el('label',null,'capture-field');label.append(el('strong',record.title),el('span','Visit or test date'));const field=el('input');field.type='date';field.required=true;field.setAttribute('aria-label',record.corpus_id+' visit or test date');field.value=record.record_date||record.date_suggestion.date||'';label.append(field);form.append(label);const quote=record.date_suggestion.candidates.find(c=>c.date===field.value);if(quote)form.append(el('small',`From page ${quote.page}: ${quote.quote}`));inputs.set(record.id,field);}
+  if(activeReview.dates_confirmed)host.append(el('p','Dates confirmed'));
+  const save=button('Confirm dates',()=>{},true);save.type='submit';form.append(save);form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{await api(`/demo/years/${year.year}/dates`,{method:'POST',json:{dates:Object.fromEntries([...inputs].map(([id,input])=>[id,input.value]))}});await showYear();}catch(error){notice(error.message);save.disabled=false;}});host.append(form);
  }else if(turn.kind==='notebooks'){
   if(!activeReview)return;
-  host.append(el('p',`Before this review: ${status.notebooks.length} notebooks`));const selected=[];
-  for(const suggestion of activeReview.suggestions){const label=el('label',null,'catalogue-option');const checkbox=el('input');checkbox.type='checkbox';checkbox.checked=true;checkbox.value=suggestion.template_id;selected.push(checkbox);const description=el('span');description.append(el('strong',suggestion.name),el('small',`${suggestion.record_count} related records / ${suggestion.existing?'Existing notebook':'New suggestion'}`));label.append(checkbox,description);host.append(label);}
-  host.append(button('Add notebooks and file records',async()=>{await api(`/demo/years/${year.year}/notebooks`,{method:'POST',json:{templates:selected.filter(c=>c.checked).map(c=>c.value)}});await window.reloadLibrary?.();await showYear();},true));
-  if(activeReview.filed)host.append(el('p',`${activeReview.documents.filter(r=>r.notebook_id).length} records filed / ${status.notebooks.length} notebooks now available`));
+  const review=el('section',null,'list-widget maya-notebook-review');
+  const heading=el('div',null,'list-widget-head');heading.append(el('h3','Suggested notebooks'),el('span',`${status.notebooks.length} in your library`,'dashboard-meta'));review.append(heading);
+  const choices=el('fieldset',null,'list-widget-rows maya-notebook-options');
+  choices.append(el('legend','Suggested notebooks','visually-hidden'));
+  const selected=[];
+  for(const suggestion of activeReview.suggestions){
+   const label=el('label',null,'catalogue-option list-widget-row');
+   const checkbox=el('input');checkbox.type='checkbox';checkbox.checked=true;checkbox.value=suggestion.template_id;selected.push(checkbox);
+   const description=el('span',null,'list-widget-text');description.append(el('strong',suggestion.name),el('small',`${suggestion.record_count} records / ${suggestion.existing?'Existing notebook':'New notebook'}`));
+   label.append(checkbox,description);choices.append(label);
+  }
+  review.append(choices);
+  const actions=el('div',null,'maya-notebook-actions');const count=el('span',null,'dashboard-meta');
+  const approve=button('Add notebooks and file records',async()=>{await api(`/demo/years/${year.year}/notebooks`,{method:'POST',json:{templates:selected.filter(c=>c.checked).map(c=>c.value)}});await window.reloadLibrary?.();await showYear();},true);
+  const selectionChanged=()=>{const total=selected.filter(input=>input.checked).length;count.textContent=`${total} selected`;approve.disabled=!total;};
+  for(const checkbox of selected)checkbox.addEventListener('change',selectionChanged);selectionChanged();
+  actions.append(approve,count);review.append(actions);host.append(review);
+  if(activeReview.filed)host.append(el('p',`${activeReview.documents.filter(r=>r.notebook_id).length} records filed / ${status.notebooks.length} notebooks`,'dashboard-meta'));
+
  }else controls.append(button(actionLabel(turn.kind),()=>useTool(turn),true));
 }
 function actionLabel(kind){return {cycle:'Open Cycle',appointment:'Add appointment',timeline:'Open timeline',chat:'Ask Stellis',milestone:'Add due-date milestone',birth:'Update birth milestone',overview:'Open My Health'}[kind]||'Open health interface';}
