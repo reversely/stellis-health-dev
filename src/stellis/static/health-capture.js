@@ -1,7 +1,7 @@
 /** Shared health capture with explicit review and notebook context. */
 (() => {
 'use strict';
-const ACTIONS = {'photo':'Take Photo','reading':'Enter Reading','upload':'Upload Record','record':'Record Visit','appointment':'Add Appointment','checkin':'Check-in'};
+const ACTIONS = {'log':'Log Items','photo':'Take Photo','reading':'Enter Reading','upload':'Upload Record','record':'Record Visit','appointment':'Add Appointment','checkin':'Check-in'};
 const UNITS = {weight:['kg','lb'],blood_pressure:['mmHg'],blood_glucose:['mg/dL','mmol/L'],temperature:['°C','°F']};
 const el = (tag,text,cls) => window.StellisDom.el(tag,text,cls);
 const api = (...args) => window.StellisDom.api(...args);
@@ -35,6 +35,7 @@ async function open(action=null,options={}) {
   if(action && !Object.hasOwn(ACTIONS,action))return;
   const notebookId=Object.hasOwn(options,'notebookId') ? options.notebookId : context();
   if(action==='record'){active?.close();window.startHealthRecording(notebookId);return;}
+  if(action==='log'){active?.close();window.StellisTrackerLog.open({notebookId});return;}
   const {dialog,body}=modal(ACTIONS[action] || 'Add');
   if(!action) {
     const choices=el('div',null,'capture-choices');

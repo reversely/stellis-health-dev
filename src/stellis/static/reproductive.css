@@ -164,6 +164,7 @@ html[data-theme='dark'] .dashboard-reproductive .dashboard-body {
 .tracker-cycle-overview .tracker-metric { padding: var(--space-4) var(--space-4); background: var(--raised); border-radius: var(--radius-panel); }
 .tracker-cycle-overview .tracker-metric dd { font-size: 22px; }
 .dashboard-reproductive .dashboard-section-head > button { padding: var(--space-3) var(--space-4); flex: none; }
+.dashboard-reproductive .dashboard-section-head > .tracker-log-open { margin-left: auto; }
 .dashboard-reproductive .dashboard-section-head > button[hidden] { display: none; }
 @media(max-width:640px) {
   .tracker-cycle-overview { display: flex; align-items: stretch; }

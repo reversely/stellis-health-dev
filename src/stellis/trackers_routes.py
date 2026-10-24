@@ -5,7 +5,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from stellis import trackers
+from stellis import tracker_log, trackers
 
 router = APIRouter()
 # A form has at most a few dozen fields; reject oversized bodies early.
@@ -40,6 +40,45 @@ def kinds():
 def records(today: str | None = Query(default=None, max_length=10),
             notebook_id: str | None = Query(default=None, max_length=64)):
     return {'records': trackers.list_records(notebook_id=notebook_id, today=_today(today))}
+
+
+# Fixed paths come before /trackers/{kind}, which would otherwise match them.
+@router.get('/trackers/log/items')
+def log_items(today: str | None = Query(default=None, max_length=10)):
+    return {'items': tracker_log.items(_today(today)), 'max': tracker_log.MAX_ENTRIES}
+
+
+class EntryIn(BaseModel):
+    item: str = Field(max_length=120)
+    value: str | float | bool | None = None
+    value2: float | None = None
+    amount: float | None = Field(default=None, gt=0)
+    evidence: str = Field(default='', max_length=500)
+
+
+class EntriesIn(BaseModel):
+    day: str = Field(max_length=10)
+    time: str | None = Field(default=None, pattern=r'^\d{2}:\d{2}$')
+    entries: list[EntryIn] = Field(min_length=1, max_length=tracker_log.MAX_ENTRIES)
+
+
+@router.post('/trackers/entries')
+def save_entries(request: EntriesIn):
+    try:
+        return tracker_log.save([entry.model_dump() for entry in request.entries], request.day, request.time)
+    except tracker_log.EntryErrors as error:
+        raise HTTPException(422, {'message': 'Nothing was saved. Check the marked items.',
+                                  'errors': {str(k): v for k, v in error.errors.items()}}) from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@router.delete('/trackers/entries/{batch_id}')
+def undo_entries(batch_id: str):
+    try:
+        return tracker_log.undo(batch_id)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
 
 
 @router.post('/trackers/{kind}')

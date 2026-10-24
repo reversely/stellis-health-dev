@@ -69,7 +69,8 @@ function plural(count, word) {
  * @param {{method: (string|undefined), json: (*|undefined),
  *     body: (!FormData|undefined)}=} options
  * @return {!Promise<*>}
- * @throws {!Error} With the server's message when the response is not ok.
+ * @throws {!Error} With the server's message when the response is not ok,
+ *     and the response body as `data`.
  */
 async function api(path, options = {}) {
   const init = {method: options.method || 'GET'};
@@ -82,8 +83,11 @@ async function api(path, options = {}) {
   const response = await fetch('/api/v1' + path, init);
   const data = await response.json();
   if (!response.ok) {
-    const detail = typeof data.detail === 'string' ? data.detail : '';
-    throw new Error(detail || 'Could not reach Stellis Health');
+    const detail = typeof data.detail === 'string' ? data.detail :
+        typeof data.detail?.message === 'string' ? data.detail.message : '';
+    const error = new Error(detail || 'Could not reach Stellis Health');
+    error.data = data;  // Structured details, such as per-entry errors.
+    throw error;
   }
   return data;
 }

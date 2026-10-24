@@ -263,21 +263,26 @@ def _day(text: str) -> str:
     return day.isoformat()
 
 
-def mark(goal_id: str, day: str, done: bool) -> None:
+def mark(goal_id: str, day: str, done: bool, conn=None) -> None:
     """Logs or clears a goal's activity on a day.
+
+    Args:
+        conn: An open connection, so joined logging can share one transaction.
 
     Raises:
         LookupError: No goal has ``goal_id``.
         ValueError: ``day`` is not a date or is in the future.
     """
     day = _day(day)
-    with storage.connect() as conn:
-        _require(conn, goal_id)
-        conn.execute("DELETE FROM coach_goal_days WHERE goal_id = ? AND day = ?",
+    if conn is None:
+        with storage.connect() as own:
+            return mark(goal_id, day, done, own)
+    _require(conn, goal_id)
+    conn.execute("DELETE FROM coach_goal_days WHERE goal_id = ? AND day = ?",
+                 (goal_id, day))
+    if done:
+        conn.execute("INSERT INTO coach_goal_days VALUES (?, ?)",
                      (goal_id, day))
-        if done:
-            conn.execute("INSERT INTO coach_goal_days VALUES (?, ?)",
-                         (goal_id, day))
 
 
 def not_yet(goal_id: str, day: str) -> None:

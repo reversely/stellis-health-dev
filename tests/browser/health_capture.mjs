@@ -47,7 +47,7 @@ try {
    await page.setViewportSize({width,height:900});await page.goto(origin+'/notebook/'+book.id);
    await page.locator('#global-add').focus();await page.keyboard.press('Enter');
    dialog=page.getByRole('dialog',{name:'Add',exact:true});await dialog.waitFor();
-   assert.deepEqual(await dialog.locator('.capture-choices button').allTextContents(),['Take Photo','Enter Reading','Upload Record','Record Visit','Add Appointment','Check-in']);
+   assert.deepEqual(await dialog.locator('.capture-choices button').allTextContents(),['Log Items','Take Photo','Enter Reading','Upload Record','Record Visit','Add Appointment','Check-in']);
    await page.keyboard.press('Escape');assert.equal(await page.locator('#global-add').evaluate(e=>e===document.activeElement),true);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,theme+' '+width);
    for(const action of ['Take Photo','Enter Reading','Upload Record','Add Appointment','Check-in']){dialog=await open(action);await dialog.getByLabel('Notebook',{exact:true}).waitFor();await page.screenshot({path:`/tmp/stellis-capture-${theme}-${width}-${action.replaceAll(' ','-')}.png`});await page.keyboard.press('Escape');}

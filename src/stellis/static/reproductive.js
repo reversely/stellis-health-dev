@@ -59,7 +59,9 @@ function mount(host,options={}) {
   }
   navigation.append(tablist);
   const sectionHead=host.closest('.dashboard-reproductive')?.querySelector('.dashboard-section-head');
-  if(sectionHead)sectionHead.lastElementChild.replaceWith(add);else navigation.append(add);
+  const logItems=createButton('Log',()=>root.StellisTrackerLog.open({onSaved:()=>{load().catch(()=>{});options.onChange?.();}}),'coach-button tracker-log-open');
+  logItems.prepend(getDomHelpers().icon('checks'));
+  if(sectionHead){sectionHead.lastElementChild.replaceWith(add);add.before(logItems);}else navigation.append(logItems,add);
   const footnote=createElement('p','Reminders appear while My Health is open','tracker-footnote');
   host.replaceChildren(navigation,status,reminders,panel,footnote);
 

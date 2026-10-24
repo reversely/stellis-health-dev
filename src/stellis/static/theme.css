@@ -2789,6 +2789,22 @@ html[data-theme='dark'] :is(dialog:not([data-stage='live']), .more-menu-items, .
   --line-soft: #BBB5BF;
   --selected: #D8D3DC;
   --focus: #4E4357;
+  /* Blocks on light glass take the light-page pairing: dark fill, light ink. */
+  --block-fill: #4E4357;
+  --block-ink: #FFFFFF;
+  --block-muted: #E4DCE8;
+  --block-alert-fill: var(--paper-failure);
+  --block-alert-ink: #FFFFFF;
+  --block-ok-fill: var(--paper-success);
+  --block-ok-ink: #FFFFFF;
+  --block-calculated-fill: var(--paper-warning);
+  --block-calculated-ink: #FFFFFF;
+  --block-planned-fill: var(--brand-slate);
+  --block-planned-ink: #FFFFFF;
+  /* Primary actions on light glass are dark blocks too, not white on white. */
+  --action-fill: var(--block-fill);
+  --action-ink: var(--block-ink);
+  --action-hover: #42374D;
   background: var(--glass-fill);
   color: var(--ink);
   border-color: var(--glass-line);

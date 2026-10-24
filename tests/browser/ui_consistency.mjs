@@ -125,27 +125,42 @@ try {
   // Colour blocks keep inverted ink: dark on light pages, light on dark pages.
   for (const theme of ['light','dark']) {
     await page.goto(origin);
-    await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+    // Apply the theme without its colour transition so surfaces are final.
+    await page.evaluate(t=>{document.documentElement.classList.add('theme-swapping');localStorage.setItem('stellis-theme',t);document.documentElement.dataset.theme=t;},theme);
     const blocks=await page.evaluate(()=>{
       const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
       const ctx=canvas.getContext('2d',{willReadFrequently:true});
       const rgb=colour=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=colour;ctx.fillRect(0,0,1,1);return Array.from(ctx.getImageData(0,0,1,1).data).slice(0,3);};
       const luminance=c=>c.map(x=>{x/=255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4;}).reduce((a,x,i)=>a+x*[.2126,.7152,.0722][i],0);
-      return [['',''],['alert','-alert'],['ok','-ok'],['calculated','-calculated'],['planned','-planned'],['muted','']].map(([name,role])=>{
-        const probe=document.createElement('span');
-        probe.style.background=`var(--block${role}-fill)`;
-        probe.style.color=name==='muted'?'var(--block-muted)':`var(--block${role}-ink)`;
-        document.body.append(probe);
-        const s=getComputedStyle(probe);const fill=luminance(rgb(s.backgroundColor)), ink=luminance(rgb(s.color));
-        probe.remove();
-        const [hi,lo]=[fill,ink].sort((a,b)=>b-a);
-        return {name:name||'block',contrast:(hi+.05)/(lo+.05),inkLighterThanFill:ink>fill};
-      });
+      // Probe on the page and inside a dialog, whose dark-mode glass is a light surface.
+      const dialog=document.createElement('dialog');document.body.append(dialog);
+      const result=[];
+      for (const [context,host] of [['page',document.body],['dialog',dialog]]) {
+        // The first painted background up the tree is the surface behind the block.
+        let surfaceColour='rgb(255, 255, 255)';
+        for (let node=host;node;node=node.parentElement) {
+          const colour=getComputedStyle(node).backgroundColor;
+          if (colour!=='rgba(0, 0, 0, 0)' && colour!=='transparent') {surfaceColour=colour;break;}
+        }
+        const surface=luminance(rgb(surfaceColour));
+        for (const [name,role] of [['',''],['alert','-alert'],['ok','-ok'],['calculated','-calculated'],['planned','-planned'],['muted','']]) {
+          const probe=document.createElement('span');
+          probe.style.background=`var(--block${role}-fill)`;
+          probe.style.color=name==='muted'?'var(--block-muted)':`var(--block${role}-ink)`;
+          host.append(probe);
+          const s=getComputedStyle(probe);const fill=luminance(rgb(s.backgroundColor)), ink=luminance(rgb(s.color));
+          probe.remove();
+          const [hi,lo]=[fill,ink].sort((a,b)=>b-a);
+          result.push({context,name:name||'block',contrast:(hi+.05)/(lo+.05),inkLighterThanFill:ink>fill,lightSurface:surface>.18});
+        }
+      }
+      dialog.remove();
+      return result;
     });
     for (const block of blocks) {
-      assert(block.contrast>=4.5, `${theme} ${block.name} block contrast ${block.contrast.toFixed(2)}`);
-      // Light pages carry dark blocks with light ink; dark pages flip both.
-      assert.equal(block.inkLighterThanFill, theme==='light', `${theme} ${block.name} block ink is not inverted`);
+      assert(block.contrast>=4.5, `${theme} ${block.context} ${block.name} block contrast ${block.contrast.toFixed(2)}`);
+      // Light surfaces carry dark blocks with light ink; dark surfaces flip both.
+      assert.equal(block.inkLighterThanFill, block.lightSurface, `${theme} ${block.context} ${block.name} block ink is not inverted`);
     }
     results.push({theme,blocks});
   }
@@ -193,7 +208,7 @@ try {
       await dialog.waitFor();
       const choices=await dialog.locator('.capture-choices button').evaluateAll(nodes=>
         nodes.map(n=>({width:n.getBoundingClientRect().width,height:n.getBoundingClientRect().height})));
-      assert.equal(choices.length,6);
+      assert.equal(choices.length,7);
       assert(Math.max(...choices.map(c=>c.width))-Math.min(...choices.map(c=>c.width))<1);
       assert(choices.every(c=>c.height>=56));
       const bounds=await dialog.boundingBox();assert(bounds.x>=0 && bounds.x+bounds.width<=width);

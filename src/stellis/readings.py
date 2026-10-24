@@ -148,7 +148,8 @@ def add(measure_key: str,
         source: str = "self",
         quality: float | None = None,
         note: str = "", *, notebook_id: str | None = None,
-        document_id: str | None = None, capture_id: str | None = None) -> dict[str, object]:
+        document_id: str | None = None, capture_id: str | None = None,
+        conn=None) -> dict[str, object]:
     """Stores a reading the person logged or the camera measured.
 
     Args:
@@ -162,6 +163,8 @@ def add(measure_key: str,
         notebook_id: The selected active notebook or None for general history.
         document_id: The source photo retained with a reviewed reading.
         capture_id: A retry key for saving the same reviewed entry once.
+        conn: An open connection already in a transaction, so joined logging
+            can save several entries together.
 
     Returns:
         The stored reading as ``series`` lists it.
@@ -191,31 +194,34 @@ def add(measure_key: str,
         raise ValueError(f"Keep the note under {MAX_NOTE} characters")
     moment = _taken_at(taken_at)
     reading_id = str(uuid.uuid4())
-    with storage.connect() as conn:
-        conn.execute('BEGIN IMMEDIATE')
-        _create_table(conn)
-        if notebook_id and not conn.execute('SELECT id FROM notebooks WHERE id = ? AND archived_at IS NULL',(notebook_id,)).fetchone():
-            raise ValueError('Choose an available notebook')
-        if document_id and not conn.execute('SELECT id FROM documents WHERE id = ?',(document_id,)).fetchone():
-            raise LookupError('Source photo not found')
-        if capture_id:
-            previous = conn.execute('SELECT * FROM readings WHERE capture_id = ?',(capture_id,)).fetchone()
-            if previous:
-                fields = ('measure', 'value', 'value2', 'document_id', 'notebook_id', 'note', 'source')
-                values = (measure.key, value, value2, document_id, notebook_id, note, source)
-                changed = tuple(previous[field] for field in fields) != values
-                if changed or (taken_at is not None and previous['taken_at'] != moment):
-                    raise ValueError('This capture has already been saved with different values')
-                return _stored_point(previous)
-        conn.execute(
-            """
-            INSERT INTO readings (id, measure, value, value2, taken_at,
-                source, quality, note, created_at, notebook_id, document_id, capture_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (reading_id, measure.key, value, value2, moment,
-             source, quality, note, _now(), notebook_id, document_id, capture_id))
-        row = conn.execute("SELECT * FROM readings WHERE id = ?",
-                           (reading_id,)).fetchone()
+    if conn is None:
+        with storage.connect() as own:
+            own.execute('BEGIN IMMEDIATE')
+            return add(measure_key, value, value2, taken_at, source, quality, note, notebook_id=notebook_id,
+                       document_id=document_id, capture_id=capture_id, conn=own)
+    _create_table(conn)
+    if notebook_id and not conn.execute('SELECT id FROM notebooks WHERE id = ? AND archived_at IS NULL',(notebook_id,)).fetchone():
+        raise ValueError('Choose an available notebook')
+    if document_id and not conn.execute('SELECT id FROM documents WHERE id = ?',(document_id,)).fetchone():
+        raise LookupError('Source photo not found')
+    if capture_id:
+        previous = conn.execute('SELECT * FROM readings WHERE capture_id = ?',(capture_id,)).fetchone()
+        if previous:
+            fields = ('measure', 'value', 'value2', 'document_id', 'notebook_id', 'note', 'source')
+            values = (measure.key, value, value2, document_id, notebook_id, note, source)
+            changed = tuple(previous[field] for field in fields) != values
+            if changed or (taken_at is not None and previous['taken_at'] != moment):
+                raise ValueError('This capture has already been saved with different values')
+            return _stored_point(previous)
+    conn.execute(
+        """
+        INSERT INTO readings (id, measure, value, value2, taken_at,
+            source, quality, note, created_at, notebook_id, document_id, capture_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (reading_id, measure.key, value, value2, moment,
+         source, quality, note, _now(), notebook_id, document_id, capture_id))
+    row = conn.execute("SELECT * FROM readings WHERE id = ?",
+                       (reading_id,)).fetchone()
     return _stored_point(row)
 
 

@@ -695,3 +695,18 @@ flowchart LR
   Summary --> Tracking[My Health Tracking]
   Summary --> Calendar[Shared calendar]
 ```
+
+## Joined logging
+
+`tracker_log.py` lists every loggable item: registry courses and packs (gated kinds only when their preference is on, ended courses omitted), period flow, goals, and pinned or recently logged measurements. Each item carries its area, icon, today's state and the control its value needs. `POST /trackers/entries` saves 1 to 10 entries for one date in a single `BEGIN IMMEDIATE` transaction; goals, readings and observations write through the shared connection. Any failing entry rolls back the batch and returns per-entry errors. The batch keeps what each entry replaced, so `DELETE /trackers/entries/{id}` restores exactly that state and leaves entries changed since.
+
+`tracker-log.js` opens from Add (*Log Items*) and from the Tracking section (*Log*). People choose tiles (search appears after twelve items; an eleventh selection is refused), then review one row per item under a shared date. With proposals, the sheet opens on review with each proposed entry checked, its quoted evidence and date, and saves only through *Log selected*. A toast offers Undo. Selected tiles, choices and the toast use the block roles. In dark mode, dialogs are light glass, so their blocks and primary actions use a dark fill with light ink.
+
+```mermaid
+flowchart LR
+  Items[GET /trackers/log/items] --> Choose[Choose up to 10 tiles]
+  Proposal[Call or chat proposal] --> Review
+  Choose --> Review[One date, one row per item]
+  Review --> Batch[POST /trackers/entries]
+  Batch --> Tx[(One transaction: outcomes, observations, goal days, readings)]
+  Tx --> Undo[Batch record for exact Undo]
