@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: encouragement asks for the logs that reach a weekly goal
+ok 1 - encouragement asks for the logs that reach a weekly goal
+  ---
+  duration_ms: 1.557181
+  type: 'test'
+  ...
+# Subtest: frequency, reminder times and overview context read as plain sentences
+ok 2 - frequency, reminder times and overview context read as plain sentences
+  ---
+  duration_ms: 0.295264
+  type: 'test'
+  ...
+# Subtest: Trends charts a sleep total per day and keeps the entries
+ok 3 - Trends charts a sleep total per day and keeps the entries
+  ---
+  duration_ms: 0.456783
+  type: 'test'
+  ...
+# Subtest: a bare date parses as local midnight
+ok 4 - a bare date parses as local midnight
+  ---
+  duration_ms: 1.906252
+  type: 'test'
+  ...
+# Subtest: values format with their decimals, pairs with a slash
+ok 5 - values format with their decimals, pairs with a slash
+  ---
+  duration_ms: 0.303935
+  type: 'test'
+  ...
+# Subtest: nice ticks land on round steps
+ok 6 - nice ticks land on round steps
+  ---
+  duration_ms: 0.221104
+  type: 'test'
+  ...
+# Subtest: the y scale keeps the usual band and a minimum span
+ok 7 - the y scale keeps the usual band and a minimum span
+  ---
+  duration_ms: 0.522207
+  type: 'test'
+  ...
+# Subtest: time ticks pick years, months or days to fit
+ok 8 - time ticks pick years, months or days to fit
+  ---
+  duration_ms: 0.603198
+  type: 'test'
+  ...
+# Subtest: the nearest reading is found by time
+ok 9 - the nearest reading is found by time
+  ---
+  duration_ms: 0.1784
+  type: 'test'
+  ...
+# Subtest: ranges end now; All starts just before the first reading
+ok 10 - ranges end now; All starts just before the first reading
+  ---
+  duration_ms: 0.379407
+  type: 'test'
+  ...
+# Subtest: summaries show change, average or the highest reading
+ok 11 - summaries show change, average or the highest reading
+  ---
+  duration_ms: 0.299503
+  type: 'test'
+  ...
+# Subtest: a date becomes a datetime-local value in local time
+ok 12 - a date becomes a datetime-local value in local time
+  ---
+  duration_ms: 0.680575
+  type: 'test'
+  ...
+# Subtest: the face check wants a centred face of the right size
+ok 13 - the face check wants a centred face of the right size
+  ---
+  duration_ms: 0.651422
+  type: 'test'
+  ...
+# Subtest: the light check finds dark, backlit and glaring faces
+ok 14 - the light check finds dark, backlit and glaring faces
+  ---
+  duration_ms: 0.245824
+  type: 'test'
+  ...
+# Subtest: the still check measures the last second of movement
+ok 15 - the still check measures the last second of movement
+  ---
+  duration_ms: 0.299199
+  type: 'test'
+  ...
+# Subtest: progress steps follow the capture stage
+ok 16 - progress steps follow the capture stage
+  ---
+  duration_ms: 0.268255
+  type: 'test'
+  ...
+# Subtest: a reading is described against the usual range
+ok 17 - a reading is described against the usual range
+  ---
+  duration_ms: 0.19464
+  type: 'test'
+  ...
+# Subtest: without a waveform the summary takes the median estimate
+ok 18 - without a waveform the summary takes the median estimate
+  ---
+  duration_ms: 0.540719
+  type: 'test'
+  ...
+# Subtest: the waveform gives the pulse even when it is noisy
+ok 19 - the waveform gives the pulse even when it is noisy
+  ---
+  duration_ms: 21.017876
+  type: 'test'
+  ...
+# Subtest: the countdown pauses while a check fails and then finishes
+ok 20 - the countdown pauses while a check fails and then finishes
+  ---
+  duration_ms: 4.529079
+  type: 'test'
+  ...
+# Subtest: poor light keeps measuring and shows advice after 3 s
+ok 21 - poor light keeps measuring and shows advice after 3 s
+  ---
+  duration_ms: 0.08824
+  type: 'test'
+  ...
+# Subtest: an attempt with no face found asks for the face
+ok 22 - an attempt with no face found asks for the face
+  ---
+  duration_ms: 0.605118
+  type: 'test'
+  ...
+# Subtest: a full ring always gives a reading, marked approximate if unsure
+ok 23 - a full ring always gives a reading, marked approximate if unsure
+  ---
+  duration_ms: 22.293954
+  type: 'test'
+  ...
+# Subtest: running out of time keeps a reading from 15 s of good signal
+ok 24 - running out of time keeps a reading from 15 s of good signal
+  ---
+  duration_ms: 5.181942
+  type: 'test'
+  ...
+# Subtest: no waveform for three seconds is a missing signal
+ok 25 - no waveform for three seconds is a missing signal
+  ---
+  duration_ms: 4.826949
+  type: 'test'
+  ...
+# Subtest: the oval path starts at the top of the oval
+ok 26 - the oval path starts at the top of the oval
+  ---
+  duration_ms: 0.115248
+  type: 'test'
+  ...
+# Subtest: spoken guidance is on until the person turns it off
+ok 27 - spoken guidance is on until the person turns it off
+  ---
+  duration_ms: 0.092512
+  type: 'test'
+  ...
+# Subtest: a reading saves its breathing rate and HRV beside the pulse
+ok 28 - a reading saves its breathing rate and HRV beside the pulse
+  ---
+  duration_ms: 0.099264
+  type: 'test'
+  ...
+# Subtest: beats are found at their true times
+ok 29 - beats are found at their true times
+  ---
+  duration_ms: 10.030763
+  type: 'test'
+  ...
+# Subtest: HRV matches the true beat intervals
+ok 30 - HRV matches the true beat intervals
+  ---
+  duration_ms: 9.184909
+  type: 'test'
+  ...
+# Subtest: a missed beat is left out of HRV
+ok 31 - a missed beat is left out of HRV
+  ---
+  duration_ms: 0.20624
+  type: 'test'
+  ...
+# Subtest: breathing rate agrees across beat height, timing and movement
+ok 32 - breathing rate agrees across beat height, timing and movement
+  ---
+  duration_ms: 15.095184
+  type: 'test'
+  ...
+# Subtest: breathing rate needs 20 seconds of signal
+ok 33 - breathing rate needs 20 seconds of signal
+  ---
+  duration_ms: 0.566015
+  type: 'test'
+  ...
+# Subtest: the pulse is the strongest rhythm
+ok 34 - the pulse is the strongest rhythm
+  ---
+  duration_ms: 2.333323
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 134.312379

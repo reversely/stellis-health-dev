@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "theme": "light",
+      "width": 390,
+      "sideBySide": false
+    },
+    {
+      "theme": "light",
+      "width": 768,
+      "sideBySide": false
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "sideBySide": true
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "sideBySide": true
+    },
+    {
+      "theme": "light",
+      "width": 1920,
+      "sideBySide": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "sideBySide": false
+    },
+    {
+      "theme": "dark",
+      "width": 768,
+      "sideBySide": false
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "sideBySide": true
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "sideBySide": true
+    },
+    {
+      "theme": "dark",
+      "width": 1920,
+      "sideBySide": true
+    }
+  ],
+  "paired": true,
+  "errors": []
+}

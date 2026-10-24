@@ -1,0 +1,23 @@
+SCENE opening 0.0
+SCENE periods 1.5
+SCENE appointment 2.3
+SCENE first-import 3.0
+SCENE dates 3.7
+SCENE notebooks 4.4
+SCENE first-source 5.6
+SCENE notes 6.0
+SCENE changing-care 6.6
+SCENE grow-library 7.0
+SCENE treatment 13.9
+SCENE pregnancy 14.3
+SCENE new-routine 14.7
+SCENE care-course 17.6
+SCENE log-care 18.6
+SCENE brief 19.2
+SCENE recording 19.7
+SCENE measurements 20.2
+SCENE camera-intro 23.7
+SCENE camera-space 24.0
+SCENE camera-attempt 25.0
+SCENE continuity 25.4
+RECORDED /tmp/stellis-integrated-paired-preflight185/raw/page@a239dd125891691379fe01b45e11b64f.webm

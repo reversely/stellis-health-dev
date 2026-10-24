@@ -1,0 +1,23 @@
+SCENE opening 0.0
+SCENE periods 12.2
+SCENE appointment 32.3
+SCENE first-import 50.5
+SCENE dates 75.7
+SCENE notebooks 95.9
+SCENE first-source 114.0
+SCENE notes 132.1
+SCENE changing-care 154.2
+SCENE grow-library 169.3
+SCENE treatment 204.3
+SCENE pregnancy 222.4
+SCENE new-routine 240.5
+SCENE care-course 268.6
+SCENE log-care 298.7
+SCENE brief 318.8
+SCENE recording 336.9
+SCENE measurements 352.0
+SCENE camera-intro 382.2
+SCENE camera-space 394.3
+SCENE camera-attempt 439.5
+SCENE continuity 454.6
+RECORDED /home/springbuilt/stellis-health-dev/.agents/worktrees/integrated-demo/docs/evidence/185/raw/page@fedb25b077241d36ed55222d5771c500.webm
