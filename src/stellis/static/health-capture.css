@@ -1,20 +1,20 @@
-#global-add { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; flex-shrink: 0; }
+#global-add { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--control-height); padding: var(--space-2) var(--space-4); flex-shrink: 0; }
 #global-add .icon { width: 20px; height: 20px; }
 .health-capture { width: min(560px,calc(100vw - 24px)); box-sizing: border-box; }
 .health-capture[open] { display: flex; flex-direction: column; }
-.health-capture .drawer-head { flex: 0 0 auto; padding-bottom: 8px; }
+.health-capture .drawer-head { flex: 0 0 auto; padding-bottom: var(--space-2); }
 .health-capture .capture-body { min-height: 0; overflow-y: auto; }
-.capture-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-.capture-choices button { min-height: 56px; white-space: normal; }
-.capture-field { display: flex; flex-direction: column; gap: 8px; margin-block: 16px; min-width: 0; }
-.capture-field :is(input,select,textarea) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; font-size: 16px; }
-.capture-field input[type=file] { white-space: normal; overflow-wrap: anywhere; padding: 8px; }
-.capture-field input::file-selector-button { min-height: 44px; background: var(--action-fill); color: var(--action-ink); border: 0; border-radius: 8px; padding: 8px 12px; font: inherit; margin-right: 8px; cursor: pointer; }
+.capture-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-3); }
+.capture-choices button { justify-self: stretch; justify-content: flex-start; width: 100%; min-height: 56px; white-space: normal; }
+.capture-field { display: flex; flex-direction: column; gap: var(--space-2); margin-block: var(--space-4); min-width: 0; }
+.capture-field :is(input,select,textarea) { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--control-height); font-size: 16px; }
+.capture-field input[type=file] { white-space: normal; overflow-wrap: anywhere; padding: var(--space-2); }
+.capture-field input::file-selector-button { min-height: var(--control-height); background: var(--action-fill); color: var(--action-ink); border: 0; border-radius: var(--radius-control); padding: var(--space-2) var(--space-3); font: inherit; margin-right: var(--space-2); cursor: pointer; }
 .capture-error { color: var(--ink); }
 .capture-error:empty,.capture-status:empty { display: none; }
 .capture-content .trend-form { margin-inline: 0; }
 .capture-body :is(p,h3,a) { overflow-wrap: anywhere; }
-@media (max-width: 600px) { #global-add { width: 44px; padding: 0; } #global-add span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .capture-choices { grid-template-columns: 1fr; } .health-capture { padding: 18px; } }
+@media (max-width: 600px) { #global-add { width: 44px; padding: 0; } #global-add span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .capture-choices { grid-template-columns: 1fr; } .health-capture { padding: var(--space-4); } }
 /* Capture uses spare desktop toolbar space and one mobile navigation slot. */
 @media (min-width: 1001px) {
   #global-add { position: fixed; top: 14px; right: 180px; z-index: 4; }
@@ -22,7 +22,7 @@
 }
 @media (max-width: 1000px) {
   #compact-nav { grid-template-columns: repeat(4,minmax(0,1fr)); }
-  #compact-nav #global-add { justify-self: stretch; width: auto; padding: 8px; color: var(--action-ink); background: var(--action-fill); border-radius: var(--action-radius); }
+  #compact-nav #global-add { justify-self: stretch; width: auto; padding: var(--space-2); color: var(--action-ink); background: var(--action-fill); border-radius: var(--action-radius); }
   #compact-nav #global-add span { position: static; width: auto; height: auto; clip-path: none; }
 }
 #health-capture-toolbar:empty { display: none; }

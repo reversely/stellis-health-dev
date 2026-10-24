@@ -5,10 +5,10 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 16px 28px;
-  margin-bottom: 28px;
-  padding: 28px 32px;
-  border-radius: 22px;
+  gap: var(--space-4) var(--space-7);
+  margin-bottom: var(--space-7);
+  padding: var(--space-7) var(--space-8);
+  border-radius: var(--radius-dialog);
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: var(--shadow);
@@ -29,7 +29,7 @@
 }
 .coach-incoming-text {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .coach-incoming-kind {
   margin: 0;
@@ -40,7 +40,7 @@
 }
 .coach-incoming h2 {
   margin: 0;
-  font: 300 36px/1.1 Piazzolla, Georgia, serif;
+  font: 300 36px/1.1 var(--font-heading);
   letter-spacing: -0.02em;
 }
 .coach-incoming-hint {
@@ -54,7 +54,7 @@
   display: flex;
   flex-wrap: wrap;
   grid-column: 2;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .coach-incoming .coach-button {
   border-color: color-mix(in oklch, var(--accent-ink) 50%, transparent);
@@ -87,7 +87,7 @@
   width: min(400px, calc(100vw - 32px));
   max-height: min(560px, calc(100vh - 40px));
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-dialog);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow);
@@ -95,16 +95,16 @@
 .coach-call-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 12px 12px 16px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 .coach-call-face {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  outline: 2px solid transparent;
-  outline-offset: 2px;
+  outline: var(--focus-width) solid transparent;
+  outline-offset: var(--focus-offset);
   transition: outline-color 200ms;
 }
 .coach-call[data-state='speaking'] .coach-call-face {
@@ -120,7 +120,7 @@
 }
 .coach-call-line {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
@@ -158,10 +158,10 @@
 .coach-call-log {
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: var(--space-3);
   min-height: 120px;
   margin: 0;
-  padding: 14px 16px;
+  padding: var(--space-4) var(--space-4);
   overflow-y: auto;
   list-style: none;
   overscroll-behavior: contain;
@@ -177,8 +177,8 @@
 }
 .coach-call-log p {
   margin: 0;
-  padding: 8px 12px;
-  border-radius: 14px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-dialog);
   background: var(--raised);
   font-size: 15px;
   line-height: 1.45;
@@ -205,8 +205,8 @@
 .coach-call-ended {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3);
   border-top: 1px solid var(--line);
 }
 .coach-call-foot[hidden],
@@ -217,9 +217,9 @@
   flex: 1;
   min-width: 0;
   min-height: 40px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--input);
   color: var(--ink);
   font: inherit;
@@ -227,7 +227,7 @@
 }
 .coach-call-heard {
   margin: 0;
-  padding: 0 16px 10px;
+  padding: 0 var(--space-4) var(--space-3);
   color: var(--muted);
   font-size: 12px;
 }
@@ -236,8 +236,8 @@
   display: none;
 }
 :is(.coach-call-icon, .coach-call-foot input):focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 @media (hover: hover) and (pointer: fine) {
   .coach-call-icon:not([aria-pressed='true'], .is-end):hover {
@@ -247,8 +247,8 @@
 
 @media (max-width: 760px) {
   .coach-incoming {
-    gap: 16px;
-    padding: 20px;
+    gap: var(--space-4);
+    padding: var(--space-5);
   }
   .coach-incoming-face {
     width: 80px;
@@ -291,7 +291,7 @@
 
 /* The tour's highlight on the control Stellis is describing */
 .tour-target {
-  outline: 3px solid var(--accent);
+  outline: var(--focus-width) solid var(--accent);
   outline-offset: 6px;
   box-shadow: 0 0 0 12px color-mix(in oklch, var(--accent) 12%, transparent);
   scroll-margin: 96px;
@@ -319,17 +319,17 @@
 /* Keep tour narration distinct from the page behind the call. */
 html[data-theme] .coach-call[data-kind='tour'] {
   background: var(--selected);
-  padding: 10px;
-  border-radius: 20px;
+  padding: var(--space-3);
+  border-radius: var(--radius-dialog);
 }
 
 .coach-call-head { grid-row: 1; }
-.coach-tour-step { margin: 12px 4px; padding: 16px; background: var(--surface); border-radius: 12px; }
-.coach-tour-step h3 { margin: 0 0 8px; font-size: 18px; }
+.coach-tour-step { margin: var(--space-3) var(--space-1); padding: var(--space-4); background: var(--surface); border-radius: var(--radius-panel); }
+.coach-tour-step h3 { margin: 0 0 var(--space-2); font-size: 18px; }
 .coach-tour-step p { margin: 0; line-height: 1.5; }
 .coach-call-body { grid-row: 2; min-height: 0; overflow-y: auto; }
-.coach-call-body:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.coach-call-recovery { grid-row: 3; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.coach-call-body:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+.coach-call-recovery { grid-row: 3; padding: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .coach-call-recovery p { flex-basis: 100%; margin: 0; }
 .coach-call-foot { grid-row: 4; }
 .coach-call-ended { grid-row: 5; flex-wrap: wrap; }

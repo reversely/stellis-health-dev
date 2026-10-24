@@ -29,21 +29,31 @@ try {
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   const onboarding = {};
+  await page.goto(origin + '/onboarding');
+  const start = page.getByRole('button', {name: 'Get started', exact: true});
+  await start.waitFor();
   for (const theme of ['light', 'dark']) {
-    await page.goto(origin + '/onboarding');
-    await page.evaluate(theme => localStorage.setItem('stellis-theme', theme), theme);
-    await page.reload();
-    const start = page.getByRole('button', {name: 'Get started', exact: true});
-    await start.waitFor();
-    const welcome = await style(start);
-    await start.click();
-    await page.getByRole('button', {name: 'Continue', exact: true}).click();
-    const call = page.getByRole('button', {name: 'Start call', exact: true});
-    await call.waitFor();
-    onboarding[theme] = [welcome, await style(call)];
-    await page.getByRole('button', {name: 'Back', exact: true}).click();
-    await page.getByRole('button', {name: 'Back', exact: true}).click();
-    await page.getByRole('heading', {name: 'Welcome to Stellis Health', exact: true}).waitFor();
+    await page.evaluate(theme => {localStorage.setItem('stellis-theme', theme);
+      document.documentElement.dataset.theme = theme;}, theme);
+    onboarding[theme] = [];
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({width, height: 900});
+      onboarding[theme].push(await style(start));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    }
+  }
+  await start.click();
+  await page.getByRole('button', {name: 'Continue', exact: true}).click();
+  const call = page.getByRole('button', {name: 'Start call', exact: true});
+  await call.waitFor();
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(theme => {localStorage.setItem('stellis-theme', theme);
+      document.documentElement.dataset.theme = theme;}, theme);
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({width, height: 900});
+      onboarding[theme].push(await style(call));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    }
   }
   await api('/onboarding', {uses: [], step: 'review', agent_choices: {}}, 'put');
   await api('/onboarding/complete');
@@ -98,8 +108,9 @@ try {
       assert(actual.height >= 44);
     };
     for (const entry of onboarding[theme]) {
-      assert.equal(entry.fill, reference.fill);
-      assert.equal(entry.ink, reference.ink);
+      const expected = entry.disabled ? disabledReference : reference;
+      assert.equal(entry.fill, expected.fill);
+      assert.equal(entry.ink, expected.ink);
       assert.equal(entry.radius, reference.radius);
     }
     for (const width of [390, 1280]) {
@@ -138,6 +149,7 @@ try {
               chat.querySelector('.nb-composer').getBoundingClientRect().top));
           }
         } else if (route.startsWith('/document/')) {
+          await page.getByText('Extracted text', {exact: true}).click();
           await check(page.getByRole('button', {name: 'Read text', exact: true}));
           await page.getByRole('button', {name: 'Edit text', exact: true}).click();
           await check(page.getByRole('button', {name: 'Save text', exact: true}));
@@ -150,16 +162,20 @@ try {
     const anonymous = await browser.newContext();
     await anonymous.addInitScript(theme => localStorage.setItem('stellis-theme', theme), theme);
     const auth = await anonymous.newPage();
-    await auth.goto(origin + '/auth');
-    await auth.locator('.auth-card form button[type=submit]').waitFor();
-    const submit = await style(auth.locator('.auth-card form button[type=submit]'));
-    assert.equal(submit.fill, reference.fill);
-    assert.equal(submit.ink, reference.ink);
-    assert(submit.height >= 48);
-    if (theme === 'dark') {
-      assert.equal(reference.fill, 'rgb(255, 255, 255)');
-      assert.equal(reference.radius, '999px');
-      assert.match((await style(auth.locator('.auth-card'))).fill, /0\.8\)/);
+    for (const width of [390, 1280]) {
+      await auth.setViewportSize({width, height: 900});
+      await auth.goto(origin + '/auth');
+      await auth.locator('.auth-card form button[type=submit]').waitFor();
+      const submit = await style(auth.locator('.auth-card form button[type=submit]'));
+      assert.equal(submit.fill, reference.fill);
+      assert.equal(submit.ink, reference.ink);
+      assert(submit.height >= 48);
+      if (theme === 'dark') {
+        assert.equal(reference.fill, 'rgb(255, 255, 255)');
+        assert.equal(reference.radius, '999px');
+        assert.match((await style(auth.locator('.auth-card'))).fill, /0\.8\)/);
+      }
+      assert.equal(await auth.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     }
     await anonymous.close();
     console.log(`PASS ${theme}: shared primary styles across 14 screens at phone and desktop widths`);

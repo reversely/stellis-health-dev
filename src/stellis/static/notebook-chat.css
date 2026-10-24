@@ -3,7 +3,7 @@
 .notebook-chat {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--space-6);
   align-items: start;
 }
 .notebook-chat[data-sources='closed'] {
@@ -16,14 +16,14 @@
   color: var(--ink);
 }
 .notebook-chat button {
-  min-height: 44px;
+  min-height: var(--control-height);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--surface);
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   cursor: pointer;
   transition:
     border-color 120ms,
@@ -39,22 +39,22 @@
   }
 }
 .notebook-chat :focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 .nb-empty {
   color: var(--muted);
-  margin: 12px 0;
+  margin: var(--space-3) 0;
 }
 
 .nb-sources {
   position: sticky;
   top: 16px;
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
-  padding: 12px;
-  border-radius: 12px;
+  padding: var(--space-3);
+  border-radius: var(--radius-panel);
   background: var(--raised);
 }
 .nb-sources-toggle {
@@ -62,7 +62,7 @@
   justify-content: flex-start;
   background: transparent !important;
   border-color: transparent !important;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
 }
 .nb-sources-label {
   font-weight: 600;
@@ -74,7 +74,7 @@
   font-variant-numeric: tabular-nums;
 }
 .notebook-chat[data-sources='closed'] .nb-sources {
-  padding: 6px;
+  padding: var(--space-compact);
 }
 .notebook-chat[data-sources='closed'] .nb-sources-body {
   display: none;
@@ -89,12 +89,12 @@
 }
 .nb-sources-body {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .nb-sources-actions {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .nb-source-add {
   justify-content: center;
@@ -103,10 +103,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 8px;
-  border-radius: 8px;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
   color: var(--muted);
   font-size: 14px;
   cursor: pointer;
@@ -121,16 +121,16 @@
 .nb-source {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 .notebook-chat .nb-source-open {
   flex: 1;
   min-width: 0;
   justify-content: flex-start;
-  gap: 10px;
-  padding: 0 8px;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
   border-color: transparent;
   background: transparent;
   text-align: left;
@@ -158,7 +158,7 @@
 }
 .nb-source-status {
   flex: none;
-  padding-right: 8px;
+  padding-right: var(--space-2);
   font-size: 12px;
   color: var(--muted);
 }
@@ -185,11 +185,11 @@
 .nb-chat {
   min-width: 0;
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .nb-messages {
   display: grid;
-  gap: 20px;
+  gap: var(--space-5);
   min-height: 120px;
 }
 .nb-msg {
@@ -198,7 +198,7 @@
   line-height: 1.6;
 }
 .nb-msg p {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-3);
 }
 .nb-msg p:last-child {
   margin-bottom: 0;
@@ -206,15 +206,15 @@
 .nb-msg-user {
   justify-self: end;
   max-width: min(560px, 90%);
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-message);
   background: var(--selected);
 }
 .nb-msg-author {
   display: block;
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .nb-cite {
   display: inline-flex;
@@ -223,8 +223,8 @@
   min-width: 22px;
   height: 22px;
   margin: 0 2px;
-  padding: 0 6px;
-  border-radius: 11px;
+  padding: 0 var(--space-compact);
+  border-radius: var(--radius-panel);
   background: var(--raised);
   border: 1px solid var(--line);
   color: var(--ink);
@@ -250,32 +250,32 @@
   position: sticky;
   bottom: 0;
   display: grid;
-  gap: 8px;
-  padding: 12px 0 16px;
+  gap: var(--space-2);
+  padding: var(--space-3) 0 var(--space-4);
   background: var(--field);
 }
 .nb-answer-with {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: 14px;
   color: var(--muted);
 }
 .nb-answer-with select {
-  min-height: 44px;
+  min-height: var(--control-height);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--surface);
-  padding: 0 10px;
+  padding: 0 var(--space-3);
 }
 .nb-input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: end;
-  padding: 8px;
+  padding: var(--space-2);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: var(--input);
 }
 .nb-input:focus-within {
@@ -285,9 +285,9 @@
   border: 0;
   background: transparent;
   resize: none;
-  min-height: 44px;
+  min-height: var(--control-height);
   max-height: 200px;
-  padding: 10px 8px;
+  padding: var(--space-3) var(--space-2);
   font-size: 16px;
 }
 .nb-input textarea:focus-visible {
@@ -311,7 +311,7 @@
 }
 .notebook-chat .nb-msg-save {
   min-height: 36px;
-  margin-top: 8px;
+  margin-top: var(--space-2);
   font-size: 13px;
   color: var(--muted);
 }
@@ -328,14 +328,14 @@
   min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line-soft);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
 }
 .nb-viewer-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 10px 10px 16px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line-soft);
 }
 .nb-viewer-title {
@@ -352,8 +352,8 @@
 .nb-viewer-open {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0 10px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
   color: var(--accent);
   font-size: 14px;
 }
@@ -364,13 +364,13 @@
   font-size: 22px;
 }
 .nb-viewer > .nb-status {
-  padding: 0 16px;
+  padding: 0 var(--space-4);
 }
 .nb-viewer-body {
   overflow: auto;
-  padding: 4px 16px 16px;
+  padding: var(--space-1) var(--space-4) var(--space-4);
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   align-content: start;
 }
 .nb-viewer-audio {
@@ -387,8 +387,8 @@
   display: grid;
   gap: 2px;
   width: 100%;
-  min-height: 44px;
-  padding: 8px 10px;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
   border-color: transparent;
   background: transparent;
   text-align: left;
@@ -410,7 +410,7 @@
   overflow-wrap: anywhere;
 }
 .nb-viewer-document .document-page {
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
 }
 @media (min-width: 1400px) {
   .notebook-chat[data-viewer='open'] {
@@ -445,17 +445,17 @@
   .notebook-chat,
   .notebook-chat[data-sources='closed'] {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--space-4);
   }
   .nb-sources {
     position: static;
   }
   .notebook-chat[data-sources='closed'] .nb-sources {
-    padding: 6px 12px;
+    padding: var(--space-compact) var(--space-3);
   }
   .notebook-chat[data-sources='closed'] .nb-sources-toggle {
     justify-content: flex-start;
-    padding: 0 8px;
+    padding: 0 var(--space-2);
   }
   .notebook-chat[data-sources='closed'] .nb-sources-label,
   .notebook-chat[data-sources='closed'] .nb-sources-count {
@@ -469,17 +469,17 @@
   max-height: calc(100vh - 32px);
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-dialog);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow);
 }
 .nb-add[open] {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
   align-content: start;
   overflow: auto;
-  padding: 16px 20px 20px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
 }
 .nb-add::backdrop {
   background: color-mix(in oklch, var(--field) 70%, transparent);
@@ -494,11 +494,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   cursor: pointer;
   transition: border-color 120ms;
@@ -513,13 +513,13 @@
   }
 }
 .nb-add :focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 .nb-add-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .nb-add-head h2 {
   margin: 0;
@@ -539,10 +539,10 @@
 .nb-add-drop {
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding: 24px 16px;
+  gap: var(--space-compact);
+  padding: var(--space-6) var(--space-4);
   border: 1.5px dashed var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   text-align: center;
   cursor: pointer;
   transition:
@@ -565,7 +565,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: 14px;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -576,28 +576,28 @@
 .nb-add-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .nb-add-paste {
   display: grid;
-  gap: 10px;
+  gap: var(--space-3);
 }
 .nb-add-paste[hidden] {
   display: none;
 }
 .nb-add-paste label {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: 14px;
   color: var(--muted);
 }
 .nb-add-paste input,
 .nb-add-paste textarea,
 .nb-add-records input {
-  min-height: 44px;
-  padding: 8px 10px;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--input);
   font-size: 16px;
 }
@@ -612,10 +612,10 @@
 }
 .nb-add-records {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .nb-add-records h3 {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: 15px;
 }
 .nb-add-list {
@@ -630,9 +630,9 @@
 .nb-add-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 4px 4px 8px;
-  border-radius: 8px;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
 }
 .nb-add-row .icon {
   flex: none;

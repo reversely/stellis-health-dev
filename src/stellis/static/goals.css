@@ -2,12 +2,12 @@
    in accent colours; charts use Trends' series colour, so a reading looks
    alike on both pages. */
 .home-goals {
-  --coach-series: oklch(0.6 0.1 200);
+  --coach-series: var(--data-series-light);
   --coach-band: color-mix(in oklch, var(--coach-series) 14%, transparent);
-  margin: 8px 0 32px;
+  margin: var(--space-2) 0 var(--space-8);
 }
 html[data-theme='dark'] .home-goals {
-  --coach-series: oklch(0.72 0.105 196);
+  --coach-series: var(--data-series-dark);
   --coach-band: color-mix(in oklch, var(--coach-series) 20%, transparent);
 }
 .home-goals:empty {
@@ -20,10 +20,10 @@ html[data-theme='dark'] .home-goals {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 16px;
-  margin-bottom: 20px;
-  padding: 14px 18px;
-  border-radius: 14px;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) var(--space-4);
+  border-radius: var(--radius-panel);
 }
 .coach-reminder.is-ask {
   background: var(--accent);
@@ -40,13 +40,13 @@ html[data-theme='dark'] .home-goals {
 }
 .coach-reminder.is-pending .coach-reminder-text {
   justify-items: start;
-  gap: 4px;
+  gap: var(--space-1);
 }
 /* A goal's name inside a sentence, set apart as an inverted pill. */
 .coach-pill {
   display: inline-block;
-  padding: 1px 10px;
-  border-radius: 999px;
+  padding: 1px var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 0.9em;
@@ -75,7 +75,7 @@ html[data-theme='dark'] .home-goals {
 }
 .coach-reminder-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .coach-reminder.is-ask .coach-button {
   border-color: color-mix(in oklch, var(--accent-ink) 50%, transparent);
@@ -97,21 +97,21 @@ html[data-theme='dark'] .home-goals {
 
 /* Health overview */
 .coach-title {
-  margin: 0 0 14px;
-  font: 300 32px/1.15 Piazzolla, Georgia, serif;
+  margin: 0 0 var(--space-4);
+  font: 300 32px/1.15 var(--font-heading);
   letter-spacing: -0.02em;
 }
 .coach-title span {
-  margin-left: 8px;
+  margin-left: var(--space-2);
   color: var(--muted);
-  font: 400 14px Inter, sans-serif;
+  font: 400 14px var(--font-body);
   letter-spacing: 0;
 }
 .overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--surface);
 }
 /* Each stat spans five rows of the card and shares them with its
@@ -122,9 +122,9 @@ html[data-theme='dark'] .home-goals {
   grid-template-rows: subgrid;
   align-content: start;
   justify-items: start;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
-  padding: 16px 18px;
+  padding: var(--space-4) var(--space-4);
 }
 .overview-stat + .overview-stat {
   border-left: 1px solid var(--line-soft);
@@ -142,7 +142,7 @@ html[data-theme='dark'] .home-goals {
   font-variant-numeric: tabular-nums;
 }
 .overview-unit {
-  margin-left: 6px;
+  margin-left: var(--space-compact);
   color: var(--muted);
   font-size: 14px;
   font-weight: 400;
@@ -150,7 +150,7 @@ html[data-theme='dark'] .home-goals {
 .overview-spark {
   width: 100%;
   height: 32px;
-  margin: 4px 0;
+  margin: var(--space-1) 0;
   overflow: visible;
 }
 .overview-spark polyline {
@@ -187,14 +187,14 @@ html[data-theme='dark'] .home-goals {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 32px 0 12px;
+  margin: var(--space-8) 0 var(--space-3);
 }
 .coach-section-head h3 {
   margin: 0;
-  font: 300 24px/1.2 Piazzolla, Georgia, serif;
+  font: 300 24px/1.2 var(--font-heading);
 }
 .coach-link {
-  min-height: 24px;
+  min-height: var(--control-height);
   padding: 0;
   border: 0;
   background: none;
@@ -208,7 +208,7 @@ html[data-theme='dark'] .home-goals {
 .coach-goals {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 /* Each card spans four rows of the grid and shares them with the card
    beside it, so titles, charts, sentences and buttons line up. */
@@ -216,18 +216,18 @@ html[data-theme='dark'] .home-goals {
   display: grid;
   grid-row: span 4;
   grid-template-rows: subgrid;
-  gap: 10px;
+  gap: var(--space-3);
   min-width: 0;
-  padding: 16px 18px;
+  padding: var(--space-4) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--surface);
 }
 .coach-goal-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
-  padding: 0 0 10px;
+  gap: var(--space-compact);
+  padding: 0 0 var(--space-3);
   border-bottom: 1px solid var(--line-soft);
 }
 .coach-goal-head h4 {
@@ -240,11 +240,11 @@ html[data-theme='dark'] .home-goals {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-compact);
 }
 .coach-chip {
-  padding: 2px 10px;
-  border-radius: 999px;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--raised);
   color: var(--muted);
   font-size: 12px;
@@ -253,11 +253,11 @@ html[data-theme='dark'] .home-goals {
 .coach-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: var(--control-height);
+  height: var(--control-height);
   margin: -6px -8px 0 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: none;
   color: var(--quiet);
   cursor: pointer;
@@ -266,7 +266,7 @@ html[data-theme='dark'] .home-goals {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: end;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .coach-count {
   display: grid;
@@ -300,7 +300,7 @@ html[data-theme='dark'] .home-goals {
 }
 .goal-weeks text {
   fill: var(--muted);
-  font-family: Inter, sans-serif;
+  font-family: var(--font-body);
   font-size: 10px;
 }
 .coach-note {
@@ -314,11 +314,11 @@ html[data-theme='dark'] .home-goals {
   align-items: center;
   justify-content: center;
   justify-self: start;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 16px;
+  gap: var(--space-compact);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
@@ -367,7 +367,7 @@ html[data-theme='dark'] .home-goals {
   display: grid;
   align-content: end;
   justify-items: start;
-  gap: 6px;
+  gap: var(--space-compact);
 }
 .coach-error {
   margin: 0;
@@ -381,14 +381,14 @@ html[data-theme='dark'] .home-goals {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .coach-reading input {
   width: 88px;
-  min-height: 40px;
-  padding: 0 10px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--input);
   color: var(--ink);
   font: inherit;
@@ -401,11 +401,11 @@ html[data-theme='dark'] .home-goals {
 /* Add or edit a goal */
 .coach-form {
   display: grid;
-  gap: 14px;
-  margin-top: 16px;
-  padding: 16px 18px;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-4);
   border: 1px dashed var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--surface);
 }
 .coach-goals .coach-form {
@@ -422,11 +422,11 @@ html[data-theme='dark'] .home-goals {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .coach-field {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
@@ -435,20 +435,20 @@ html[data-theme='dark'] .home-goals {
   display: none;
 }
 .coach-field :is(select, input:not([type='checkbox'])) {
-  min-height: 44px;
-  padding: 0 10px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--input);
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--text-body);
   font-weight: 400;
 }
 .coach-remind-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--ink);
   font-weight: 400;
 }
@@ -460,12 +460,12 @@ html[data-theme='dark'] .home-goals {
 .coach-form-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 :is(.coach-button, .coach-link, .coach-icon):focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 
 @media (max-width: 760px) {
@@ -477,7 +477,7 @@ html[data-theme='dark'] .home-goals {
     border-top: 1px solid var(--line-soft);
   }
   .overview-stat {
-    padding: 14px;
+    padding: var(--space-4);
   }
   .overview-value,
   .coach-count-value {
@@ -488,7 +488,7 @@ html[data-theme='dark'] .home-goals {
   }
   .coach-title span {
     display: block;
-    margin: 4px 0 0;
+    margin: var(--space-1) 0 0;
   }
   .coach-reminder {
     flex-direction: column;
@@ -522,8 +522,8 @@ html[data-theme='dark'] .home-goals {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: 8px 12px;
-  padding-bottom: 14px;
+  gap: var(--space-2) var(--space-3);
+  padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 .coach-describe .coach-field {
@@ -554,8 +554,8 @@ html[data-theme='dark'] .home-goals {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  margin-bottom: 14px;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-4);
 }
 .coach-overview-head .coach-title {
   margin: 0;
@@ -563,6 +563,6 @@ html[data-theme='dark'] .home-goals {
 
 .overview-vitals {
   display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }

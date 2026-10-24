@@ -1,0 +1,389 @@
+{
+  "cases": [
+    {
+      "route": "/",
+      "width": 1280,
+      "theme": "light",
+      "controls": 80,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 4.75
+    },
+    {
+      "route": "/records",
+      "width": 1280,
+      "theme": "light",
+      "controls": 6,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/trends",
+      "width": 1280,
+      "theme": "light",
+      "controls": 21,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 5.68
+    },
+    {
+      "route": "/summary",
+      "width": 1280,
+      "theme": "light",
+      "controls": 5,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/timeline",
+      "width": 1280,
+      "theme": "light",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/todos",
+      "width": 1280,
+      "theme": "light",
+      "controls": 9,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 6.02
+    },
+    {
+      "route": "/settings",
+      "width": 1280,
+      "theme": "light",
+      "controls": 35,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 7.56
+    },
+    {
+      "route": "/recording",
+      "width": 1280,
+      "theme": "light",
+      "controls": 30,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 5.68
+    },
+    {
+      "route": "/chat",
+      "width": 1280,
+      "theme": "light",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/page/14089117-a0da-48d0-8a19-504ef3e280af",
+      "width": 1280,
+      "theme": "light",
+      "controls": 29,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/notebook/208b35ba-82ea-4263-afcb-f514f88a0977",
+      "width": 1280,
+      "theme": "light",
+      "controls": 18,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 5.68
+    },
+    {
+      "route": "/document/550a6026-71b3-436e-bbd7-fb5f1015b73c",
+      "width": 1280,
+      "theme": "light",
+      "controls": 15,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/",
+      "width": 390,
+      "theme": "light",
+      "controls": 80,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 4.75
+    },
+    {
+      "route": "/records",
+      "width": 390,
+      "theme": "light",
+      "controls": 6,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/trends",
+      "width": 390,
+      "theme": "light",
+      "controls": 21,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 5.68
+    },
+    {
+      "route": "/summary",
+      "width": 390,
+      "theme": "light",
+      "controls": 5,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/timeline",
+      "width": 390,
+      "theme": "light",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/todos",
+      "width": 390,
+      "theme": "light",
+      "controls": 9,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 6.02
+    },
+    {
+      "route": "/settings",
+      "width": 390,
+      "theme": "light",
+      "controls": 37,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 7.56
+    },
+    {
+      "route": "/recording",
+      "width": 390,
+      "theme": "light",
+      "controls": 31,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 5.68
+    },
+    {
+      "route": "/chat",
+      "width": 390,
+      "theme": "light",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/page/14089117-a0da-48d0-8a19-504ef3e280af",
+      "width": 390,
+      "theme": "light",
+      "controls": 29,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/notebook/208b35ba-82ea-4263-afcb-f514f88a0977",
+      "width": 390,
+      "theme": "light",
+      "controls": 16,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 5.68
+    },
+    {
+      "route": "/document/550a6026-71b3-436e-bbd7-fb5f1015b73c",
+      "width": 390,
+      "theme": "light",
+      "controls": 15,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 9.27
+    },
+    {
+      "route": "/",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 80,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 4.75
+    },
+    {
+      "route": "/records",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 6,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 14.91
+    },
+    {
+      "route": "/trends",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 21,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 8.88
+    },
+    {
+      "route": "/summary",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 5,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 15.56
+    },
+    {
+      "route": "/timeline",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 14.91
+    },
+    {
+      "route": "/todos",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 9,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 10.45
+    },
+    {
+      "route": "/settings",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 38,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 7.56
+    },
+    {
+      "route": "/recording",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 30,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 8.88
+    },
+    {
+      "route": "/chat",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 10.0
+    },
+    {
+      "route": "/page/14089117-a0da-48d0-8a19-504ef3e280af",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 29,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 12.18
+    },
+    {
+      "route": "/notebook/208b35ba-82ea-4263-afcb-f514f88a0977",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 18,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 8.88
+    },
+    {
+      "route": "/document/550a6026-71b3-436e-bbd7-fb5f1015b73c",
+      "width": 1280,
+      "theme": "dark",
+      "controls": 15,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 10.0
+    },
+    {
+      "route": "/",
+      "width": 390,
+      "theme": "dark",
+      "controls": 80,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 4.75
+    },
+    {
+      "route": "/records",
+      "width": 390,
+      "theme": "dark",
+      "controls": 6,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 11.71
+    },
+    {
+      "route": "/trends",
+      "width": 390,
+      "theme": "dark",
+      "controls": 21,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 8.88
+    },
+    {
+      "route": "/summary",
+      "width": 390,
+      "theme": "dark",
+      "controls": 5,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 11.71
+    },
+    {
+      "route": "/timeline",
+      "width": 390,
+      "theme": "dark",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 11.71
+    },
+    {
+      "route": "/todos",
+      "width": 390,
+      "theme": "dark",
+      "controls": 9,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 10.45
+    },
+    {
+      "route": "/settings",
+      "width": 390,
+      "theme": "dark",
+      "controls": 39,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 7.56
+    },
+    {
+      "route": "/recording",
+      "width": 390,
+      "theme": "dark",
+      "controls": 31,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 8.88
+    },
+    {
+      "route": "/chat",
+      "width": 390,
+      "theme": "dark",
+      "controls": 11,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 10.0
+    },
+    {
+      "route": "/page/14089117-a0da-48d0-8a19-504ef3e280af",
+      "width": 390,
+      "theme": "dark",
+      "controls": 29,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 12.18
+    },
+    {
+      "route": "/notebook/208b35ba-82ea-4263-afcb-f514f88a0977",
+      "width": 390,
+      "theme": "dark",
+      "controls": 16,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 8.88
+    },
+    {
+      "route": "/document/550a6026-71b3-436e-bbd7-fb5f1015b73c",
+      "width": 390,
+      "theme": "dark",
+      "controls": 15,
+      "smallest_target_height": 44,
+      "minimum_solid_text_contrast": 10.0
+    }
+  ],
+  "page_errors": []
+}

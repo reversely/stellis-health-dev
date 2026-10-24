@@ -9,21 +9,21 @@
   box-sizing: border-box;
   max-width: 760px;
   margin: 0 auto;
-  padding: 32px 16px 64px;
+  padding: var(--space-8) var(--space-4) 64px;
   line-height: 1.55;
 }
 .accuracy h1 {
-  margin: 16px 0 8px;
-  font: 300 40px/1.1 Piazzolla, Georgia, serif;
+  margin: var(--space-4) 0 var(--space-2);
+  font: 300 40px/1.1 var(--font-heading);
   letter-spacing: -0.02em;
 }
 .accuracy h2 {
-  margin: 40px 0 8px;
-  font: 300 28px/1.2 Piazzolla, Georgia, serif;
-  scroll-margin-top: 24px;
+  margin: var(--space-10) 0 var(--space-2);
+  font: 300 28px/1.2 var(--font-heading);
+  scroll-margin-top: var(--space-6);
 }
 .accuracy h3 {
-  margin: 20px 0 6px;
+  margin: var(--space-5) 0 var(--space-compact);
   font-size: 16px;
 }
 .accuracy-lead {
@@ -33,16 +33,16 @@
 .accuracy nav ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 20px 0 0;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
   padding: 0;
   list-style: none;
 }
 .accuracy nav a {
   display: inline-block;
-  padding: 6px 12px;
+  padding: var(--space-compact) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--ink);
   font-size: 14px;
   text-decoration: none;
@@ -55,24 +55,24 @@
   font-weight: 600;
 }
 .accuracy ul {
-  padding-left: 20px;
+  padding-left: var(--space-5);
 }
 .accuracy li + li {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 .accuracy table {
   width: 100%;
-  margin: 8px 0 12px;
+  margin: var(--space-2) 0 var(--space-3);
   border-collapse: collapse;
   font-size: 14px;
 }
 .accuracy caption {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-compact);
   color: var(--muted);
   text-align: left;
 }
 .accuracy :is(th, td) {
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
@@ -85,7 +85,7 @@
   font-variant-numeric: tabular-nums;
 }
 .accuracy-updated {
-  margin-top: 40px;
+  margin-top: var(--space-10);
   color: var(--muted);
   font-size: 13px;
 }
@@ -100,7 +100,7 @@
     display: none;
   }
   .accuracy tr {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
   }
   .accuracy td {
     border-top: 0;
@@ -118,7 +118,7 @@
   display: inline-flex;
   min-height: 24px;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--muted);
   font-size: 12px;
   font-weight: 500;
@@ -129,9 +129,9 @@
   height: 14px;
 }
 .accuracy-note:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-small);
 }
 @media (hover: hover) and (pointer: fine) {
   .accuracy-note:hover {

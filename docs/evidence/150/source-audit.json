@@ -1,0 +1,14 @@
+{
+  "before": {
+    "stylesheets": 31,
+    "palette_literals": 232,
+    "radius_literals": 167,
+    "spacing_references": 0
+  },
+  "after": {
+    "stylesheets": 31,
+    "palette_literals": 0,
+    "radius_literals": 0,
+    "spacing_references": 1897
+  }
+}
