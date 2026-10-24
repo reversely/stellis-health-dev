@@ -119,3 +119,7 @@ The Cycle daily log follows the supplied Apple Health reference: weekday and dat
 ## Chat attachments
 
 Ask Stellis and notebook chat share Attach beside the composer. PDF and image files appear as filename links with a notebook selector and Save to notebook. Saved files link to their notebook. Needs text links to the retained document for correction. Remove applies to unsent chat attachments and retains the original record. Upload and send states disable conflicting controls. Attachment rows wrap on phones and keep filenames readable. Notebook Records includes Documents alongside Meetings and Notes.
+
+## Original report assistance
+
+The full document page uses the original report as its primary surface. Selecting a recognized line highlights it and requests an explanation; subsequent questions retain that source selection. Keep explanations alongside the page on desktop and below it on phones, with page/zoom/rotation controls and keyboard-accessible source regions. Source chips open the relevant report page or selected region. Historical explanations remain readable when inference is unavailable; changed evidence is labelled. Extracted text and correction controls sit in a supporting disclosure rather than leading the experience. See [report evidence](evidence/148/README.md).

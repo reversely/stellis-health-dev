@@ -144,3 +144,22 @@ class ReportContextTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 404)
                 response = self.client.get(self.base+'/explanations')
                 self.assertEqual(response.status_code, 404)
+
+    def test_login_required_for_original_geometry_and_conversation(self):
+        with mock.patch.dict(os.environ, {'STELLIS_AUTH_MODE': 'required'}):
+            for path in ('/pages/1/original', '/pages/1/map', '/explanations'):
+                self.assertEqual(self.client.get(self.base+path).status_code, 401)
+            self.assertEqual(self.client.post(self.base+'/explanations', json={
+                'map_id': 'x', 'region_id': '0', 'question': 'Explain'}).status_code, 401)
+
+    def test_related_source_deletion_marks_saved_answer_historical(self):
+        prior, _ = documents.create('prior.pdf', report('4.8'))
+        mapped, region = self.mapped()
+        with mock.patch.object(report_context.agent_gateway, 'turn', return_value=('Result. [[source:1]]', 's')):
+            response = self.client.post(self.base+'/explanations', json={
+                'map_id': mapped['id'], 'region_id': region['id'], 'question': 'Explain'})
+        self.assertEqual(response.status_code, 200, response.text)
+        documents.delete(prior['id'])
+        saved = report_context.history(self.record['id'])[0]
+        self.assertTrue(saved['stale'])
+        self.assertTrue(saved['evidence'][0]['text'])

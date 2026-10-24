@@ -49,6 +49,7 @@ def _worker(document_id, number, mode):
     executable = shutil.which(os.environ.get('STELLIS_TESSERACT', 'tesseract')) or 'tesseract'
     with document_ocr._slot(), runtime_trace.span('report_page', provider='local',
             model='pdf-text/tesseract-tsv', execution='Open original report'):
+        runtime_trace.event('page_started', page_number=number)
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name('report_page_worker.py')),
                                     str(path), media_type, str(number), mode, executable],
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -61,6 +62,7 @@ def _worker(document_id, number, mode):
             raise document_ocr.OcrError('This page took too long. Try again.') from exc
         if process.returncode or len(output) > 32_000_000:
             raise document_ocr.OcrError('This page could not be opened. Try again.')
+        runtime_trace.event('page_completed', page_number=number)
         return output
 
 
@@ -113,20 +115,20 @@ def history(document_id):
             JOIN document_pages p ON p.document_id=e.document_id AND p.page_number=m.page
             WHERE e.document_id=? ORDER BY e.created_at, e.rowid''', (document_id,)).fetchall()
     result = []
-    for row in rows:
-        item = dict(row)
-        regions = json.loads(item.pop('payload'))['regions']
-        item['selection'] = next(r for r in regions if r['id'] == item['region_id'])
-        item['citations'] = json.loads(item['citations'])
-        item['evidence'] = json.loads(item['evidence'])
-        item['stale'] = item.pop('current_revision') != item['revision']
-        with storage.connect() as conn:
+    with storage.connect() as conn:
+        for row in rows:
+            item = dict(row)
+            regions = json.loads(item.pop('payload'))['regions']
+            item['selection'] = next(r for r in regions if r['id'] == item['region_id'])
+            item['citations'] = json.loads(item['citations'])
+            item['evidence'] = json.loads(item['evidence'])
+            item['stale'] = item.pop('current_revision') != item['revision']
             for evidence in item['evidence']:
                 saved = conn.execute('SELECT text FROM document_pages WHERE document_id=? AND page_number=?',
                     (evidence['document_id'], evidence['page'])).fetchone()
                 if saved is None or _digest(saved['text']) != evidence['digest']:
                     item['stale'] = True
-        result.append(item)
+            result.append(item)
     return result
 
 
@@ -152,15 +154,20 @@ async def ask(document_id, map_id, region_id, question):
         raise ValueError('Select a region in this report first')
     page_text = '\n'.join(r['text'] for r in mapped['regions'])
     # Keep the selected line even on a long page; preserve broad table/section context.
-    position = page_text.find(selection['text'])
+    selected_index = mapped['regions'].index(selection)
+    position = sum(len(r['text'])+1 for r in mapped['regions'][:selected_index])
     context = page_text[max(0, position-6000):position+6000]
+    y = selection['box'][1]
+    nearby = [r for r in mapped['regions'] if abs(r['box'][1]-y) < .06]
+    layout = [r for r in mapped['regions'] if r in nearby or r['box'][1] < .15][:120]
     target = f'/document/{document_id}?page={row["page"]}&map={map_id}&region={region_id}'
     passages = [notebook_chat.Passage('document:'+document_id, record['title'],
-                 'Selected region: '+selection['text']+'\nOriginal page context:\n'+context,
+                 'Selected region: '+selection['text']+'\nOriginal page context:\n'+context+
+                 '\nSource layout (normalized top-left coordinates):\n'+json.dumps(layout),
                  target, page=row['page'])]
     evidence = []
     candidates = []
-    terms = {t.casefold() for t in re.findall(r'[^\W\d_]{3,}', selection['text'])}
+    terms = {t.casefold() for t in re.findall(r'[^\W\d_]{3,}', ' '.join(r['text'] for r in nearby))}
     terms -= {'reference', 'interval', 'result', 'test', 'range', 'unit', 'date', 'collected'}
     # Related records stay inside the current account; bounded excerpts, no global index.
     source_pages = documents.all_pages()
@@ -176,7 +183,7 @@ async def ask(document_id, map_id, region_id, question):
         context = text[:1000] + '\n…\n' + text[start:start+4500] if start > 1000 else text[:6000]
         candidates.append(notebook_chat.Passage('document:'+page['document_id'], page['title'],
             context, f'/document/{page["document_id"]}?page={page["number"]}', page=page['number']))
-    related = notebook_chat.rank(candidates, selection['text']+' '+question, limit=6)
+    related = notebook_chat.rank(candidates, ' '.join(sorted(terms))+' '+question, limit=3)
     passages.extend(related)
     all_text = {(p['document_id'], p['number']): p['text'] for p in source_pages}
     for passage in related:
@@ -190,7 +197,7 @@ async def ask(document_id, map_id, region_id, question):
         'sources': [{'index': i, 'title': p.title, 'text': p.text} for i, p in enumerate(passages, 1)]},
         ensure_ascii=False)
     try:
-        reply, _ = await agent_gateway.turn(prompt, 'report-'+document_id+'-'+map_id+'-'+region_id)
+        reply, _ = await agent_gateway.turn(prompt, 'report-'+str(uuid.uuid4()))
     except agent_gateway.GatewayError as exc:
         raise notebook_chat.ChatError(str(exc)) from exc
     if len(reply) > 16000:

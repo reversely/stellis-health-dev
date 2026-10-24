@@ -134,12 +134,15 @@ function mount(host, record, initialPage) {
     event.preventDefault();
     if (!map || !region || busy || !configured) return;
     const anchor = {map_id: map.id, region_id: region.id};
-    const question = input.value.trim() || 'Help me understand this part of my report in context.';
+    const draft = input.value;
+    const question = draft.trim() || 'Help me understand this part of my report in context.';
     busy = true; send.disabled = true; explainStatus.textContent = 'Reading the report and related records…';
     try {
       const result = await dom.api(`${base}/explanations`, {method: 'POST', json: {...anchor, question}});
       if (!workspace.isConnected) return;
-      exchanges.push(result); input.value = ''; renderHistory();
+      exchanges.push(result);
+      if (input.value === draft) input.value = '';
+      renderHistory();
       explainStatus.textContent = (map?.id === anchor.map_id && region?.id === anchor.region_id) ? '' :
           'Explanation saved for the previous selection.';
     } catch (error) { explainStatus.textContent = error.message; }
@@ -158,13 +161,15 @@ function mount(host, record, initialPage) {
       exchanges = saved.exchanges; configured = Boolean(capabilities.ai?.configured);
       if (!configured) explainStatus.textContent = 'Set up AI in Settings to ask about this report.';
       const params = new URLSearchParams(location.search);
-      const latest = exchanges.at(-1);
+      const requested = params.get('map');
+      const latest = requested ? exchanges.filter(e => e.map_id === requested &&
+          (!params.has('region') || e.region_id === params.get('region'))).at(-1) : exchanges.at(-1);
       const targetMap = params.get('map') || latest?.map_id;
       const targetRegion = params.get('region') ?? latest?.region_id ?? null;
       if (!initialPage && latest) pageSelect.value = String(latest.page);
       await load(targetMap, targetRegion);
       // Historical answers remain readable when the original page text has changed.
-      if (latest && latest.stale && !region) {
+      if (latest && !region) {
         selected.textContent = latest.selection.text;
         showAnswer(latest);
       }

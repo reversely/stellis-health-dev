@@ -216,6 +216,7 @@ function dateReview(record, onSaved = () => {}) {
  * @return {!Element} An empty slot between the header and the pages.
  */
 function render(host, record, page, onDelete, onChanged = null) {
+  const extractedOpen = host.querySelector('.document-extracted-details')?.open || false;
   const dom = root.StellisDom;
   const head = dom.el('div', null, 'document-head');
   const meta = dom.el('p', null, 'document-meta');
@@ -243,6 +244,7 @@ function render(host, record, page, onDelete, onChanged = null) {
   if (root.StellisReportContext) {
     root.StellisReportContext.mount(reportHost, record, page);
     const details = dom.el('details', null, 'document-extracted-details');
+    details.open = extractedOpen;
     details.append(dom.el('summary', 'Extracted text'), body);
     host.append(details);
   }
