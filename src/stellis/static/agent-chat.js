@@ -167,10 +167,11 @@
     card.append(actions,notice);if(showFollowup && draft.follow_up)card.append(suggestionCard(draft.follow_up,onChange));return card;
   }
   async function refreshThread(section, agent) {
-    const [messages, jobs, artifacts] = await Promise.all([
+    const [messages, jobs, artifacts, attachments] = await Promise.all([
       request(`/agents/${encodeURIComponent(agent.id)}/messages`),
       request(`/agents/${encodeURIComponent(agent.id)}/jobs`),
       request(`/agents/${encodeURIComponent(agent.id)}/artifacts`),
+      window.StellisDom.api(window.StellisChatAttachments.path('agent',agent.id)),
     ]);
     if (selectedId !== agent.id) return;
     const feed = section.querySelector('.agent-thread-feed');
@@ -186,6 +187,7 @@
       if(message.role==='user' && message.addressed_agent_id && message.addressed_agent_id!==agent.id)item.append(el('small','agent-job-state','To '+message.addressed_agent_name));
       const draft=message.routed_artifact || artifacts.find(item=>item.message_id===message.id);
       if(draft)item.append(artifactCard(draft,()=>refreshThread(section,agent)));else item.append(messageBody(message.content));
+      item.append(window.StellisChatAttachments.cards(attachments.filter(file=>file.message_id===message.id),{kind:'agent',id:agent.id,books:notebooks,notebookId:()=>message.notebook_id||''}));
       const chip = contextChip(message.notebook_id); if (chip) item.append(chip);
       const job = byJob.get(message.job_id);
       if (message.role === 'user' && job && job.state !== 'succeeded')
@@ -217,14 +219,14 @@
     const pending = pendingTurns.get(agent.id);
     section.running = Boolean(pending) || jobs.some(job => job.state === 'running');
     const send = section.querySelector('button[type=submit]');
-    if (send) send.disabled = !runtimeConfigured || !agent.enabled || section.running;
+    if (send) send.disabled = !runtimeConfigured || !agent.enabled || section.running || section.attachments?.busy();
     if (pending && !messages.some(message => message.role === 'user' && message.content === pending.question.replace(/\s+/g, ' ').trim() && Date.parse(message.created_at) >= Date.parse(pending.started) - 1000)) {
       const item = el('article', 'agent-message agent-message-user');
       item.append(el('strong', 'agent-message-author', 'You'), messageBody(pending.question), el('small', 'agent-job-state', 'Submitting…'));
       const chip = contextChip(pending.notebook); if (chip) item.append(chip); nodes.push(item);
     }
     if (!nodes.length) nodes.push(el('p', 'agent-empty', `Ask ${agent.name} a question or choose a notebook to work from.`));
-    const signature = JSON.stringify([messages,jobs,artifacts,pending?.question]);
+    const signature = JSON.stringify([messages,jobs,artifacts,attachments,pending?.question]);
     if (feed.dataset.signature !== signature) {feed.replaceChildren(...nodes);feed.dataset.signature = signature;}
     if (nearBottom || pending) feed.scrollTop = feed.scrollHeight;
     clearTimeout(threadTimer);
@@ -258,17 +260,20 @@
     else if (!runtimeConfigured) state.textContent = 'Configure inference in Settings to reply.';
     const add = el('button', 'agent-capture-action', 'Add'); add.type = 'button'; add.setAttribute('aria-haspopup','dialog');
     add.addEventListener('click',()=>window.StellisCapture.open(null,{notebookId:select.value || null}));
+    const attachments=window.StellisChatAttachments.create({kind:'agent',id:agent.id,books:notebooks,notebookId:()=>select.value,
+      onChange:()=>{send.disabled=!runtimeConfigured||!agent.enabled||section.running||attachments.busy();}});
+    section.attachments=attachments;await attachments.load();form.append(attachments.element);
     actions.append(state, add, send); form.append(actions);
     input.addEventListener('keydown', event => { if (!event.defaultPrevented && (event.metaKey || event.ctrlKey) && event.key === 'Enter' && !send.disabled) {event.preventDefault(); form.requestSubmit();} });
     form.addEventListener('submit', async event => {
       event.preventDefault(); if (send.disabled || !input.value.trim()) return;
       const submitted = {question:input.value.trim(), notebook:select.value, started:new Date().toISOString()};
-      pendingTurns.set(agent.id, submitted); send.disabled = true; input.value = ''; remember(); state.textContent = 'Working…';
+      attachments.setSending(true);pendingTurns.set(agent.id, submitted); send.disabled = true; input.value = ''; remember(); state.textContent = 'Working…';
       const optimistic = el('article', 'agent-message agent-message-user'); optimistic.append(el('strong', 'agent-message-author', 'You'), messageBody(submitted.question), el('small', 'agent-job-state', 'Submitting…')); feed.querySelector('.agent-empty')?.remove(); feed.append(optimistic); feed.scrollTop = feed.scrollHeight;
       clearTimeout(threadTimer); threadTimer = setTimeout(() => refreshThread(section, agent).catch(error => status(error.message)), 700);
       try {
-        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null})});
-        state.textContent = '';
+        await request(`/agents/${encodeURIComponent(agent.id)}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:submitted.question, notebook_id:submitted.notebook || null,attachment_ids:attachments.ids()})});
+        await attachments.load();state.textContent = '';
       } catch (error) {
         state.textContent = error.message;
         if (!leavingPage && !readDraft(agent.id).question) {
@@ -277,7 +282,7 @@
           if (current && !current.value) current.value = submitted.question;
         }
       } finally {
-        pendingTurns.delete(agent.id); send.disabled = !runtimeConfigured || !agent.enabled;
+        attachments.setSending(false);pendingTurns.delete(agent.id); send.disabled = !runtimeConfigured || !agent.enabled;
         if (selectedId === agent.id && section.isConnected) await refreshThread(section, agent).catch(error => status(error.message));
       }
     });

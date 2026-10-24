@@ -46,3 +46,10 @@ test('latestSummary takes the newest meeting with an overview, unmodified', () =
   assert.equal(latestSummary(meetings, new Map()), null);
   assert.equal(latestSummary([], new Map()), null);
 });
+
+test('document entries appear in Records and retain their recorded dates', () => {
+  const items = buildItems({documents:[{id:'scan',title:'Lab attachment',record_date:'2026-01-03',created_at:'2026-01-05'}]});
+  assert.equal(items[0].kind,'document');
+  assert.equal(items[0].date,'2026-01-03');
+  assert.equal(filterItems(items,'document')[0].id,'scan');
+});

@@ -28,6 +28,10 @@ EXPOSE 8080
 
 # The app runs as this unprivileged user; the entrypoint gives it the data volume.
 RUN useradd --system --create-home --uid 10001 stellis
+COPY scripts/check_ocr.py /usr/local/libexec/stellis/check_ocr.py
+# Exercise the bounded worker and English data as the runtime user before shipping.
+RUN setpriv --reuid=stellis --regid=stellis --init-groups \
+    python /usr/local/libexec/stellis/check_ocr.py
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 

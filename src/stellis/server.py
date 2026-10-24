@@ -629,6 +629,7 @@ class AgentMemory(BaseModel):
 
 
 class AgentQuestion(BaseModel):
+    attachment_ids: list[str] = Field(default_factory=list, max_length=5)
     question: str = Field(min_length=1, max_length=2000)
     notebook_id: str | None = None
 
@@ -738,7 +739,15 @@ async def stop_agent_job(agent_id: str, job_id: str):
 @api.post("/agents/{agent_id}/ask")
 async def ask_agent(agent_id: str, request: AgentQuestion) -> dict[str, object]:
     try:
-        return await agent_runtime.ask(agent_id, request.question, request.notebook_id)
+        from stellis import chat_attachments
+        passages = chat_attachments.passages('agent', agent_id, request.attachment_ids, request.question)
+        sources = [{'source_id': item.source_id, 'title': item.title,
+                    'excerpt': item.text, 'target': item.target, 'start_ms': item.start_ms}
+                   for item in passages]
+        result = await agent_runtime.ask(agent_id, request.question, request.notebook_id, sources)
+        if request.attachment_ids:
+            chat_attachments.bind('agent', agent_id, request.attachment_ids, result['user_message']['id'])
+        return result
     except asyncio.CancelledError as exc:
         raise HTTPException(status_code=409, detail="Reply stopped") from exc
     except LookupError as exc:
@@ -1399,6 +1408,7 @@ class SourceSelection(BaseModel):
 
 
 class NotebookQuestion(BaseModel):
+    attachment_ids: list[str] = Field(default_factory=list, max_length=5)
     question: str = Field(max_length=notebook_chat.MAX_QUESTION)
     source_ids: list[str] = Field(max_length=500)
     agent_id: str | None = Field(default=None, max_length=100)
@@ -1496,7 +1506,7 @@ def notebook_chat_messages(notebook_id: str):
 async def notebook_chat_ask(notebook_id: str, request: NotebookQuestion):
     try:
         return await notebook_chat.ask(notebook_id, request.question,
-                                       request.source_ids, request.agent_id)
+                                       request.source_ids, request.agent_id, request.attachment_ids)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -3343,6 +3353,8 @@ def edit_clean_segment(run_id: str, segment_id: str, edit: CleanSegmentEdit) -> 
 
 from stellis.demo_routes import router as demo_router
 api.include_router(demo_router)
+from stellis.chat_attachment_routes import router as chat_attachment_router
+api.include_router(chat_attachment_router)
 api.include_router(reproductive_routes.router)
 api.include_router(milestone_routes.router)
 

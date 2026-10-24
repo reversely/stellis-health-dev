@@ -115,3 +115,7 @@ The call panel beside the live Notes/Transcript notepad is the primary onboardin
 ## Period day logging
 
 The Cycle daily log follows the supplied Apple Health reference: weekday and date labels above pale vertical capsules, with coral circles for recorded flow. Each day is an accessible toggle that immediately saves `Had flow`; a second tap removes that observation. Save failures restore its prior state. Days save independently for consecutive taps. Keep detailed flow choices optional, week navigation and a date picker for history, and the existing shared Calendar projection.
+
+## Chat attachments
+
+Ask Stellis and notebook chat share Attach beside the composer. PDF and image files appear as filename links with a notebook selector and Save to notebook. Saved files link to their notebook. Needs text links to the retained document for correction. Remove applies to unsent chat attachments and retains the original record. Upload and send states disable conflicting controls. Attachment rows wrap on phones and keep filenames readable. Notebook Records includes Documents alongside Meetings and Notes.

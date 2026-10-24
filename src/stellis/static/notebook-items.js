@@ -4,9 +4,10 @@
   const DARK_INK = '#27222B';
   const LIGHT_INK = '#F7F5F6';
   const FILTERS = [
-    {id: 'all', label: 'All', icon: 'list', empty: 'No notes or meetings yet'},
+    {id: 'all', label: 'All', icon: 'list', empty: 'No records yet'},
     {id: 'conversation', label: 'Meetings', icon: 'microphone', empty: 'No meetings yet'},
     {id: 'page', label: 'Notes', icon: 'file-text', empty: 'No notes yet'},
+    {id: 'document', label: 'Documents', icon: 'file-text', empty: 'No documents yet'},
   ];
 
   const isHexColour = value => typeof value === 'string' && HEX.test(value);
@@ -41,13 +42,14 @@
   }
 
   // One row per meeting and note in the notebook, newest first.
-  function buildItems({conversations = [], pages = [], tagsByConversation = new Map(), counts = new Map()}) {
+  function buildItems({conversations = [], pages = [], documents = [], tagsByConversation = new Map(), counts = new Map()}) {
     const none = {open: 0, done: 0};
     return [
       ...conversations.map(item => ({kind: 'conversation', id: item.id, title: item.title, date: item.recorded_at || item.created_at,
         categoryIds: tagsByConversation.get(item.id) || [], todos: counts.get(item.id) || none})),
       ...pages.map(item => ({kind: 'page', id: item.id, title: item.title, date: item.updated_at,
         categoryIds: item.category_ids || [], todos: counts.get(item.id) || none})),
+      ...documents.map(item => ({kind:'document',id:item.id,title:item.title,date:item.record_date||item.created_at,categoryIds:[],todos:none})),
     ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   }
 

@@ -437,7 +437,8 @@ async def _ask_agent(
 async def ask(notebook_id: str,
               question: str,
               source_ids: list[str],
-              agent_id: str | None = None) -> dict[str, object]:
+              agent_id: str | None = None,
+              attachment_ids: list[str] | None = None) -> dict[str, object]:
     """Answers one question from the checked sources and stores the exchange.
 
     Args:
@@ -460,7 +461,15 @@ async def ask(notebook_id: str,
         raise ValueError("Enter a question of at most 2,000 characters")
     history = messages(notebook_id)
     check(question)
-    passages = retrieve(notebook_id, source_ids, question)
+    from stellis import chat_attachments
+    attachment_ids = attachment_ids or []
+    attached = chat_attachments.passages('notebook', notebook_id, attachment_ids, question)
+    passages = retrieve(notebook_id, source_ids, question) if source_ids else []
+    passages = [*attached, *passages]
+    if sum(len(item.text) for item in passages) > FULL_TEXT_CHARS:
+        passages = rank(passages, question)
+    if not passages:
+        raise ValueError('Check a source or attach a file that has text')
     agent = None
     if agent_id:
         reply, passages, agent = await _ask_agent(agent_id, notebook_id,
@@ -475,5 +484,6 @@ async def ask(notebook_id: str,
     answer, citations = cite(reply.strip(), passages)
     with storage.connect() as conn:
         _create_table(conn)
-        _append(conn, notebook_id, "user", question, [])
+        message = _append(conn, notebook_id, "user", question, [])
+        chat_attachments.bind('notebook', notebook_id, attachment_ids, message['id'], conn)
         return _append(conn, notebook_id, "assistant", answer, citations, agent)

@@ -31,6 +31,19 @@ fly secrets list -a stellis-health
 
 ## First deploy
 
+Every image installs Tesseract and English language data through `Dockerfile`.
+The build runs `scripts/check_ocr.py` as the unprivileged app user against a
+scanned PDF and the bundled lab photo through the app's bounded OCR worker.
+Missing packages, missing language data or failed recognition stop the build.
+The check uses a temporary workspace and requires no credentials or volume.
+
+To build and repeat this check in the deployment image locally:
+
+```sh
+docker build -t stellis-health:check .
+docker run --rm stellis-health:check python /usr/local/libexec/stellis/check_ocr.py
+```
+
 The app needs exactly one machine, because the volume attaches to one machine.
 
 ```sh

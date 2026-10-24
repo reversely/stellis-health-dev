@@ -18,6 +18,7 @@ implementation/
 plans/
 release/
 rust/
-scripts/
+scripts/*
+!scripts/check_ocr.py
 tests/
 fly.toml

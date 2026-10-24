@@ -4275,9 +4275,9 @@ function paintNotebookItems() {
     const meeting = item.kind === 'conversation';
     const row = el('tr');
     const lead = el('td', 'items-icon'); lead.append(icon(meeting ? 'microphone' : 'file-text'));
-    lead.title = meeting ? 'Meeting' : 'Note';
+    lead.title = meeting ? 'Meeting' : item.kind==='document'?'Document':'Note';
     const title = el('td', 'items-title'); const link = el('a', '', item.title || 'Untitled');
-    link.href = meeting ? `/conversation/${encodeURIComponent(item.id)}` : `/page/${encodeURIComponent(item.id)}`; title.append(link);
+    link.href = `/${item.kind==='conversation'?'conversation':item.kind==='document'?'document':'page'}/${encodeURIComponent(item.id)}`; title.append(link);
     const date = el('td', 'items-date'); const stamp = el('time', '', window.StellisListDate.formatListDate(item.date));
     stamp.dateTime = String(item.date); stamp.title = window.StellisListDate.formatListDate(item.date, {format: 'iso'}); date.append(stamp);
     const tags = el('td', 'items-tags');
@@ -4299,6 +4299,7 @@ async function loadNotebookItems(notebook) {
   const counts = await notebookTodoCounts(notebook.id);
   const tags = new Map(libraryConversations.map(item => [item.id, item.category_ids || []]));
   notebookItems = window.StellisNotebookItems.buildItems({conversations: notebook.conversations, pages: notebook.pages || [],
+    documents:libraryDocuments.filter(item=>item.notebook_id===notebook.id),
     tagsByConversation: tags, counts});
   paintNotebookItems();
 }
@@ -5025,3 +5026,5 @@ window.addEventListener('health-capture-saved', () => {
   if (notebookId) window.StellisNotebookHealth?.mount(document.querySelector('#notebook-health'), notebookId).catch(()=>{});
   if (location.pathname === '/trends') window.StellisTrends?.mount(document.querySelector('#trends-view'));
 });
+
+window.addEventListener('stellis:attachment-filed',async()=>{try{await reloadLibrary();await refreshNotebookItems();}catch(error){setStatus(error.message);}});

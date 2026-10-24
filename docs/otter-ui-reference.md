@@ -244,3 +244,11 @@ User feedback: “what happened to the onboarding call interface” followed by 
 Implemented: extracted the existing call panel as a shared factory in `onboarding-call.js` and reused it around the confirmed-profile UI. Start call is prominent again; Notes contains the current editable answer and saved confirmed notes, while Transcript retains turns. The timer and mute/speaker preferences survive field transitions. Text fallback, health/medicine search, explicit confirmation and drained acknowledgements remain connected to their existing services.
 
 Verified: control wiring and confirmed storage pass against authenticated APIs; 28 active expanded/compact layouts pass at seven widths in both themes. A separate real transport check passes typed confirmation and drained local Chatterbox playback. The complete Maya setup passes name correction, clarifications, pauses, manual edits, medicine search, shared preferences, notebook review and persisted approval. 41 Python tests and 199 JavaScript tests pass; one model-dependent Python test is skipped. Final integration is tracked in #143. Evidence: `docs/evidence/restored-onboarding-call/`.
+
+## Chat attachments
+
+User request: “please add feat; attatchments to chats that can be logged as notebook entries”.
+
+Implemented: Ask Stellis and notebook chat accept up to five PDF, PNG or JPEG attachments per message. Uploads retain the original document, attempt first-page OCR when text is missing, and persist unsent attachments across reload. Save to notebook explicitly files the canonical document without making another copy. Files already assigned to another notebook retain that assignment. Removing an unsent attachment keeps the original record. Notebook Records includes documents.
+
+Verified locally: uploads, explicit filing, canonical duplicate handling, sent-message associations and reload in both chat surfaces. Twenty browser checks cover five widths in both themes with no horizontal page overflow or application exceptions. Inference replies used a controlled test gateway; this run does not establish live model answer quality. Backend tests cover source delivery, citations, retry retention, unavailable OCR, attachment limits and isolation between chats and account workspaces.

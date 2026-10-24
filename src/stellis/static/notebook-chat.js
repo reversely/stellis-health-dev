@@ -193,7 +193,8 @@ class NotebookChat {
 
     this.status = dom.el('p', null, 'nb-status');
     this.status.setAttribute('role', 'status');
-    this.form.append(this.answerWith, box, this.status);
+    this.attachments=root.StellisChatAttachments.create({kind:'notebook',id:this.book.id,books:[this.book],notebookId:()=>this.book.id,onChange:()=>this.paintComposer(),onFiled:()=>this.refreshSources().catch(error=>this.status.textContent=error.message)});
+    this.form.append(this.answerWith, box, this.attachments.element, this.status);
     this.form.addEventListener('submit', (event) => {
       event.preventDefault();
       this.submit();
@@ -239,12 +240,12 @@ class NotebookChat {
   }
 
   paintComposer() {
-    const count = this.checkedSources().length;
+    const count = this.checkedSources().length + (this.attachments?.pending().filter(item=>item.status==='ready').length||0);
     this.input.placeholder = count ?
         `Ask about ${this.dom.plural(count, 'source')}` :
         'Check a source to ask about it';
     this.input.disabled = !count;
-    this.send.disabled = !count || this.form.dataset.busy === 'true';
+    this.send.disabled = !count || this.form.dataset.busy === 'true' || this.attachments?.busy();
   }
 
   paintSources() {
@@ -371,7 +372,7 @@ class NotebookChat {
     if (item.role === 'user') {
       this.lastQuestion = item.content;
       const node = dom.el('div', null, 'nb-msg nb-msg-user');
-      node.append(dom.el('p', item.content));
+      node.append(dom.el('p', item.content),this.attachments.messages(item.id));
       return node;
     }
     const node = dom.el('article', null, 'nb-msg');
@@ -425,10 +426,11 @@ class NotebookChat {
   async submit() {
     const question = this.input.value.trim();
     const sourceIds = this.checkedSources().map((source) => source.id);
-    if (!question || !sourceIds.length || this.form.dataset.busy === 'true') {
+    if (!question || this.send.disabled || this.form.dataset.busy === 'true') {
       return;
     }
     this.form.dataset.busy = 'true';
+    this.attachments.setSending(true);
     this.paintComposer();
     this.intro.remove();
     const previousQuestion = this.lastQuestion;
@@ -438,16 +440,19 @@ class NotebookChat {
     this.status.textContent =
         `Reading ${this.dom.plural(sourceIds.length, 'source')}`;
     try {
-      const answer = await this.dom.api(`/notebooks/${this.book.id}/ask`, {
+      await this.dom.api(`/notebooks/${this.book.id}/ask`, {
         method: 'POST',
         json: {
           question,
+          attachment_ids: this.attachments.ids(),
           source_ids: sourceIds,
           agent_id: this.picker.value || null,
         },
       });
+      await this.attachments.load();
       if (!this.stopped) {
-        this.log.append(this.message(answer));
+        const history=await this.dom.api(`/notebooks/${this.book.id}/chat`);
+        this.log.replaceChildren(...history.messages.map(item=>this.message(item)));
         this.status.textContent = '';
       }
     } catch (error) {
@@ -459,6 +464,7 @@ class NotebookChat {
       this.status.textContent = error.message;
     } finally {
       this.form.dataset.busy = 'false';
+      this.attachments.setSending(false);
       this.paintComposer();
     }
   }
@@ -497,7 +503,7 @@ class NotebookChat {
   async start() {
     try {
       const [, history, team] = await Promise.all([
-        this.refreshSources(),
+        Promise.all([this.refreshSources(),this.attachments.load()]),
         this.dom.api(`/notebooks/${this.book.id}/chat`),
         this.dom.api('/agents').catch(() => []),
       ]);
