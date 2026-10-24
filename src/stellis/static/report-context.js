@@ -94,6 +94,7 @@ function mount(host, record, initialPage) {
   }
   async function load(wantedMap = null, wantedRegion = null) {
     const current = ++serial;
+    overlay.inert = true;
     map = null; region = null; buttons.clear(); overlay.replaceChildren(); messages.replaceChildren();
     selected.textContent = 'Select part of your report.'; send.disabled = true;
     status.textContent = 'Opening report…'; retry.hidden = true;
@@ -148,7 +149,7 @@ function mount(host, record, initialPage) {
     } catch (error) { explainStatus.textContent = error.message; }
     finally { busy = false; send.disabled = !region || !configured; }
   });
-  image.addEventListener('load', size);
+  image.addEventListener('load', () => { size(); overlay.inert = false; });
   pageSelect.addEventListener('change', () => {scale = 1; rotation = 0; size(); load();});
   retry.addEventListener('click', () => load());
   zoomOut.addEventListener('click', () => {scale = Math.max(1, scale-0.25); size();});

@@ -37,6 +37,7 @@ try {
     await page.waitForFunction(() => document.querySelector('.report-stage img')?.naturalWidth > 0);
     assert.equal(await page.locator('.report-region.is-selected').count(), 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    for (let i = 0; i < 3; i++) await page.getByRole('button', {name: 'Rotate', exact: true}).click();
     for (const theme of ['light', 'dark']) {
       await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
       const evidence = process.env.STELLIS_REPORT_EVIDENCE;

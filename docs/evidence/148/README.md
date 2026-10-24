@@ -13,7 +13,7 @@ The user explicitly clarified that sourcing information and understanding their 
 - Python tests cover real PDF geometry at 0/90/180/270 degrees, raster output, real scanned-image OCR geometry, account isolation, authentication, cache identity, map/document binding, source-backed history and follow-ups, invalid citation rejection, source edits during inference and deletion of related sources.
 - `tests/browser/report_context.mjs` exercises the full app with original PDFs and real SQLite: line selection, explanation, earlier-result citations, reload, source link navigation, zoom and rotation at 1280px and 390px, both themes, failed inference/retry and saved answers with AI unavailable. Screenshots here are from synthetic clinical records.
 - The browser fixture in `tests/browser/report_context_server.py` replaces only AI response generation and its configured flag. It is not a product entrypoint. Actual model/provider quality is unverified: this shell has neither AI credentials nor a configured gateway. Citation validation checks supplied source identities, not clinical entailment.
-- Related regressions cover documents, OCR, dates, notebook chat and chat attachments. Existing OCR text correction remains independently exercised by `tests/browser/document_ocr.mjs`.
+- The targeted Python run passed 66 tests and 11 subtests across report context, documents, OCR, dates, notebook chat and chat attachments. Existing OCR text correction is independently exercised by `tests/browser/document_ocr.mjs`.
 
 ## Reproduction
 
