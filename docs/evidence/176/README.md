@@ -1,6 +1,6 @@
 # Dash and Mantine Trends comparison
 
-Issue #176. This is an executable evaluation with sample readings, not a production migration. See [the assessment](../../../plans/dash-trends-evaluation.md).
+Issue: [#176](https://github.com/reversely/stellis-health-dev/issues/176). Owner reference: [the supplied desktop screenshot](../trends-organization/trends-1280-light.png). This is an executable evaluation with sample readings, not a production migration. See [the assessment](../../../plans/dash-trends-evaluation.md).
 
 ## Run locally
 

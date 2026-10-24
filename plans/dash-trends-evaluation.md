@@ -41,7 +41,7 @@ flowchart LR
 
 ## Evaluation evidence and limits
 
-`docs/evidence/dash-trends-preview/` contains desktop/phone chart and table screenshots, twelve responsive layout checks, and a dependency-license manifest. Browser tests cover chart/table controls, shared filtering, newest/oldest ordering, date ranges, both themes, local-only requests and absence of application errors. The native fix has twelve responsive layouts plus the existing fifty-state control audit and 28 helper tests.
+`docs/evidence/176/` contains desktop/phone chart and table screenshots, twelve responsive layout checks, and a dependency-license manifest. Browser tests cover chart/table controls, shared filtering, newest/oldest ordering, date ranges, both themes, local-only requests and absence of application errors. The native fix has twelve responsive layouts plus the existing fifty-state control audit and 28 helper tests.
 
 The optional preview dependency set is separate from `pyproject.toml` and the shipped runtime lock. Python dependency license metadata identifies FOSS terms for all 42 pinned packages. Dash, Plotly and DMC are MIT; bundled Mantine/React are MIT. DMC includes optional editor components, but this prototype does not use an editor and proposes no Tiptap adoption. Existing self-hosted fonts retain their OFL notices. AG Grid was considered during research and is not included: its Python distribution bundles enterprise assets, whereas this preview needs only the Mantine table.
 
