@@ -1,0 +1,19 @@
+{
+    "programs": [
+
+    ],
+    "streams": [
+        {
+            "codec_type": "video",
+            "width": 1920,
+            "height": 1224
+        },
+        {
+            "codec_type": "audio"
+        }
+    ],
+    "format": {
+        "duration": "474.600000",
+        "size": "24774861"
+    }
+}

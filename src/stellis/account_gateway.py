@@ -18,7 +18,7 @@ from stellis import auth, calendar, intake_voice, server, storage
 from stellis.processing import model_paths
 
 _PUBLIC = {"/auth", "/api/health", "/api/v1/health"}
-_WEBSOCKETS = {"/api/v1/intake/call", "/api/v1/coach/call", "/api/v1/tour/call", "/api/v1/onboarding/profile/call"}
+_WEBSOCKETS = {"/components/measurements/_dash-ws-callback", "/api/v1/intake/call", "/api/v1/coach/call", "/api/v1/tour/call", "/api/v1/onboarding/profile/call"}
 _HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
                 "te", "trailers", "transfer-encoding", "upgrade"}
 

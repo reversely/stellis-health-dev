@@ -1,0 +1,282 @@
+{
+  "source": "/tmp/stellis-integrated-demo-185-raw/page@fedb25b077241d36ed55222d5771c500.webm",
+  "rawDuration": 477.92,
+  "trimmedLoadingSeconds": 3.3140000000000214,
+  "duration": 474.606,
+  "timings": [
+    {
+      "id": "opening",
+      "seconds": 12,
+      "caption": "I'm Maya. My life changes, but I keep building on one health history in Stellis.",
+      "start": 0,
+      "end": 12.006
+    },
+    {
+      "id": "periods",
+      "seconds": 20,
+      "caption": "2022: I start with tiredness, my actual period dates, and an appointment with my doctor.",
+      "start": 12.174,
+      "end": 32.177
+    },
+    {
+      "id": "appointment",
+      "seconds": 18,
+      "caption": "I keep a confirmed appointment separate from a plan. I check the details before saving.",
+      "start": 32.346,
+      "end": 50.347
+    },
+    {
+      "id": "first-import",
+      "seconds": 25,
+      "caption": "I bring in my original reports. They enter Maya's isolated demo workspace, using the app's record import.",
+      "start": 50.529,
+      "end": 75.53
+    },
+    {
+      "id": "dates",
+      "seconds": 20,
+      "caption": "I review the visit and test dates against the original documents before confirming them.",
+      "start": 75.695,
+      "end": 95.698
+    },
+    {
+      "id": "notebooks",
+      "seconds": 18,
+      "caption": "I choose the notebooks that share these records. One history can belong in more than one part of my care.",
+      "start": 95.926,
+      "end": 113.928
+    },
+    {
+      "id": "first-source",
+      "seconds": 18,
+      "caption": "The original blood result stays available. Hemoglobin and ferritin are different findings, with their own values and dates.",
+      "start": 114.046,
+      "end": 132.048
+    },
+    {
+      "id": "notes",
+      "seconds": 22,
+      "caption": "I keep my own follow-up notes in the same notebook. These are my words, saved in the app.",
+      "start": 132.117,
+      "end": 154.118
+    },
+    {
+      "id": "changing-care",
+      "seconds": 15,
+      "caption": "2024\u201325: fertility investigations lead to treatment, pregnancy and becoming a parent. I don't start my history over.",
+      "start": 154.192,
+      "end": 169.204
+    },
+    {
+      "id": "grow-library",
+      "seconds": 35,
+      "caption": "The next source packages extend the same library. I confirm their dates and notebook filing through the same review flow.",
+      "start": 169.275,
+      "end": 204.288
+    },
+    {
+      "id": "treatment",
+      "seconds": 18,
+      "caption": "I inspect the actual monitoring record. Dose changes retain their date and context; I don't turn them into a generic health score.",
+      "start": 204.349,
+      "end": 222.364
+    },
+    {
+      "id": "pregnancy",
+      "seconds": 18,
+      "caption": "Pregnancy and postpartum records stay connected. An estimated due date remains different from the actual birth.",
+      "start": 222.445,
+      "end": 240.453
+    },
+    {
+      "id": "new-routine",
+      "seconds": 28,
+      "caption": "2026: my periods return and iron follow-up matters again. Earlier notebooks and my own notes are still here.",
+      "start": 240.544,
+      "end": 268.555
+    },
+    {
+      "id": "care-course",
+      "seconds": 30,
+      "caption": "I enter the medicine course from its source: dose, alternate-day schedule and recorded supply. I review it before saving.",
+      "start": 268.62,
+      "end": 298.622
+    },
+    {
+      "id": "log-care",
+      "seconds": 20,
+      "caption": "Logging is a separate decision. I review the dated entry and confirm before it becomes part of my history.",
+      "start": 298.742,
+      "end": 318.743
+    },
+    {
+      "id": "brief",
+      "seconds": 18,
+      "caption": "The notebook Brief brings the saved course and its calculated dates together with the original records.",
+      "start": 318.843,
+      "end": 336.847
+    },
+    {
+      "id": "recording",
+      "seconds": 15,
+      "caption": "For a new visit, recording and personal notes live in the same interface. This is the ready state, not a claimed transcription run.",
+      "start": 336.945,
+      "end": 351.948
+    },
+    {
+      "id": "measurements",
+      "seconds": 30,
+      "caption": "Measurements are part of this same app. I enter dated values from my records, then inspect the chart and table directly.",
+      "start": 352.046,
+      "end": 382.059
+    },
+    {
+      "id": "camera-intro",
+      "seconds": 12,
+      "caption": "Now try a fresh reading of your own. Your camera test stays separate from my sample history.",
+      "start": 382.194,
+      "end": 394.197
+    },
+    {
+      "id": "camera-space",
+      "seconds": 45,
+      "caption": "Pause here to try the live camera. Rest, face the light, and choose Start when you're ready. Video stays on your device.",
+      "start": 394.319,
+      "end": 439.326
+    },
+    {
+      "id": "camera-attempt",
+      "seconds": 15,
+      "caption": "This recording host has no physical camera. The real recovery state stays visible; no sample number is presented as live inference.",
+      "start": 439.478,
+      "end": 454.487
+    },
+    {
+      "id": "continuity",
+      "seconds": 20,
+      "caption": "From a first concern to changing care and a new routine, I have grown my history. The earlier source and my notes are still part of it.",
+      "start": 454.603,
+      "end": 474.606
+    }
+  ],
+  "pace": 1,
+  "mode": "Actual integrated app; real uploads, approvals, database writes and native controls. No mocked APIs, camera, clock or inference.",
+  "camera": "Real no-device recovery, no physical capture claimed.",
+  "errors": [],
+  "caption_layout": "Dedicated 144px purple footer; full 1920x1080 application frame is preserved above it",
+  "audio": "Local synthetic narration of the authored script, Kitten TTS sid 1; no cloned person, live recognition or cloud service",
+  "narration_model_license": "Apache-2.0 (installed Kitten model LICENSE)",
+  "narration": [
+    {
+      "scene": "opening",
+      "seconds": 8.771083333333333,
+      "text": "I'm Maya. My life changes, but I keep building on one health history in Stellis."
+    },
+    {
+      "scene": "periods",
+      "seconds": 9.73075,
+      "text": "twenty twenty-two: I start with tiredness, my actual period dates, and an appointment with my doctor."
+    },
+    {
+      "scene": "appointment",
+      "seconds": 8.981541666666667,
+      "text": "I keep a confirmed appointment separate from a plan. I check the details before saving."
+    },
+    {
+      "scene": "first-import",
+      "seconds": 11.13875,
+      "text": "I bring in my original reports. They enter Maya's isolated demo workspace, using the app's record import."
+    },
+    {
+      "scene": "dates",
+      "seconds": 8.797333333333333,
+      "text": "I review the visit and test dates against the original documents before confirming them."
+    },
+    {
+      "scene": "notebooks",
+      "seconds": 10.474833333333333,
+      "text": "I choose the notebooks that share these records. One history can belong in more than one part of my care."
+    },
+    {
+      "scene": "first-source",
+      "seconds": 12.139,
+      "text": "The original blood result stays available. Hemoglobin and ferritin are different findings, with their own values and dates."
+    },
+    {
+      "scene": "notes",
+      "seconds": 9.429625,
+      "text": "I keep my own follow-up notes in the same notebook. These are my words, saved in the app."
+    },
+    {
+      "scene": "changing-care",
+      "seconds": 13.494708333333334,
+      "text": "twenty twenty-four to twenty twenty-five: fertility investigations lead to treatment, pregnancy and becoming a parent. I don't start my history over."
+    },
+    {
+      "scene": "grow-library",
+      "seconds": 11.839333333333334,
+      "text": "The next source packages extend the same library. I confirm their dates and notebook filing through the same review flow."
+    },
+    {
+      "scene": "treatment",
+      "seconds": 13.647958333333333,
+      "text": "I inspect the actual monitoring record. Dose changes retain their date and context; I don't turn them into a generic health score."
+    },
+    {
+      "scene": "pregnancy",
+      "seconds": 11.753,
+      "text": "Pregnancy and postpartum records stay connected. An estimated due date remains different from the actual birth."
+    },
+    {
+      "scene": "new-routine",
+      "seconds": 11.984416666666666,
+      "text": "twenty twenty-six: my periods return and iron follow-up matters again. Earlier notebooks and my own notes are still here."
+    },
+    {
+      "scene": "care-course",
+      "seconds": 11.951208333333334,
+      "text": "I enter the medicine course from its source: dose, alternate-day schedule and recorded supply. I review it before saving."
+    },
+    {
+      "scene": "log-care",
+      "seconds": 11.787583333333334,
+      "text": "Logging is a separate decision. I review the dated entry and confirm before it becomes part of my history."
+    },
+    {
+      "scene": "brief",
+      "seconds": 9.147041666666667,
+      "text": "The notebook Brief brings the saved course and its calculated dates together with the original records."
+    },
+    {
+      "scene": "recording",
+      "seconds": 12.747958333333333,
+      "text": "For a new visit, recording and personal notes live in the same interface. This is the ready state, not a claimed transcription run."
+    },
+    {
+      "scene": "measurements",
+      "seconds": 12.166958333333334,
+      "text": "Measurements are part of this same app. I enter dated values from my records, then inspect the chart and table directly."
+    },
+    {
+      "scene": "camera-intro",
+      "seconds": 8.944625,
+      "text": "Now try a fresh reading of your own. Your camera test stays separate from my sample history."
+    },
+    {
+      "scene": "camera-space",
+      "seconds": 12.22475,
+      "text": "Pause here to try the live camera. Rest, face the light, and choose Start when you're ready. Video stays on your device."
+    },
+    {
+      "scene": "camera-attempt",
+      "seconds": 13.692083333333333,
+      "text": "This recording host has no physical camera. The real recovery state stays visible; no sample number is presented as live inference."
+    },
+    {
+      "scene": "continuity",
+      "seconds": 13.297958333333334,
+      "text": "From a first concern to changing care and a new routine, I have grown my history. The earlier source and my notes are still part of it."
+    }
+  ],
+  "raw_capture_delivery": "Raw working captures archived locally; delivered MP4, sidecars and actual timing metadata are committed."
+}

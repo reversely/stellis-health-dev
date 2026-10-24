@@ -1,0 +1,2 @@
+LOADED
+PASS integrated Dash: real writes/reload/table/delete, native shell, eight theme/layout states, demo isolation, three chapters and native camera recovery

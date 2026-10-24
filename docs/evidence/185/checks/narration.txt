@@ -1,0 +1,23 @@
+VOICE opening 8.77
+VOICE periods 9.73
+VOICE appointment 8.98
+VOICE first-import 11.14
+VOICE dates 8.8
+VOICE notebooks 10.47
+VOICE first-source 12.14
+VOICE notes 9.43
+VOICE changing-care 13.49
+VOICE grow-library 11.84
+VOICE treatment 13.65
+VOICE pregnancy 11.75
+VOICE new-routine 11.98
+VOICE care-course 11.95
+VOICE log-care 11.79
+VOICE brief 9.15
+VOICE recording 12.75
+VOICE measurements 12.17
+VOICE camera-intro 8.94
+VOICE camera-space 12.22
+VOICE camera-attempt 13.69
+VOICE continuity 13.3
+NARRATED docs/evidence/185/maya-integrated-demo.mp4

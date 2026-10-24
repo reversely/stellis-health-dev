@@ -40,19 +40,13 @@
         {
           "kind": "notebooks",
           "maya": "My reports cover low iron and period health as well as routine care.",
-          "stellis": "Review the suggested notebooks before adding them to Maya\u2019s empty library."
+          "stellis": "Review the suggested notebooks before adding them to Maya’s empty library."
         },
         {
           "kind": "timeline",
           "maya": "My hemoglobin was normal but my ferritin was low. I'd like to see the follow-up results together.",
           "stellis": "Open the timeline and compare January and May with the August review.",
           "document_id": "D007"
-        },
-        {
-          "kind": "chat",
-          "maya": "My iron repletion follow-up says my ferritin improved. Can you explain what changed during 2022 using my reports?",
-          "stellis": "Ask Stellis with Preventive Care selected and inspect the source links.",
-          "template_id": "preventive-care--preventive-care"
         },
         {
           "kind": "overview",
@@ -101,14 +95,8 @@
         {
           "kind": "timeline",
           "maya": "I want to take the hormone results and ultrasound findings to my next visit.",
-          "stellis": "Use the timeline\u2019s document and notebook filters to review the investigations.",
+          "stellis": "Use the timeline’s document and notebook filters to review the investigations.",
           "document_id": "D015"
-        },
-        {
-          "kind": "chat",
-          "maya": "My mid-luteal progesterone was tested. What does my report document, and what investigations were still pending?",
-          "stellis": "Ask from the Fertility notebook and follow the citations.",
-          "template_id": "reproductive-health--fertility"
         }
       ],
       "record_count": 7
@@ -203,12 +191,6 @@
           "document_id": "D041"
         },
         {
-          "kind": "chat",
-          "maya": "My maternal discharge summary is here. Can you help me review the birth and my recovery using that report?",
-          "stellis": "Ask from Postpartum Recovery and inspect the discharge citation.",
-          "template_id": "pregnancy-postpartum--postpartum-recovery"
-        },
-        {
           "kind": "birth",
           "maya": "My baby was born on July 29. I'd like the calendar to distinguish the actual birth from the estimated due date.",
           "stellis": "Confirm the birth date in the existing milestone instead of changing the estimate.",
@@ -250,7 +232,7 @@
         },
         {
           "kind": "dates",
-          "maya": "I'd like this year\u2019s tests and treatment reviews to stay in clinical date order.",
+          "maya": "I'd like this year’s tests and treatment reviews to stay in clinical date order.",
           "stellis": "Confirm the extracted dates from the reports."
         },
         {
@@ -263,12 +245,6 @@
           "maya": "My ferritin fell again and improved with follow-up. I want to compare the results across years.",
           "stellis": "Open the annual review and compare it with earlier iron results.",
           "document_id": "D070"
-        },
-        {
-          "kind": "chat",
-          "maya": "My annual review says my latest ferritin is 48. What is the documented iron plan and the last-dose date?",
-          "stellis": "Ask from Preventive Care and check the dated source.",
-          "template_id": "preventive-care--preventive-care"
         },
         {
           "kind": "overview",
@@ -410,72 +386,182 @@
   ],
   "scenes": [
     {
-      "key": "report",
-      "label": "Report",
-      "date": "2026-06-15",
-      "year": 2026,
-      "title": "Understand a line in the report",
-      "description": "Maya selects the ferritin row. Stellis explains it, cites the row, and compares it with the October 2025 report.",
-      "tags": [
-        "Report page",
-        "Citations"
-      ],
+      "key": "first-record",
+      "chapter": "2022",
+      "label": "Original result",
+      "date": "2022-01-21",
+      "year": 2022,
+      "title": "A first concern, kept in context",
+      "description": "Maya starts with the dated blood result. The original source stays linked as her history grows.",
       "target": {
         "kind": "document",
-        "corpus_id": "D065"
+        "corpus_id": "D002"
       },
-      "focus": ".report-stage"
+      "focus": ".report-stage",
+      "tags": []
     },
     {
-      "key": "trace",
-      "label": "Trace",
-      "date": "2026-06-15",
-      "year": 2026,
-      "title": "See how Stellis answered",
-      "description": "The explanation opens its request: the line, the related pages it ranked, the model's reply and the source checks.",
-      "tags": [
-        "Request trace",
-        "Source checks"
-      ],
-      "target": {
-        "kind": "document",
-        "corpus_id": "D065"
-      },
-      "focus": ".trace-link"
-    },
-    {
-      "key": "check-in",
-      "label": "Check-in",
-      "date": "2026-08-21",
-      "year": 2026,
-      "title": "Morning check-in",
-      "description": "Stellis calls with what is due: the iron fill, the repeat blood test and the walking goal. Maya confirms her walk before it is logged.",
-      "tags": [
-        "Check-in",
-        "Confirm before logging"
-      ],
+      "key": "periods",
+      "chapter": "2022",
+      "label": "Periods and follow-up",
+      "date": "2022-02-02",
+      "year": 2022,
+      "title": "Build a routine around the actual dates",
+      "description": "Period history, appointments and records are separate facts in the same health history.",
       "target": {
         "kind": "home"
       },
-      "focus": ".coach-incoming, #health-dashboard"
+      "focus": "#health-dashboard",
+      "tags": []
     },
     {
-      "key": "levels",
-      "label": "Levels",
+      "key": "first-notebook",
+      "chapter": "2022",
+      "label": "Notebook and notes",
+      "date": "2022-08-02",
+      "year": 2022,
+      "title": "Follow the first concern over time",
+      "description": "The same notebook brings original reports, follow-up levels and personal notes together.",
+      "target": {
+        "kind": "notebook",
+        "name": "Preventive Care",
+        "tab": "list"
+      },
+      "focus": "#notebook-view",
+      "tags": []
+    },
+    {
+      "key": "treatment",
+      "chapter": "2024-25",
+      "label": "Treatment record",
+      "date": "2024-06-07",
+      "year": 2024,
+      "title": "Coordinate a changing plan",
+      "description": "Inspect the actual stimulation monitoring record. Dose adjustments retain their source and date.",
+      "target": {
+        "kind": "document",
+        "corpus_id": "D022"
+      },
+      "focus": ".report-stage",
+      "tags": []
+    },
+    {
+      "key": "ivf",
+      "chapter": "2024-25",
+      "label": "IVF care",
+      "date": "2024-06-25",
+      "year": 2024,
+      "title": "Keep care and its evidence together",
+      "description": "Review the IVF notebook, courses and dated results without starting the history over.",
+      "target": {
+        "kind": "notebook",
+        "name": "IVF",
+        "tab": "overview"
+      },
+      "focus": "#notebook-health, #notebook-view",
+      "tags": []
+    },
+    {
+      "key": "pregnancy",
+      "chapter": "2024-25",
+      "label": "Pregnancy and birth",
+      "date": "2025-07-31",
+      "year": 2025,
+      "title": "An estimate and a confirmed event",
+      "description": "The discharge source records the actual birth. It stays distinct from the estimated due date.",
+      "target": {
+        "kind": "document",
+        "corpus_id": "D054"
+      },
+      "focus": ".report-stage",
+      "tags": []
+    },
+    {
+      "key": "care",
+      "chapter": "2026",
+      "label": "Course and levels",
       "date": "2026-08-21",
       "year": 2026,
-      "title": "Iron course and levels",
-      "description": "The Blood Health Brief shows the iron course, when the fill runs out, and ferritin across reports from both notebooks.",
-      "tags": [
-        "Timeline",
-        "Levels"
-      ],
+      "title": "Find a routine that fits life now",
+      "description": "Blood Health retains the iron course, supply calculation and source-backed levels across years.",
       "target": {
         "kind": "notebook",
         "name": "Blood Health",
         "tab": "overview"
       },
-      "focus": "#notebook-health, #notebook-levels"
+      "focus": "#notebook-health, #notebook-levels",
+      "tags": []
+    },
+    {
+      "key": "report",
+      "chapter": "2026",
+      "label": "Latest source",
+      "date": "2026-12-18",
+      "year": 2026,
+      "title": "Read the plan in its original context",
+      "description": "Inspect the dated annual review and its source-based explanation controls. The last dose and stop date remain distinct.",
+      "target": {
+        "kind": "document",
+        "corpus_id": "D070"
+      },
+      "focus": ".report-stage",
+      "tags": []
+    },
+    {
+      "key": "measurements",
+      "chapter": "2026",
+      "label": "Measurements",
+      "date": "2026-12-18",
+      "year": 2026,
+      "title": "Review measurements directly",
+      "description": "Use the chart and upper-right Table icon with the actual saved readings in this workspace.",
+      "target": {
+        "kind": "measurements"
+      },
+      "focus": ".dash-measurements-frame",
+      "tags": []
+    },
+    {
+      "key": "camera",
+      "chapter": "2026",
+      "label": "Try the camera",
+      "date": "2026-12-18",
+      "year": 2026,
+      "title": "Make space for a fresh reading",
+      "description": "Rest, face the light and choose Start when ready. Your camera test stays separate from Maya’s sample history.",
+      "target": {
+        "kind": "measurements"
+      },
+      "focus": ".dash-measurements-frame",
+      "tags": []
+    },
+    {
+      "key": "continuity",
+      "chapter": "2026",
+      "label": "The longer view",
+      "date": "2026-12-18",
+      "year": 2026,
+      "title": "One history, changing needs",
+      "description": "Return to My Health. Earlier records and notebook identities remain part of the same workspace.",
+      "target": {
+        "kind": "home"
+      },
+      "focus": "#health-dashboard",
+      "tags": []
+    }
+  ],
+  "chapters": [
+    {
+      "key": "2022",
+      "label": "2022 First concerns"
+    },
+    {
+      "key": "2024-25",
+      "label": "2024–25 Changing care"
+    },
+    {
+      "key": "2026",
+      "label": "2026 A new routine"
     }
   ]
 }

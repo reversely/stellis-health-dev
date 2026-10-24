@@ -38,7 +38,7 @@ CONTENT_SECURITY_POLICY = "; ".join((
     # data: lets vitallens load its embedded WebAssembly; it reaches no host.
     "connect-src 'self' data:",
     "font-src 'self'",
-    f"frame-src {_FRAME_HOSTS}",
+    f"frame-src 'self' {_FRAME_HOSTS}",
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",

@@ -493,3 +493,8 @@ p.trend-status:not([class*='is-']) {
 
 .trend-actions { margin-top: auto; }
 .trend-untracked { align-self: start; }
+
+/* Dash owns only the measurement body; the existing app owns its shell. */
+.dash-measurements-frame { display:block; width:100%; min-height:480px; border:0; color-scheme:normal; }
+.dash-camera-results:empty { display:none; }
+.dash-camera-results { padding:var(--space-5); border:1px solid var(--line); border-radius:var(--radius-panel); background:var(--surface); }

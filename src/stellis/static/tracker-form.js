@@ -132,7 +132,8 @@ async function open(kind, existing, options) {
   footer.append(cancel, save);
   form.append(fields, error, footer);
   dialog.append(header, form);
-  options.host.append(dialog);
+  // Keep the modal alive when its dashboard widget refreshes asynchronously.
+  document.body.append(dialog);
   dialog.addEventListener('close', () => { dialog.remove(); if (trigger?.isConnected) trigger.focus(); }, {once: true});
   form.addEventListener('submit', async event => {
     event.preventDefault(); save.disabled = true; error.textContent = '';

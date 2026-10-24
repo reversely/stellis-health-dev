@@ -2,6 +2,9 @@
 // The CSS gradient underneath stays as the fallback when WebGL is unavailable.
 (() => {
   const canvas = document.querySelector('#rail-shader');
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  // Reduced motion uses the shared static rail gradient.
+  if (still.matches) return;
   const gl = canvas?.getContext('webgl', {alpha: false, antialias: false, powerPreference: 'low-power'});
   if (!gl) return;
   const vertex = 'attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }';
@@ -59,7 +62,6 @@
   const uniform = Object.fromEntries(['size', 'time', 'pointer', 'pull', 'blur'].map(name => [name, gl.getUniformLocation(program, name)]));
   document.documentElement.classList.add('rail-shader-ready');
 
-  const still = matchMedia('(prefers-reduced-motion: reduce)');
   const target = {x: 0.5, y: 0.5, pull: 0}, current = {x: 0.5, y: 0.5, pull: 0};
   addEventListener('pointermove', event => {
     const box = canvas.getBoundingClientRect();
@@ -95,6 +97,10 @@
   new MutationObserver(start).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['hidden']});
   addEventListener('resize', start);
   document.addEventListener('visibilitychange', start);
-  still.addEventListener('change', start);
+  still.addEventListener('change', () => {
+    canvas.style.visibility = still.matches ? 'hidden' : '';
+    document.documentElement.classList.toggle('rail-shader-ready', !still.matches);
+    if (!still.matches) start();
+  });
   start();
 })();

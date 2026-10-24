@@ -129,6 +129,28 @@ class AccountGatewayTest(unittest.TestCase):
             replay = owner.get("/api/v1/calendar/google/callback", params={"state":state,"error":"access_denied"})
             self.assertEqual(replay.headers["location"], "/onboarding?calendar=expired")
 
+    def test_dash_component_and_runtime_socket_use_the_account_gateway(self) -> None:
+        """The integrated component reaches the same authenticated account worker."""
+        import sqlite3
+        from websockets.exceptions import InvalidStatus
+        from websockets.sync.client import connect
+        address=self.url.replace('http','ws')+'/components/measurements/_dash-ws-callback'
+        self.assertEqual(httpx.get(self.url+'/components/measurements/_dash-layout').status_code,303)
+        with self.assertRaises(InvalidStatus):connect(address,open_timeout=10).close()
+        with httpx.Client(base_url=self.url,timeout=30) as client:
+            client.post('/api/v1/auth/register',json={'username':'componentowner','password':'correct horse battery staple'}).raise_for_status()
+            # Fixture setup completes onboarding without changing the interface under test.
+            with sqlite3.connect(Path(self.temp.name)/'auth.sqlite3') as conn:
+                conn.execute('UPDATE account SET onboarding_completed=1 WHERE username=?',('componentowner',))
+            layout=client.get('/components/measurements/_dash-layout')
+            self.assertEqual(layout.status_code,200,layout.text)
+            self.assertIn('measure-data',layout.text)
+            cookie='stellis_session='+client.cookies.get('stellis_session')
+            with self.assertRaises(InvalidStatus):
+                connect(address,additional_headers={'Cookie':cookie,'Origin':'https://unrelated.example'},open_timeout=10).close()
+            with connect(address,additional_headers={'Cookie':cookie,'Origin':self.url},open_timeout=30) as runtime:
+                self.assertTrue(runtime.ping().wait(5),'the component runtime must relay both directions')
+
     def test_the_intake_call_needs_a_session_from_this_site(self) -> None:
         """The gateway relays the call's WebSocket to the account's process."""
         from websockets.exceptions import InvalidStatus

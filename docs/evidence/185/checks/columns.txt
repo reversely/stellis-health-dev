@@ -1,0 +1,1 @@
+PASS native measurement columns: two at 1280/1440, wide layout at 1920, one on phones/tablets, both themes and actual paired table

@@ -5,6 +5,8 @@ description = "Record, transcribe, and search conversations on your computer"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "dash==4.4.1",
+    "dash-mantine-components==2.8.1",
     "fastapi>=0.143.2",
     "httpx>=0.28.1",
     "imageio-ffmpeg==0.6.0",
