@@ -40,8 +40,42 @@ try {
   assert.equal(await viewer.locator('.nb-viewer-badge').textContent(), '1');
   assert.match(await viewer.locator('.nb-viewer-meta').textContent(), /^Note, /);
   assert.equal(await viewer.locator('.nb-viewer-open').textContent(), 'Open the whole record');
-  if (evidence) { await mkdir(evidence, {recursive: true}); await page.screenshot({path: `${evidence}/notebook-ask-1440-light.png`}); }
+  // The answer retains reading room and the composer never covers its controls.
+  const bounds = selector => chat.locator(selector).boundingBox();
+  const sourcesBox = await bounds('.nb-sources');
+  const chatBox = await bounds('.nb-chat');
+  const viewerBox = await bounds('.nb-viewer');
+  assert(chatBox.width >= 440, 'open viewer leaves a readable answer column');
+  assert(Math.abs(sourcesBox.y - chatBox.y) < 1 && Math.abs(viewerBox.y - chatBox.y) < 1,
+      'workspace panels share their top edge');
+  const messagesBox = await bounds('.nb-messages');
+  const composerBox = await bounds('.nb-composer');
+  assert(composerBox.y >= messagesBox.y + messagesBox.height, 'composer follows the complete answer');
+  for (const width of [1440, 1280, 390]) {
+    for (const theme of ['light', 'dark']) {
+      await page.setViewportSize({width, height: 1000});
+      await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
+          `${width} ${theme}: no horizontal overflow`);
+      assert.equal(await viewer.evaluate(el => getComputedStyle(el).position),
+          width >= 1384 ? 'static' : 'fixed');
+      if (evidence) {
+        await mkdir(evidence, {recursive: true});
+        await page.screenshot({path: `${evidence}/notebook-ask-${width}-${theme}.png`});
+      }
+    }
+  }
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.evaluate(() => document.documentElement.dataset.theme = 'light');
   await viewer.getByRole('button', {name: 'Close source'}).click();
+  for (const theme of ['light', 'dark']) {
+    await page.setViewportSize({width: 390, height: 1000});
+    await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    if (evidence) await page.screenshot({path: `${evidence}/notebook-chat-390-${theme}.png`});
+  }
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.evaluate(() => document.documentElement.dataset.theme = 'light');
 
   // Including the other notebook reads it for one question; that answer names nothing unread.
   await answer.locator('.nb-follow-chip').click();

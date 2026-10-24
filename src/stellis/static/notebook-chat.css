@@ -2,9 +2,9 @@
    stacks above the chat and starts closed. */
 .notebook-chat {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: start;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: stretch;
 }
 .notebook-chat[data-sources='closed'] {
   grid-template-columns: 56px minmax(0, 1fr);
@@ -48,14 +48,14 @@
 }
 
 .nb-sources {
-  position: sticky;
-  top: 16px;
   display: grid;
+  align-content: start;
   gap: var(--space-3);
   min-width: 0;
   padding: var(--space-3);
   border-radius: var(--radius-panel);
-  background: var(--raised);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
 }
 .nb-sources-toggle {
   width: 100%;
@@ -186,6 +186,11 @@
   min-width: 0;
   display: grid;
   gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
 }
 .nb-messages {
   display: grid;
@@ -253,12 +258,11 @@
 }
 
 .nb-composer {
-  position: sticky;
-  bottom: 0;
+  position: static;
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3) 0 var(--space-4);
-  background: var(--field);
+  background: transparent;
 }
 .nb-answer-with {
   display: flex;
@@ -329,13 +333,13 @@
 }
 
 /* Source viewer: a third column on wide screens and a sheet over the page
-   below 1400px. */
+   when there is insufficient reading space. */
 .nb-viewer[hidden] {
   display: none;
 }
 .nb-viewer {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   align-content: start;
   min-width: 0;
   background: var(--surface);
@@ -424,20 +428,18 @@
 .nb-viewer-document .document-page {
   padding: var(--space-3) var(--space-4);
 }
-@media (min-width: 1400px) {
+@media (min-width: 1384px) {
   .notebook-chat[data-viewer='open'] {
-    grid-template-columns: 280px minmax(0, 1fr) 400px;
+    grid-template-columns: 240px minmax(0, 1fr) minmax(280px, 29%);
   }
   .notebook-chat[data-viewer='open'][data-sources='closed'] {
-    grid-template-columns: 56px minmax(0, 1fr) 400px;
+    grid-template-columns: 56px minmax(0, 1fr) minmax(280px, 29%);
   }
   .nb-viewer {
-    position: sticky;
-    top: 16px;
-    max-height: calc(100vh - 32px);
+    min-height: 600px;
   }
 }
-@media (max-width: 1399px) {
+@media (max-width: 1383px) {
   .nb-viewer {
     position: fixed;
     z-index: 40;
@@ -459,6 +461,7 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
   }
+  .nb-chat { padding: var(--space-3); }
   .nb-sources {
     position: static;
   }
@@ -688,4 +691,24 @@
 .nb-viewer-titles { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .nb-viewer-meta { margin: 0; color: var(--muted); font-size: 14px; }
 .nb-viewer-meta:empty { display: none; }
-.nb-viewer > .nb-viewer-open { justify-self: start; display: inline-flex; align-items: center; min-height: var(--control-height); margin-top: var(--space-3); padding: 0 var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink); text-decoration: none; }
+.nb-viewer > .nb-viewer-open { justify-self: start; display: inline-flex; align-items: center; min-height: var(--control-height); margin: var(--space-4); align-self: end; padding: 0 var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink); text-decoration: none; }
+
+/* Notebook workspace proportions from the original Ask reference. */
+@media (min-width: 1001px) {
+  html body.notebook-page:has(#notebook-view) { --rail-width: 280px; }
+  .notebook-page #notebook-view { padding-top: var(--space-4); }
+}
+.notebook-page .notebook-hero { margin-bottom: var(--space-5); }
+.notebook-chat .nb-source-add { white-space: nowrap; padding-inline: var(--space-2); }
+.nb-sources-actions { grid-template-columns: minmax(0, 1fr) auto; }
+.nb-msg-user { background: var(--ink); color: var(--surface); }
+.notebook-chat .nb-input button[type='submit']:not(:disabled) {
+  background: var(--action-fill);
+  color: var(--action-ink);
+  border-color: transparent;
+}
+
+.nb-msg-user p { color: inherit; }
+@media (max-width: 1000px) {
+  .nb-viewer { bottom: 80px; }
+}
