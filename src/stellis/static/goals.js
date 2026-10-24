@@ -113,7 +113,7 @@ function sourceText(point) {
   const when = dayText(point.time);
   if (point.source === 'camera') return `Camera estimate, ${when}`;
   if (point.source === 'record') return `From ${point.title}, ${when}`;
-  return `You logged, ${when}`;
+  return `Manual entry, ${when}`;
 }
 
 /** Creates an SVG element with attributes. */

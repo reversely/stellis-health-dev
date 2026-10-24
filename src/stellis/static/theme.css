@@ -36,12 +36,12 @@
   --control-padding-block: 10px;
   --control-padding-inline: 16px;
   --control-gap: 8px;
-  --rail-surface: #27222B;
+  --rail-surface: #2C2234;
   --rail-ink: #F7F5F6;
   --rail-muted: #CDBFCE;
-  --rail-control: #37303D;
-  --rail-input: #302A35;
-  --rail-line: #605465;
+  --rail-control: #44364E;
+  --rail-input: #382C42;
+  --rail-line: #6E5B79;
   --paper-surface: #F7F5F6;
   --paper-raised: #FFFFFF;
   --paper-ink: #2A252F;
@@ -63,13 +63,13 @@
   --data-series-dark: oklch(.72 .105 196);
   --data-series: var(--data-series-light);
   --camera-series-dark: oklch(.64 .105 196);
-  --media-surface: oklch(.2 .015 320);
-  --media-stage: oklch(.14 .01 320);
+  --media-surface: #382C42;
+  --media-stage: #302638;
   --media-ink: oklch(.97 .005 320);
   --media-muted: oklch(.8 .015 320);
   --media-pass: oklch(.72 .12 196);
   --media-caution: oklch(.82 .13 80);
-  --call-surface: oklch(.22 .02 300);
+  --call-surface: #382C42;
   --call-ink: oklch(.97 .005 300);
   --call-muted: oklch(.8 .015 300);
   --call-start-ink: oklch(.2 .02 300);
@@ -124,19 +124,19 @@
 
 :root {
   color-scheme: dark;
-  --field: var(--paper-ink);
-  --surface: var(--rail-surface);
+  --field: #302638;
+  --surface: #382C42;
   --raised: var(--rail-control);
   --input: var(--rail-input);
   --line: var(--rail-line);
-  --line-soft: #413A48;
+  --line-soft: #51415C;
   --ink: #fff8ff;
   --muted: #DED5DE;
   --quiet: #C4B6C6;
   --accent: #FFFFFF;
   --accent-strong: #E5E2E7;
   --accent-ink: var(--rail-surface);
-  --selected: #38303D;
+  --selected: #4A3A56;
   --selection: #86798E;
   --warning: #f3c983;
   --warning-bg: #322919;
@@ -935,19 +935,19 @@ html[data-theme='light'] {
 }
 html[data-theme='dark'] {
   --data-series: var(--data-series-dark);
-  --field: #2A252F;
-  --surface: var(--rail-surface);
+  --field: #302638;
+  --surface: #382C42;
   --raised: var(--rail-control);
   --input: var(--rail-input);
   --line: #605465;
-  --line-soft: #413A48;
+  --line-soft: #51415C;
   --ink: #fff8ff;
   --muted: #DED5DE;
   --quiet: #C4B6C6;
   --accent: #FFFFFF;
   --accent-strong: #E5E2E7;
   --accent-ink: var(--rail-surface);
-  --selected: #38303D;
+  --selected: #4A3A56;
   --selection: #86798E;
   --focus: #FFFFFF;
   --shadow: 0 16px 38px #2B2630A0;
@@ -2618,7 +2618,7 @@ html[data-theme='dark'] {
 :root :is(.invert-button,
   .coach-button.is-primary,
   .trend-card .trend-add,
-  .trend-card .trend-save,
+  :is(.trend-card, .trend-untracked) .trend-save,
   .pulse-dialog .pulse-primary,
   .summary-view .summary-update,
   .records-view .records-sort,
@@ -2655,7 +2655,7 @@ html[data-theme='dark'] {
 :root :is(.invert-button,
   .coach-button.is-primary,
   .trend-card .trend-add,
-  .trend-card .trend-save,
+  :is(.trend-card, .trend-untracked) .trend-save,
   .pulse-dialog .pulse-primary,
   .summary-view .summary-update,
   .records-view .records-sort,
@@ -2684,7 +2684,7 @@ html[data-theme='dark'] {
   :root :is(.invert-button,
   .coach-button.is-primary,
   .trend-card .trend-add,
-  .trend-card .trend-save,
+  :is(.trend-card, .trend-untracked) .trend-save,
   .pulse-dialog .pulse-primary,
   .summary-view .summary-update,
   .records-view .records-sort,
@@ -2748,14 +2748,14 @@ html[data-theme='dark'] {
   --glass-disabled-fill: oklch(1 0 0 / .12);
   --glass-disabled-ink: oklch(1 0 0 / .55);
 }
-html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet), .trend-card .trend-cancel,
+html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet), :is(.trend-card, .trend-untracked) .trend-cancel,
   .pulse-dialog .pulse-secondary, .onboarding-page button.secondary,
   .document-text-editor button:not(.invert-button), .auth-card) {
   background: var(--glass-fill);
   color: var(--glass-ink);
   border-color: var(--glass-line);
 }
-html[data-theme='dark'] :is(.coach-button, .trend-card .trend-cancel,
+html[data-theme='dark'] :is(.coach-button, :is(.trend-card, .trend-untracked) .trend-cancel,
   .pulse-dialog .pulse-secondary, .onboarding-page button.secondary) {
   border-radius: var(--action-radius);
 }
@@ -2770,7 +2770,7 @@ html[data-theme='dark'] .auth-card {
 
 @media (hover: hover) and (pointer: fine) {
   html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet, [aria-pressed='true']),
-    .trend-card .trend-cancel, .pulse-dialog .pulse-secondary,
+    :is(.trend-card, .trend-untracked) .trend-cancel, .pulse-dialog .pulse-secondary,
     .onboarding-page button.secondary):enabled:hover {
     background: var(--glass-hover);
     color: var(--glass-ink);
@@ -2825,7 +2825,7 @@ html[data-theme='dark'] :is(dialog:not([data-stage='live']), .more-menu-items, .
 .note-page .back-link { display: inline-flex; align-items: center; min-height: 44px; }
 
 html[data-theme='dark'] :is(.coach-button:not(.is-primary, .invert-button, .is-danger, .is-quiet),
-  .trend-card .trend-cancel, .pulse-dialog .pulse-secondary,
+  :is(.trend-card, .trend-untracked) .trend-cancel, .pulse-dialog .pulse-secondary,
   .onboarding-page button.secondary):disabled {
   background: var(--glass-disabled-fill);
   color: var(--glass-disabled-ink);
@@ -2841,7 +2841,7 @@ html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page'])
 :root :is(.document-actions button:not(.invert-button, .danger-button),
   .document-actions a, .facts button:not(.facts-find),
   .chat-file button, .chat-attach, .calendar-card button,
-  .trend-card .trend-manual, .trend-card .trend-table-toggle, .trend-card .trend-cancel,
+  .trend-untracked .trend-manual, .trend-card .trend-manual, .trend-card .trend-table-toggle, :is(.trend-card, .trend-untracked) .trend-cancel,
   .notebook-work-actions button, .agent-composer-actions .agent-attach) {
   min-height: var(--control-height);
   padding: var(--control-padding-block) var(--control-padding-inline);
@@ -2857,7 +2857,7 @@ html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page'])
   :root :is(.document-actions button:not(.invert-button, .danger-button),
     .document-actions a, .facts button:not(.facts-find),
     .chat-file button, .chat-attach, .calendar-card button,
-    .trend-card .trend-manual, .trend-card .trend-table-toggle, .trend-card .trend-cancel,
+    .trend-untracked .trend-manual, .trend-card .trend-manual, .trend-card .trend-table-toggle, :is(.trend-card, .trend-untracked) .trend-cancel,
     .notebook-work-actions button, .agent-composer-actions .agent-attach):enabled:hover {
     background: var(--secondary-hover);
     color: var(--secondary-ink);
@@ -2866,7 +2866,7 @@ html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page'])
 }
 :root :is(.document-actions button:not(.invert-button), .facts button:not(.facts-find),
   .chat-file button, .chat-attach, .calendar-card button,
-  .trend-card .trend-manual, .trend-card .trend-table-toggle, .trend-card .trend-cancel,
+  .trend-untracked .trend-manual, .trend-card .trend-manual, .trend-card .trend-table-toggle, :is(.trend-card, .trend-untracked) .trend-cancel,
   .notebook-work-actions button, .agent-composer-actions .agent-attach):disabled {
   background: var(--secondary-disabled-fill);
   color: var(--secondary-disabled-ink);

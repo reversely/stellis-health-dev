@@ -6,16 +6,16 @@ Use this guide for new screens and when revising existing controls. It records t
 
 | Role | Color | Use |
 | --- | --- | --- |
-| Dark core | `#27222B` | Home rail edge, recording rail, auth backdrop |
+| Dark purple core | `#2C2234` | Home rail edge, recording rail, auth backdrop |
 | Light paper | `#F7F5F6` | Default writing canvas and light card surfaces |
 | White | `#FFFFFF` | Inputs and the light theme auth card |
 | Dark ink | `#2A252F` | Text on paper |
 | Muted mauve | `#413A48` | Dark primary controls and the home rail highlight |
-| Dark control | `#37303D` | Secondary controls on the rail |
+| Dark control | `#44364E` | Secondary controls on the rail |
 | Teal | `#335C63` | Home rail focal color, waveform, and light theme focus |
 | Wine | `#654654` | Recording Stop action |
 
-Use the roles already defined in `src/stellis/static/theme.css` before adding a color. Check text and icon contrast in both themes. The dark core has a red undertone and is never pure black. Keep the light document surface flat. Dark mode keeps the mauve writing canvas, uses solid white primary action pills, and uses white at 80% opacity for glass secondary controls and account surfaces. Glass controls use dark ink. Blur belongs only on overlays with content behind them; a flat canvas needs no blur. Beige is not an action colour.
+Use the roles already defined in `src/stellis/static/theme.css` before adding a color. Check text and icon contrast in both themes. Dark mode is dark purple, never black or neutral charcoal. Use `#302638` for the canvas, `#382C42` for cards and inputs, `#44364E` for raised controls, and `#2C2234` for the header and navigation. These shared roles also supply media and call surfaces; do not add local black backgrounds. Keep the light document surface flat. Dark mode keeps the mauve writing canvas, uses solid white primary action pills, and uses white at 80% opacity for glass secondary controls and account surfaces. Glass controls use dark ink. Blur belongs only on overlays with content behind them; a flat canvas needs no blur. Beige is not an action colour.
 
 The **desktop home left rail** is a WebGL fill (`static/rail-shader.js`) of five soft blobs in the user's palette `#495575`, `#56465C`, `#594F4F`, `#547980`, and `#45ADA8` over the dark core. The bright teal blob is smaller than the others. The blobs drift slowly, travel about a quarter of the rail, and lean only slightly toward the pointer. `--rail-blur` on `#rail-shader` sets edge softness from 0 to 1; the default is 0.55 so neighbouring colours blend. Static grain sits in the shader and in an SVG overlay at 30% opacity with an overlay blend. Reduced-motion preferences get one still frame. Without WebGL the rail falls back to the centered radial gradient. Its transparent header is continuous with the rail, with no separate top bar or divider. The recording rail and writing canvas use solid fills. Dark-mode account and overlay surfaces use the shared white glass role. Do not spread the gradient across controls or other pages.
 
@@ -149,3 +149,11 @@ Use `theme.css` as the colour and geometry catalogue. Component styles reference
 Home and Trends use the same `--data-series-*` palette for the same measurements. Chart, camera, call, cycle and pillar colours live in the catalogue under semantic names. Report hit regions preserve their actual source coordinates instead of taking a 44px UI target; native 24px checkboxes retain the larger clickable label around them.
 
 Run `python3 scripts/audit_ui_styles.py` before introducing component colours or corners. CI enforces this rule for shipped component CSS and excludes vendor-owned assets. `tests/browser/ui_consistency.mjs` checks the actual workspace at 390px and 1280px in both themes, including target sizes, phone field text, solid-surface contrast, secondary states, capture geometry, focus return and overflow. `tests/browser/style_sweep.mjs` additionally checks primary actions, auth/onboarding and motion/reduced-motion behavior. Gradient rail contrast requires visual inspection; a solid CSS colour calculation does not represent the shader.
+
+## Trends organization
+
+Keep a stable measurement hierarchy regardless of whether readings exist: Vital signs (pulse, breathing rate, heart rate variability, blood pressure, temperature), Body measurements (weight), Blood sugar (blood sugar, HbA1c), Sleep, and Symptoms (pain). Empty measures are quiet rows inside their category, with secondary logging actions; never collect unrelated measures under “Start tracking”. Recorded measurements remain inside the same category after saving. Vital signs retain one camera action; manual entry is secondary.
+
+Reading metadata uses a semantic date and a separate source label (“Manual entry”, “Camera reading”, or the source record title), without conversational fragments or comma-joined sentences. Comparisons with personal history are neutral information, not red/green severity alerts. Retain the shared teal series and usual-range band across charts.
+
+Mobile navigation stays fixed at the viewport bottom, with safe-area padding and enough page space to scroll the final action fully above it. Review viewport captures at the top, middle and bottom of long pages. A full-page stitched screenshot places a fixed element at one viewport boundary within a taller image; it cannot establish how navigation behaves during scrolling.

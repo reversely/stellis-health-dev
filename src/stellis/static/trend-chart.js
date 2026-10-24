@@ -19,7 +19,7 @@ const MARGIN = {
   bottom: 28,
   left: 40
 };
-const PLOT_HEIGHT = 180;
+const PLOT_HEIGHT = 160;
 /** Markers closer than this many pixels are skipped, except the latest. */
 const MARKER_GAP = 12;
 /**
@@ -36,7 +36,7 @@ const MIN_SPAN = {
 };
 const SOURCE_LABELS = {
   record: 'From your records',
-  self: 'You logged',
+  self: 'Manual entry',
   camera: 'Camera reading',
 };
 
@@ -127,7 +127,7 @@ function yScale(points, usual, minSpan = 0) {
   const pad = Math.max((max - min) * 0.15, Math.abs(max) * 0.02, 1);
   min -= pad;
   max += pad;
-  const ticks = niceTicks(min, max, 4);
+  const ticks = niceTicks(min, max, 5);
   const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
   return {
     min: Math.min(min, ticks[0]),
@@ -341,14 +341,19 @@ class TrendChart {
       label.textContent = String(tick);
       svg.append(label);
     }
-    for (const tick of timeTicks(
-             this.range.start, this.range.end,
-             Math.max(2, Math.floor(plotWidth / 64)))) {
+    let dates = timeTicks(this.range.start, this.range.end,
+        Math.max(2, Math.floor(plotWidth / 64)));
+    if (dates.length < 2) {
+      dates = [this.range.start, this.range.end].map(time => ({
+        time, label: longDate(time).split(' ').slice(0, 2).join(' '),
+      }));
+    }
+    for (const tick of dates) {
       const label = svgEl('text', {
         x: this.x(tick.time),
         y: height - 8,
         class: 'trend-axis',
-        'text-anchor': 'middle',
+        'text-anchor': tick.time === this.range.start ? 'start' : tick.time === this.range.end ? 'end' : 'middle',
       });
       label.textContent = tick.label;
       svg.append(label);

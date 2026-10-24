@@ -129,8 +129,12 @@ html[data-theme='dark'] .trends-view {
   height: 16px;
   color: var(--chart-series);
 }
-.trend-status:is(.is-above, .is-below) { background: var(--block-alert-fill); color: var(--block-alert-ink); }
-.trend-status.is-usual { background: var(--block-ok-fill); color: var(--block-ok-ink); }
+/* Personal-history comparisons carry no alert severity. */
+.trend-status:is(.is-above, .is-below, .is-usual) {
+  background: var(--raised);
+  color: var(--ink);
+  border: 1px solid var(--line-soft);
+}
 .trend-status:is(.is-above, .is-below, .is-usual) .icon { color: currentColor; }
 p.trend-status:not([class*='is-']) {
   color: var(--muted);
@@ -401,9 +405,6 @@ p.trend-status:not([class*='is-']) {
   width: 40px;
   padding-right: 0;
 }
-.trend-start {
-  gap: var(--space-2);
-}
 .trend-start-row {
   display: flex;
   align-items: center;
@@ -452,4 +453,19 @@ p.trend-status:not([class*='is-']) {
 }
 @media (hover: hover) and (pointer: fine) {
   .trend-card .trend-manual:hover { color: var(--ink); }
+}
+
+/* Measurement categories share one hierarchy; unused measures are quiet rows. */
+.trends-cards { gap: var(--space-8); }
+.trend-group { display: grid; gap: var(--space-4); min-width: 0; }
+.trend-group .vital-signs-head { flex-wrap: wrap; }
+.trend-when { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline; }
+.trend-source { overflow-wrap: anywhere; }
+.trend-untracked { display: grid; min-width: 0; }
+.trend-untracked .trend-start-row { padding-block: var(--space-2); border-top: 0; }
+.trend-untracked .trend-start-row + .trend-start-row { border-top: 1px solid var(--line-soft); }
+.trend-untracked button { min-height: var(--control-height); }
+
+@media (max-width: 1000px) {
+  .trend-form { scroll-margin-block: var(--space-4) calc(88px + env(safe-area-inset-bottom)); }
 }

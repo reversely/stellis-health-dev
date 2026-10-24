@@ -118,7 +118,7 @@ try {
     results.push({theme,width,route,controls});
     if (process.env.STELLIS_UI_EVIDENCE && (route==='/' || (route==='/trends' && width===390))) {
       await mkdir(process.env.STELLIS_UI_EVIDENCE,{recursive:true});
-      await page.screenshot({path:`${process.env.STELLIS_UI_EVIDENCE}/${route==='/'?'home':'trends'}-${width}-${theme}.png`,fullPage:true});
+      await page.screenshot({path:`${process.env.STELLIS_UI_EVIDENCE}/${route==='/'?'home':'trends'}-${width}-${theme}.png`,fullPage:route!=='/trends'});
     }
     await page.evaluate(()=>document.documentElement.classList.remove('theme-swapping'));
   }
