@@ -74,3 +74,45 @@ body.is-maya-demo #setup-card { display:none; }
 .maya-notebook-review .list-widget-head { flex-wrap:wrap; }
 .maya-notebook-actions { display:flex; align-items:center; flex-wrap:wrap; gap: var(--space-3) var(--space-4); margin-top: var(--space-4); }
 .maya-notebook-actions .coach-button { white-space:normal; }
+
+/* Demo scene dock: numbered scenes along the bottom, the current one a colour block,
+   and a scene card with inverted ink above it. */
+.maya-scene-dock {
+  position: fixed; inset: auto 0 0 0; z-index: 38; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3) var(--space-5); border-top: 1px solid var(--line); background: var(--surface);
+}
+.maya-scene-list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 auto 0 0; padding: 0; list-style: none; }
+.maya-scene-button, .maya-scene-arrow {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); padding: 0 var(--space-4);
+  border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
+}
+.maya-scene-arrow { justify-content: center; width: var(--control-height); padding: 0; }
+.maya-scene-arrow:disabled { color: var(--quiet); cursor: default; }
+.maya-scene-arrow .icon { width: 18px; height: 18px; }
+.maya-scene-number { font-variant-numeric: tabular-nums; }
+.maya-scene-button[aria-current='step'] { border-color: var(--block-fill); background: var(--block-fill); color: var(--block-ink); }
+@media (hover: hover) and (pointer: fine) { .maya-scene-button:not([aria-current]):hover, .maya-scene-arrow:enabled:hover { background: var(--raised); } }
+.maya-scene-button:focus-visible, .maya-scene-arrow:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+.maya-scene-card {
+  position: fixed; z-index: 38; left: var(--space-6); bottom: calc(var(--control-height) + var(--space-8)); width: min(560px, calc(100vw - 32px)); box-sizing: border-box;
+  display: grid; gap: var(--space-2); padding: var(--space-5) var(--space-6); border-radius: var(--radius-dialog);
+  background: var(--block-fill); color: var(--block-ink); box-shadow: var(--overlay-shadow);
+}
+.maya-scene-card time { color: var(--block-muted); font-size: 14px; }
+.maya-scene-card h2 { margin: 0; font: 300 30px/1.15 var(--font-heading); }
+.maya-scene-card > p { margin: 0; color: var(--block-ink); font-size: 16px; line-height: 1.5; }
+.maya-scene-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-1) 0 0; padding: 0; list-style: none; }
+.maya-scene-tags li { padding: 2px var(--space-2); border-radius: var(--radius-small); background: color-mix(in oklch, var(--block-ink) 16%, transparent); font-size: 13px; font-weight: 600; }
+.maya-scene-status:empty { display: none; }
+.maya-scene-card[hidden] { display: none; }
+.maya-scene-hide { justify-self: start; min-height: var(--control-height); padding: 0 var(--space-4); border: 1px solid var(--block-muted); border-radius: var(--radius-control); background: transparent; color: var(--block-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.maya-scene-hide:focus-visible { outline: var(--focus-width) solid var(--block-ink); outline-offset: var(--focus-offset); }
+.maya-scene-focus { outline: 3px solid var(--block-calculated-fill); outline-offset: 4px; transition: outline-color 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+body.has-maya-scenes main { padding-bottom: calc(var(--control-height) + var(--space-8)); }
+@media (max-width: 1000px) {
+  .maya-scene-dock { bottom: 72px; padding: var(--space-2) var(--space-3); }
+  .maya-scene-card { left: var(--space-3); bottom: calc(72px + var(--control-height) + var(--space-6)); padding: var(--space-4); }
+  .maya-scene-card h2 { font-size: 24px; }
+  .maya-scene-button span:not(.maya-scene-number) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .maya-scene-button { padding: 0 var(--space-3); min-width: var(--control-height); justify-content: center; }
+}

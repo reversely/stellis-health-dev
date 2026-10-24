@@ -407,5 +407,75 @@
     "2026-10-14",
     "2026-11-12",
     "2026-12-12"
+  ],
+  "scenes": [
+    {
+      "key": "report",
+      "label": "Report",
+      "date": "2026-06-15",
+      "year": 2026,
+      "title": "Understand a line in the report",
+      "description": "Maya selects the ferritin row. Stellis explains it, cites the row, and compares it with the October 2025 report.",
+      "tags": [
+        "Report page",
+        "Citations"
+      ],
+      "target": {
+        "kind": "document",
+        "corpus_id": "D065"
+      },
+      "focus": ".report-stage"
+    },
+    {
+      "key": "trace",
+      "label": "Trace",
+      "date": "2026-06-15",
+      "year": 2026,
+      "title": "See how Stellis answered",
+      "description": "The explanation opens its request: the line, the related pages it ranked, the model's reply and the source checks.",
+      "tags": [
+        "Request trace",
+        "Source checks"
+      ],
+      "target": {
+        "kind": "document",
+        "corpus_id": "D065"
+      },
+      "focus": ".trace-link"
+    },
+    {
+      "key": "check-in",
+      "label": "Check-in",
+      "date": "2026-08-21",
+      "year": 2026,
+      "title": "Morning check-in",
+      "description": "Stellis calls with what is due: the iron fill, the repeat blood test and the walking goal. Maya confirms her walk before it is logged.",
+      "tags": [
+        "Check-in",
+        "Confirm before logging"
+      ],
+      "target": {
+        "kind": "home"
+      },
+      "focus": ".coach-incoming, #health-dashboard"
+    },
+    {
+      "key": "levels",
+      "label": "Levels",
+      "date": "2026-08-21",
+      "year": 2026,
+      "title": "Iron course and levels",
+      "description": "The Blood Health Brief shows the iron course, when the fill runs out, and ferritin across reports from both notebooks.",
+      "tags": [
+        "Timeline",
+        "Levels"
+      ],
+      "target": {
+        "kind": "notebook",
+        "name": "Blood Health",
+        "tab": "overview"
+      },
+      "focus": "#notebook-health, #notebook-levels"
+    }
   ]
 }
