@@ -38,3 +38,5 @@ Apply this skill to `/Users/slee/Repos/stellis-dev` or `reversely/stellis-dev`. 
 ## Measurement UI
 
 Use responsive measurement columns on desktop and one column on phones. Keep card edges and controls aligned. Table view uses an upper-right table icon button with an accessible name and a pressed state, not a switch or footer action. Chart overlays show one date and one marker/value on a padded coloured surface. Show usual-range bounds from actual data only, and make each measurement category select real content. Use “Lower than usual”, “Higher than usual” and “Within usual range” throughout; omit the possessive from usual-range labels and hints. A standalone Dash/Mantine evaluation is not authorization to migrate the production frontend; preserve the existing service, account and demo boundaries until its documented pilot checks pass.
+
+Sidebar active, hover and focus states use shared ink and raised purple/neutral surfaces. No fuchsia or grape sidebar highlights.

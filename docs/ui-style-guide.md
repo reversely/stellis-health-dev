@@ -171,3 +171,5 @@ Use **Lower than usual**, **Higher than usual** and **Within usual range** consi
 A standalone Dash/Mantine prototype evaluates a possible component-based frontend; it is not the production UI. Its synthetic data, runtime and migration limits are documented in `plans/dash-trends-evaluation.md`.
 
 Chart hover overlays use a padded purple surface with light text, one date and one coloured marker/value line. Avoid duplicate date headers, crosshair decoration and hard borders. Range legends must include calculated bounds and units from the actual series; without a supported baseline, omit both legend and band. Measurement navigation must select real content and reflect the active category; provide an equivalent working selector on narrow screens.
+
+Sidebar selection, hover and keyboard focus use shared ink and raised-surface roles: muted purple in dark mode and neutral paper/gray in light mode. Do not use fuchsia/grape highlights or allow component-library primary colors to override these sidebar roles.
