@@ -18,20 +18,26 @@ supports English printed text and runs on the server. The original file stays
 available through **Open PDF** or **Open image**. Settings lists timed requests
 under **Recent requests**.
 
-## Run it locally
+## Choose a version
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then clone this repository. Choose one explicit launch:
 
 ```sh
-git clone https://github.com/reversely/stellis-health-dev.git
-cd stellis-health-dev
-STELLIS_RUNTIME_PROFILE=direct NEBIUS_API_KEY=... uv run stellis
+uv run --locked stellis launch local --init
+uv run --locked stellis launch local
 ```
 
-Install Tesseract and its English language data for local OCR (`tesseract-ocr`
-and `tesseract-ocr-eng` on Debian or Ubuntu). The hosted image includes them.
+Or, for the managed cloud runtime:
 
-Open <http://127.0.0.1:8765/>. Set `STELLIS_DATA_DIR` to choose where the local data folder lives. Add `TAVILY_API_KEY` to let research agents search the web.
+```sh
+uv run --locked stellis launch cloud --init
+# Edit .private/cloud.env with your cloud gateway and credentials.
+uv run --locked stellis launch cloud
+```
+
+Local uses NemoClaw and Ollama on GN100. Cloud uses NemoClaw on Nebius Cloud with Token Factory inference. Each has separate configuration, data and a default port. Both currently run speech workers on the Stellis host. [Launch instructions](docs/launch.md) cover prerequisites, configuration checks and the legacy direct mode. [Cloud integration work](plans/nebius-cloud-integration.md) separates the upcoming serverless speech service.
+
+Install Tesseract and English language data for host execution (`tesseract-ocr` and `tesseract-ocr-eng` on Debian or Ubuntu). The deployment image includes and verifies them.
 
 Run the tests with:
 
@@ -47,7 +53,7 @@ node --test tests/*.cjs
 ## Your data
 
 - **Storage:** each account has its own SQLite database and media folder on the Fly volume. In the alpha the server can read stored data; client-side encryption is a later milestone.
-- **Model requests:** Stellis Health sends Token Factory only the transcript, note or question text a request needs. Audio stays on the server.
+- **Model requests:** the local version uses GN100 Ollama; the cloud version uses Token Factory. Requests include only the transcript, note or question text needed. Speech currently runs on the Stellis host.
 - **Web research:** research agents send their search queries to Tavily.
 - **Accuracy:** speech models are English-only, and transcripts, speaker groups and AI answers can be wrong. Check the recording before relying on a transcript or summary.
 

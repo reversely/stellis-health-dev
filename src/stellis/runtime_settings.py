@@ -35,7 +35,8 @@ def status():
         row = conn.execute("SELECT * FROM runtime_observations WHERE id = 1").fetchone()
     observed = json.loads(row["result_json"]) if row and row["signature"] == _signature() else None
     return {"profile": runtime_profile.selected(), "local_inference": runtime_profile.local_inference(),
-            "agent_execution": "Token Factory" if runtime_profile.direct() else "Nebius Cloud" if runtime_profile.cloud() else "GN100",
+            "agent_execution": runtime_profile.agent_execution(),
+            "speech_execution": "Stellis server",
             "agent_configured": agent_runtime.configured(),
             "inference_provider": "Ollama" if runtime_profile.local_inference() else "Token Factory",
             "inference_model": runtime_profile.model_id(), "agent_model": runtime_profile.model_id("agent"), "inference_configured": bool(ai._key()),

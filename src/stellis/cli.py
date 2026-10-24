@@ -24,8 +24,23 @@ def main() -> None:
     sync_serve = command.add_parser("sync-serve", help="Start the separate development account service")
     sync_serve.add_argument("--port", type=int, default=8769)
     command.add_parser("doctor", help="Check the speech tools and models")
+    launch = command.add_parser("launch", help="Launch the local or cloud NemoClaw version")
+    launch.add_argument("version", choices=("local", "cloud"))
+    launch.add_argument("--env-file", help="configuration file (default: .private/<version>.env)")
+    launch.add_argument("--port", type=int, default=None)
+    mode = launch.add_mutually_exclusive_group()
+    mode.add_argument("--init", action="store_true", help="create a private configuration template")
+    mode.add_argument("--check", action="store_true", help="validate configuration without starting services")
     args = parser.parse_args()
     args.command = args.command or "serve"
+
+    if args.command == "launch":
+        from stellis import launch
+        try:
+            launch.run(args)
+        except (ValueError, OSError) as error:
+            parser.error(str(error))
+        return
 
     if args.command == "doctor":
         print(f"ffmpeg: {tools.ffmpeg()}")

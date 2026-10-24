@@ -151,7 +151,7 @@
             'p',
             state.runtime.local_inference ?
                 'AI responses run on your connected computer.' :
-                'Agents run on Nebius Cloud with Token Factory inference.',
+                'AI responses use Nebius Token Factory.',
             'setup-hint'),
         button('Get started', () => go('call'), 'primary'));
     scene.append(copy);
@@ -253,7 +253,9 @@
             state.runtime.local_inference ?
                 'AI responses run on your connected computer without a ' +
                     'cloud AI service' :
-                'Connect your cloud agent deployment and Token Factory key'));
+                state.runtime.profile === 'cloud' ?
+                    'Connect your NemoClaw gateway and Token Factory key' :
+                    'Connect your Token Factory key'));
     const result = node(
         'p', state.ready ? 'AI is ready' : 'Test that Stellis can respond',
         'setup-hint');

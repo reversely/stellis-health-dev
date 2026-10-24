@@ -252,3 +252,9 @@ User request: “please add feat; attatchments to chats that can be logged as no
 Implemented: Ask Stellis and notebook chat accept up to five PDF, PNG or JPEG attachments per message. Uploads retain the original document, attempt first-page OCR when text is missing, and persist unsent attachments across reload. Save to notebook explicitly files the canonical document without making another copy. Files already assigned to another notebook retain that assignment. Removing an unsent attachment keeps the original record. Notebook Records includes documents.
 
 Verified locally: uploads, explicit filing, canonical duplicate handling, sent-message associations and reload in both chat surfaces. Twenty browser checks cover five widths in both themes with no horizontal page overflow or application exceptions. Inference replies used a controlled test gateway; this run does not establish live model answer quality. Backend tests cover source delivery, citations, retry retention, unavailable OCR, attachment limits and isolation between chats and account workspaces.
+
+## Local and cloud launch separation
+
+Owner request: “Please divide these clearly and make it simple and straightforward to launch on one version or the other.” Follow-up: “clean the confusing labels and comments”. The next requested direction is Token Factory-backed NemoClaw with separate Nebius serverless speech inference.
+
+Implemented: explicit `launch local` and `launch cloud`, separate private files, data directories and ports, configuration-only checks, and no cross-profile fallback. Settings separates agent execution, model provider and speech location. The legacy direct mode and the isolated demo's direct completions are labelled explicitly. The serverless speech backend is a documented next integration, not claimed as deployed. Configuration tests cover secret isolation, route validation and refusing shared data; network-backed runtime and cloud speech checks remain separate.

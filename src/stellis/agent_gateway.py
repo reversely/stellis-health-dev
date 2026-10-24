@@ -1,4 +1,4 @@
-"""Authenticated cloud OpenClaw transport, or direct Token Factory turns; never starts a local runtime."""
+"""Cloud NemoClaw/OpenClaw gateway and the separate direct inference adapter."""
 
 from __future__ import annotations
 
@@ -125,13 +125,14 @@ async def _turn(prompt: str, session_id: str) -> tuple[str, str]:
 
 
 async def _direct_turn(prompt: str, session_id: str) -> tuple[str, str]:
-    """Run one job as a single Token Factory chat completion, without tools or a sandbox.
+    """Run a legacy direct or demo completion without a managed agent sandbox.
 
     The prompt already carries the agent's instructions, memories and numbered sources,
     so the caller's citation checks and retries apply unchanged.
     """
     from stellis import ai
     key = ai._key()
+    provider = "Local inference" if runtime_profile.local_inference() else "Token Factory"
     if not key:
         raise GatewayError("Add a Nebius API key first")
     body = {"model": runtime_profile.model_id("agent"), "messages": [{"role": "user", "content": prompt}],
@@ -142,9 +143,9 @@ async def _direct_turn(prompt: str, session_id: str) -> tuple[str, str]:
                 response = await client.post(runtime_profile.inference_url() + "/chat/completions",
                                              headers={"Authorization": "Bearer " + key}, json=body)
         if response.status_code == 429:
-            raise GatewayError("Token Factory rate limit reached. Try again later.")
+            raise GatewayError(f"{provider} rate limit reached. Try again later.")
         if response.status_code != 200:
-            raise GatewayError("Token Factory is unavailable. Try again.")
+            raise GatewayError(f"{provider} is unavailable. Try again.")
         data = response.json()
         runtime_trace.report(model=data.get("model"), usage=data.get("usage"))
         token_quota.record(data.get("usage"))

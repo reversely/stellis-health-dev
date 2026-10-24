@@ -1,4 +1,4 @@
-"""Explicit execution profiles; cloud and direct never fall back to a local runtime."""
+"""Separate agent execution from model inference for each explicit profile."""
 import os
 
 
@@ -19,7 +19,7 @@ def direct() -> bool:
 
 
 def remote_agents() -> bool:
-    """Agent turns use the source-only inference transport instead of managed tools."""
+    """Use HTTP: cloud calls managed OpenClaw; direct and demo call inference."""
     from stellis import storage
     return storage.in_demo() or selected() in {"cloud", "direct"}
 
@@ -74,3 +74,23 @@ def model_id(role: str = "transcript") -> str:
     if role == "categories" and not local_inference():
         return "zai-org/GLM-5.3-Flash"
     return _default_text_model()
+
+
+def agent_execution() -> str:
+    """Describe the agent execution path, including the isolated demo exception."""
+    from stellis import storage
+    if storage.in_demo():
+        return "Direct Ollama (demo)" if local_inference() else "Direct Token Factory (demo)"
+    if direct():
+        return "Direct Token Factory (legacy)"
+    return "NemoClaw on Nebius Cloud" if cloud() else "NemoClaw on GN100"
+
+
+def label() -> str:
+    """Name the configured version separately from its model provider."""
+    from stellis import storage
+    if storage.in_demo() or direct():
+        return agent_execution()
+    if cloud():
+        return "Cloud NemoClaw + Token Factory"
+    return "Local NemoClaw + Ollama" if local_inference() else "Legacy GN100 NemoClaw + Token Factory"

@@ -12,7 +12,7 @@ const eventLabels = {page_started: 'Page started', page_completed: 'Page complet
   request_completed: 'Request completed', request_failed: 'Request failed', request_interrupted: 'Request interrupted'};
 const checkLabels = {available: 'Model available', model_missing: 'Selected model not found',
   unavailable: 'Unavailable', not_configured: 'Not configured', reported: 'Route reported by runtime',
-  mismatch: 'Managed runtime uses a different model', remote_unverified: 'Cloud route not yet verified'};
+  mismatch: 'Managed runtime uses a different model', remote_unverified: 'Agent route not yet verified'};
 function element(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -40,7 +40,7 @@ function editableRoute(entry, data) {
   const observed = entry.observed;
   const state = observed ? (checkLabels[observed.state] || observed.state) +
     (observed.model ? `: ${observed.model}` : '') : entry.model ? 'Configured, not checked' : 'Not configured';
-  const row = route(entry.label, entry.role === 'agent' ? data.agent_execution + ' → OpenClaw inside NemoClaw' : data.inference_provider, entry.model, state);
+  const row = route(entry.label, entry.role === 'agent' ? data.agent_execution : data.inference_provider, entry.model, state);
   row.dataset.role = entry.role;
   const form = element('form', undefined, 'inference-route-editor');
   const input = element(data.local_inference ? 'select' : 'input'); input.setAttribute('aria-label', entry.label + ' model');
@@ -74,9 +74,9 @@ function render(data) {
   const agent = observed?.agent;
   $('#inference-routes').replaceChildren(
     ...data.routes.map(entry => editableRoute(entry, data)),
-    route('Live transcription', data.agent_execution, 'Local Parakeet speech worker',
+    route('Live transcription', data.speech_execution, 'Local Parakeet speech worker',
       data.speech?.live_installed ? 'Worker and model files installed' : 'Not configured'),
-    route('Saved transcription', data.agent_execution, 'Whisper + local speaker models',
+    route('Saved transcription', data.speech_execution, 'Whisper + local speaker models',
       data.speech?.transcribe && data.speech?.diarize ? 'Model files installed' : 'Not configured'));
   $('#inference-checked-at').textContent = observed ? 'Last checked ' + time(observed.checked_at) : 'No connection check yet.';
   $('#local-model-controls').hidden = true;

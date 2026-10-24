@@ -2,6 +2,10 @@
 
 Stellis Health runs on Fly.io as one machine with one volume. The image starts the account gateway on port 8080, and the gateway starts one workspace process per account. SQLite files, recordings and speech models live on the `stellis_data` volume at `/data`.
 
+## Runtime selection
+
+The existing `fly.toml` uses the legacy `direct` profile: Token Factory completions without NemoClaw. It is separate from the managed local/cloud versions in [Launch local or cloud](launch.md). Speech currently runs in the app's host environment. Changing launch configuration does not deploy a managed gateway or the upcoming Nebius serverless speech workers.
+
 ## Settings
 
 `fly.toml` sets the non-secret settings:

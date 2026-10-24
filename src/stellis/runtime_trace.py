@@ -78,7 +78,7 @@ def span(kind: str, agent_id=None, model=None, provider=None, execution=None):
     trace_id = str(uuid.uuid4())
     start = time.monotonic()
     if execution is None:
-        execution = ("Token Factory" if runtime_profile.direct() else "Nebius Cloud" if runtime_profile.cloud() else "GN100") if kind in {
+        execution = runtime_profile.agent_execution() if kind in {
             "agent_request", "agent_chat", "agent_plan", "agent_review"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
     with _GUARD:
         if _SWITCHING:
