@@ -68,7 +68,25 @@ try {
   assert.equal(await review.getByRole('button', {name: 'Yesterday', exact: true}).getAttribute('aria-pressed'), 'true');
   // Nothing is logged before the person confirms.
   assert.equal((await api(`/goals?today=${yesterday}&now=12:00`, undefined, 'get')).goals[0].done_today, false);
-  if (evidence) await page.screenshot({path: `${evidence}/panel-390-dark.png`});
+  // Review controls must retain their layout inside the message list.
+  for (const width of [390, 1280]) for (const theme of ['dark', 'light']) {
+    await page.setViewportSize({width, height: 900});
+    await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+    const geometry = await review.locator('.log-row').first().evaluate(row => {
+      const box = selector => row.querySelector(selector).getBoundingClientRect();
+      const check = box('input[type="checkbox"]');
+      const icon = box('.log-tile-icon');
+      const label = box('.log-row-label');
+      return {delta: Math.abs(check.y + check.height / 2 - icon.y - icon.height / 2),
+        width: row.getBoundingClientRect().width, available: row.parentElement.getBoundingClientRect().width,
+        iconLeft: icon.right <= label.right};
+    });
+    assert(geometry.delta < 1, JSON.stringify(geometry));
+    assert(Math.abs(geometry.width - geometry.available) < 1, JSON.stringify(geometry));
+    assert(geometry.iconLeft);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    if (evidence) await page.screenshot({path: `${evidence}/panel-${width}-${theme}.png`});
+  }
   await review.getByRole('button', {name: 'Log selected', exact: true}).click();
   await panel.locator('.coach-call-log li.is-action', {hasText: /^Logged for /}).waitFor();
   assert.equal(await review.count(), 0);

@@ -166,12 +166,12 @@
   list-style: none;
   overscroll-behavior: contain;
 }
-.coach-call-log li {
+.coach-call-log > li {
   display: grid;
   gap: 2px;
   max-width: 85%;
 }
-.coach-call-log li.is-person {
+.coach-call-log > li.is-person {
   justify-self: end;
   text-align: right;
 }
@@ -194,7 +194,7 @@
   font-size: 12px;
   font-weight: 600;
 }
-.coach-call-log li.is-action {
+.coach-call-log > li.is-action {
   justify-self: center;
   max-width: 100%;
   color: var(--muted);
@@ -373,8 +373,8 @@ html[data-theme] .coach-call[data-kind='tour'] {
 .coach-agenda li[data-covered]::before { border-color: var(--block-ok-fill); background: var(--block-ok-fill); }
 .coach-agenda li[data-covered] { color: var(--muted); }
 .coach-call-source { color: var(--muted); font-size: 12px; }
-.coach-call-log li.is-action strong { color: var(--ink); }
-.coach-call-log li.is-review { justify-self: stretch; max-width: 100%; }
+.coach-call-log > li.is-action strong { color: var(--ink); }
+.coach-call-log > li.is-review { justify-self: stretch; max-width: 100%; }
 @media (max-width: 760px) {
   .coach-incoming-agenda li { grid-template-columns: auto minmax(0, 1fr); }
   .coach-incoming-agenda .coach-agenda-source { grid-column: 2; text-align: left; }
