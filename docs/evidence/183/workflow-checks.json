@@ -1,0 +1,94 @@
+{
+  "passed": true,
+  "layouts": [
+    {
+      "theme": "dark",
+      "width": 390
+    },
+    {
+      "theme": "dark",
+      "width": 768
+    },
+    {
+      "theme": "dark",
+      "width": 1440
+    },
+    {
+      "theme": "dark",
+      "width": 1920
+    },
+    {
+      "theme": "light",
+      "width": 390
+    },
+    {
+      "theme": "light",
+      "width": 768
+    },
+    {
+      "theme": "light",
+      "width": 1440
+    },
+    {
+      "theme": "light",
+      "width": 1920
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "dark",
+      "buttons": [
+        {
+          "id": "maya-file",
+          "fill": "rgb(249, 245, 252)",
+          "ink": "rgb(56, 44, 66)",
+          "expectedFill": "rgb(249, 245, 252)",
+          "expectedInk": "rgb(56, 44, 66)"
+        },
+        {
+          "id": "maya-log-review",
+          "fill": "rgb(249, 245, 252)",
+          "ink": "rgb(56, 44, 66)",
+          "expectedFill": "rgb(249, 245, 252)",
+          "expectedInk": "rgb(56, 44, 66)"
+        },
+        {
+          "id": "maya-notes-save",
+          "fill": "rgb(249, 245, 252)",
+          "ink": "rgb(56, 44, 66)",
+          "expectedFill": "rgb(249, 245, 252)",
+          "expectedInk": "rgb(56, 44, 66)"
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "buttons": [
+        {
+          "id": "maya-file",
+          "fill": "rgb(42, 37, 47)",
+          "ink": "rgb(255, 255, 255)",
+          "expectedFill": "rgb(42, 37, 47)",
+          "expectedInk": "rgb(255, 255, 255)"
+        },
+        {
+          "id": "maya-log-review",
+          "fill": "rgb(42, 37, 47)",
+          "ink": "rgb(255, 255, 255)",
+          "expectedFill": "rgb(42, 37, 47)",
+          "expectedInk": "rgb(255, 255, 255)"
+        },
+        {
+          "id": "maya-notes-save",
+          "fill": "rgb(42, 37, 47)",
+          "ink": "rgb(255, 255, 255)",
+          "expectedFill": "rgb(42, 37, 47)",
+          "expectedInk": "rgb(255, 255, 255)"
+        }
+      ]
+    }
+  ],
+  "camera": "Actual getUserMedia failure with no physical device; no simulated camera values",
+  "errors": [],
+  "consoleErrors": []
+}

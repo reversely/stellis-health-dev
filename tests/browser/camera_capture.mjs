@@ -131,10 +131,13 @@ try {
       for (const value of ['70', '14', '42']) {
         await page.locator('.trend-vitals .trend-value', {hasText: value}).waitFor();
       }
+      const preferences=await (await context.request.get(origin+'/api/v1/dashboard/preferences')).json();
+      await context.request.put(origin+'/api/v1/dashboard/preferences',{data:{...preferences,measurements:['pulse','breathing_rate','hrv']}});
       await page.goto(origin + '/');
-      for (const value of ['70', '14', '42']) {
-        await page.locator('.overview-vitals .overview-value', {hasText: value}).waitFor();
+      for (const value of ['70 bpm', '14 breaths/min', '42 ms']) {
+        await page.locator('.dashboard-measure strong').filter({hasText:new RegExp('^'+value+'$')}).waitFor();
       }
+      await context.request.put(origin+'/api/v1/dashboard/preferences',{data:preferences});
     } finally {
       for (const point of saved) {
         await context.request.delete(origin + '/api/v1/readings/' + point.id);

@@ -6,11 +6,11 @@ Date: 2026-10-24. Owner request: the current tables feel hardcoded; investigate 
 
 Evaluate Trends as the first Dash page. Dash is a viable component framework for measurements and dashboards, and the working prototype confirms native FastAPI hosting. A full app migration would also require deliberate work on the recording, document replay, rich-text editor, chat streaming and navigation lifecycles. Adopting Dash does not decide those interactions or the visual design automatically.
 
-The current production app still uses its JavaScript frontend. The optional prototype is local-only, read-only and synthetic; it does not import the server, authenticate a user, read account databases, write readings or replace `/trends`.
+The current production app still uses its JavaScript frontend. The optional prototype is local-only. Its Maya history comes from canonical fictional-patient sources, and demo choices persist in a browser-session store. A separate, user-started camera test reuses the real local capture pipeline and stores numeric estimates in its own browser session. It does not authenticate a user, read account databases, write account readings or replace `/trends`.
 
 ## Working comparison
 
-Run `scripts/dash_trends_preview.py` with the pinned optional dependencies in `scripts/dash-trends-requirements.txt`. It creates a native FastAPI server and mounts Dash on that server without a WSGI adapter, iframe or external hosted service. It uses production measurement definitions and the usual-range helper, but supplies sample values.
+Run `scripts/dash_trends_preview.py` with the pinned optional dependencies in `scripts/dash-trends-requirements.txt`. It creates a native FastAPI server and mounts Dash on that server without a WSGI adapter, iframe or external hosted service. It uses production measurement definitions and the usual-range helper, but supplies values projected from Maya’s canonical source records, rather than inventing values for empty categories.
 
 - `dmc.AppShell`, `SimpleGrid`, `Paper`, `Group` and `Stack` supply layout and responsive behavior.
 - A real `dmc.ActionIcon` table button at the upper right replaces the plot with the table, with an accessible name and a pressed state.
@@ -52,3 +52,11 @@ The optional preview dependency set is separate from `pyproject.toml` and the sh
 - [Dash Mantine Table](https://www.dash-mantine-components.com/components/table): data-driven tables, scroll containers and component styling.
 - [Dash Mantine Switch](https://www.dash-mantine-components.com/components/switch): controlled `checked` state and callbacks.
 - [Dash API reference](https://dash.plotly.com/reference): route prefixes and local asset serving.
+
+## Three-stage narrative extension (#183)
+
+The prototype now opens on Maya’s continuous 2022 → 2024–25 → 2026 history. Records/date/notebook review, care logging, appointments, period dates, personal goals and notes are functional browser-demo interactions. Original PDFs and a saved scripted visit are accessible. These are prototype state transitions, not production ingestion, OCR, transcription or account-service integration. One saved, authored explanation demonstrates source inspection without claiming a new model run or an execution trace.
+
+The camera panel starts only on explicit Start. Its injected persistence adapter saves numeric estimates to a separate browser session; it never compares the viewer’s reading to Maya’s fictional baseline. The native dialog retains its existing API persistence by default. The recorded environment has no physical camera: the film shows the real no-device recovery state, and separate controlled-signal tests validate result/review/save plumbing. Physical physiological accuracy is not established by those tests.
+
+See [the detailed pre-recording script](maya-prototype-demo-script.md) and [recording, workflow evidence and limits](../docs/evidence/183/README.md). The production integration gates above remain open.

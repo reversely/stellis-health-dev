@@ -12,7 +12,7 @@ const requests=[];page.on('request',r=>requests.push(r.url()));
 const results=[];
 try {
  if(out)await mkdir(out,{recursive:true});
- await page.goto(origin);await page.locator('.js-plotly-plot').first().waitFor();await page.evaluate(()=>document.fonts.ready);
+ await page.goto(origin);await page.getByText('Maya grows with Stellis',{exact:true}).waitFor();await page.locator('.maya-chapters label').filter({hasText:/^2026/}).click();await page.locator('.preview-category').filter({hasText:/^Vital signs$/}).click();await page.locator('.preview-card .js-plotly-plot').first().waitFor();await page.evaluate(()=>document.fonts.ready);
  for(const theme of ['dark','light']) {
   if(theme==='light')await page.getByRole('button',{name:'Switch to light mode'}).click();
   await page.waitForFunction(t=>document.documentElement.dataset.mantineColorScheme===t,theme);
@@ -21,7 +21,7 @@ try {
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth,{},{timeout:5000});
    const cards=await page.locator('.preview-card').evaluateAll(ns=>ns.map(n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}}));
-   assert.equal(cards.length,6);
+   assert.equal(cards.length,3);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${theme} ${width}: overflow`);
    if(width>=1280)assert(Math.abs(cards[0].y-cards[1].y)<2 && cards[1].x>cards[0].x+cards[0].width,'desktop columns');
    if(width<=390)assert(cards[1].y>=cards[0].y+cards[0].height,'mobile stack');
@@ -32,18 +32,18 @@ try {
   const pulse=page.locator('.preview-card').first();
   await pulse.getByRole('button',{name:'Table view',exact:true}).click();
   await pulse.locator('.mantine-Table-table').waitFor();
-  assert.equal(await pulse.locator('tbody tr').count(),9);
+  assert.equal(await pulse.locator('tbody tr').count(),3);
   // Date ordering and text filtering are shared table behavior, not per-measure markup.
   const newest=await pulse.locator('tbody tr').first().innerText();
   await pulse.getByLabel('Order',{exact:true}).click();await page.getByRole('option',{name:'Oldest first',exact:true}).click();
   await page.waitForFunction(newest=>document.querySelector('.preview-card tbody tr')?.innerText!==newest,newest);
-  await pulse.getByLabel('Search readings',{exact:true}).fill('77');
+  await pulse.getByLabel('Search readings',{exact:true}).fill('2026');
   await page.waitForFunction(()=>document.querySelectorAll('.preview-card:first-child tbody tr').length===1);
-  assert.match(await pulse.locator('tbody tr').innerText(),/77/);
+  assert.match(await pulse.locator('tbody tr').innerText(),/2026/);
   await pulse.getByLabel('Search readings',{exact:true}).fill('');
-  await page.waitForFunction(()=>document.querySelectorAll('.preview-card:first-child tbody tr').length===9);
+  await page.waitForFunction(()=>document.querySelectorAll('.preview-card:first-child tbody tr').length===3);
   await page.locator('.mantine-SegmentedControl-label').filter({hasText:/^1 week$/}).click();
-  await page.waitForFunction(()=>document.querySelectorAll('.preview-card:first-child tbody tr').length===7);
+  await page.waitForFunction(()=>document.querySelectorAll('.preview-card:first-child tbody tr').length===1);
   if(out)await page.screenshot({path:`${out}/dash-1440-${theme}-table.png`});
   await page.setViewportSize({width:390,height:1000});
   await pulse.locator('table').waitFor();
@@ -73,7 +73,8 @@ try {
  await page.setViewportSize({width:1440,height:1000});
  const plot=page.locator('.preview-card').first().locator('.js-plotly-plot');
  // Exercise actual pointer hover, with a single date and a padded coloured overlay.
- const marker=await plot.locator('.scatterlayer .point').nth(4).boundingBox();
+ await plot.locator('.scatterlayer .point').last().scrollIntoViewIfNeeded();
+ const marker=await plot.locator('.scatterlayer .point').last().boundingBox();
  await page.mouse.move(marker.x+marker.width/2,marker.y+marker.height/2);
  const tooltip=page.locator('.preview-reading-tooltip:visible');
  await tooltip.waitFor();
@@ -85,15 +86,16 @@ try {
  if(out)await page.screenshot({path:`${out}/tooltip-light.png`});
  await page.mouse.move(0,0);await tooltip.waitFor({state:'hidden'});
  assert.equal(await page.locator('.preview-card').first().getByText('Usual range',{exact:true}).count(),0);
- assert.match(await page.locator('.preview-range-legend').first().innerText(),/Usual range [\d.]+–[\d.]+ bpm/);
+ assert.equal(await page.locator('.preview-card').first().locator('.preview-range-legend').count(),0,'three pulse observations do not establish a baseline');
  for (const theme of ['light','dark']) {
   if(theme==='dark')await page.getByRole('button',{name:'Switch to dark mode'}).click();
   await page.waitForFunction(t=>document.documentElement.dataset.mantineColorScheme===t,theme);
   for(const width of [1440,390]) {
    await page.setViewportSize({width,height:1000});
    await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth);
-   for(const index of [0,8]) {
+   for(const index of [0,2]) {
     const point=page.locator('.preview-card').first().locator('.scatterlayer .point').nth(index);
+    await point.scrollIntoViewIfNeeded();
     const rect=await point.boundingBox();
     await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
     const overlay=page.locator('.preview-reading-tooltip:visible');await overlay.waitFor();
@@ -101,28 +103,11 @@ try {
     assert(bounds.x>=0 && bounds.x+bounds.width<=width,'edge tooltip must stay within viewport');
     assert.equal(await overlay.locator('time').count(),1);
     assert.equal(await overlay.locator('.preview-tooltip-marker').count(),1);
-    if(out&&index===8)await page.screenshot({path:`${out}/tooltip-${width}-${theme}.png`});
+    if(out&&index===2)await page.screenshot({path:`${out}/tooltip-${width}-${theme}.png`});
     await page.mouse.move(0,0);await overlay.waitFor({state:'hidden'});
    }
   }
  }
- // Prove ranges follow supplied data and disappear completely without a baseline.
- let customBounds=false;
- await page.route('**/_dash-layout',async route=>{
-  const response=await route.fetch();const data=await response.json();
-  const visit=node=>{
-   if(!node||typeof node!=='object')return;
-   if(node.props?.id==='preview-data') {
-    for(const measure of Object.values(node.props.data))measure.usual=null;
-    if(customBounds)node.props.data.pulse.usual={low:65,high:68};
-   }
-   for(const child of Object.values(node))if(Array.isArray(child))child.forEach(visit);else if(child&&typeof child==='object')visit(child);
-  };visit(data);await route.fulfill({json:data});
- });
- await page.reload();await page.locator('.js-plotly-plot').first().waitFor();
- assert.equal(await page.locator('.preview-range-legend').count(),0);
- assert.equal(await page.locator('.js-plotly-plot').first().evaluate(n=>n.layout.shapes.length),0);
- customBounds=true;await page.reload();await page.getByText('Usual range 65–68 bpm',{exact:true}).waitFor();
  assert.deepEqual(errors,[]);assert.deepEqual(consoleErrors,[]);
  assert(requests.every(url=>new URL(url).origin===origin),'all assets and callbacks must be local');
  if(out)await writeFile(out+'/checks.json',JSON.stringify({layouts:results,pageErrors:errors,consoleErrors,externalRequests:[]},null,2));

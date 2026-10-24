@@ -46,3 +46,55 @@ html[data-mantine-color-scheme='dark'] { --mantine-color-dimmed: #DED5DE; --mant
 .preview-category[aria-pressed='true'], .preview-category:hover { background: var(--raised); }
 
 .preview-category:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* The narrative and its source-based tools share the existing prototype roles. */
+.maya-chapters { position: sticky; top: 84px; z-index: 3; background: var(--surface); }
+.maya-chapter-content { margin-top: 28px; }
+.maya-need { max-width: 70ch; }
+.maya-panel { background: var(--surface); border-color: var(--line); min-width: 0; }
+.maya-panel h3 { font-size: 21px; }
+.maya-panel p { margin-block: 0; }
+.maya-panel .mantine-Tabs-panel { min-width: 0; }
+.maya-panel .mantine-TextInput-input, .maya-panel .mantine-Textarea-input { font-size: 16px; }
+.maya-panel .mantine-Button-root { min-height: 44px; }
+.maya-panel .mantine-Button-root[data-variant='filled'], .maya-primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.maya-plain-row { min-height: 44px; padding-block: 8px; border-bottom: 1px solid var(--line); }
+.maya-source-link { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.maya-pdf { width: 100%; height: 460px; border: 0; background: var(--surface); }
+.maya-feedback { position: sticky; bottom: 12px; padding: 12px 16px; background: var(--surface); border-radius: 6px; }
+.maya-feedback:empty { display: none; }
+#maya-journey .mantine-Tabs-tab { min-height: 44px; font-size: 15px; }
+#maya-journey .mantine-Tabs-tab[data-active] { color: var(--surface); background: var(--ink); border-color: var(--ink); }
+.preview-live-test { padding: 24px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); margin-bottom: 32px; min-height: 280px; }
+.preview-live-test h2 { font-size: 24px; }
+.preview-live-test h3 { font-size: 21px; }
+[hidden] { display: none !important; }
+@media(max-width:600px) {
+ .maya-chapters { top: 76px; }
+ .maya-chapters .mantine-SegmentedControl-label { font-size: 12px; white-space: normal; }
+ #maya-journey .mantine-Tabs-list { flex-wrap: wrap; }
+ .preview-live-test { padding: 16px; }
+}
+/* Scope the shared capture's foundation to its dialog, rather than restyling Dash. */
+.pulse-dialog {
+ --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-compact:6px;
+ --control-height:44px; --radius-control:8px; --radius-dialog:12px; --radius-panel:6px; --radius-pill:999px;
+ --focus-width:2px; --focus-offset:2px; --focus:var(--ink); --font-heading:Piazzolla,Georgia,serif;
+ --muted:#635B65; --quiet:#635B65; --line-soft:var(--line); --accent:var(--ink); --accent-ink:var(--surface);
+ --media-surface:#302638; --media-stage:#2C2234; --media-ink:#F9F5FC; --media-muted:#DED5DE;
+ --media-pass:#77D5D1; --media-caution:#F3C983; --data-series-light:#167E85; --camera-series-dark:#55B8B6;
+ --overlay-caption-dim:#2C2234CC; --overlay-media-dim:#2C22348C; --failure:#A33232; --shadow:0 16px 38px #2C223433;
+}
+:root[data-mantine-color-scheme='dark'] .pulse-dialog { --muted:#DED5DE; --quiet:#C4B6C6; --failure:#FFB4AE; }
+.pulse-dialog::backdrop { background:#2C2234A6; }
+.pulse-dialog button { font:inherit; min-height:44px; cursor:pointer; }
+.pulse-dialog .icon { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.pulse-dialog h2 { font-size:24px; }
+.pulse-dialog p { line-height:1.5; }
+.pulse-dialog a { color:inherit; }
+.pulse-dialog :focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+.story-view-glyph { display:inline-block; width:20px; height:20px; background:currentColor; mask:url('/static/story-view.svg') center/contain no-repeat; }
+#preview-open-story-mobile, #preview-open-measurements-mobile { color:var(--ink); }
+@media(max-width:600px) { .preview-brand { font-size:23px; } }
+@media(max-width:991px) { .dash-preview .mantine-AppShell-navbar { display:none; } }
+/* Mantine omits data-variant for its default filled button. */
+.maya-panel .mantine-Button-root:not([data-variant]) { background:var(--ink); color:var(--surface); border-color:var(--ink); }

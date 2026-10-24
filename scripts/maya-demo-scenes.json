@@ -1,0 +1,112 @@
+[
+  {
+    "id": "opening",
+    "seconds": 12,
+    "caption": "I'm Maya. As my life changes, I keep building on one health history."
+  },
+  {
+    "id": "first-record",
+    "seconds": 14,
+    "caption": "2022: I'm tired after work. I start with my period history and the records I already have."
+  },
+  {
+    "id": "upload",
+    "seconds": 18,
+    "caption": "I bring in the original result. Its date and findings are there to check, not silently accept."
+  },
+  {
+    "id": "file",
+    "seconds": 20,
+    "caption": "I confirm the date and choose shared notebooks. One source can belong in more than one part of my care."
+  },
+  {
+    "id": "first-routine",
+    "seconds": 18,
+    "caption": "My period dates and iron plan become things I can follow through on. I review an entry before confirming it."
+  },
+  {
+    "id": "visit-notes",
+    "seconds": 18,
+    "caption": "A saved, scripted visit and my own notes sit beside the record. I can replay it and keep what matters to me."
+  },
+  {
+    "id": "changing-care",
+    "seconds": 12,
+    "caption": "2024–25: fertility investigations lead to IVF, pregnancy and becoming a parent. I don't start my history over."
+  },
+  {
+    "id": "treatment-records",
+    "seconds": 20,
+    "caption": "I add Fertility and IVF to the same library. The original treatment records stay available."
+  },
+  {
+    "id": "treatment-plan",
+    "seconds": 20,
+    "caption": "The dose, schedule and dates come from the treatment record. I can distinguish the plan from what I actually log."
+  },
+  {
+    "id": "log-together",
+    "seconds": 20,
+    "caption": "When several medicines are due together, I review the selection and date, then confirm the entries together."
+  },
+  {
+    "id": "checkin-calendar",
+    "seconds": 18,
+    "caption": "A check-in can wait until tomorrow. A confirmed appointment stays different from a plan."
+  },
+  {
+    "id": "one-explanation",
+    "seconds": 22,
+    "caption": "For one question, I inspect a saved explanation and the original source. Retrieved, mature, fertilized and frozen are different stages."
+  },
+  {
+    "id": "pregnancy-birth",
+    "seconds": 20,
+    "caption": "Pregnancy and postpartum care join the same history. The estimated due date stays separate from the confirmed birth."
+  },
+  {
+    "id": "new-routine",
+    "seconds": 12,
+    "caption": "2026: my periods have returned. I can look back across five years while finding a routine that fits life now."
+  },
+  {
+    "id": "latest-record",
+    "seconds": 18,
+    "caption": "The latest review is still linked to its dated original. Earlier notebooks and notes have not disappeared."
+  },
+  {
+    "id": "goals-course",
+    "seconds": 20,
+    "caption": "A course has a calculated supply and a planned end date. My own activity goal is a separate choice."
+  },
+  {
+    "id": "measurements",
+    "seconds": 24,
+    "caption": "I review Maya's documented measurements directly: chart, source dates and table. Nothing is invented to fill an empty category."
+  },
+  {
+    "id": "camera-intro",
+    "seconds": 14,
+    "caption": "Now try a fresh reading of your own. Your camera test stays separate from my sample history."
+  },
+  {
+    "id": "camera-space",
+    "seconds": 45,
+    "caption": "Pause here to try the prototype. Rest, face the light, and choose Start when you're ready. Video stays on your device."
+  },
+  {
+    "id": "camera-attempt",
+    "seconds": 15,
+    "caption": "This recording environment has no physical camera. The real recovery state stays visible; sample values are not passed off as live inference."
+  },
+  {
+    "id": "camera-return",
+    "seconds": 10,
+    "caption": "Close stops capture. A supported estimate can be reviewed and kept in its own test session, then cleared."
+  },
+  {
+    "id": "continuity",
+    "seconds": 20,
+    "caption": "From a first concern to changing treatment and a new routine, I have grown my history—not replaced it."
+  }
+]

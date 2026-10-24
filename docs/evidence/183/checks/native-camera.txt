@@ -1,0 +1,2 @@
+PASS 390px: capture cleanup, grouped save, Trends refresh and Home reload
+PASS 1280px: capture cleanup, grouped save, Trends refresh and Home reload

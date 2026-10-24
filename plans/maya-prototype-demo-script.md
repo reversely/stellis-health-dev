@@ -8,7 +8,7 @@ Maya is the protagonist. The app is useful because her circumstances change, not
 
 Use three chapter anchors, covering the existing five-year canon without giving every year an identical upload/chat routine:
 
-1. **2022 — Make sense of a first concern.** Fatigue, heavy periods and low iron. Use case: build a trustworthy health history and a manageable daily routine.
+1. **2022 — Make sense of a first concern.** Fatigue, period history and low iron. Use case: build a trustworthy health history and a manageable daily routine.
 2. **2024–25 — Coordinate care that keeps changing.** The 2023 fertility work-up leads to IVF, pregnancy and birth. Use case: keep records, treatment schedules and important dates together without losing their status or evidence.
 3. **2026 — Find a routine that fits life now.** Postpartum recovery, returned periods and recurrent iron follow-up. Use case: see change over time, handle check-ins efficiently, and try a camera measurement when useful.
 
