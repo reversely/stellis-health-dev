@@ -162,8 +162,10 @@ Mobile navigation stays fixed at the viewport bottom, with safe-area padding and
 
 ### Desktop measurement cards and tables
 
-Trends uses the available desktop workspace: two measurement columns above 1000px, three vital-sign columns above 1800px, and one column on phones/tablets. Category headings align with their cards; card headers and footers align across a row. Put a labelled **Table** switch at the upper right of each measurement card. Switching replaces the chart with the table, keeps the reading heading/value/context and leaves the switch available. Do not use Show table/Hide table footer buttons.
+Trends uses the available desktop workspace: two measurement columns above 1000px, three vital-sign columns above 1800px, and one column on phones/tablets. Category headings align with their cards; card headers and footers align across a row. Put a 44px **table icon button** at the upper right of each measurement card, with the accessible name “Table view”. Its pressed state indicates table view; clicking again returns to the chart. Keep the reading heading/value/context visible. Do not use Show table/Hide table footer buttons.
 
 Use **Lower than usual**, **Higher than usual** and **Within usual range** consistently in Trends, measurement previews and camera results. Omit the possessive from usual-range labels, hints and legends.
 
 A standalone Dash/Mantine prototype evaluates a possible component-based frontend; it is not the production UI. Its synthetic data, runtime and migration limits are documented in `plans/dash-trends-evaluation.md`.
+
+Chart hover overlays use a padded purple surface with light text, one date and one coloured marker/value line. Avoid duplicate date headers, crosshair decoration and hard borders. Range legends must include calculated bounds and units from the actual series; without a supported baseline, omit both legend and band. Measurement navigation must select real content and reflect the active category; provide an equivalent working selector on narrow screens.

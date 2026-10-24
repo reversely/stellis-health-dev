@@ -290,3 +290,11 @@ User feedback: align the icons in the [supplied phone panel](evidence/156/panel-
 ### Check-in Send alignment follow-up (#156, 2026-10-24)
 
 User clarified that the supplied screenshot also calls for Send alignment. Implemented right alignment with the message field on phones, removing the unused trailing grid column unless Next is present. Verified at 390px in both themes, with desktop regression checks. [Evidence and limits](evidence/156/send-alignment/README.md).
+
+## Dash overlays, table icon and category navigation — 2026-10-24
+
+Owner reference: `docs/refs/1temp-screenshots/image.png`, preserved in `docs/evidence/178/reference.png`. Distinct feedback: soften and pad the chart overlay, use a coloured background with light text and one date/reading marker; replace the Table settings switch with a table icon; remove the hardcoded Usual range footer; make the other Measurements categories open actual content.
+
+Implemented and browser verified: a local client-side Dash tooltip shows one semantic date and one marker/value line, with 12×16px padding and a purple/light-text surface, without the unified date header or crosshair. Native and Dash cards use an accessible 44px Tabler table icon with a pressed state. Range legends show the calculated bounds/units rather than a static caption; fixture checks prove supplied bounds change the legend and no baseline removes both band and legend. Measurement categories select actual panels and active buttons; the phone selector selects the same panels. Empty categories explicitly show No readings.
+
+Verification includes twelve Dash responsive layouts, all five category buttons, the mobile category selector, search/order/range callbacks, hover at both chart edges at phone and desktop widths in both themes, one date/marker, tooltip padding and bounds, and no page/console errors. Native layout/save/reload/table checks pass twelve layouts. Evidence and limits: `docs/evidence/178/`. The Dash preview remains synthetic; no production migration is claimed. Ticket #178.

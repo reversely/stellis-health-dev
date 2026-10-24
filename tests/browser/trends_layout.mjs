@@ -42,10 +42,10 @@ try {
   else assert(b.y>=p.y+p.height,'phone cards must stack');
   const switchBox=await pulseCard.locator('.trend-table-control').boundingBox();
   assert(switchBox.x+switchBox.width>p.x+p.width-30,'Table belongs at upper right');
-  await pulseCard.getByRole('switch',{name:'Table',exact:true}).check();
+  await pulseCard.getByRole('button',{name:'Table view',exact:true}).click();
   await pulseCard.locator('.trend-table').waitFor({state:'visible'});
   assert.equal(await pulseCard.locator('.trend-plot').isVisible(),false);
-  await pulseCard.getByRole('switch',{name:'Table',exact:true}).uncheck();
+  await pulseCard.getByRole('button',{name:'Table view',exact:true}).click();
   await pulseCard.locator('.trend-plot').waitFor({state:'visible'});
   const colours=await page.evaluate(()=>Object.fromEntries(['field','surface','rail-surface','raised'].map(k=>[k,getComputedStyle(document.documentElement).getPropertyValue('--'+k).trim()])));
   if(theme==='dark')assert.equal(colours.field,'#302638');
@@ -82,7 +82,7 @@ try {
  await form.locator('input[type=number]').fill('3');await form.getByRole('button',{name:'Save',exact:true}).click();
  await page.locator('[data-group=symptoms] .trend-value').waitFor();await page.reload();
  assert.equal(await page.locator('[data-group=symptoms] .trend-value').textContent(),'3');
- await page.locator('[data-group=symptoms]').getByRole('switch',{name:'Table',exact:true}).check();await page.locator('[data-group=symptoms] .trend-table').waitFor({state:'visible'});
+ await page.locator('[data-group=symptoms]').getByRole('button',{name:'Table view',exact:true}).click();await page.locator('[data-group=symptoms] .trend-table').waitFor({state:'visible'});
  assert.deepEqual(errors,[]);
  if(evidence)await writeFile(evidence+'/checks.json',JSON.stringify(results,null,2));
  console.log('PASS Trends: 12 layouts, categories, purple surfaces, navigation at three scroll positions, save/reload and table');

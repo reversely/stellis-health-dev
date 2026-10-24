@@ -1,0 +1,122 @@
+[
+  {
+    "theme": "light",
+    "width": 360,
+    "colours": {
+      "field": "#F7F5F6",
+      "surface": "#ffffff",
+      "rail-surface": "#2C2234",
+      "raised": "#EFEFEE"
+    }
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "colours": {
+      "field": "#F7F5F6",
+      "surface": "#ffffff",
+      "rail-surface": "#2C2234",
+      "raised": "#EFEFEE"
+    }
+  },
+  {
+    "theme": "light",
+    "width": 768,
+    "colours": {
+      "field": "#F7F5F6",
+      "surface": "#ffffff",
+      "rail-surface": "#2C2234",
+      "raised": "#EFEFEE"
+    }
+  },
+  {
+    "theme": "light",
+    "width": 1024,
+    "colours": {
+      "field": "#F7F5F6",
+      "surface": "#ffffff",
+      "rail-surface": "#2C2234",
+      "raised": "#EFEFEE"
+    }
+  },
+  {
+    "theme": "light",
+    "width": 1280,
+    "colours": {
+      "field": "#F7F5F6",
+      "surface": "#ffffff",
+      "rail-surface": "#2C2234",
+      "raised": "#EFEFEE"
+    }
+  },
+  {
+    "theme": "light",
+    "width": 1920,
+    "colours": {
+      "field": "#F7F5F6",
+      "surface": "#ffffff",
+      "rail-surface": "#2C2234",
+      "raised": "#EFEFEE"
+    }
+  },
+  {
+    "theme": "dark",
+    "width": 360,
+    "colours": {
+      "field": "#302638",
+      "surface": "#382C42",
+      "rail-surface": "#2C2234",
+      "raised": "#44364E"
+    }
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "colours": {
+      "field": "#302638",
+      "surface": "#382C42",
+      "rail-surface": "#2C2234",
+      "raised": "#44364E"
+    }
+  },
+  {
+    "theme": "dark",
+    "width": 768,
+    "colours": {
+      "field": "#302638",
+      "surface": "#382C42",
+      "rail-surface": "#2C2234",
+      "raised": "#44364E"
+    }
+  },
+  {
+    "theme": "dark",
+    "width": 1024,
+    "colours": {
+      "field": "#302638",
+      "surface": "#382C42",
+      "rail-surface": "#2C2234",
+      "raised": "#44364E"
+    }
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "colours": {
+      "field": "#302638",
+      "surface": "#382C42",
+      "rail-surface": "#2C2234",
+      "raised": "#44364E"
+    }
+  },
+  {
+    "theme": "dark",
+    "width": 1920,
+    "colours": {
+      "field": "#302638",
+      "surface": "#382C42",
+      "rail-surface": "#2C2234",
+      "raised": "#44364E"
+    }
+  }
+]
