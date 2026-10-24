@@ -133,6 +133,7 @@ def import_year(content: bytes):
     added = []
     for item, data in validated:
         record, _ = documents.create(item['filename'], data)
+        documents.update(record['id'], title=item['title'])
         added.append({'document_id': item['document_id'], 'id': record['id']})
     state['years'][year] = {'records': added, 'dates_confirmed': False, 'filed': False}
     _save(state)

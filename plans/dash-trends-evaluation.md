@@ -2,7 +2,11 @@
 
 Date: 2026-10-24. Owner request: the current tables feel hardcoded; investigate switching to Dash and show a concrete comparison. Evaluation issue: #176. Immediate layout/copy correction: #175.
 
-## Recommendation
+## Current implementation (#185)
+
+The owner explicitly clarified that Dash/Mantine must be part of the actual interface. Measurements is now integrated on the existing account-local FastAPI server and inside the native Trends view, using the existing readings API and capture forms. The separate #183 story interface is superseded. See [ADR 0087](../docs/decisions/0087-integrated-dash-measurements.md), [integrated demo plan](maya-integrated-demo.md) and [validation evidence](../docs/evidence/185/README.md). The historical evaluation below explains the earlier investigation; it no longer describes the delivered entry point.
+
+## Original recommendation
 
 Evaluate Trends as the first Dash page. Dash is a viable component framework for measurements and dashboards, and the working prototype confirms native FastAPI hosting. A full app migration would also require deliberate work on the recording, document replay, rich-text editor, chat streaming and navigation lifecycles. Adopting Dash does not decide those interactions or the visual design automatically.
 

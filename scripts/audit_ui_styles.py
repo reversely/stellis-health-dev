@@ -14,7 +14,7 @@ COLOUR = re.compile(r'#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\
 
 def audit(directory=STATIC):
     files = []
-    for path in sorted(directory.glob('*.css')):
+    for path in sorted([*directory.glob('*.css'), *directory.glob('dash-measurements/*.css')]):
         text = re.sub(r'/\*.*?\*/', lambda match: '\n'*match[0].count('\n'), path.read_text(), flags=re.S)
         literals = [] if path.name == 'theme.css' else [
             {'line': text.count('\n', 0, match.start())+1, 'value': match[0].strip()}
@@ -22,7 +22,7 @@ def audit(directory=STATIC):
         radii = [] if path.name == 'theme.css' else [
             {'line': text.count('\n', 0, match.start())+1, 'value': match[0]}
             for match in re.finditer(r'border-radius:\s*[^;{}]*\b[1-9]\d*px\b', text)]
-        files.append({'file': path.name, 'palette_literals': literals, 'radius_literals': radii,
+        files.append({'file': str(path.relative_to(directory)), 'palette_literals': literals, 'radius_literals': radii,
                       'spacing_roles': len(re.findall(r'var\(--space-', text)),
                       'control_roles': len(re.findall(r'var\(--(?:control|action|secondary|radius|focus)-', text))})
     return {'files': files, 'violations': sum(len(item['palette_literals'])+len(item['radius_literals']) for item in files)}

@@ -67,7 +67,7 @@ try {
         }
       `}));
     await page.goto(origin + '/trends');
-    await page.getByRole('button', {name: 'Log vital signs', exact: true}).click();
+    await page.frameLocator('.dash-measurements-frame').getByRole('button', {name: 'Open camera test', exact: true}).click();
     await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.getByRole('button', {name: 'Try again', exact: true}).waitFor();
     assert.equal(await page.evaluate(() => window.captureEvents), 1);
@@ -95,7 +95,7 @@ try {
         stream => stream.getTracks().every(track => track.readyState === 'ended'))));
     // A successful capture must clear its deadline without replacing its result.
     await page.evaluate(() => { window.captureScenario = 'success'; });
-    await page.getByRole('button', {name: 'Log vital signs', exact: true}).click();
+    await page.frameLocator('.dash-measurements-frame').getByRole('button', {name: 'Open camera test', exact: true}).click();
     await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.getByRole('button', {name: 'Save', exact: true}).waitFor();
     await page.waitForTimeout(750);
@@ -115,7 +115,7 @@ try {
       window.StellisVitalsMath.heartRateVariability = () => ({rmssd: 42, sure: true});
       window.StellisVitalsMath.breathingRate = () => ({rate: 14, sure: true});
     });
-    await page.getByRole('button', {name: 'Log vital signs', exact: true}).click();
+    await page.frameLocator('.dash-measurements-frame').getByRole('button', {name: 'Open camera test', exact: true}).click();
     await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.getByRole('button', {name: 'Save', exact: true}).waitFor();
     const responses = ['pulse', 'breathing_rate', 'hrv'].map(measure =>
@@ -129,7 +129,7 @@ try {
     try {
       await page.getByRole('dialog').waitFor({state: 'detached'});
       for (const value of ['70', '14', '42']) {
-        await page.locator('.trend-vitals .trend-value', {hasText: value}).waitFor();
+        await page.frameLocator('.dash-measurements-frame').locator('.preview-value').filter({hasText:new RegExp('^'+value+'$')}).waitFor();
       }
       const preferences=await (await context.request.get(origin+'/api/v1/dashboard/preferences')).json();
       await context.request.put(origin+'/api/v1/dashboard/preferences',{data:{...preferences,measurements:['pulse','breathing_rate','hrv']}});

@@ -133,13 +133,19 @@ async def development_cache_policy(request: Request, call_next):
     """Revalidate mutable assets so a normal reload uses the current local build, and set security headers."""
     from stellis import security_headers
     response = await call_next(request)
+    if request.url.path.startswith('/components/measurements/'):
+        # Isolate dynamic Mantine/Plotly styling to this app-owned body frame.
+        policy=security_headers.CONTENT_SECURITY_POLICY.replace("style-src 'self'", "style-src 'self' 'unsafe-inline'").replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+        policy=policy.replace("script-src 'self'", "script-src 'self' "+' '.join(_measurement_dash.csp_hashes()))
+        response.headers['Content-Security-Policy']=policy
+        response.headers['Cache-Control']='no-store'
     security_headers.apply(response.headers, https=request.url.scheme == "https")
     path = request.url.path
     if path.startswith(("/static/", "/shared/")):
         response.headers["Cache-Control"] = "private, no-cache"
     elif path.startswith(("/api/v1/calendar/", "/api/calendar/")):
         response.headers["Cache-Control"] = "no-store"
-    elif (path in {"/", "/auth", "/onboarding", "/recording", "/vocabulary", "/settings", "/todos"} or
+    elif (path in {"/", "/demo", "/auth", "/onboarding", "/recording", "/vocabulary", "/settings", "/todos"} or
           path.startswith(("/conversation/", "/person/", "/vocabulary/", "/notebook/", "/page/"))):
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -1259,6 +1265,7 @@ def person_page(person_id: str | None = None, page_id: str | None = None, docume
 @app.get("/timeline", include_in_schema=False)
 @app.get("/records", include_in_schema=False)
 @app.get("/summary", include_in_schema=False)
+@app.get("/demo", include_in_schema=False)
 @app.get("/trends", include_in_schema=False)
 @app.get("/chat", include_in_schema=False)
 @app.get("/chat/{agent_id}", include_in_schema=False)
@@ -3386,3 +3393,7 @@ api.include_router(milestone_routes.router)
 
 app.include_router(api, prefix="/api/v1")
 app.include_router(api, prefix="/api", include_in_schema=False)
+
+# A component body, served by the same account process and session gate.
+from stellis.dash_measurements import install as install_measurements
+_measurement_dash = install_measurements(app)

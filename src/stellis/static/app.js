@@ -946,7 +946,7 @@ async function showList() {
   // Tag cards wait for the first conversation; an empty account sees none.
   document.querySelector('#list-view [data-widget="tags"]')?.toggleAttribute('hidden', !libraryConversations.length);
   document.querySelector('#home-pillars').hidden = true;
-  window.StellisHealthDashboard?.mount(document.querySelector('#health-dashboard'), {books:libraryNotebooks, collections:libraryCollections});
+  await window.StellisHealthDashboard?.mount(document.querySelector('#health-dashboard'), {books:libraryNotebooks, collections:libraryCollections});
   window.StellisGoals?.home(document.querySelector('#home-goals'), document.querySelector('#dashboard-notifications'));
   watchSetup();
   if (calendarOutcome) { setStatus(calendarOutcomeText(), calendarOutcome === 'connected'); calendarOutcome = null; }
@@ -4349,7 +4349,8 @@ async function showNotebook(id) {
     when.dateTime = String(latest.date); when.textContent = window.StellisListDate.formatListDate(latest.date);
     document.querySelector('#notebook-summary-text').textContent = latest.text;
   }
-  showNotebookTab('chat');
+  const requestedTab=new URLSearchParams(location.search).get('tab');
+  showNotebookTab(notebookTabs.includes(requestedTab)?requestedTab:'chat');
   document.querySelector('#notebook-view').hidden = false;
   const rail=document.querySelector('#home-rail');document.querySelector('main').prepend(rail);
   rail.querySelectorAll('.rail-pin').forEach(link=>link.removeAttribute('aria-current'));
@@ -4979,7 +4980,8 @@ const widgetsDialog = document.querySelector('#widgets-dialog');
 document.querySelector('#edit-widgets').addEventListener('click', () => {document.querySelector('#library-more').open = false; window.StellisHealthDashboard?.customize();});
 document.querySelector('#close-widgets').addEventListener('click', () => widgetsDialog.close());
 applyWidgets();
-route().catch(error => setStatus(error.message));
+window.StellisAppReady=route().catch(error => setStatus(error.message));
+window.StellisNavigate=async path=>{await window.StellisAppReady;if(location.pathname+location.search!==path)history.pushState({},'',path);await route();};
 
 // Dashboard actions reuse the existing capture and notebook flows.
 for (const [source,target] of [['dashboard-note','home-new-note'],['dashboard-record','home-record'],['dashboard-import','home-import'],['dashboard-notebook','new-notebook']]) {

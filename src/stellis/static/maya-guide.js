@@ -15,7 +15,7 @@ function storyClock(){
  if(changed&&status.active)window.dispatchEvent(new Event('stellis:health-preferences-changed'));
 }
 function notice(text){const node=view?.querySelector('[data-story-status]');if(node)node.textContent=text;}
-function navigate(path){if(location.pathname!==path){history.pushState({},'',path);window.dispatchEvent(new PopStateEvent('popstate'));}}
+async function navigate(path){await window.StellisNavigate(path);}
 async function waitFor(selector){for(let i=0;i<80;i++){const node=document.querySelector(selector);if(node?.checkVisibility())return node;await new Promise(resolve=>setTimeout(resolve,100));}throw Error('The health view could not open');}
 function profile(year,large=false){
  const row=el('div',null,'maya-profile');row.append(avatar(true,large?64:36));
@@ -39,7 +39,7 @@ function dialog(title){
  node.addEventListener('cancel',()=>{progress.open=false;save();});node.addEventListener('close',()=>{if(!node.open)node.remove();});document.body.append(node);node.showModal();return node;
 }
 function graphic(){
- const figure=el('figure',null,'maya-story-timelines');figure.setAttribute('aria-label','Five-year life, care and menstrual timelines');
+ const figure=el('figure',null,'maya-story-timelines');figure.setAttribute('aria-label','Maya’s life, care and period timelines');
  for(const [label,dates] of [['Life',data.life_events.map(e=>e.date)],['Records',data.care_dates],['Periods',data.cycle_dates]]){
   const row=el('div',null,'maya-timeline-track');row.append(el('span',label));const line=el('div',null,'maya-timeline-line');
   for(const date of dates){const marker=el('span',null,'maya-timeline-mark');marker.style.left=`${(Date.parse(date)-Date.parse('2022-01-01'))/(Date.parse('2027-01-01')-Date.parse('2022-01-01'))*100}%`;marker.title=label==='Life'?data.life_events.find(event=>event.date===date).label+' / '+date:date;if(label==='Life')marker.classList.add('is-life');if(label==='Periods')marker.classList.add('is-period');line.append(marker);}row.append(line);figure.append(row);
@@ -53,6 +53,7 @@ function showOverview(){
   el('p','Each year has its own demo ZIP and a set of situations to work through. Demo records, notebooks, tracking and conversations stay separate from your records.'),graphic());
  const years=el('div',null,'maya-year-list');
  for(const [index,year] of data.years.entries()){
+  const chapter={2022:'2022 First concerns',2023:'2024–25 Changing care',2026:'2026 A new routine'}[year.year];if(chapter)years.append(el('h3',chapter));
   const row=button(`${year.year} / ${year.title}`,async()=>{progress.year=index;progress.turn=progress.completed?.includes(year.year)?year.turns.length-1:0;save();await refresh();showYear();});
   row.disabled=!status.active||index>progress.year&&!progress.completed?.includes(data.years[index-1]?.year);row.setAttribute('aria-current',index===progress.year?'step':'false');years.append(row);
  }
@@ -65,12 +66,12 @@ function showOverview(){
 function message(maya,text){const article=el('article',null,`agent-message ${maya?'agent-message-user':'agent-message-agent'} maya-story-message`);const who=el('strong',null,'agent-message-author');who.append(avatar(maya,28),document.createTextNode(maya?'Maya':'Stellis'));article.append(who,el('p',text));return article;}
 function collapse(){
  progress.mode='dock';progress.open=true;save();closeView();const dock=el('section',null,'coach-call maya-story-dock');dock.setAttribute('aria-label','Maya’s story');
- const head=el('div',null,'maya-story-head');head.append(profile(currentYear()),button('Open story',showYear));const hint=el('p',currentTurn().stellis);dock.append(head,hint);view=dock;document.body.append(dock);
+ const head=el('div',null,'maya-story-head');head.append(profile(currentYear()),button('Open story',showYear));const hint=el('p',currentTurn().stellis);const error=el('p');error.dataset.storyStatus='';error.role='status';dock.append(head,hint,error);view=dock;document.body.append(dock);
 }
 async function showYear(){
  if(!status.active){showOverview();return;}
  progress.mode='year';progress.open=true;save();storyClock();await refresh();const year=currentYear(), turn=currentTurn();const node=dialog('Maya’s story');
- node.append(heading(`${year.year} / ${year.title}`,year));const nav=el('div',null,'maya-story-year-nav');nav.append(button('Five-year timeline',showOverview),el('span',`Situation ${progress.turn+1} of ${year.turns.length}`),button('Use health interface',()=>{collapse();navigate('/');}));node.append(nav);
+ node.append(heading(`${year.year} / ${year.title}`,year));const nav=el('div',null,'maya-story-year-nav');nav.append(button('Maya’s timeline',showOverview),el('span',`Situation ${progress.turn+1} of ${year.turns.length}`),button('Use health interface',()=>{collapse();navigate('/');}));node.append(nav);
  const body=el('div',null,'maya-story-body');const log=el('div',null,'maya-story-log');log.setAttribute('role','log');log.setAttribute('aria-label',`Maya’s ${year.year} story`);
  if(progress.turn){const earlier=el('details',null,'maya-earlier-turns');earlier.append(el('summary','Earlier situations'));for(const item of year.turns.slice(0,progress.turn)){earlier.append(message(true,item.maya),message(false,item.stellis));}log.append(earlier);}
  log.append(message(true,turn.maya),message(false,turn.stellis));body.append(log);
@@ -134,19 +135,19 @@ async function useTool(turn){
   document.querySelector('dialog.health-capture input[aria-label="When"]').value=localInput(turn.starts_at);return;
  }
  if(turn.kind==='chat'){
-  navigate('/chat');const input=await waitFor('.agent-composer textarea');const books=(await api('/notebooks')).notebooks;const book=books.find(b=>b.template_id===turn.template_id);const select=document.querySelector('.agent-composer-context select');if(book){select.value=book.id;select.dispatchEvent(new Event('change'));}input.value=turn.maya;input.dispatchEvent(new Event('input'));input.focus();return;
+  await navigate('/chat');const input=await waitFor('.agent-composer textarea');const books=(await api('/notebooks')).notebooks;const book=books.find(b=>b.template_id===turn.template_id);const select=document.querySelector('.agent-composer-context select');if(book){select.value=book.id;select.dispatchEvent(new Event('change'));}input.value=turn.maya;input.dispatchEvent(new Event('input'));input.focus();return;
  }
  if(turn.kind==='timeline'){
-  navigate('/timeline');await waitFor('#timeline-view .timeline-filters');document.querySelector('#timeline-view button[data-kind="document"]').click();
+  await navigate('/timeline');await waitFor('#timeline-view .timeline-filters');document.querySelector('#timeline-view button[data-kind="document"]').click();
   const review=await api(`/demo/years/${currentYear().year}`);const record=review.documents.find(item=>item.corpus_id===turn.document_id);
   if(!record)throw Error('This report has not been imported');
   const source=await waitFor(`#timeline-view a[href="/document/${record.id}"]`);source.scrollIntoView({block:'center'});source.focus();
   progress.visited=progress.visited||[];progress.visited.push(currentYear().year+':'+progress.turn);save();source.click();await waitFor('#document-view');return;
  }
- navigate('/');await waitFor('#health-dashboard .dashboard-calendar');
+ await navigate('/');await waitFor('#health-dashboard .dashboard-calendar');
  if(turn.kind==='cycle'){
   await api('/health/preferences',{method:'PUT',json:{experiences_periods:true}});await window.StellisHealthDashboard.reload();
-  await waitFor('.dashboard-reproductive .tracker-daily');await window.StellisHealthDashboard.focusCycle(turn.start);
+  await window.StellisHealthDashboard.focusCycle(turn.start);await waitFor('.dashboard-reproductive .tracker-daily');
   const button=[...document.querySelectorAll('.dashboard-reproductive button')].find(node=>node.textContent==='Edit period history');button.click();
   const start=await waitFor('dialog input[aria-label="Period start"]');start.value=turn.start;document.querySelector('dialog input[aria-label="Period end"]').value=turn.end;const note=document.querySelector('dialog textarea');if(note)note.value=turn.note;const gap=document.querySelector('dialog input[aria-label="Tracking resumed after a gap"]');if(gap)gap.checked=currentYear().year!==2022;return;
  }
@@ -177,6 +178,15 @@ async function initialize(){
  try{progress=JSON.parse(localStorage.getItem(key));}catch(_){progress=null;}if(!progress||!data.years[progress.year]?.turns[progress.turn])progress={year:0,turn:0,completed:[],open:false};storyClock();banner();
 }
 async function open(){await initialize();await showOverview();}
-window.StellisMayaGuide={open};
-(async()=>{try{await initialize();if(sessionStorage.getItem('stellis-open-maya')){sessionStorage.removeItem('stellis-open-maya');progress.open=true;save();await showYear();}else if(status.active&&progress.open){if(progress.mode==='dock')collapse();else await showYear();}}catch(_){/* Demo availability does not block the real workspace. */}})();
+async function openChapter(chapter){
+ await initialize();
+ const years=chapter==='2022'?[2022]:chapter==='2024-25'?[2023,2024,2025]:[2026];
+ const year=years.find(y=>!status.years[String(y)]?.filed)||years[0];
+ progress.year=data.years.findIndex(y=>y.year===year);
+ const entry=status.years[String(year)];const kind=!entry?'upload':!entry.dates_confirmed?'dates':!entry.filed?'notebooks':'overview';
+ progress.turn=Math.max(0,currentYear().turns.findIndex(t=>t.kind===kind));progress.open=true;save();await showYear();
+}
+window.StellisMayaGuide={open,openChapter};
+window.addEventListener('stellis-demo-date',()=>{if(status?.active)banner();});
+(async()=>{try{await initialize();if(sessionStorage.getItem('stellis-open-maya')){sessionStorage.removeItem('stellis-open-maya');progress.open=true;save();await showYear();}else if(location.pathname==='/demo'){await showOverview();}else if(status.active&&progress.open){if(progress.mode==='dock')collapse();else await showYear();}}catch(_){/* Demo availability does not block the real workspace. */}})();
 })();

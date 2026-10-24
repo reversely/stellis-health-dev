@@ -72,6 +72,7 @@ class Dashboard {
     this.entries = this.data.timeline?.entries || [];
     this.measures = (this.data.readings?.measures || []).map(root.StellisTrends.dailyTotals);
     this.paint();
+    await this.tracker?.ready;
 
   }
 

@@ -1,4 +1,6 @@
-# Maya grows with Stellis — prototype demo
+# Maya grows with Stellis — superseded standalone prototype
+
+**Superseded by [#185](../185/README.md).** The owner rejected this separate interface. It is retained as historical evidence, not the actual app demo or the current Dash integration.
 
 Owning ticket: [#183](https://github.com/reversely/stellis-health-dev/issues/183). Brief: keep and improve Maya’s timeline, show three timings/use cases and the breadth of features, avoid fixating on chatbot interactions, plan the script first, and provide space to try live camera inference.
 

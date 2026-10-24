@@ -24,6 +24,8 @@ const formatAmount = value => Number(value).toLocaleString([], {maximumFractionD
 const lowerFirst = text => text ? text[0].toLowerCase()+text.slice(1) : '';
 const weekdayLabel = date => new Date(date+'T12:00:00').toLocaleDateString([], {weekday:'long',month:'short',day:'numeric'});
 let nextId=0;
+// Retain the selected tracker while the dashboard refreshes its sections.
+let activeKind=null;
 const mounted=new WeakMap();
 
 function mount(host,options={}) {
@@ -66,7 +68,7 @@ function mount(host,options={}) {
   host.replaceChildren(navigation,status,reminders,panel,footnote);
 
   function selectTab(kind) {
-    current=kind;
+    current=kind;activeKind=kind;
     for(const [key,tab] of tabs) {tab.setAttribute('aria-selected',String(key===kind));tab.tabIndex=key===kind?0:-1;}
     panel.setAttribute('aria-labelledby',tabs.get(kind).id);
     add.replaceChildren(getDomHelpers().icon('plus'),document.createTextNode(trackerViews[kind].add));
@@ -518,7 +520,7 @@ function mount(host,options={}) {
         else {error.textContent=status.textContent;remove.disabled=false;}
       },'coach-button is-danger');footer.append(remove);
     }
-    footer.append(cancel,save);form.append(fields,error,footer);dialog.append(header,form);host.append(dialog);
+    footer.append(cancel,save);form.append(fields,error,footer);dialog.append(header,form);document.body.append(dialog);
     dialog.addEventListener('close',()=>{dialog.remove();if(trigger?.isConnected)trigger.focus();else tabs.get(current).focus();},{once:true});
     form.onsubmit=async event=>{
       event.preventDefault();save.disabled=true;error.textContent='';
@@ -551,7 +553,7 @@ function mount(host,options={}) {
       options.preferences?Promise.resolve(options.preferences):getDomHelpers().api('/health/preferences')]);
     if(!host.isConnected)return;
     buildTabs(kinds.kinds,preferences);
-    selectTab(Object.keys(trackerViews)[0]);
+    selectTab(trackerViews[activeKind]?activeKind:Object.keys(trackerViews)[0]);
     await load();
   })();
   ready.then(()=>{status.textContent='';}).catch(error=>status.replaceChildren(createElement('span',error.message),createButton('Try again',()=>load().then(()=>{status.textContent='';}).catch(err=>{status.textContent=err.message;}))));
@@ -562,6 +564,7 @@ function mount(host,options={}) {
   },30000);
   mounted.set(host,()=>clearInterval(timer));
   return {
+    ready,
     createPeriod:async()=>{await ready;if(!trackerViews.period)return;referenceDay=currentDate();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});panel.querySelector('.tracker-daily button[aria-pressed="true"]')?.focus();},
     openRecord:async recordId=>{await ready;if(recordId.startsWith('day:')){referenceDay=recordId.slice(4);await load();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});return;}await load();const record=records.find(record=>record.id===recordId);if(record&&trackerViews[record.kind]){selectTab(record.kind);openForm(record.kind,record);}},
     destroy:()=>{clearInterval(timer);host.replaceChildren();},

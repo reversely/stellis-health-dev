@@ -1,4 +1,4 @@
-"""Standalone Dash/Mantine Maya prototype with an isolated live camera test.
+"""Historical standalone Dash/Mantine prototype, superseded by the integrated app.
 
 Run with the optional dependencies in dash-trends-requirements.txt. The page uses
 Dash's native FastAPI backend. Original PDFs use embedded viewers; the app shell
@@ -353,8 +353,4 @@ def create_preview():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--port", type=int, default=8856)
-    args = parser.parse_args()
-    import uvicorn
-    uvicorn.run(create_preview(), host="127.0.0.1", port=args.port)
+    raise SystemExit("The standalone prototype is superseded. Start the actual app with: uv run stellis serve --port 8840, then open /demo.")

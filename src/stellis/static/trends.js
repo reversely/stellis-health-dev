@@ -574,14 +574,15 @@ class TrendsPage {
  * @return {!Promise<void>}
  */
 function mount(host) {
-  return new TrendsPage(host).load();
+  return root.StellisDashTrends.mount(host);
 }
 
 const exported = {
-  async entryForm(host, notebookId, saved) {
+  async entryForm(host, notebookId, saved, initialMeasure) {
     const measures = (await root.StellisDom.api('/readings')).measures;
     const select = document.createElement('select'); select.setAttribute('aria-label','Measurement');
     for (const m of measures) select.add(new Option(m.label,m.key));
+    if(initialMeasure)select.value=initialMeasure;
     const body = document.createElement('div'); host.append(select,body);
     const controller = Object.create(TrendsPage.prototype);
     Object.assign(controller,{dom:root.StellisDom, notebookId, status:document.createElement('p'), load:saved});
