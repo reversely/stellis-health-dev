@@ -38,7 +38,8 @@ try {
   for (const width of [390, 1280]) {
     await page.setViewportSize({width, height: 900});
     await page.goto(origin + '/document/' + record.id);
-    await page.waitForSelector('.document-image');
+    await page.waitForFunction(() => document.querySelector('.report-paper img')?.naturalWidth > 0);
+    await page.getByText('Extracted text', {exact: true}).click();
     if (width === 390 && await page.getByRole('button', {name: 'Read text', exact: true}).count()) {
       await page.getByRole('button', {name: 'Read text', exact: true}).click();
       await page.getByText('Machine-read text', {exact: true}).waitFor();
@@ -52,6 +53,7 @@ try {
     await page.getByRole('button', {name: 'Save text', exact: true}).click();
     await page.getByText('Edited text', {exact: true}).waitFor();
     await page.reload();
+    await page.getByText('Extracted text', {exact: true}).click();
     await page.getByText('Edited text', {exact: true}).waitFor();
     assert.equal(await page.locator('.document-text').textContent(), correction);
     assert.equal(await page.evaluate(() => window.__ocrInjected), undefined);
@@ -63,9 +65,10 @@ try {
     await page.getByRole('heading', {name: 'Recent requests', exact: true}).waitFor();
     await page.waitForFunction(() => document.querySelector('#inference-traces')?.textContent.includes('Text recognition'));
     assert.ok(await page.locator('#inference-traces').getByText('Text recognition', {exact: true}).count());
-    assert.match(await page.locator('#inference-traces .trace-duration').first().textContent(), /\d+\.\d+ s/);
-    await page.locator('#inference-traces details').first().locator('summary').click();
-    assert.ok(await page.locator('#inference-traces details').first().locator('.trace-events').isVisible());
+    const recognitionTrace = page.locator('#inference-traces').getByText('Text recognition', {exact: true}).first().locator('xpath=ancestor::details[1]');
+    assert.match(await recognitionTrace.locator('summary .trace-duration').textContent(), /\d+\.\d+ s/);
+    await recognitionTrace.locator('summary').click();
+    assert.ok(await recognitionTrace.locator('.trace-events').isVisible());
     assert.ok(await page.locator('[data-operator-only]').evaluateAll(
         nodes => nodes.every(node => node.hidden)));
     console.log(`PASS ${width}px: correction persistence, original file, literal text and timed traces`);
