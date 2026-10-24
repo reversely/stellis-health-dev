@@ -158,3 +158,11 @@ Keep a stable measurement hierarchy regardless of whether readings exist: Vital 
 Reading metadata uses a semantic date and a separate source label (“Manual entry”, “Camera reading”, or the source record title), without conversational fragments or comma-joined sentences. Comparisons with personal history are neutral information, not red/green severity alerts. Retain the shared teal series and usual-range band across charts.
 
 Mobile navigation stays fixed at the viewport bottom, with safe-area padding and enough page space to scroll the final action fully above it. Review viewport captures at the top, middle and bottom of long pages. A full-page stitched screenshot places a fixed element at one viewport boundary within a taller image; it cannot establish how navigation behaves during scrolling.
+
+### Desktop measurement cards and tables
+
+Trends uses the available desktop workspace: two measurement columns above 1000px, three vital-sign columns above 1800px, and one column on phones/tablets. Category headings align with their cards; card headers and footers align across a row. Put a labelled **Table** switch at the upper right of each measurement card. Switching replaces the chart with the table, keeps the reading heading/value/context and leaves the switch available. Do not use Show table/Hide table footer buttons.
+
+Use **Lower than usual**, **Higher than usual** and **Within usual range** consistently in Trends, measurement previews and camera results. Omit the possessive from usual-range labels, hints and legends.
+
+A standalone Dash/Mantine prototype evaluates a possible component-based frontend; it is not the production UI. Its synthetic data, runtime and migration limits are documented in `plans/dash-trends-evaluation.md`.

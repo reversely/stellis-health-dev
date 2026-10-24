@@ -112,8 +112,11 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${route} ${width} ${theme}`);
     if (route==='/trends') {
       const manual=await style(page.locator('.trend-manual[data-log=pulse]'));
-      const table=await style(page.getByRole('button',{name:'Show table',exact:true}).first());
-      for (const key of ['fill','ink','radius','padding']) assert.equal(table[key],manual[key],`trend secondary ${key}`);
+      const control=page.locator('.trend-table-control').first();
+      assert((await control.boundingBox()).height>=44);
+      await control.getByRole('switch',{name:'Table',exact:true}).check();
+      await page.locator('.trend-table').first().waitFor({state:'visible'});
+      await control.getByRole('switch',{name:'Table',exact:true}).uncheck();
     }
     results.push({theme,width,route,controls});
     if (process.env.STELLIS_UI_EVIDENCE && (route==='/' || (route==='/trends' && width===390))) {
