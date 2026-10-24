@@ -1,0 +1,50 @@
+[
+  {
+    "theme": "dark",
+    "name": "Vital signs",
+    "styles": {
+      "background": "rgb(68, 54, 78)",
+      "color": "rgb(249, 245, 252)",
+      "outline": "rgb(249, 245, 252)",
+      "expectedBackground": "rgb(68, 54, 78)",
+      "expectedColor": "rgb(249, 245, 252)",
+      "variantInk": "#F9F5FC"
+    }
+  },
+  {
+    "theme": "dark",
+    "name": "Body measurements",
+    "styles": {
+      "background": "rgb(68, 54, 78)",
+      "color": "rgb(249, 245, 252)",
+      "outline": "rgb(249, 245, 252)",
+      "expectedBackground": "rgb(68, 54, 78)",
+      "expectedColor": "rgb(249, 245, 252)",
+      "variantInk": "#F9F5FC"
+    }
+  },
+  {
+    "theme": "light",
+    "name": "Vital signs",
+    "styles": {
+      "background": "rgb(239, 239, 238)",
+      "color": "rgb(42, 37, 47)",
+      "outline": "rgb(42, 37, 47)",
+      "expectedBackground": "rgb(239, 239, 238)",
+      "expectedColor": "rgb(42, 37, 47)",
+      "variantInk": "#2A252F"
+    }
+  },
+  {
+    "theme": "light",
+    "name": "Body measurements",
+    "styles": {
+      "background": "rgb(239, 239, 238)",
+      "color": "rgb(42, 37, 47)",
+      "outline": "rgb(42, 37, 47)",
+      "expectedBackground": "rgb(239, 239, 238)",
+      "expectedColor": "rgb(42, 37, 47)",
+      "variantInk": "#2A252F"
+    }
+  }
+]

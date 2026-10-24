@@ -305,3 +305,7 @@ Owner feedback: colours throughout remain nonconformant after the #157/#160 layo
 Observed mismatches: white light cards instead of paper, a different mauve for task actions and focus, separately invented chart/dose teals, action-coloured selected tabs, purple-filled notebook secondary buttons in dark mode, card-coloured mobile navigation, and icons that did not inherit inverted control ink. The auth form also had a white task action against its light glass surface.
 
 Implemented and browser verified: shared palette corrected to the guide, notebook secondary states shared with other controls, explicit current-colour icon inheritance, purple navigation, and mauve auth primary controls. Exact computed-colour checks pass in both themes at desktop/phone widths, auth visual checks pass, 50 shared UI states pass, and Brief/Ask browser workflows pass. [Evidence and limits](evidence/179/README.md). Custom notebook colours and semantic status pairs remain data-driven and retain their separate meanings.
+
+## Sidebar highlight palette — 2026-10-24
+
+Owner feedback: no fuchsia sidebar highlights. Implemented: remove the Dash grape-primary fallback, set sidebar text explicitly from shared ink, and use raised-surface selection/hover with ink keyboard focus. Verified rendered active/hover/focus colors and real category navigation in both themes; twelve responsive Dash layouts pass. [Evidence and limits](evidence/181/README.md). Ticket #181.

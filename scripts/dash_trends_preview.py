@@ -159,7 +159,7 @@ def create_preview():
     app.layout = dmc.MantineProvider(
         id="preview-theme", forceColorScheme="dark",
         theme={"fontFamily": "Inter, sans-serif", "headings": {"fontFamily": "Piazzolla, Georgia, serif", "fontWeight": "300"},
-               "primaryColor": "grape", "defaultRadius": "sm", "respectReducedMotion": True,
+               "primaryColor": "dark", "defaultRadius": "sm", "respectReducedMotion": True,
                "colors": {"dark": ["#F9F5FC", "#DED5DE", "#C4B6C6", "#6E5B79", "#51415C", "#44364E", "#382C42", "#302638", "#2C2234", "#2C2234"]}},
         children=[
             dcc.Store(id="preview-data", data=data),
@@ -172,7 +172,7 @@ def create_preview():
                 ], justify="space-between", h="100%", px="lg")),
                 dmc.AppShellNavbar([
                     dmc.Text("Measurements", fw=600, size="sm", mb="sm"),
-                    *[dmc.Button(name, id={"kind": "category", "key": index}, n_clicks=0, variant="subtle", fullWidth=True, className="preview-category", **{"aria-pressed": str(index == 0).lower()}) for index, (name, _) in enumerate(GROUPS)],
+                    *[dmc.Button(name, id={"kind": "category", "key": index}, n_clicks=0, variant="subtle", color="var(--ink)", fullWidth=True, className="preview-category", **{"aria-pressed": str(index == 0).lower()}) for index, (name, _) in enumerate(GROUPS)],
                     dmc.Text("Sample readings only", size="xs", c="dimmed", mt="auto"),
                 ], p="lg"),
                 dmc.AppShellMain([
