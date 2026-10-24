@@ -1312,6 +1312,18 @@ class RecordLink(BaseModel):
     source_id: str = Field(min_length=1, max_length=150)
 
 
+@api.get("/notebooks/{notebook_id}/brief")
+def notebook_brief_view(notebook_id: str, today: str | None = Query(default=None, max_length=10)):
+    from stellis import notebook_brief
+    try:
+        day = datetime.fromisoformat(today).date() if today else None
+        return notebook_brief.brief(notebook_id, day)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @api.get("/notebooks/{notebook_id}/health")
 def notebook_health_context(notebook_id: str):
     from stellis import notebook_health

@@ -176,6 +176,7 @@ def _validate_course(data, record_id, conn):
         'start': date(data.get('start') or '').isoformat() if data.get('start') else '',
         'end': _optional_date(data, 'end'),
         'units_per_fill': _number(data, 'units_per_fill', 'units in each fill', 1, 10_000, integer=True),
+        'supply_unit': str(data.get('supply_unit') or ''),
         'units_per_dose': _number(data, 'units_per_dose', 'units in each dose', 0.001, 1000, default=1),
         'repeats': _number(data, 'repeats', 'repeats', 0, 20, integer=True, default=0),
         'time': str(data.get('time') or ''),
@@ -186,6 +187,8 @@ def _validate_course(data, record_id, conn):
         raise ValueError('Enter the dose')
     if clean['dose_unit'] not in goals.DOSE_UNITS:
         raise ValueError('Choose a dose unit')
+    if clean['supply_unit'] and clean['supply_unit'] not in goals.DOSE_UNITS:
+        raise ValueError('Choose a supply unit')
     if not clean['start']:
         raise ValueError('Enter a start date')
     if clean['end'] and clean['end'] < clean['start']:
@@ -367,6 +370,7 @@ KINDS = {kind.key: kind for kind in (
         _field('start', 'Start date', 'date'), _field('end', 'End date', 'date', required=False),
         _field('units_per_fill', 'Units in each fill', 'number', required=False, min=1, max=10_000,
                hint='From the prescription, such as 45 tablets'),
+        _field('supply_unit', 'Supply unit', 'choice', required=False, choices=list(goals.DOSE_UNITS)),
         _field('units_per_dose', 'Units in each dose', 'number', required=False, min=0.001, max=1000,
                step='any', default=1),
         _field('repeats', 'Repeats', 'number', required=False, min=0, max=20, default=0),

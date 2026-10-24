@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
   <!-- The icon sprite, refresh, sun, and moon icons are Tabler Icons (MIT); see /static/icons.NOTICES.txt. -->
   <head>
-<script defer src="/static/notebook-health.js"></script>
+<script defer src="/static/notebook-health.js"></script><link rel="stylesheet" href="/static/notebook-brief.css" />
 <script defer src="/static/health-catalogue.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -312,6 +312,7 @@
           <section id="notebook-activity" aria-label="Notebook activity"></section>
           <p id="notebook-brief-empty" hidden>No meeting summary yet. Add or record a conversation to build this brief.</p>
           <div id="notebook-overview" class="notebook-overview">
+            <div id="notebook-levels" class="notebook-levels"></div>
             <section id="notebook-todos" data-widget="todos" aria-label="Check-ins"></section>
             <section id="notebook-summary" class="notebook-summary" aria-labelledby="notebook-summary-title" hidden>
               <div class="list-widget-head"><h2 id="notebook-summary-title"><svg class="icon" aria-hidden="true"><use href="#i-sparkles"/></svg><span>Latest summary</span></h2></div>
