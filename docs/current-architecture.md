@@ -661,3 +661,18 @@ flowchart LR
 Report rendering jobs wait up to 25 seconds for the shared worker slot so a reload can follow an in-flight page job. The service checks selected page revisions and related-page text hashes after inference under a write transaction before publishing a result. Historical exchanges retain their source snapshots and are marked stale when selected or related evidence changes or disappears. Deleting the original document cascades its maps and explanations. Original images are returned with private/no-store headers. Recognition traces contain timing and page events, not source content. The browser keeps line highlights aligned while zooming/rotating and uses a stacked report/explanation layout on phones. Saved answers remain readable when AI is unconfigured.
 
 [Issue #148 evidence](evidence/148/README.md) records real geometry/OCR and database tests plus browser verification at 1280px and 390px. Browser inference uses a controlled fixture; live provider quality is unverified without configured credentials. Arbitrary chart coordinates, freeform region selection, report voice input, automatic purpose naming, fuller metric enrichment and choosing a new OCR engine remain outside this delivered slice and tracked under #147.
+
+## Explicit launch versions
+
+`stellis launch local` selects the GN100 NemoClaw/OpenClaw agent runtime and local Ollama inference. `stellis launch cloud` selects the authenticated cloud NemoClaw/OpenClaw gateway and Token Factory inference. `launch.py` parses private environment assignments without shell execution, removes inherited runtime configuration, validates the selected route, and starts the existing `serve` process. Default data roots and ports differ. `--init` creates a private template; `--check` validates configuration without network calls or readiness claims.
+
+```mermaid
+flowchart LR
+    Launch[Explicit launch command] --> Local[local: GN100 NemoClaw and Ollama]
+    Launch --> Cloud[cloud: Nebius NemoClaw and Token Factory]
+    Local --> Speech[Current speech workers on the Stellis host]
+    Cloud --> Speech
+    Cloud -. Next integration .-> Serverless[Nebius Serverless AI speech endpoints]
+```
+
+Settings and traces label agent execution independently from the inference provider and speech location. Legacy `direct` remains available and is still selected by the existing Fly configuration; it executes Token Factory completions without a managed agent sandbox. Isolated demo turns retain their direct inference exception and receive explicit demo execution labels. The launch changes do not provision or deploy cloud infrastructure. Serverless speech remains planned, with no unused configuration flag implying an implemented backend. See [launch instructions](launch.md) and [the cloud integration plan](../plans/nebius-cloud-integration.md).
