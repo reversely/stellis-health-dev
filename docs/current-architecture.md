@@ -620,3 +620,21 @@ flowchart LR
 ```
 
 `maya-guide.js` presents labelled scripted turns and opens existing controls; it does not fabricate saved tool results or assistant replies. The demo banner explicitly labels the historical story date used by frontend calendar and cycle views. Real workspace dates remain based on the current date.
+
+## Chat attachments
+
+Chat attachments reuse canonical PDF and image documents in each account workspace. `chat_attachments` associates a retained document with an agent or notebook thread and, after a successful reply, its user message. Unsent associations survive reload. Removing an unsent association preserves the document. Documents cascade their attachment associations on deletion.
+
+```mermaid
+flowchart LR
+  Composer[Chat composer] --> Upload[Account-scoped attachment upload]
+  Upload --> Document[Canonical document and original file]
+  Document --> OCR[Bounded first-page OCR when needed]
+  Document --> Evidence[Ranked extracted passages]
+  Evidence --> Reply[Source-backed chat reply]
+  Reply --> Association[User message attachment association]
+  Document --> Filing[Explicit Save to notebook]
+  Filing --> Records[Notebook sources and Records]
+```
+
+`chat_attachment_routes.py` exposes thread-scoped list, upload, removal and filing endpoints. Uploads use existing document type, size and raster validation. Failed OCR retains a Needs text document for correction. A transaction limits pending attachments to five per thread. Send validates every attachment against the current thread and refuses consumed IDs. Agent requests receive the extracted passages as extra sources; notebook chat combines them with explicitly checked sources under its existing context budget and citation rules. Attachment text remains untrusted evidence in both prompt paths. Filing enforces notebook source limits, reuses the canonical document and refuses to move files already saved elsewhere. Chat history retains attachment links after filing and reload.
