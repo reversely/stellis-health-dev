@@ -676,3 +676,22 @@ flowchart LR
 ```
 
 Settings and traces label agent execution independently from the inference provider and speech location. Legacy `direct` remains available and is still selected by the existing Fly configuration; it executes Token Factory completions without a managed agent sandbox. Isolated demo turns retain their direct inference exception and receive explicit demo execution labels. The launch changes do not provision or deploy cloud infrastructure. Serverless speech remains planned, with no unused configuration flag implying an implemented backend. See [launch instructions](launch.md) and [the cloud integration plan](../plans/nebius-cloud-integration.md).
+
+## Tracker registry
+
+`trackers.py` registers each kind of tracked item: its form fields, the days an entry is expected, whether dated outcomes can be logged, the dates derived from its data and an optional health-preference gate. Period, pill pack and device keep their dedicated views; medicine course is the first kind rendered entirely from the registry. All kinds share `reproductive_records` (typed JSON, plus notebook, source document, source page and creation time) and the dated outcome table `pill_doses` (status and optional amount). `reproductive.py` and `/reproductive/*` remain as a compatibility layer.
+
+A medicine course stores its dose, schedule (every day, every N days, chosen weekdays or as needed), start, optional end and prescription supply. Each fill's run-out date is calculated from the schedule and supply; a dose logged as skipped consumes nothing. Derived dates carry a *Calculated* or *Planned* status and reach the shared calendar on the Medicines track without the cycle preference. Links to deleted notebooks or documents are dropped when read.
+
+`GET /trackers/kinds` returns the schemas, and `tracker-form.js` renders forms from them, including conditional fields and notebook and source pickers. My Health's Tracking section shows one tab per kind whose gate is met. See ADR 0086.
+
+```mermaid
+flowchart LR
+  Registry[Tracker registry] --> Form[Schema-rendered forms]
+  Form --> Records[(reproductive_records)]
+  Log[Taken or skipped] --> Outcomes[(pill_doses)]
+  Records --> Summary[Today, next dose, counts, derived dates]
+  Outcomes --> Summary
+  Summary --> Tracking[My Health Tracking]
+  Summary --> Calendar[Shared calendar]
+```

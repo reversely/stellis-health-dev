@@ -1,4 +1,4 @@
-/** Cycle calendars and date-based pill packs using saved workspace records. */
+/** Tracked items from the registry: cycle, pill packs, devices and medicine courses. */
 (function(root) {
 'use strict';
 const getDomHelpers = () => root.StellisDom;
@@ -17,39 +17,45 @@ const createIconButton = (label, icon, onActivate) => {
   const button=createButton(null,onActivate,'coach-button tracker-icon-button');
   button.setAttribute('aria-label',label);button.append(getDomHelpers().icon(icon));return button;
 };
-const trackerViews = {
-  period: {label:'Cycle', add:'Log period', title:'Period'},
-  pill: {label:'Pills', add:'Add pill pack', title:'Pill pack'},
-  larc: {label:'Devices', add:'Add device', title:'Device'},
-};
+// Kinds with a dedicated view here; other registered kinds use the course view.
+const BESPOKE = new Set(['period','pill','larc']);
+const formatAmount = value => Number(value).toLocaleString([], {maximumFractionDigits:3});
+// "Every other day" reads mid-sentence; a capital follows only names such as "Mon".
+const lowerFirst = text => text ? text[0].toLowerCase()+text.slice(1) : '';
+const weekdayLabel = date => new Date(date+'T12:00:00').toLocaleDateString([], {weekday:'long',month:'short',day:'numeric'});
 let nextId=0;
 const mounted=new WeakMap();
 
 function mount(host,options={}) {
   mounted.get(host)?.();
   const instance=++nextId;
-  let records=[], observations=[], referenceDay=currentDate(), current='period', busy=false;
+  let records=[], observations=[], referenceDay=currentDate(), current=null, busy=false;
+  const trackerViews={};
   let selectedDose=new Map();
   const pendingPeriodDays=new Map();
   const tabs=new Map();
   const status=createElement('p',null,'tracker-status');status.setAttribute('role','status');
   const reminders=createElement('div',null,'tracker-reminders');reminders.setAttribute('aria-live','polite');
   const navigation=createElement('div',null,'tracker-navigation');
-  const tablist=createElement('div',null,'tracker-tabs');tablist.setAttribute('role','tablist');tablist.setAttribute('aria-label','Cycle and contraception');
-  const add=createButton(trackerViews[current].add,()=>openForm(current));
-  add.prepend(getDomHelpers().icon('plus'));
+  const tablist=createElement('div',null,'tracker-tabs');tablist.setAttribute('role','tablist');tablist.setAttribute('aria-label','Tracking');
+  const add=createButton('',()=>openForm(current));
   const panel=createElement('section',null,'tracker-panel');panel.id=`tracker-panel-${instance}`;
   panel.setAttribute('role','tabpanel');panel.tabIndex=-1;
-  for(const [kind,config] of Object.entries(trackerViews)) {
-    const tab=createButton(config.label,()=>selectTab(kind),'tracker-tab');
-    tab.id=`tracker-tab-${instance}-${kind}`;
-    tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panel.id);
-    tab.addEventListener('keydown',event=>{
-      const keys=Object.keys(trackerViews), index=keys.indexOf(kind);
-      const target=event.key==='ArrowRight'?keys[(index+1)%3]:event.key==='ArrowLeft'?keys[(index+2)%3]:event.key==='Home'?keys[0]:event.key==='End'?keys[2]:null;
-      if(target){event.preventDefault();selectTab(target);tabs.get(target).focus();}
-    });
-    tabs.set(kind,tab);tablist.append(tab);
+  /** Builds one tab per registered kind whose preference gate is met. */
+  function buildTabs(kinds, preferences) {
+    for(const kind of kinds.filter(kind=>!kind.gate||preferences[kind.gate]===true)) {
+      trackerViews[kind.key]={label:kind.plural, add:kind.add, title:kind.label, schema:kind};
+      const tab=createButton(kind.plural,()=>selectTab(kind.key),'tracker-tab');
+      tab.id=`tracker-tab-${instance}-${kind.key}`;
+      tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panel.id);
+      tab.addEventListener('keydown',event=>{
+        const keys=Object.keys(trackerViews), index=keys.indexOf(kind.key), last=keys.length-1;
+        const target=event.key==='ArrowRight'?keys[(index+1)%keys.length]:event.key==='ArrowLeft'?keys[(index+last)%keys.length]:event.key==='Home'?keys[0]:event.key==='End'?keys[last]:null;
+        if(target){event.preventDefault();selectTab(target);tabs.get(target).focus();}
+      });
+      tabs.set(kind.key,tab);tablist.append(tab);
+    }
+    tablist.hidden=tabs.size<2;
   }
   navigation.append(tablist);
   const sectionHead=host.closest('.dashboard-reproductive')?.querySelector('.dashboard-section-head');
@@ -65,9 +71,12 @@ function mount(host,options={}) {
     paint();
   }
   async function load() {
-    const [result,daily]=await Promise.all([requestTracker(''),getDomHelpers().api('/health/observations')]);
+    const [result,daily]=await Promise.all([getDomHelpers().api('/trackers?today='+currentDate()),getDomHelpers().api('/health/observations')]);
     if(!host.isConnected)return;
-    records=result.records;observations=daily.observations;paint();checkReminders();
+    const outcomeDays=(record,status)=>Object.keys(record.outcomes).filter(day=>record.outcomes[day].status===status);
+    // Kinds whose preference gate is off stay out of view and reminders.
+    records=result.records.filter(record=>trackerViews[record.kind]).map(record=>({...record,doses:outcomeDays(record,'taken'),skipped:outcomeDays(record,'skipped')}));
+    observations=daily.observations;paint();checkReminders();
   }
   async function mutate(operation) {
     if(busy)return false;
@@ -83,7 +92,7 @@ function mount(host,options={}) {
   }
   function empty(title, description, kind) {
     const block=createElement('div',null,'tracker-empty');
-    const symbol=createElement('div',null,'tracker-empty-icon');symbol.append(getDomHelpers().icon(kind==='period'?'calendar':kind==='pill'?'circle-check':'clock'));
+    const symbol=createElement('div',null,'tracker-empty-icon');symbol.append(getDomHelpers().icon(trackerViews[kind].schema.icon));
     block.append(symbol,heading(title,description),createButton(trackerViews[kind].add,()=>openForm(kind),'coach-button is-primary'));
     return block;
   }
@@ -113,7 +122,7 @@ function mount(host,options={}) {
     add.hidden=current==='period'||!entries(current).length;
     add.classList.toggle('is-primary',current==='period');
     panel.replaceChildren();
-    if(current==='period')paintCycle();else if(current==='pill')paintPills();else paintDevices();
+    if(current==='period')paintCycle();else if(current==='pill')paintPills();else if(current==='larc')paintDevices();else paintCourses(current);
   }
   function paintDailyLog() {
     const daily=createElement('section',null,'tracker-daily');
@@ -334,7 +343,92 @@ function mount(host,options={}) {
     }
   }
 
+  /** Today's dose state in words, from the server summary. */
+  function courseState(record) {
+    const summary=record.summary, today=currentDate();
+    if(record.start>today)return 'Starts '+formatDateLabel(record.start);
+    if(record.end&&record.end<today)return 'Ended '+formatDateLabel(record.end);
+    if(summary.today_status)return summary.today_status==='taken'?'Taken today':'Skipped today';
+    if(summary.expected_today)return 'Due today';
+    if(summary.loggable_today)return 'Take as needed';
+    return 'Not a dose day'+(summary.next_expected?'. Next dose '+weekdayLabel(summary.next_expected):'');
+  }
+  /** A start-to-end bar with calculated and planned markers and today's position. */
+  function courseTrack(record) {
+    const today=currentDate(), dates=record.summary.derived.map(item=>item.date);
+    const last=[record.end,today,...dates].filter(Boolean).sort().at(-1);
+    const span=Math.max(1,daysBetween(last,record.start));
+    const position=date=>`${Math.min(100,Math.max(0,daysBetween(date,record.start)/span*100))}%`;
+    const track=createElement('div',null,'tracker-course-track');
+    const bar=createElement('div',null,'tracker-course-bar');bar.setAttribute('aria-hidden','true');
+    const done=createElement('span',null,'tracker-course-done');done.style.width=position(today);bar.append(done);
+    for(const item of record.summary.derived) {
+      const marker=createElement('span',null,`tracker-course-marker is-${item.status}`);marker.style.left=position(item.date);marker.title=item.title;bar.append(marker);
+    }
+    const now=createElement('span',null,'tracker-course-now');now.style.left=position(today);bar.append(now);
+    const labels=createElement('div',null,'tracker-course-labels');
+    labels.append(createElement('span','Started '+formatDateLabel(record.start)),
+      createElement('span',record.end?'Ends '+formatDateLabel(record.end):'No end date yet'));
+    track.append(bar,labels);return track;
+  }
+  function paintCourses(kind) {
+    const view=trackerViews[kind], items=entries(kind);
+    if(!items.length){panel.append(empty(view.schema.plural,view.schema.description,kind));return;}
+    for(const record of items) {
+      const summary=record.summary, card=createElement('article',null,'tracker-course');card.dataset.record=record.id;
+      const head=createElement('div',null,'tracker-course-head');
+      const dose=record.dose_amount!=null?`${formatAmount(record.dose_amount)} ${record.dose_unit}`:'';
+      head.append(heading(record.name,[dose,lowerFirst(summary.schedule_text)].filter(Boolean).join(', ')),
+        createButton('Edit',()=>openForm(kind,record),'coach-button is-quiet'));
+      const today=createElement('div',null,'tracker-course-today');
+      today.append(createElement('p',courseState(record),'tracker-dose-status'));
+      if(summary.loggable_today) {
+        const actions=createElement('div',null,'tracker-dose-actions');
+        const save=async state=>{
+          if(await mutate(()=>getDomHelpers().api(`/trackers/records/${encodeURIComponent(record.id)}/outcomes/${currentDate()}`,{method:'PUT',json:{status:state}})))
+            panel.querySelector(`[data-record="${record.id}"] .tracker-dose-action`)?.focus();
+        };
+        if(summary.today_status)actions.append(createButton('Undo',()=>save(null),'coach-button is-quiet tracker-dose-action'));
+        else {
+          const taken=createButton('Mark taken',()=>save('taken'),'coach-button is-primary tracker-dose-action');taken.prepend(getDomHelpers().icon('check'));
+          actions.append(taken,createButton('Skip',()=>save('skipped')));
+        }
+        today.append(actions);
+      }
+      const metrics=createElement('dl',null,'tracker-metrics');
+      metrics.append(metric('Doses logged',String(summary.taken_count)));
+      if(summary.skipped_count)metrics.append(metric('Skipped',String(summary.skipped_count)));
+      const elapsed=daysBetween(record.end&&record.end<currentDate()?record.end:currentDate(),record.start)+1;
+      if(elapsed>0)metrics.append(metric('Duration',elapsed<14?`${elapsed} day${elapsed===1?'':'s'}`:`${Math.floor(elapsed/7)} weeks`));
+      card.append(head,today,metrics);
+      // A track needs an end point: an end date or a calculated date.
+      if(record.end||summary.derived.length)card.append(courseTrack(record));
+      const upcoming=summary.derived.filter(item=>item.date>=currentDate());
+      if(upcoming.length) {
+        const list=createElement('ul',null,'tracker-course-upcoming');list.setAttribute('aria-label','Coming up');
+        for(const item of upcoming) {
+          const row=createElement('li');
+          row.append(createElement('time',formatDateLabel(item.date)),createElement('span',item.title),
+            createElement('span',item.status[0].toUpperCase()+item.status.slice(1),`status-block is-${item.status}`));
+          list.append(row);
+        }
+        card.append(list);
+      }
+      if(record.source_document_id) {
+        const source=createElement('a',`From ${record.source_title}${record.source_page?', page '+record.source_page:''}`,'tracker-course-source');
+        source.href=`/document/${encodeURIComponent(record.source_document_id)}${record.source_page?'?page='+record.source_page:''}`;
+        card.append(source);
+      }
+      panel.append(card);
+    }
+  }
+
   function openForm(kind, existing=null, overrides={}) {
+    if(!BESPOKE.has(kind)) {
+      return root.StellisTrackerForm.open(trackerViews[kind].schema,existing,{host,
+        onSaved:async()=>{await load();options.onChange?.();status.textContent='';},
+        onDelete:async()=>{await getDomHelpers().api('/trackers/records/'+encodeURIComponent(existing.id),{method:'DELETE'});await load();options.onChange?.();}});
+    }
     const trigger=document.activeElement;
     const dialog=createElement('dialog',null,'tracker-dialog');
     const title=createElement('h2',(existing?'Edit ':'Add ')+trackerViews[kind].title.toLowerCase());title.id=`tracker-dialog-${++nextId}`;
@@ -414,7 +508,7 @@ function mount(host,options={}) {
     dialog.addEventListener('close',()=>{dialog.remove();if(trigger?.isConnected)trigger.focus();else tabs.get(current).focus();},{once:true});
     form.onsubmit=async event=>{
       event.preventDefault();save.disabled=true;error.textContent='';
-      const data={...existing};delete data.id;delete data.kind;delete data.doses;delete data.skipped;
+      const data={...existing};for(const key of ['id','kind','doses','skipped','outcomes','summary','created_at','source_title'])delete data[key];
       for(const [key,input] of Object.entries(controls))data[key]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;
       try {
         await requestTracker('/'+kind+(existing?'?record_id='+encodeURIComponent(existing.id):''),{method:'POST',json:data});
@@ -428,17 +522,25 @@ function mount(host,options={}) {
     const time=new Date().toTimeString().slice(0,5);
     const due=records.filter(record=>record.reminder&&!record.end&&(record.kind==='pill'
       ?daysBetween(currentDate(),record.start)>=0&&daysBetween(currentDate(),record.start)%(record.active+record.break_days)<record.active&&!record.doses.includes(currentDate())&&!(record.skipped||[]).includes(currentDate())&&time>=record.time
-      :record.kind==='larc'&&daysBetween(record.renewal,currentDate())<=record.notice));
+      :record.kind==='larc'?daysBetween(record.renewal,currentDate())<=record.notice
+      :Boolean(record.summary?.expected_today&&!record.summary.today_status&&(!record.time||time>=record.time))));
     reminders.replaceChildren();
     for(const record of due) {
       const banner=createElement('div',null,'tracker-reminder');
-      const text=createElement('span',record.name+(record.kind==='pill'?' is due':' renewal is due'));
+      const text=createElement('span',record.name+(record.kind==='larc'?' renewal is due':' is due'));
       const view=createButton('View',()=>{selectTab(record.kind);panel.focus();},'coach-button');banner.append(getDomHelpers().icon('clock'),text,view);reminders.append(banner);
     }
   }
-  selectTab(current);
   status.textContent='Loading tracking records';
-  load().then(()=>{status.textContent='';}).catch(error=>status.replaceChildren(createElement('span',error.message),createButton('Try again',()=>load().then(()=>{status.textContent='';}).catch(err=>{status.textContent=err.message;}))));
+  const ready=(async()=>{
+    const [kinds,preferences]=await Promise.all([getDomHelpers().api('/trackers/kinds'),
+      options.preferences?Promise.resolve(options.preferences):getDomHelpers().api('/health/preferences')]);
+    if(!host.isConnected)return;
+    buildTabs(kinds.kinds,preferences);
+    selectTab(Object.keys(trackerViews)[0]);
+    await load();
+  })();
+  ready.then(()=>{status.textContent='';}).catch(error=>status.replaceChildren(createElement('span',error.message),createButton('Try again',()=>load().then(()=>{status.textContent='';}).catch(err=>{status.textContent=err.message;}))));
   let day=currentDate();
   const timer=setInterval(()=>{
     if(!host.isConnected){clearInterval(timer);return;}
@@ -446,8 +548,8 @@ function mount(host,options={}) {
   },30000);
   mounted.set(host,()=>clearInterval(timer));
   return {
-    createPeriod:()=>{referenceDay=currentDate();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});panel.querySelector('.tracker-daily button[aria-pressed="true"]')?.focus();},
-    openRecord:async recordId=>{if(recordId.startsWith('day:')){referenceDay=recordId.slice(4);await load();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});return;}await load();const record=records.find(record=>record.id===recordId);if(record){selectTab(record.kind);openForm(record.kind,record);}},
+    createPeriod:async()=>{await ready;if(!trackerViews.period)return;referenceDay=currentDate();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});panel.querySelector('.tracker-daily button[aria-pressed="true"]')?.focus();},
+    openRecord:async recordId=>{await ready;if(recordId.startsWith('day:')){referenceDay=recordId.slice(4);await load();selectTab('period');panel.querySelector('.tracker-daily')?.scrollIntoView({block:'center'});return;}await load();const record=records.find(record=>record.id===recordId);if(record&&trackerViews[record.kind]){selectTab(record.kind);openForm(record.kind,record);}},
     destroy:()=>{clearInterval(timer);host.replaceChildren();},
   };
 }

@@ -15,7 +15,8 @@ html[data-theme='dark'] .dashboard-reproductive .dashboard-body {
 .tracker-navigation { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line-soft); }
 .tracker-tabs { display: flex; gap: var(--space-1); }
 .tracker-tab { border: 0; border-radius: var(--radius-control); min-height: var(--control-height); padding: var(--space-3) var(--space-4); background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
-.tracker-tab[aria-selected='true'] { background: var(--ink); color: var(--surface); }
+.tracker-tab[aria-selected='true'] { background: var(--block-fill); color: var(--block-ink); }
+.tracker-tabs[hidden] { display: none; }
 .tracker-panel { padding-top: var(--space-7); min-width: 0; }
 .tracker-panel[aria-busy='true'] { cursor: progress; }
 .tracker-workspace { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(0, 1.4fr); gap: var(--space-10); }
@@ -206,3 +207,33 @@ html[data-theme='dark'] .dashboard-reproductive .dashboard-body {
 .tracker-log-date { display:flex; flex-direction:column; gap: var(--space-compact); font-size:12px; color:var(--muted); min-width:0; }
 .tracker-log-date input { width:100%; min-width:0; box-sizing:border-box; font-size:16px; }
 @media(max-width:480px) { .tracker-daily-title { flex-wrap:wrap; } }
+
+/* Registry courses: today's dose, counts, a start-to-end track and calculated dates. */
+.tracker-course { display: grid; gap: var(--space-5); min-width: 0; }
+.tracker-course + .tracker-course { border-top: 1px solid var(--line-soft); padding-top: var(--space-7); margin-top: var(--space-7); }
+.tracker-course-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.tracker-course-today { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); }
+.tracker-course-today .tracker-dose-status { margin: 0; font-size: 16px; font-weight: 600; }
+.tracker-course .tracker-metrics { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.tracker-course-track { display: grid; gap: var(--space-2); }
+.tracker-course-bar { position: relative; height: 8px; margin-inline: var(--space-2); border-radius: var(--radius-pill); background: var(--line-soft); }
+.tracker-course-done { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--tracker-success); }
+.tracker-course-marker, .tracker-course-now { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; translate: -50% -50%; box-sizing: border-box; }
+.tracker-course-marker { border: 2px solid var(--ink); background: var(--surface); }
+.tracker-course-marker.is-calculated { border-color: var(--block-calculated-fill); }
+.tracker-course-marker.is-planned { background: var(--block-planned-fill); border-color: var(--block-planned-fill); }
+.tracker-course-now { width: 16px; height: 16px; border: 3px solid var(--tracker-success); background: var(--surface); }
+.tracker-course-labels { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--muted); font-size: 13px; }
+.tracker-course-upcoming { display: grid; margin: 0; padding: 0; list-style: none; }
+.tracker-course-upcoming li { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--line-soft); }
+.tracker-course-upcoming time { font-weight: 600; }
+.tracker-course-upcoming span:not(.status-block) { overflow-wrap: anywhere; }
+.tracker-course-source { justify-self: start; color: var(--ink); font-size: 14px; text-underline-offset: 3px; }
+.tracker-field[hidden] { display: none; }
+.tracker-field-label { display: block; }
+.tracker-field-hint { color: var(--muted); font-size: 13px; }
+.tracker-weekday { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); margin-right: var(--space-3); }
+@media (max-width: 560px) {
+  .tracker-course-upcoming li { grid-template-columns: minmax(0, 1fr) auto; }
+  .tracker-course-upcoming li span:not(.status-block) { grid-column: 1 / -1; grid-row: 2; }
+}

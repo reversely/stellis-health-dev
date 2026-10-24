@@ -19,7 +19,7 @@ try {
  await page.goto(origin);
  const root=page.locator('#health-dashboard');
  await root.getByText('Add your records to see your health overview',{exact:true}).waitFor();
- assert.deepEqual(await root.locator('.dashboard-section-head h2').allTextContents(),['Health Overview','Calendar','My Notebooks','Measurements','Cycle and contraception','Health History']);
+ assert.deepEqual(await root.locator('.dashboard-section-head h2').allTextContents(),['Health Overview','Calendar','My Notebooks','Measurements','Tracking','Health History']);
  await page.unroute('**/static/trends.js');
  assert.equal(await root.locator('.dashboard-measure').count(),3);
  assert.equal(await root.locator('.dashboard-measure time').count(),0);

@@ -1,6 +1,6 @@
 # 0086: Tracker registry and joined logging
 
-Status: proposed, 2026-10-24.
+Status: accepted, 2026-10-24. The registry and medicine courses shipped with #153; joined logging follows in #154 and pregnancy in #158.
 
 ## Context
 

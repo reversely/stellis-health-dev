@@ -47,11 +47,10 @@ class Dashboard {
       ['upcoming','Calendar',link('Calendar settings','/settings')],
       ['notebooks','My Notebooks',button('View all',()=>this.notebooks())],
       ['measurements','Measurements',link('View all','/trends')],
-      ['reproductive','Cycle and contraception',el('span')],
+      ['reproductive','Tracking',el('span')],
       ['history','Health History',link('Explore','/timeline')],
     ]) {
       const section = el('section',null,'dashboard-section dashboard-'+key+(key==='upcoming'?' dashboard-calendar':''));
-      if(key==='reproductive')section.hidden=true;
       const head = el('div',null,'dashboard-section-head');
       const titleNode = el('h2',title); titleNode.id = 'dashboard-'+key+'-title';
       section.setAttribute('aria-labelledby',titleNode.id); head.append(titleNode,action);
@@ -86,11 +85,12 @@ class Dashboard {
     const prefs = this.preferences || {notebooks:[],measurements:[],care_contexts:[]};
     this.overview();
     const periodsEnabled=this.data.healthPreferences?.experiences_periods===true;
-    const trackerHost=this.sections.get('reproductive');trackerHost.closest('section').hidden=!periodsEnabled;
-    this.tracker=periodsEnabled?root.StellisReproductive.mount(trackerHost,{onChange:()=>this.calendarView?.reload()}):null;
+    // Registry kinds gate themselves on preferences; medicine courses show for everyone.
+    this.tracker=root.StellisReproductive.mount(this.sections.get('reproductive'),
+      {preferences:this.data.healthPreferences||{},onChange:()=>this.calendarView?.reload()});
     const calendarHost=this.sections.get('upcoming');
     this.calendarView=root.StellisHealthCalendar.mount(calendarHost,{onSelectEvent:event=>{
-      if(event.source_type==='reproductive'&&this.tracker)this.tracker.openRecord(event.source_id);
+      if(['reproductive','tracker'].includes(event.source_type)&&this.tracker)this.tracker.openRecord(event.source_id);
       else if(event.target)location.href=event.target;
       else this.eventDetail({title:event.title,date:event.start||event.start_date,status:'Scheduled',source:event.kind,meeting:event.appointment});
     }});

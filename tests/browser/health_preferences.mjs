@@ -38,11 +38,12 @@ try {
   result.tracks=[...(result.tracks||[]),{id:'appointments',label:'Appointments',tone:'default'}];await route.fulfill({json:result});
  });
  await page.goto(origin);await page.locator('.health-calendar-month .calendar-month').waitFor();
- assert.equal(await page.locator('.dashboard-reproductive').isVisible(),false);
+ await page.locator('.dashboard-reproductive .tracker-panel').waitFor();
+ assert.equal(await page.locator('.dashboard-reproductive [role=tab]').filter({hasText:'Cycle'}).count(),0);
  assert.equal(await page.locator('.calendar-month:visible').count(),1);
  await settingsChoice('yes');
  await capture('health-settings','section[aria-labelledby="settings-health-title"]');
- await page.goto(origin);await page.locator('.dashboard-reproductive').waitFor();
+ await page.goto(origin);await page.locator('.dashboard-reproductive .tracker-tab').first().waitFor();await page.locator('.health-calendar-month .calendar-month').waitFor();
  assert.equal(await page.locator('.calendar-month:visible').count(),1);
  await page.getByRole('button',{name:'Log period',exact:true}).waitFor();
  const enabledFeed=await (await request.get(origin+'/api/v1/calendar/events'+calendarQuery)).json();
@@ -56,7 +57,8 @@ try {
  await settingsChoice('no');await page.reload();
  assert.equal(await page.getByLabel('Do you experience periods?',{exact:true}).inputValue(),'no');
  await page.goto(origin);await page.locator('.health-calendar-month .calendar-month').waitFor();
- assert.equal(await page.locator('.dashboard-reproductive').isVisible(),false);
+ await page.locator('.dashboard-reproductive .tracker-panel').waitFor();
+ assert.equal(await page.locator('.dashboard-reproductive [role=tab]').filter({hasText:'Cycle'}).count(),0);
  assert.equal(await page.getByRole('button',{name:'Log period',exact:true}).count(),0);
  assert.equal(await page.locator('.calendar-month:visible').count(),1);
  await page.locator('.health-calendar-event').filter({hasText:'Example appointment'}).waitFor();
@@ -85,7 +87,7 @@ try {
  await page.getByRole('button',{name:'Continue',exact:true}).click();
  await page.getByRole('heading',{name:'When is your birth date?',exact:true}).waitFor();
  assert.equal((await (await request.get(preferenceUrl)).json()).experiences_periods,true);
- await page.goto(origin);await page.locator('.dashboard-reproductive').waitFor();
+ await page.goto(origin);await page.locator('.dashboard-reproductive .tracker-tab').first().waitFor();await page.locator('.health-calendar-month .calendar-month').waitFor();
  assert.equal(await page.locator('.calendar-month:visible').count(),1);
  await capture('calendar-with-periods','.dashboard-calendar');
  assert.deepEqual(errors,[]);

@@ -12,7 +12,8 @@ try {
   await page.waitForFunction(()=>document.querySelector('.health-calendar-status')?.textContent==='');
   assert.equal(await page.locator('.calendar-month:visible').count(),1);
   assert.equal(await page.locator('#calendar-card').isVisible(),false);
-  assert.equal(await page.locator('.dashboard-reproductive').isVisible(),false);
+  await page.locator('.dashboard-reproductive .tracker-panel').waitFor();
+  assert.equal(await page.locator('.dashboard-reproductive [role=tab]').filter({hasText:'Cycle'}).count(),0);
   await page.evaluate(()=>{
     document.querySelector('#dashboard-tools').open=false;
     const records=[
