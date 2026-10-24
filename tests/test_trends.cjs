@@ -167,11 +167,11 @@ test('progress steps follow the capture stage', () => {
 test('a reading is described against the usual range', () => {
   const usual = {low: 60.2, high: 70.4};
   assert.equal(
-      pulse.usualText(64, usual), 'Within your usual range of 60 to 70');
+      pulse.usualText(64, usual), 'Within usual range of 60 to 70');
   assert.equal(
-      pulse.usualText(76, usual), 'Above your usual range of 60 to 70');
+      pulse.usualText(76, usual), 'Higher than usual: 60 to 70');
   assert.equal(
-      pulse.usualText(55, usual), 'Below your usual range of 60 to 70');
+      pulse.usualText(55, usual), 'Lower than usual: 60 to 70');
   assert.match(pulse.usualText(64, null), /few more readings/);
 });
 

@@ -21,9 +21,9 @@ const SPARK_POINTS = 12;
 const USUAL_MIN = 6;
 const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
 const STATUS = {
-  usual: 'Within your usual range',
-  above: 'Higher than your usual range',
-  below: 'Lower than your usual range',
+  usual: 'Within usual range',
+  above: 'Higher than usual',
+  below: 'Lower than usual',
 };
 const REFRESH_MS = 60000;
 // Non-breaking spaces keep "this week's goal!" on one line.
@@ -103,9 +103,9 @@ function contextText(measure) {
   const more = USUAL_MIN - measure.points.length;
   if (more > 0) {
     return `${WORDS[more] || more} more ${
-        more === 1 ? 'reading shows' : 'readings show'} your usual range`;
+        more === 1 ? 'reading shows' : 'readings show'} usual range`;
   }
-  return 'Your usual range appears with more recent readings';
+  return 'Usual range appears with more recent readings';
 }
 
 /** Overview source line for a reading. */

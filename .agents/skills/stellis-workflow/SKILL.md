@@ -32,3 +32,7 @@ Apply this skill to `/Users/slee/Repos/stellis-dev` or `reversely/stellis-dev`. 
 - A visible speaker name is not proof of a saved Person. For every Tag flow, assert a single Person row, the expected passage links, and the picker and Manage Speakers options after reload. Repeated tags of the same normalized name must reuse that identity; legacy passage labels with that name must be promoted together without changing other confirmed people.
 - Check every UI path that can name a speaker, including Manage Speakers and its detailed passage editor. A UI name write must create or reuse a Person through the canonical Tag API; the manual-label API remains for clearing legacy labels and technical overlays, not for a second naming workflow.
 - Reuse one Otter tab and one Stellis tab when possible; close agent-created duplicate tabs and test profiles. Preserve unrelated user browser tabs.
+
+## Measurement UI
+
+Use responsive measurement columns on desktop and one column on phones. Keep card edges and controls aligned. Table is an upper-right labelled switch that replaces the plot, not a Show table footer action. Use “Lower than usual”, “Higher than usual” and “Within usual range” throughout; omit the possessive from usual-range labels and hints. A standalone Dash/Mantine evaluation is not authorization to migrate the production frontend; preserve the existing service, account and demo boundaries until its documented pilot checks pass.

@@ -14,9 +14,9 @@ const RANGES = [
   {key: 'all', label: 'All', days: null},
 ];
 const STATUS_TEXT = {
-  usual: 'About your usual',
-  above: 'Higher than your usual',
-  below: 'Lower than your usual',
+  usual: 'Within usual range',
+  above: 'Higher than usual',
+  below: 'Lower than usual',
 };
 const STATUS_ICONS = {
   usual: 'check',
@@ -132,6 +132,7 @@ class TrendsPage {
     this.rangeKey = 'all';
     this.measures = [];
     this.charts = [];
+    this.tableMeasures = new Set();
     const head = dom.el('div', null, 'trends-head');
     head.append(dom.el('h2', 'Trends'));
     this.ranges = dom.el('div', null, 'trends-ranges');
@@ -208,12 +209,13 @@ class TrendsPage {
       if (definition.key === 'vitals' && camera) {
         head.append(camera.logButton(() => this.load(), this.measures, 'trend-add trend-camera'));
       }
-      group.append(head);
+      const body = this.dom.el('div', null, 'trend-group-body');
+      group.append(head, body);
       for (const measure of measures.filter(m => m.points.length)) {
-        group.append(this.card(measure, span, 'h4'));
+        body.append(this.card(measure, span, 'h4'));
       }
       const empty = measures.filter(m => !m.points.length);
-      if (empty.length) group.append(this.startCard(empty));
+      if (empty.length) body.append(this.startCard(empty));
       this.cards.append(group);
     }
   }
@@ -255,7 +257,9 @@ class TrendsPage {
     if (latest.source === 'camera') {
       whenLine.append(' ', dom.accuracyNote('camera'));
     }
-    head.append(title, figure, whenLine);
+    const top = dom.el('div', null, 'trend-card-top');
+    top.append(title);
+    head.append(top, figure, whenLine);
     if (measure.status in STATUS_TEXT) {
       const status = dom.el('p', null, `trend-status is-${measure.status}`);
       status.append(
@@ -264,7 +268,7 @@ class TrendsPage {
       head.append(status);
     } else if (measure.points.length < USUAL_HINT_READINGS) {
       head.append(dom.el(
-          'p', 'Your usual range appears after a few more readings',
+          'p', 'Usual range appears after a few more readings',
           'trend-status'));
     }
     card.append(head);
@@ -322,7 +326,7 @@ class TrendsPage {
       const item = dom.el('li');
       item.append(
           dom.el('span', null, 'trend-key is-usual'),
-          dom.el('span', 'Your usual'));
+          dom.el('span', 'Usual'));
       list.append(item);
     }
     return list;
@@ -341,15 +345,27 @@ class TrendsPage {
         cameraMeasure ? 'Log manually' : 'Add a reading',
         cameraMeasure ? 'trend-manual' : 'trend-add');
     add.dataset.log = measure.key;
-    const tableButton = dom.button('Show table', 'trend-table-toggle');
-    tableButton.setAttribute('aria-expanded', 'false');
+    const toggle = dom.el('label', null, 'trend-table-control');
+    const input = dom.el('input');
+    input.type = 'checkbox';
+    input.className = 'trend-table-input';
+    input.setAttribute('role', 'switch');
     const table = this.table(measure);
-    table.hidden = true;
-    tableButton.addEventListener('click', () => {
-      table.hidden = !table.hidden;
-      tableButton.textContent = table.hidden ? 'Show table' : 'Hide table';
-      tableButton.setAttribute('aria-expanded', String(!table.hidden));
+    table.id = `trend-table-${measure.key}`;
+    input.setAttribute('aria-controls', table.id);
+    toggle.append(dom.el('span', 'Table'), input, dom.el('span', null, 'trend-switch-track'));
+    toggle.lastChild.setAttribute('aria-hidden', 'true');
+    const update = () => {
+      input.checked = this.tableMeasures.has(measure.key);
+      table.hidden = !input.checked;
+      for (const node of card.querySelectorAll('.trend-plot, .trend-foot, .trend-empty')) node.hidden = input.checked;
+    };
+    input.addEventListener('change', () => {
+      if (input.checked) this.tableMeasures.add(measure.key);
+      else this.tableMeasures.delete(measure.key);
+      update();
     });
+    card.querySelector('.trend-card-top').append(toggle);
     add.addEventListener('click', () => {
       add.hidden = true;
       const form = this.form(measure, () => {
@@ -362,10 +378,11 @@ class TrendsPage {
       form.scrollIntoView({block: 'nearest', behavior: 'instant'});
     });
     if (!measure.points.length) {
-      tableButton.hidden = true;
+      toggle.hidden = true;
     }
-    row.append(add, tableButton);
+    row.append(add);
     card.append(row, table);
+    update();
   }
 
   /**

@@ -461,16 +461,16 @@ function stepStates(stage) {
  */
 function usualText(bpm, usual) {
   if (!usual) {
-    return 'Your usual range shows after a few more readings';
+    return 'Usual range shows after a few more readings';
   }
   const range = `${Math.round(usual.low)} to ${Math.round(usual.high)}`;
   if (bpm > usual.high) {
-    return `Above your usual range of ${range}`;
+    return `Higher than usual: ${range}`;
   }
   if (bpm < usual.low) {
-    return `Below your usual range of ${range}`;
+    return `Lower than usual: ${range}`;
   }
-  return `Within your usual range of ${range}`;
+  return `Within usual range of ${range}`;
 }
 
 /**

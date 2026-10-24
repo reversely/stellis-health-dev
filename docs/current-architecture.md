@@ -744,3 +744,11 @@ After a notebook answer, `notebook_chat.unread` searches the ready sources of ot
 ## Demo scene dock
 
 In the Maya demo workspace, `maya-scenes.js` reads `scenes` from `static/maya/story.json`. Each scene has a label, date, title, description, tags, a target described as data (a demo document by corpus ID and year, a notebook by name and tab, or My Health) and a focus selector. A bottom dock shows back, next and one numbered button per scene (the current one a colour block); a card above it shows the scene's date, title, description and tags and can be hidden. Choosing a scene resolves its target against the live demo workspace, opens the real view and highlights the focus element; a target that does not exist yet says what to do first. The dock never shows outside the demo workspace.
+
+## Optional Dash frontend evaluation (2026-10-24)
+
+The shipped frontend remains the JavaScript application. Trends now uses responsive desktop measurement columns and an upper-right Table switch. No Dash package is required by the production server or its lockfile.
+
+`scripts/dash_trends_preview.py` is a separate, local-only Dash/Mantine comparison using synthetic values and the existing measurement definitions/usual-range helper. It creates a native FastAPI backend and uses Mantine layout, switches, tables and form controls with Plotly charts. Its pinned optional environment is in `scripts/dash-trends-requirements.txt`; it neither reads account databases nor replaces `/trends`.
+
+A proposed account-local Trends pilot, including session/demo scoping, callback/WebSocket routing, shared navigation, saved readings, source/logging parity and performance checks, is documented in [the evaluation](../plans/dash-trends-evaluation.md). These integration checks remain unverified; a standalone screenshot does not establish production isolation or feature parity.

@@ -26,11 +26,11 @@ test('frequency, reminder times and overview context read as plain sentences', (
   assert.equal(goals.clockText('20:00'), '8:00 pm');
   assert.equal(goals.clockText('07:30'), '7:30 am');
   assert.equal(goals.clockText('00:15'), '12:15 am');
-  assert.equal(goals.contextText({status: 'usual', points: []}), 'Within your usual range');
+  assert.equal(goals.contextText({status: 'usual', points: []}), 'Within usual range');
   assert.equal(goals.contextText({status: 'unknown', points: [{}, {}, {}, {}]}),
-               'Two more readings show your usual range');
+               'Two more readings show usual range');
   assert.equal(goals.contextText({status: 'unknown', points: [{}, {}, {}, {}, {}]}),
-               'One more reading shows your usual range');
+               'One more reading shows usual range');
 });
 
 test('Trends charts a sleep total per day and keeps the entries', () => {
