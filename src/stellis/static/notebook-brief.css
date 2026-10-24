@@ -65,7 +65,7 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-coming-text { display: grid; gap: var(--space-1); min-width: 0; }
 .brief-coming-text strong { font-size: 17px; font-weight: 650; overflow-wrap: anywhere; }
 .brief-coming-text p { overflow-wrap: anywhere; margin: 0; color: var(--muted); font-size: 15px; }
-.brief-coming-source, .brief-level-source, .brief-facts-list a { color: var(--ink); font-size: 14px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.brief-coming-source, .brief-level-source, .brief-facts-list a { color: var(--link-ink); font-size: 14px; text-underline-offset: 3px; overflow-wrap: anywhere; }
 
 .brief-ranges { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border-radius: var(--radius-control); background: var(--raised); }
 .brief-range { min-height: var(--control-height); padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--radius-small); background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }

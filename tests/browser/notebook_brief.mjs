@@ -61,7 +61,7 @@ try {
       a.y < b.y + b.height && a.y + a.height > b.y;
   for (const theme of ['light', 'dark']) for (const width of [1280, 390]) {
     await page.setViewportSize({width, height: 1000});
-    await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
+    await page.evaluate(t => { document.documentElement.classList.add('theme-swapping'); document.documentElement.dataset.theme = t; }, theme);
     await levels.locator('.brief-level-card').first().click();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${theme} ${width} overflow`);
     const currentDay = top.locator('.brief-day[aria-current]');

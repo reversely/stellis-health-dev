@@ -56,12 +56,15 @@
   --flow-colour: #ff6351;
   --brand-slate: #495575;
   --brand-teal: #547980;
+  --brand-mauve: #413A48;
+  --brand-aqua: #45ADA8;
   --overlay-dim: oklch(0 0 0 / .6);
   --overlay-media-dim: oklch(0 0 0 / .55);
   --overlay-caption-dim: oklch(0 0 0 / .72);
-  --data-series-light: oklch(.6 .1 200);
-  --data-series-dark: oklch(.72 .105 196);
+  --data-series-light: var(--source-focus);
+  --data-series-dark: var(--brand-aqua);
   --data-series: var(--data-series-light);
+  --link-ink: var(--source-focus);
   --camera-series-dark: oklch(.64 .105 196);
   --media-surface: #382C42;
   --media-stage: #302638;
@@ -76,8 +79,8 @@
   --overlay-shadow: 0 18px 48px oklch(0 0 0 / .35);
   --cycle-light: oklch(.47 .09 355);
   --cycle-dark: oklch(.8 .075 355);
-  --tracker-success-light: oklch(.4 .065 175);
-  --tracker-success-dark: oklch(.8 .07 175);
+  --tracker-success-light: var(--data-series-light);
+  --tracker-success-dark: var(--data-series-dark);
   --pillar-records-colour: oklch(.62 .1 196);
   --pillar-questions-colour: oklch(.6 .12 290);
   --pillar-goals-colour: oklch(.7 .13 70);
@@ -130,7 +133,7 @@
   --input: var(--rail-input);
   --line: var(--rail-line);
   --line-soft: #51415C;
-  --ink: #fff8ff;
+  --ink: var(--rail-ink);
   --muted: #DED5DE;
   --quiet: #C4B6C6;
   --accent: #FFFFFF;
@@ -145,8 +148,8 @@
   --focus: #FFFFFF;
   --shadow: 0 16px 38px #2B2630A0;
   /* Colour blocks carry inverted ink: a light block with dark ink on dark pages. */
-  --block-fill: var(--accent);
-  --block-ink: var(--accent-ink);
+  --block-fill: var(--ink);
+  --block-ink: var(--surface);
   --block-muted: #5B5260;
   --block-alert-fill: #FFB4AE;
   --block-alert-ink: #3B1012;
@@ -899,29 +902,29 @@ html[data-theme='light'] {
   --warning-bg: #fff5df;
   --success: var(--paper-success);
   --failure: var(--paper-failure);
-  --field: var(--rail-ink);
-  --surface: #ffffff;
+  --field: var(--paper-surface);
+  --surface: var(--paper-surface);
   --raised: #EFEFEE;
   --input: #ffffff;
   --line: var(--paper-line);
   --line-soft: var(--paper-line-soft);
-  --ink: #2A252F;
-  --muted: #635B65;
+  --ink: var(--paper-ink);
+  --muted: var(--paper-muted);
   --quiet: #605465;
-  --accent: #4E4357;
-  --accent-strong: #42374D;
+  --accent: var(--brand-mauve);
+  --accent-strong: color-mix(in srgb, var(--accent) 88%, var(--paper-ink));
   --accent-ink: #ffffff;
   --selected: #e5efed;
   --selection: #c8dcd7;
-  --focus: #4E4357;
+  --focus: var(--source-focus);
   --shadow: 0 16px 38px #2A252F1c;
   --waveform: #335C63;
-  --check-bg: #4E4357;
-  --check-ink: #ffffff;
+  --check-bg: var(--ink);
+  --check-ink: var(--surface);
   --speaker-auto: #7A6E7C;
   /* Colour blocks carry inverted ink: a dark block with light ink on light pages. */
-  --block-fill: var(--accent);
-  --block-ink: var(--accent-ink);
+  --block-fill: var(--ink);
+  --block-ink: var(--surface);
   --block-muted: #E4DCE8;
   --block-alert-fill: var(--paper-failure);
   --block-alert-ink: #FFFFFF;
@@ -935,13 +938,14 @@ html[data-theme='light'] {
 }
 html[data-theme='dark'] {
   --data-series: var(--data-series-dark);
+  --link-ink: var(--brand-aqua);
   --field: #302638;
   --surface: #382C42;
   --raised: var(--rail-control);
   --input: var(--rail-input);
   --line: #605465;
   --line-soft: #51415C;
-  --ink: #fff8ff;
+  --ink: var(--rail-ink);
   --muted: #DED5DE;
   --quiet: #C4B6C6;
   --accent: #FFFFFF;
@@ -952,12 +956,12 @@ html[data-theme='dark'] {
   --focus: #FFFFFF;
   --shadow: 0 16px 38px #2B2630A0;
   --waveform: #335C63;
-  --check-bg: #fff8ff;
-  --check-ink: #4E4357;
+  --check-bg: var(--ink);
+  --check-ink: var(--surface);
   --speaker-auto: #A99BAB;
   /* Colour blocks carry inverted ink: a light block with dark ink on dark pages. */
-  --block-fill: var(--accent);
-  --block-ink: var(--accent-ink);
+  --block-fill: var(--ink);
+  --block-ink: var(--surface);
   --block-muted: #5B5260;
   --block-alert-fill: #FFB4AE;
   --block-alert-ink: #3B1012;
@@ -1416,7 +1420,8 @@ body:has(#vocabulary-panel:not([hidden])) .heading { display: none; }
 .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 body.settings-page .heading, body.notebook-page .heading, body.todos-page .heading, body.note-page .heading { display: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.icon { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon { color: inherit; flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon use { color: inherit; stroke: currentColor; }
 .icon-button {
   display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0;
   border: 0; border-radius: var(--radius-control); background: transparent; color: var(--muted); cursor: pointer;
@@ -2601,9 +2606,9 @@ html[data-theme='dark'] {
   --action-disabled-ink: var(--control-disabled-ink);
   --action-danger-fill: #654654;
   --action-danger-ink: var(--rail-ink);
-  --paper-action-fill: #4E4357;
+  --paper-action-fill: var(--brand-mauve);
   --paper-action-ink: #FFFFFF;
-  --paper-action-hover: #42374D;
+  --paper-action-hover: color-mix(in srgb, var(--paper-action-fill) 88%, var(--paper-ink));
   --paper-control-fill: #F0ECEF;
   --paper-control-ink: #635B65;
 }
@@ -2760,9 +2765,9 @@ html[data-theme='dark'] :is(.coach-button, :is(.trend-card, .trend-untracked) .t
   border-radius: var(--action-radius);
 }
 html[data-theme='dark'] .auth-card {
-  --action-fill: var(--accent);
-  --action-ink: var(--accent-ink);
-  --action-hover: var(--accent-strong);
+  --action-fill: var(--paper-action-fill);
+  --action-ink: var(--paper-action-ink);
+  --action-hover: var(--paper-action-hover);
   --action-disabled-fill: #BBB8BF;
   --action-disabled-ink: #514B55;
   box-shadow: none;
@@ -2779,7 +2784,7 @@ html[data-theme='dark'] .auth-card {
 
 /* White glass overlays sit above page content, with dark text for contrast. */
 html[data-theme='dark'] :is(dialog:not([data-stage='live']), .more-menu-items, .coach-call) {
-  --ink: #2A252F;
+  --ink: var(--paper-ink);
   --muted: #514B55;
   --quiet: #514B55;
   --surface: var(--rail-ink);
@@ -2788,9 +2793,9 @@ html[data-theme='dark'] :is(dialog:not([data-stage='live']), .more-menu-items, .
   --line: #9B949F;
   --line-soft: #BBB5BF;
   --selected: #D8D3DC;
-  --focus: #4E4357;
+  --focus: var(--source-focus);
   /* Blocks on light glass take the light-page pairing: dark fill, light ink. */
-  --block-fill: #4E4357;
+  --block-fill: var(--paper-ink);
   --block-ink: #FFFFFF;
   --block-muted: #E4DCE8;
   --block-alert-fill: var(--paper-failure);
@@ -2802,9 +2807,9 @@ html[data-theme='dark'] :is(dialog:not([data-stage='live']), .more-menu-items, .
   --block-planned-fill: var(--brand-slate);
   --block-planned-ink: #FFFFFF;
   /* Primary actions on light glass are dark blocks too, not white on white. */
-  --action-fill: var(--block-fill);
-  --action-ink: var(--block-ink);
-  --action-hover: #42374D;
+  --action-fill: var(--paper-action-fill);
+  --action-ink: var(--paper-action-ink);
+  --action-hover: var(--paper-action-hover);
   background: var(--glass-fill);
   color: var(--ink);
   border-color: var(--glass-line);
@@ -2842,7 +2847,9 @@ html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page'])
   .document-actions a, .facts button:not(.facts-find),
   .chat-file button, .chat-attach, .calendar-card button,
   .trend-untracked .trend-manual, .trend-card .trend-manual, .trend-card .trend-table-toggle, :is(.trend-card, .trend-untracked) .trend-cancel,
-  .notebook-work-actions button, .agent-composer-actions .agent-attach) {
+  .notebook-work-actions button, .agent-composer-actions .agent-attach,
+  .notebook-chat button:not(.nb-sources-toggle, .nb-source-open, .nb-viewer-segment, [type='submit']),
+  .nb-viewer > .nb-viewer-open) {
   min-height: var(--control-height);
   padding: var(--control-padding-block) var(--control-padding-inline);
   gap: var(--control-gap);
@@ -2858,7 +2865,9 @@ html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page'])
     .document-actions a, .facts button:not(.facts-find),
     .chat-file button, .chat-attach, .calendar-card button,
     .trend-untracked .trend-manual, .trend-card .trend-manual, .trend-card .trend-table-toggle, :is(.trend-card, .trend-untracked) .trend-cancel,
-    .notebook-work-actions button, .agent-composer-actions .agent-attach):enabled:hover {
+    .notebook-work-actions button, .agent-composer-actions .agent-attach,
+  .notebook-chat button:not(.nb-sources-toggle, .nb-source-open, .nb-viewer-segment, [type='submit']),
+  .nb-viewer > .nb-viewer-open):enabled:hover {
     background: var(--secondary-hover);
     color: var(--secondary-ink);
   }
@@ -2867,7 +2876,9 @@ html[data-theme='dark'] .auth-card .auth-modes button:not([aria-current='page'])
 :root :is(.document-actions button:not(.invert-button), .facts button:not(.facts-find),
   .chat-file button, .chat-attach, .calendar-card button,
   .trend-untracked .trend-manual, .trend-card .trend-manual, .trend-card .trend-table-toggle, :is(.trend-card, .trend-untracked) .trend-cancel,
-  .notebook-work-actions button, .agent-composer-actions .agent-attach):disabled {
+  .notebook-work-actions button, .agent-composer-actions .agent-attach,
+  .notebook-chat button:not(.nb-sources-toggle, .nb-source-open, .nb-viewer-segment, [type='submit']),
+  .nb-viewer > .nb-viewer-open):disabled {
   background: var(--secondary-disabled-fill);
   color: var(--secondary-disabled-ink);
   border-color: transparent;

@@ -1,0 +1,32 @@
+[
+  {
+    "theme": "light",
+    "width": 1280,
+    "result": "passed"
+  },
+  {
+    "theme": "light",
+    "width": 390,
+    "result": "passed"
+  },
+  {
+    "theme": "dark",
+    "width": 1280,
+    "result": "passed"
+  },
+  {
+    "theme": "dark",
+    "width": 390,
+    "result": "passed"
+  },
+  {
+    "theme": "light",
+    "surface": "auth",
+    "result": "passed"
+  },
+  {
+    "theme": "dark",
+    "surface": "auth",
+    "result": "passed"
+  }
+]

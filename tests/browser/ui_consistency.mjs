@@ -54,7 +54,7 @@ try {
       await page.locator('.coach-goal').first().waitFor({state:'attached'});
       await page.locator('#dashboard-tools').evaluate(n=>n.open=true);
     } else if (route==='/trends') await page.locator('.trend-card').first().waitFor();
-    else if (route==='/records') await page.locator('.records-row').first().waitFor();
+    else if (route==='/records') await page.locator('.records-row, .records-empty').first().waitFor();
     else if (route==='/summary') await page.locator('.summary-body > *').first().waitFor();
     else if (route==='/timeline') await page.waitForFunction(()=>document.querySelector('.timeline-years')?.children.length || document.querySelector('.timeline-status')?.textContent.length);
     else if (route==='/todos') await page.locator('#todos-view .todo-empty, #todos-view .list-widget-rows').first().waitFor();

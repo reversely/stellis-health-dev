@@ -43,3 +43,7 @@ html[data-input='keyboard'] .rail-toggle .icon { transition: none; }
 .notebooks-drawer[open] { display: flex; flex-direction: column; }
 .drawer-head, #notebooks-drawer-status { flex: 0 0 auto; }
 #notebooks-drawer-body { min-height: 0; overflow-y: auto; }
+
+@media (max-width: 1000px) {
+  html[data-theme='dark'] #compact-nav { background: var(--rail-surface); }
+}

@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: answerParts splits paragraphs and keeps unknown markers as text
+ok 1 - answerParts splits paragraphs and keeps unknown markers as text
+  ---
+  duration_ms: 0.89258
+  type: 'test'
+  ...
+# Subtest: answerMarkdown numbers the text and links each source
+ok 2 - answerMarkdown numbers the text and links each source
+  ---
+  duration_ms: 0.137617
+  type: 'test'
+  ...
+# Subtest: sourceTarget turns a typed source ID into its app link
+ok 3 - sourceTarget turns a typed source ID into its app link
+  ---
+  duration_ms: 0.111905
+  type: 'test'
+  ...
+# Subtest: parseTarget reads app links and refuses everything else
+ok 4 - parseTarget reads app links and refuses everything else
+  ---
+  duration_ms: 0.284705
+  type: 'test'
+  ...
+# Subtest: uploadKind routes audio and documents and refuses other files
+ok 5 - uploadKind routes audio and documents and refuses other files
+  ---
+  duration_ms: 0.142912
+  type: 'test'
+  ...
+# Subtest: candidates leaves out this notebook and sorts newest first
+ok 6 - candidates leaves out this notebook and sorts newest first
+  ---
+  duration_ms: 4.759075
+  type: 'test'
+  ...
+# Subtest: document helpers describe the file and link to a PDF page
+ok 7 - document helpers describe the file and link to a PDF page
+  ---
+  duration_ms: 0.090065
+  type: 'test'
+  ...
+# Subtest: health fact helpers format values and split by status
+ok 8 - health fact helpers format values and split by status
+  ---
+  duration_ms: 0.085809
+  type: 'test'
+  ...
+# Subtest: timeline helpers group by year and format short dates
+ok 9 - timeline helpers group by year and format short dates
+  ---
+  duration_ms: 0.324465
+  type: 'test'
+  ...
+# Subtest: records helpers link records and keep checked group items
+ok 10 - records helpers link records and keep checked group items
+  ---
+  duration_ms: 0.364642
+  type: 'test'
+  ...
+# Subtest: summary sections split headings and cited paragraphs
+ok 11 - summary sections split headings and cited paragraphs
+  ---
+  duration_ms: 0.252289
+  type: 'test'
+  ...
+# Subtest: isHexColour accepts only \#RRGGBB
+ok 12 - isHexColour accepts only \#RRGGBB
+  ---
+  duration_ms: 0.868003
+  type: 'test'
+  ...
+# Subtest: inkFor picks the higher-contrast house ink
+ok 13 - inkFor picks the higher-contrast house ink
+  ---
+  duration_ms: 0.383938
+  type: 'test'
+  ...
+# Subtest: custom notebook backgrounds keep normal text contrast at least 4.5:1
+ok 14 - custom notebook backgrounds keep normal text contrast at least 4.5:1
+  ---
+  duration_ms: 23.96018
+  type: 'test'
+  ...
+# Subtest: countTodos sums open and done per source
+ok 15 - countTodos sums open and done per source
+  ---
+  duration_ms: 0.893476
+  type: 'test'
+  ...
+# Subtest: buildItems merges meetings and notes newest first with tags and counts
+ok 16 - buildItems merges meetings and notes newest first with tags and counts
+  ---
+  duration_ms: 9.035942
+  type: 'test'
+  ...
+# Subtest: latestSummary takes the newest meeting with an overview, unmodified
+ok 17 - latestSummary takes the newest meeting with an overview, unmodified
+  ---
+  duration_ms: 0.386594
+  type: 'test'
+  ...
+# Subtest: document entries appear in Records and retain their recorded dates
+ok 18 - document entries appear in Records and retain their recorded dates
+  ---
+  duration_ms: 0.203729
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 82.094215

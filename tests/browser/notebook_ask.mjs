@@ -54,7 +54,7 @@ try {
   for (const width of [1440, 1280, 390]) {
     for (const theme of ['light', 'dark']) {
       await page.setViewportSize({width, height: 1000});
-      await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
+      await page.evaluate(t => { document.documentElement.classList.add('theme-swapping'); document.documentElement.dataset.theme = t; }, theme);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
           `${width} ${theme}: no horizontal overflow`);
       assert.equal(await viewer.evaluate(el => getComputedStyle(el).position),
@@ -66,16 +66,16 @@ try {
     }
   }
   await page.setViewportSize({width: 1440, height: 1000});
-  await page.evaluate(() => document.documentElement.dataset.theme = 'light');
+  await page.evaluate(() => { document.documentElement.classList.add('theme-swapping'); document.documentElement.dataset.theme = 'light'; });
   await viewer.getByRole('button', {name: 'Close source'}).click();
   for (const theme of ['light', 'dark']) {
     await page.setViewportSize({width: 390, height: 1000});
-    await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
+    await page.evaluate(t => { document.documentElement.classList.add('theme-swapping'); document.documentElement.dataset.theme = t; }, theme);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     if (evidence) await page.screenshot({path: `${evidence}/notebook-chat-390-${theme}.png`});
   }
   await page.setViewportSize({width: 1440, height: 1000});
-  await page.evaluate(() => document.documentElement.dataset.theme = 'light');
+  await page.evaluate(() => { document.documentElement.classList.add('theme-swapping'); document.documentElement.dataset.theme = 'light'; });
 
   // Including the other notebook reads it for one question; that answer names nothing unread.
   await answer.locator('.nb-follow-chip').click();
@@ -105,7 +105,7 @@ try {
   await page.locator('#notebook-items-table').getByText('drop-test', {exact: false}).first().waitFor();
   for (const [theme, width] of [['dark', 390]]) {
     await page.setViewportSize({width, height: 1000});
-    await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
+    await page.evaluate(t => { document.documentElement.classList.add('theme-swapping'); document.documentElement.dataset.theme = t; }, theme);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     if (evidence) await zone.screenshot({path: `${evidence}/drop-${width}-${theme}.png`});
   }
