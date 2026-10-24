@@ -64,10 +64,11 @@ def derived_events(first_date, last_date, current_date=None):
     """Calculated and planned dates from registered kinds outside the cycle gate."""
     today = date.fromisoformat(current_date) if current_date else None
     result = []
-    for record in trackers.list_records(kinds_filter=('medicine',), today=today):
+    for record in trackers.list_records(kinds_filter=('medicine', 'pregnancy'), today=today):
         for item in record['summary']['derived']:
             result.append({'id': f"derived:{record['id']}:{item['key']}", 'source_id': record['id'],
-                           'source_type': 'tracker', 'kind': 'derived', 'track_id': 'medicines',
+                           'source_type': 'tracker', 'kind': 'derived',
+                           'track_id': 'medicines' if record['kind'] == 'medicine' else 'pregnancy',
                            'title': item['title'], 'date_status': item['status'].capitalize(),
                            'start_date': item['date'], 'end_date': item['date'],
                            'notebook_id': record['notebook_id'], 'all_day': True})
@@ -83,6 +84,7 @@ TRACKS = (
     {'id': 'periods', 'label': 'Periods', 'tone': 'cycle'},
     {'id': 'renewals', 'label': 'Device renewals', 'tone': 'accent'},
     {'id': 'medicines', 'label': trackers.KINDS['medicine'].plural, 'tone': 'accent'},
+    {'id': 'pregnancy', 'label': trackers.KINDS['pregnancy'].plural, 'tone': 'accent'},
 )
 
 

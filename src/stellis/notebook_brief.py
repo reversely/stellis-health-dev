@@ -125,14 +125,27 @@ def _course_detail(record, item):
             f"from {dt.date.fromisoformat(record['start']):%B %-d}. {allowed}.")
 
 
-def coming_up(notebook_id, today, courses) -> list[dict]:
-    """Pending items only: calculated course dates and care events from today on."""
+def _source(record):
+    if not record.get('source_document_id'):
+        return None
+    page = record['source_page']
+    return {'title': record['source_title'] + (f', page {page}' if page else ''),
+            'target': f"/document/{record['source_document_id']}" + (f'?page={page}' if page else '')}
+
+
+def coming_up(notebook_id, today, courses, pregnancy=None) -> list[dict]:
+    """Pending items only: calculated course dates, pregnancy dates and care events from today on.
+
+    A booked birth ends the pending timeline there; the due date stays for reference.
+    """
     items = []
+    if pregnancy:
+        for item in pregnancy['summary']['derived']:
+            if item['date'] >= today.isoformat():
+                items.append({'date': item['date'], 'precision': 'day', 'title': item['title'], 'detail': item['detail'],
+                              'status': item['status'], 'source': _source(pregnancy)})
     for record in courses:
-        source = ({'title': record['source_title'] + (f", page {record['source_page']}" if record['source_page'] else ''),
-                   'target': f"/document/{record['source_document_id']}" +
-                             (f"?page={record['source_page']}" if record['source_page'] else '')}
-                  if record.get('source_document_id') else None)
+        source = _source(record)
         for item in record['summary']['derived']:
             if item['date'] >= today.isoformat():
                 items.append({'date': item['date'], 'precision': 'day', 'title': item['title'],
@@ -145,11 +158,14 @@ def coming_up(notebook_id, today, courses) -> list[dict]:
             items.append({'date': when.isoformat(), 'precision': 'month' if planned else 'day',
                           'title': event['title'], 'detail': detail, 'status': event['status'],
                           'source': {'title': 'Appointment details', 'target': event['target']}})
+    ends = (pregnancy or {}).get('booked_birth')
+    if ends:
+        items = [item for item in items if item['date'] <= ends or item['status'] == 'due']
     return sorted(items, key=lambda item: item['date'])
 
 
-def strip(today, courses) -> list[dict]:
-    """Days around today with each course's logged or expected dose."""
+def strip(today, courses, pending=()) -> list[dict]:
+    """Days around today with each course's logged or expected dose and each pending event."""
     days = []
     for offset in range(-STRIP_BEFORE, STRIP_AFTER + 1):
         day = today + dt.timedelta(days=offset)
@@ -161,6 +177,9 @@ def strip(today, courses) -> list[dict]:
                 marks.append({'record_id': record['id'], 'state': logged})
             elif kind.expected(record, day):
                 marks.append({'record_id': record['id'], 'state': 'expected' if day >= today else 'missed'})
+        for item in pending:
+            if item['date'] == day.isoformat() and item['precision'] == 'day':
+                marks.append({'event': item['title'], 'state': 'event', 'status': item['status']})
         days.append({'date': day.isoformat(), 'today': offset == 0, 'marks': marks})
     return days
 
@@ -174,10 +193,14 @@ def brief(notebook_id: str, today: dt.date | None = None) -> dict:
     if not notebooks.exists(notebook_id):
         raise LookupError('Notebook not found')
     today = today or dt.date.today()
-    courses = [record for record in trackers.list_records(notebook_id=notebook_id, today=today)
-               if trackers.KINDS[record['kind']].logs and record['kind'] != 'pill']
+    records = trackers.list_records(notebook_id=notebook_id, today=today)
+    courses = [record for record in records if trackers.KINDS[record['kind']].logs and record['kind'] != 'pill']
+    # The latest pregnancy that still has something ahead.
+    pregnancies = [record for record in records if record['kind'] == 'pregnancy'
+                   and max(item['date'] for item in record['summary']['derived']) >= today.isoformat()]
+    pregnancy = max(pregnancies, key=lambda record: record['summary']['pregnancy']['start'], default=None)
     treatments = [{'name': record['name'], 'start': record['start'], 'end': record.get('end') or None}
                   for record in courses]
-    return {'today': today.isoformat(), 'strip': strip(today, courses), 'courses': courses,
-            'coming_up': coming_up(notebook_id, today, courses), 'levels': levels(notebook_id),
-            'treatments': treatments}
+    pending = coming_up(notebook_id, today, courses, pregnancy)
+    return {'today': today.isoformat(), 'strip': strip(today, courses, pending), 'courses': courses,
+            'pregnancy': pregnancy, 'coming_up': pending, 'levels': levels(notebook_id), 'treatments': treatments}

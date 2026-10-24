@@ -108,3 +108,29 @@ def test_notebook_readings_are_levels_too():
 def test_unknown_notebook():
     with pytest.raises(LookupError):
         notebook_brief.brief('missing', TODAY)
+
+
+def test_pregnancy_brief_is_pending_only_and_ends_at_a_booked_birth():
+    book = notebooks.create('Pregnancy')['id']
+    today = dt.date(2025, 7, 25)
+    record = trackers.save('pregnancy', dict(dating_basis='transfer', basis_date='2024-11-15', embryo_day=5,
+                                             notebook_id=book))
+    care_events.add('Review if the baby has not arrived', '2025-07-31T09:00:00+00:00', 'scheduled', book)
+    care_events.add('Postnatal check', '2025-08-20T09:00:00+00:00', 'scheduled', book)
+    care_events.add('Earlier scan', '2025-07-01T09:00:00+00:00', 'scheduled', book)
+    result = notebook_brief.brief(book, today)
+    assert result['pregnancy']['id'] == record['id']
+    assert [item['title'] for item in result['coming_up']] == [
+        'Review if the baby has not arrived', 'Due date', 'Postnatal check']
+    days = {day['date']: day['marks'] for day in result['strip']}
+    assert days['2025-07-31'] == [{'event': 'Review if the baby has not arrived', 'state': 'event', 'status': 'scheduled'}]
+    assert days['2025-08-03'] == [{'event': 'Due date', 'state': 'event', 'status': 'due'}]
+    trackers.save('pregnancy', {**record, 'booked_birth': '2025-07-30'}, record['id'])
+    titles = [item['title'] for item in notebook_brief.brief(book, today)['coming_up']]
+    assert titles == ['Booked birth', 'Due date']
+
+
+def test_a_finished_pregnancy_leaves_the_brief():
+    book = notebooks.create('Pregnancy')['id']
+    trackers.save('pregnancy', dict(dating_basis='last_period', basis_date='2023-01-01', notebook_id=book))
+    assert notebook_brief.brief(book, dt.date(2025, 7, 25))['pregnancy'] is None

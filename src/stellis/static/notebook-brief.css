@@ -60,6 +60,7 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-coming-date { font-weight: 650; }
 .brief-coming-dot { width: 10px; height: 10px; margin-top: 6px; box-sizing: border-box; border: 2px solid var(--ink); border-radius: 50%; }
 .brief-coming-dot.is-calculated { border-color: var(--block-calculated-fill); background: var(--block-calculated-fill); }
+.brief-coming-dot.is-due { border-color: var(--block-alert-fill); background: var(--block-alert-fill); }
 .brief-coming-text { display: grid; gap: var(--space-1); min-width: 0; }
 .brief-coming-text strong { font-size: 17px; font-weight: 650; overflow-wrap: anywhere; }
 .brief-coming-text p { margin: 0; color: var(--muted); font-size: 15px; }
@@ -120,3 +121,18 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
   .brief-coming-dot { grid-row: 2; }
   .brief-level-panel { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'title' 'chart' 'facts'; padding: var(--space-4); }
 }
+
+/* Pregnancy: pending events on the strip, weeks and due date, and the booked birth card. */
+.brief-dot.is-event { border: 2px solid var(--ink); background: var(--surface); }
+.brief-dot.is-event.is-due { border-color: var(--block-alert-fill); background: var(--block-alert-fill); }
+.brief-gestation { margin: var(--space-3) 0 0; color: var(--brief-dose); font-size: 14px; font-weight: 700; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.brief-pregnancy-weeks { padding-left: 0; border-left: 0; }
+.brief-coming-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); align-items: start; gap: var(--space-6); }
+.brief-birth-wrap { display: grid; gap: var(--space-3); }
+.brief-birth { display: grid; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--line-soft); border-radius: var(--radius-panel); background: var(--surface); }
+.brief-birth h3 { margin: 0; font-size: 18px; font-weight: 650; }
+.brief-birth p, .brief-birth-note { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.brief-birth-field { display: grid; gap: var(--space-2); font-weight: 650; font-size: 14px; }
+.brief-birth-field input { min-height: var(--control-height); font-size: 16px; }
+.brief-birth-status:empty { display: none; }
+@media (max-width: 900px) { .brief-coming-wrap { grid-template-columns: minmax(0, 1fr); } }

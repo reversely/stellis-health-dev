@@ -210,6 +210,66 @@ def _validate_course(data, record_id, conn):
     return clean
 
 
+DATING = {'last_period': 'First day of last period', 'transfer': 'Embryo transfer', 'ultrasound': 'Dating ultrasound'}
+# Days from the gestational start to the due date, and from conception to a transfer by embryo age.
+PREGNANCY_DAYS = 280
+CONCEPTION_DAY = 14
+
+
+def pregnancy_start(record) -> dt.date:
+    """The gestational start (first day of the last period, or its equivalent)."""
+    basis = date(record['basis_date'])
+    if record['dating_basis'] == 'transfer':
+        return basis - dt.timedelta(days=CONCEPTION_DAY + record['embryo_day'])
+    if record['dating_basis'] == 'ultrasound':
+        return basis - dt.timedelta(days=record['scan_weeks'] * 7 + record['scan_days'])
+    return basis
+
+
+def _validate_pregnancy(data, record_id, conn):
+    basis = data.get('dating_basis')
+    if basis not in DATING:
+        raise ValueError('Choose how the pregnancy is dated')
+    if not data.get('basis_date'):
+        raise ValueError('Enter the dating date')
+    clean = {'dating_basis': basis, 'basis_date': date(data['basis_date']).isoformat(),
+             'booked_birth': _optional_date(data, 'booked_birth'),
+             'note': _text(data, 'note', 500, 'the note', required=False)}
+    if clean['basis_date'] > dt.date.today().isoformat():
+        raise ValueError('The dating date cannot be in the future')
+    if basis == 'transfer':
+        clean['embryo_day'] = _number(data, 'embryo_day', 'the embryo age in days', 2, 7, integer=True)
+        if clean['embryo_day'] is None:
+            raise ValueError('Enter the embryo age in days')
+    if basis == 'ultrasound':
+        clean['scan_weeks'] = _number(data, 'scan_weeks', 'weeks at the scan', 4, 42, integer=True)
+        clean['scan_days'] = _number(data, 'scan_days', 'days at the scan', 0, 6, integer=True, default=0)
+        if clean['scan_weeks'] is None:
+            raise ValueError('Enter the weeks at the scan')
+    if clean['booked_birth'] and clean['booked_birth'] <= pregnancy_start(clean).isoformat():
+        raise ValueError('The booked birth date must follow the start of the pregnancy')
+    return clean
+
+
+def basis_text(record) -> str:
+    """How the due date was worked out, in words."""
+    when = date(record['basis_date']).strftime('%B %-d, %Y')
+    if record['dating_basis'] == 'transfer':
+        return f"Dated from the day-{record['embryo_day']} embryo transfer on {when}."
+    if record['dating_basis'] == 'ultrasound':
+        return f"Dated from an ultrasound on {when} at {record['scan_weeks']} weeks, {record['scan_days']} days."
+    return f"Dated from the first day of the last period on {when}."
+
+
+def _pregnancy_derived(record, outcomes, today):
+    due = pregnancy_start(record) + dt.timedelta(days=PREGNANCY_DAYS)
+    items = [{'key': 'due', 'date': due.isoformat(), 'status': 'due', 'title': 'Due date', 'detail': basis_text(record)}]
+    if record.get('booked_birth'):
+        items.append({'key': 'birth', 'date': record['booked_birth'], 'status': 'scheduled', 'title': 'Booked birth',
+                      'detail': 'The timeline ends here; the due date stays for reference.'})
+    return items
+
+
 SCHEDULES = {'daily': 'Every day', 'every': 'Every few days', 'weekdays': 'Chosen weekdays',
              'as_needed': 'As needed'}
 
@@ -379,6 +439,17 @@ KINDS = {kind.key: kind for kind in (
         _field('note', 'Notes', 'textarea', required=False, max=500)) + _LINKS,
         _validate_course, _course_expected, logs=True, loggable=_course_loggable,
         derive=_course_derived, description='Log doses and see when each fill runs out'),
+    Kind('pregnancy', 'Pregnancy', 'Pregnancy', 'Pregnancy', 'calendar', (
+        _field('dating_basis', 'Dated from', 'choice', choices=list(DATING), labels=DATING),
+        _field('basis_date', 'Date', 'date'),
+        _field('embryo_day', 'Embryo age in days', 'number', min=2, max=7, when={'field': 'dating_basis', 'is': 'transfer'}),
+        _field('scan_weeks', 'Weeks at the scan', 'number', min=4, max=42, when={'field': 'dating_basis', 'is': 'ultrasound'}),
+        _field('scan_days', 'Days at the scan', 'number', min=0, max=6, default=0,
+               when={'field': 'dating_basis', 'is': 'ultrasound'}),
+        _field('booked_birth', 'Booked birth date', 'date', required=False,
+               hint='If the clinic books an induction or a caesarean'),
+        _field('note', 'Notes', 'textarea', required=False, max=500)) + _LINKS,
+        _validate_pregnancy, derive=_pregnancy_derived, description='See the weeks, the due date and what is coming up'),
 )}
 # Each stored record may carry these links whatever its kind.
 LINK_KEYS = ('notebook_id', 'source_document_id', 'source_page')
@@ -524,6 +595,14 @@ def summary(record, today) -> dict:
     if kind.expected is not _never:
         upcoming = _next_expected(kind, record, today)
         result['next_expected'] = upcoming.isoformat() if upcoming else None
+    if kind.key == 'pregnancy':
+        start = pregnancy_start(record)
+        elapsed = (today - start).days
+        result['pregnancy'] = {
+            'start': start.isoformat(), 'due': (start + dt.timedelta(days=PREGNANCY_DAYS)).isoformat(),
+            'weeks': elapsed // 7, 'days': elapsed % 7,
+            'trimester': 'First trimester' if elapsed < 14 * 7 else 'Second trimester' if elapsed < 28 * 7 else 'Third trimester',
+            'booked_birth': record.get('booked_birth') or None, 'basis_text': basis_text(record)}
     if kind.key == 'medicine':
         result['schedule_text'] = schedule_text(record)
         start = date(record['start'])

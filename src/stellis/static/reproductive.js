@@ -373,10 +373,22 @@ function mount(host,options={}) {
       createElement('span',record.end?'Ends '+formatDateLabel(record.end):'No end date yet'));
     track.append(bar,labels);return track;
   }
+  /** A dated pregnancy: weeks and days, trimester, due date and any booked birth. */
+  function pregnancyCard(kind,record) {
+    const p=record.summary.pregnancy, card=createElement('article',null,'tracker-course');card.dataset.record=record.id;
+    const head=createElement('div',null,'tracker-course-head');
+    head.append(heading(`${p.weeks} weeks, ${p.days} day${p.days===1?'':'s'}`,p.trimester),createButton('Edit',()=>openForm(kind,record),'coach-button is-quiet'));
+    const metrics=createElement('dl',null,'tracker-metrics');
+    metrics.append(metric('Due date',formatDateLabel(p.due)));
+    if(p.booked_birth)metrics.append(metric('Booked birth',formatDateLabel(p.booked_birth)));
+    card.append(head,metrics,createElement('p',p.basis_text,'tracker-muted'));
+    return card;
+  }
   function paintCourses(kind) {
     const view=trackerViews[kind], items=entries(kind);
     if(!items.length){panel.append(empty(view.schema.plural,view.schema.description,kind));return;}
     for(const record of items) {
+      if(record.summary.pregnancy){panel.append(pregnancyCard(kind,record));continue;}
       const summary=record.summary, card=createElement('article',null,'tracker-course');card.dataset.record=record.id;
       const head=createElement('div',null,'tracker-course-head');
       const dose=record.dose_amount!=null?`${formatAmount(record.dose_amount)} ${record.dose_unit}`:'';

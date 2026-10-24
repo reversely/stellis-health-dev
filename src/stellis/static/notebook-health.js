@@ -44,17 +44,80 @@ function timeline(data) {
     const item = el('li', null, 'brief-day');
     if (day.today) item.setAttribute('aria-current', 'date');
     if (day.date > data.today) item.classList.add('is-future');
-    const states = day.marks.map(mark => mark.state);
     const words = {taken: 'taken', skipped: 'skipped', missed: 'not logged', expected: 'dose due'};
-    item.setAttribute('aria-label', `${date.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}${states.length ? ': ' + states.map(s => words[s]).join(', ') : ''}`);
+    const said = day.marks.map(mark => mark.event || words[mark.state]);
+    item.setAttribute('aria-label', `${date.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}${said.length ? ': ' + said.join(', ') : ''}`);
     const capsule = el('span', null, 'brief-capsule');
-    for (const state of states) capsule.append(el('span', null, `brief-dot is-${state}`));
+    for (const mark of day.marks) {
+      const dot = el('span', null, `brief-dot is-${mark.state}${mark.status ? ' is-' + mark.status : ''}`);
+      if (mark.event) dot.title = mark.event;
+      capsule.append(dot);
+    }
     item.append(el('span', date.toLocaleDateString([], {weekday: 'narrow'}), 'brief-weekday'), capsule,
         el('span', String(date.getDate()), 'brief-date'));
     days.append(item);
   }
   section.append(head, days);
+  const pregnancy = data.pregnancy?.summary.pregnancy;
+  if (pregnancy) section.append(el('p', `${pregnancy.weeks} weeks, ${pregnancy.days} days`, 'brief-gestation'));
   return section;
+}
+
+/** Weeks and days, the due date, and a track from the start to the due or booked date. */
+function pregnancyBand(record, today) {
+  const p = record.summary.pregnancy;
+  const band = el('article', null, 'brief-course brief-pregnancy');
+  const weeks = el('div', null, 'brief-course-count brief-pregnancy-weeks');
+  const figure = el('p');
+  figure.append(el('strong', String(p.weeks)), ' weeks, ', el('strong', String(p.days)), ` day${p.days === 1 ? '' : 's'}`);
+  weeks.append(figure, el('span', p.trimester));
+  const due = el('div', null, 'brief-course-count');
+  const dueFigure = el('p'); dueFigure.append(el('strong', short(p.due)));
+  due.append(dueFigure, el('span', 'Due date'));
+  const end = p.booked_birth && p.booked_birth < p.due ? p.booked_birth : p.due;
+  const span = Math.max(1, (parse(end) - parse(p.start)) / DAY);
+  const at = date => `${Math.min(100, Math.max(0, (parse(date) - parse(p.start)) / DAY / span * 100))}%`;
+  const track = el('div', null, 'brief-course-track');
+  const bar = el('div', null, 'brief-course-bar');
+  bar.setAttribute('aria-hidden', 'true');
+  const done = el('span', null, 'brief-course-done'); done.style.width = at(today);
+  const goal = el('span', null, 'brief-course-marker'); goal.style.left = at(end);
+  const now = el('span', null, 'brief-course-now'); now.style.left = at(today);
+  bar.append(done, goal, now);
+  const labels = el('div', null, 'brief-course-labels');
+  labels.append(el('span', `Start: ${long(p.start)}`), el('span', p.booked_birth ? `Booked: ${short(p.booked_birth)}` : `Due: ${short(p.due)}`));
+  track.append(bar, labels);
+  band.append(weeks, due, track);
+  return band;
+}
+
+/** Lets the person add a booked induction or caesarean date, which ends the timeline there. */
+function birthCard(record, onSaved) {
+  const card = el('section', null, 'brief-birth');
+  const heading = el('h3', 'Birth date'); heading.id = `brief-birth-${++serial}`;
+  card.setAttribute('aria-labelledby', heading.id);
+  const field = el('label', null, 'brief-birth-field');
+  const input = el('input'); input.type = 'date'; input.value = record.booked_birth || '';
+  input.min = record.summary.pregnancy.start;
+  field.append(el('span', 'Booked date'), input);
+  const status = el('p', null, 'brief-birth-status'); status.setAttribute('role', 'status');
+  input.addEventListener('change', async () => {
+    const data = {};
+    for (const field of ['dating_basis', 'basis_date', 'embryo_day', 'scan_weeks', 'scan_days', 'note']) {
+      if (record[field] != null) data[field] = record[field];
+    }
+    data.booked_birth = input.value;
+    status.textContent = 'Saving';
+    try {
+      await dom().api(`/trackers/records/${encodeURIComponent(record.id)}`, {method: 'PUT', json: data});
+      status.textContent = input.value ? 'Saved' : 'Removed';
+      onSaved();
+    } catch (error) { status.textContent = error.message; }
+  });
+  card.append(heading, el('p', 'If the clinic books an induction or a caesarean, add the date. The timeline then ends there, and the due date stays for reference.'), field, status);
+  const wrap = el('div', null, 'brief-birth-wrap');
+  wrap.append(card, el('p', 'Shows only what is still ahead. Past visits and results stay in Records.', 'brief-birth-note'));
+  return wrap;
 }
 
 /** One course: name and schedule, doses logged and weeks, and a start-to-end track. */
@@ -331,23 +394,33 @@ function otherFacts(host, facts) {
   host.append(section);
 }
 
+let latestMount = 0;
+
 async function mount(host, notebookId) {
-  host.replaceChildren();
+  // Only the latest call renders; earlier ones that finish later are dropped.
+  const call = ++latestMount;
   const levelHost = document.querySelector('#notebook-levels');
-  levelHost?.replaceChildren();
   const today = root.StellisDemoDate || root.StellisCalendarDates.formatDate(new Date());
   const [brief, context] = await Promise.all([
     dom().api(`/notebooks/${encodeURIComponent(notebookId)}/brief?today=${today}`),
     dom().api(`/notebooks/${encodeURIComponent(notebookId)}/health`),
   ]);
-  if (location.pathname !== '/notebook/' + notebookId) return;
-  if (brief.courses.length) {
+  if (call !== latestMount || location.pathname !== '/notebook/' + notebookId) return;
+  host.replaceChildren();
+  levelHost?.replaceChildren();
+  if (brief.courses.length || brief.pregnancy) {
     host.append(timeline(brief));
     const bands = el('div', null, 'brief-courses');
+    if (brief.pregnancy) bands.append(pregnancyBand(brief.pregnancy, brief.today));
     for (const record of brief.courses) bands.append(course(record, brief.today));
     host.append(bands);
   }
-  if (brief.coming_up.length) host.append(comingUp(brief.coming_up));
+  if (brief.pregnancy) {
+    const row = el('div', null, 'brief-coming-wrap');
+    row.append(brief.coming_up.length ? comingUp(brief.coming_up) : el('p', 'Nothing is coming up', 'brief-empty'),
+        birthCard(brief.pregnancy, () => mount(host, notebookId)));
+    host.append(row);
+  } else if (brief.coming_up.length) host.append(comingUp(brief.coming_up));
   if (levelHost) {
     levels(levelHost, brief);
     otherFacts(levelHost, context.facts);

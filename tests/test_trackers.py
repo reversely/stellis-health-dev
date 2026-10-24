@@ -184,3 +184,41 @@ def test_routes_round_trip():
     assert listed[0]['summary']['taken_count'] == 1
     assert client.post('/api/v1/trackers/medicine', json={'name': 'x'}).status_code == 422
     assert client.put('/api/v1/trackers/records/missing', json={}).status_code == 404
+
+
+@pytest.mark.parametrize('data,start,due', [
+    (dict(dating_basis='transfer', basis_date='2024-11-15', embryo_day=5), '2024-10-27', '2025-08-03'),
+    (dict(dating_basis='transfer', basis_date='2024-11-15', embryo_day=3), '2024-10-29', '2025-08-05'),
+    (dict(dating_basis='last_period', basis_date='2023-06-01'), '2023-06-01', '2024-03-07'),
+    # 280 days across a leap day.
+    (dict(dating_basis='last_period', basis_date='2024-01-01'), '2024-01-01', '2024-10-07'),
+    (dict(dating_basis='ultrasound', basis_date='2024-12-13', scan_weeks=6, scan_days=5), '2024-10-27', '2025-08-03'),
+])
+def test_pregnancy_dating(data, start, due):
+    saved = trackers.save('pregnancy', data)
+    summary = stored(saved['id'], today='2025-07-25')['summary']
+    assert (summary['pregnancy']['start'], summary['pregnancy']['due']) == (start, due)
+    assert summary['derived'][0] == {'key': 'due', 'date': due, 'status': 'due', 'title': 'Due date',
+                                     'detail': trackers.basis_text(saved)}
+
+
+def test_pregnancy_weeks_trimester_and_booked_birth():
+    saved = trackers.save('pregnancy', dict(dating_basis='transfer', basis_date='2024-11-15', embryo_day=5,
+                                            booked_birth='2025-07-30'))
+    summary = stored(saved['id'], today='2025-07-25')['summary']
+    assert (summary['pregnancy']['weeks'], summary['pregnancy']['days'], summary['pregnancy']['trimester']) == \
+        (38, 5, 'Third trimester')
+    assert [item['key'] for item in summary['derived']] == ['due', 'birth']
+    assert stored(saved['id'], today='2024-12-13')['summary']['pregnancy']['trimester'] == 'First trimester'
+
+
+@pytest.mark.parametrize('data,message', [
+    (dict(dating_basis='guess', basis_date='2024-11-15'), 'how the pregnancy'),
+    (dict(dating_basis='transfer', basis_date='2024-11-15'), 'embryo age'),
+    (dict(dating_basis='ultrasound', basis_date='2024-11-15'), 'weeks at the scan'),
+    (dict(dating_basis='last_period', basis_date='2099-01-01'), 'future'),
+    (dict(dating_basis='last_period', basis_date='2024-06-01', booked_birth='2024-05-01'), 'booked birth'),
+])
+def test_pregnancy_validation(data, message):
+    with pytest.raises(ValueError, match=message):
+        trackers.save('pregnancy', data)

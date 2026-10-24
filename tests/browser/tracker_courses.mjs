@@ -24,8 +24,8 @@ try {
   await page.goto(origin);
   const card=tracker.locator(`.tracker-course[data-record="${course.id}"]`);
   await card.waitFor();
-  // Only one kind is visible with periods off, so the tab row is hidden.
-  assert.equal(await tracker.locator('.tracker-tabs').isVisible(),false);
+  // With periods off, only the ungated kinds have tabs.
+  assert.deepEqual(await tracker.locator('.tracker-tab').allTextContents(),['Medicines','Pregnancy']);
   assert.match(await card.locator('.tracker-heading p').textContent(),/^300 mg, every other day$/);
   assert.equal(await card.locator('.tracker-dose-status').textContent(),'Due today');
   const expected=await api('/trackers?today='+date(0),undefined,'get');
