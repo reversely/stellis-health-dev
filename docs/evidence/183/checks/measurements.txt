@@ -1,0 +1,1 @@
+PASS Dash preview: 12 responsive layouts, real Mantine tables/icons, shared filtering/order, working categories, data-derived ranges, padded tooltips, local-only assets

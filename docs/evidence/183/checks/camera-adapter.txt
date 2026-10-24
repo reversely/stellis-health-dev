@@ -1,0 +1,1 @@
+PASS controlled camera adapter: review/save, three estimates, no production writes or fictional comparison, track cleanup, separate reset/reload and clear

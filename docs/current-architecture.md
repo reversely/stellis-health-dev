@@ -749,6 +749,28 @@ In the Maya demo workspace, `maya-scenes.js` reads `scenes` from `static/maya/st
 
 The shipped frontend remains the JavaScript application. Trends now uses responsive desktop measurement columns and an upper-right table icon button. No Dash package is required by the production server or its lockfile.
 
-`scripts/dash_trends_preview.py` is a separate, local-only Dash/Mantine comparison using synthetic values and the existing measurement definitions/usual-range helper. It creates a native FastAPI backend and uses Mantine layout, icon controls, tables and form controls with Plotly charts. Its pinned optional environment is in `scripts/dash-trends-requirements.txt`; it neither reads account databases nor replaces `/trends`.
+`scripts/dash_trends_preview.py` is a separate, local-only Dash/Mantine comparison using canonical fictional-patient source values and the existing measurement definitions/usual-range helper. It creates a native FastAPI backend and uses Mantine layout, icon controls, tables and form controls with Plotly charts. Its pinned optional environment is in `scripts/dash-trends-requirements.txt`; it neither reads account databases nor replaces `/trends`.
 
 A proposed account-local Trends pilot, including session/demo scoping, callback/WebSocket routing, shared navigation, saved readings, source/logging parity and performance checks, is documented in [the evaluation](../plans/dash-trends-evaluation.md). These integration checks remain unverified; a standalone screenshot does not establish production isolation or feature parity.
+
+### Maya narrative and isolated camera session (#183)
+
+The optional Dash app opens a three-stage story built by `scripts/maya_prototype_story.py` from the canonical patient manifest and medication/appointment/yearly-story fixtures. `maya-demo-state` is a browser-session `dcc.Store` for notebook/date choices, reviewed log entries, notes, uploads, periods, goals, snoozes and appointments. Reset affects that demo state; it is not an account reset. Source availability follows each chapter’s cutoff. Measurement series project actual source values, so unsupported categories remain empty.
+
+The standalone FastAPI host mounts `/demo-sources` for canonical PDFs, `/demo-audio` for a saved scripted synthetic visit, `/accuracy` for the existing accuracy page and `/static` for shared capture assets. The saved authored explanation is a source-inspection example, not a live model call or runtime trace. Uploads and filing operate in the demo browser session, without production ingestion/OCR.
+
+```mermaid
+flowchart LR
+  Fixtures[Canonical fictional patient files] --> Story[Dash story and source measurements]
+  Story <--> Demo[Browser Maya demo session]
+  Viewer[Explicit Start] --> Capture[Existing local camera pipeline]
+  Capture --> Review[Review supported numeric estimates]
+  Review --> Adapter[Optional persistence adapter]
+  Adapter --> Camera[Separate browser camera session]
+  Native[Native capture caller] --> Capture
+  Capture --> Default[Default account readings API]
+```
+
+`StellisCameraPulse.open` accepts an optional persistence adapter and `showComparison` option. Native callers keep the default readings API and comparison behavior. The prototype supplies an adapter that writes only estimates to `stellis-preview-camera-session` and updates `preview-camera-data`; it disables comparisons against Maya’s synthetic history. Its clear action affects only that camera session. Video frames are not stored. Actual camera permission is requested only on Start, with existing track cleanup and review controls retained. No physical camera was available for the #183 film; its no-device recovery is genuine, and successful pipeline plumbing is covered separately by controlled-signal tests.
+
+The narrated demo recorder drives real browser actions without camera, network, inference or clock replacements. An authored scene list provides timing/captions; the local optional Kitten TTS helper synthesizes narration and adds a separate caption footer. These recording tools do not add dependencies to the production runtime. [Evidence and remaining integration limits](evidence/183/README.md).

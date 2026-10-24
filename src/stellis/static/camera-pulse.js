@@ -623,11 +623,14 @@ class PulseDialog {
   /**
    * @param {function(): !Promise<void>} onSaved Runs after a reading is saved.
    * @param {?Object} measure The pulse measure from GET /readings.
+   * @param {{saveReading: Function, showComparison: boolean}=} options Optional isolated-host persistence and comparison policy.
    */
-  constructor(onSaved, measure) {
+  constructor(onSaved, measure, options = {}) {
     const dom = root.StellisDom;
     this.dom = dom;
     this.onSaved = onSaved;
+    this.saveReading = options.saveReading || ((json) => dom.api('/readings', {method: 'POST', json}));
+    this.showComparison = options.showComparison !== false;
     this.usual = measure ? measure.usual : null;
     this.speak = speakChosen();
     this.spokenAt = -Infinity;
@@ -1071,7 +1074,7 @@ class PulseDialog {
       save.disabled = true;
       try {
         for (const json of readingsToSave(summary)) {
-          await dom.api('/readings', {method: 'POST', json});
+          await this.saveReading(json);
         }
         this.dialog.close();
         await this.onSaved();
@@ -1086,7 +1089,7 @@ class PulseDialog {
     buttons.append(save, again);
     this.body.replaceChildren(
         dom.el('p', 'Your pulse', 'pulse-label'), figure,
-        dom.el('p', usualText(summary.bpm, this.usual), 'pulse-usual'));
+        dom.el('p', this.showComparison ? usualText(summary.bpm, this.usual) : '', 'pulse-usual'));
     const more = dom.el('dl', null, 'pulse-more');
     for (const row of extraRows(summary)) {
       const value = dom.el('dd', row.value);
@@ -1154,9 +1157,10 @@ class PulseDialog {
  * Opens the measuring dialog.
  * @param {function(): !Promise<void>} onSaved
  * @param {?Object=} measure The pulse measure, for its usual range.
+ * @param {{saveReading: Function, showComparison: boolean}=} options Optional host adapter; native saving remains the default.
  */
-function open(onSaved, measure = null) {
-  new PulseDialog(onSaved, measure).open();
+function open(onSaved, measure = null, options = {}) {
+  new PulseDialog(onSaved, measure, options).open();
 }
 
 /** @return {boolean} Whether this browser can open a camera. */

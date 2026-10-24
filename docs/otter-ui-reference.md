@@ -309,3 +309,13 @@ Implemented and browser verified: shared palette corrected to the guide, noteboo
 ## Sidebar highlight palette — 2026-10-24
 
 Owner feedback: no fuchsia sidebar highlights. Implemented: remove the Dash grape-primary fallback, set sidebar text explicitly from shared ink, and use raised-surface selection/hover with ink keyboard focus. Verified rendered active/hover/focus colors and real category navigation in both themes; twelve responsive Dash layouts pass. [Evidence and limits](evidence/181/README.md). Ticket #181.
+
+## Maya narrative and live-camera demo — 2026-10-24
+
+Owner feedback: rerun the demo with a detailed script before creation; preserve and improve the timeline narrative; show Maya growing through three timings/use cases; cover the breadth of features without fixating on chatbot interactions; leave space to test metrics live with camera inference. Tracked in [#183](https://github.com/reversely/stellis-health-dev/issues/183).
+
+Observed: the earlier yearly video is 46.92 seconds and video-only. It cannot provide the requested source/table/camera interaction time. The recording host has no physical video device. The detailed [three-stage script](../plans/maya-prototype-demo-script.md) was committed before implementation.
+
+Implemented: a continuous 2022 / 2024–25 / 2026 Dash story with retained browser-demo history, original record/date/notebook review, reviewed multi-item care logging, periods, notes/replay, goals and appointment states. One short saved explanation supports the broader story. Canonical source measurements and upper-right Table icons lead to a separate real camera test; no made-up data fills empty categories. The film reserves 45 seconds for a viewer to pause and try the interactive prototype.
+
+Verified: actual browser interactions and session reload, eight story layouts in both themes, twelve measurement layouts, primary-button contrast, and actual user-started no-device recovery. Separate controlled-signal tests cover camera review/save/cleanup and native default persistence. Unknown: physical-camera accuracy and production Dash account integration. Saved explanation, date metadata and scripted visit are labelled artifacts; no new LLM/OCR/ASR processing is claimed. [Evidence and recording](evidence/183/README.md).

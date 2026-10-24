@@ -1,0 +1,283 @@
+{
+  "source": "/tmp/stellis-maya-demo-183-raw/page@aca4f36cbb27506e8ce14a2db06e3189.webm",
+  "rawDuration": 418.4,
+  "trimmedLoadingSeconds": 6.70799999999997,
+  "duration": 411.692,
+  "timings": [
+    {
+      "id": "opening",
+      "seconds": 12,
+      "caption": "I'm Maya. As my life changes, I keep building on one health history.",
+      "start": 0,
+      "end": 12.006
+    },
+    {
+      "id": "first-record",
+      "seconds": 14,
+      "caption": "2022: I'm tired after work. I start with my period history and the records I already have.",
+      "start": 12.058,
+      "end": 26.069
+    },
+    {
+      "id": "upload",
+      "seconds": 18,
+      "caption": "I bring in the original result. Its date and findings are there to check, not silently accept.",
+      "start": 26.145,
+      "end": 44.158
+    },
+    {
+      "id": "file",
+      "seconds": 20,
+      "caption": "I confirm the date and choose shared notebooks. One source can belong in more than one part of my care.",
+      "start": 44.235,
+      "end": 64.237
+    },
+    {
+      "id": "first-routine",
+      "seconds": 18,
+      "caption": "My period dates and iron plan become things I can follow through on. I review an entry before confirming it.",
+      "start": 64.327,
+      "end": 82.332
+    },
+    {
+      "id": "visit-notes",
+      "seconds": 18,
+      "caption": "A saved, scripted visit and my own notes sit beside the record. I can replay it and keep what matters to me.",
+      "start": 82.393,
+      "end": 100.401
+    },
+    {
+      "id": "changing-care",
+      "seconds": 12,
+      "caption": "2024\u201325: fertility investigations lead to IVF, pregnancy and becoming a parent. I don't start my history over.",
+      "start": 100.483,
+      "end": 112.492
+    },
+    {
+      "id": "treatment-records",
+      "seconds": 20,
+      "caption": "I add Fertility and IVF to the same library. The original treatment records stay available.",
+      "start": 112.541,
+      "end": 132.55
+    },
+    {
+      "id": "treatment-plan",
+      "seconds": 20,
+      "caption": "The dose, schedule and dates come from the treatment record. I can distinguish the plan from what I actually log.",
+      "start": 132.623,
+      "end": 152.629
+    },
+    {
+      "id": "log-together",
+      "seconds": 20,
+      "caption": "When several medicines are due together, I review the selection and date, then confirm the entries together.",
+      "start": 152.713,
+      "end": 172.731
+    },
+    {
+      "id": "checkin-calendar",
+      "seconds": 18,
+      "caption": "A check-in can wait until tomorrow. A confirmed appointment stays different from a plan.",
+      "start": 172.792,
+      "end": 190.794
+    },
+    {
+      "id": "one-explanation",
+      "seconds": 22,
+      "caption": "For one question, I inspect a saved explanation and the original source. Retrieved, mature, fertilized and frozen are different stages.",
+      "start": 190.868,
+      "end": 212.869
+    },
+    {
+      "id": "pregnancy-birth",
+      "seconds": 20,
+      "caption": "Pregnancy and postpartum care join the same history. The estimated due date stays separate from the confirmed birth.",
+      "start": 212.961,
+      "end": 232.977
+    },
+    {
+      "id": "new-routine",
+      "seconds": 12,
+      "caption": "2026: my periods have returned. I can look back across five years while finding a routine that fits life now.",
+      "start": 233.056,
+      "end": 245.066
+    },
+    {
+      "id": "latest-record",
+      "seconds": 18,
+      "caption": "The latest review is still linked to its dated original. Earlier notebooks and notes have not disappeared.",
+      "start": 245.138,
+      "end": 263.154
+    },
+    {
+      "id": "goals-course",
+      "seconds": 20,
+      "caption": "A course has a calculated supply and a planned end date. My own activity goal is a separate choice.",
+      "start": 263.221,
+      "end": 283.225
+    },
+    {
+      "id": "measurements",
+      "seconds": 24,
+      "caption": "I review Maya's documented measurements directly: chart, source dates and table. Nothing is invented to fill an empty category.",
+      "start": 283.297,
+      "end": 307.305
+    },
+    {
+      "id": "camera-intro",
+      "seconds": 14,
+      "caption": "Now try a fresh reading of your own. Your camera test stays separate from my sample history.",
+      "start": 307.367,
+      "end": 321.379
+    },
+    {
+      "id": "camera-space",
+      "seconds": 45,
+      "caption": "Pause here to try the prototype. Rest, face the light, and choose Start when you're ready. Video stays on your device.",
+      "start": 321.431,
+      "end": 366.463
+    },
+    {
+      "id": "camera-attempt",
+      "seconds": 15,
+      "caption": "This recording environment has no physical camera. The real recovery state stays visible; sample values are not passed off as live inference.",
+      "start": 366.535,
+      "end": 381.548
+    },
+    {
+      "id": "camera-return",
+      "seconds": 10,
+      "caption": "Close stops capture. A supported estimate can be reviewed and kept in its own test session, then cleared.",
+      "start": 381.615,
+      "end": 391.622
+    },
+    {
+      "id": "continuity",
+      "seconds": 20,
+      "caption": "From a first concern to changing treatment and a new routine, I have grown my history\u2014not replaced it.",
+      "start": 391.681,
+      "end": 411.692
+    }
+  ],
+  "pace": 1,
+  "mode": "Actual prototype interactions, fictional source data and saved scripted visit; no substituted camera or inference APIs",
+  "camera": "Real no-device result; live testing remains available in the prototype",
+  "audio": "Local synthetic narration of the authored script, Kitten TTS sid 1; no cloned person, live recognition or cloud service",
+  "errors": [],
+  "consoleErrors": [],
+  "caption_layout": "Dedicated 144px purple footer; full 1920x1080 application frame is preserved above it",
+  "narration_model_license": "Apache-2.0 (installed Kitten model LICENSE)",
+  "narration": [
+    {
+      "scene": "opening",
+      "seconds": 7.6505833333333335,
+      "text": "I'm Maya. As my life changes, I keep building on one health history."
+    },
+    {
+      "scene": "first-record",
+      "seconds": 10.718708333333334,
+      "text": "twenty twenty-two: I'm tired after work. I start with my period history and the records I already have."
+    },
+    {
+      "scene": "upload",
+      "seconds": 9.981041666666666,
+      "text": "I bring in the original result. Its date and findings are there to check, not silently accept."
+    },
+    {
+      "scene": "file",
+      "seconds": 10.690416666666666,
+      "text": "I confirm the date and choose shared notebooks. One source can belong in more than one part of my care."
+    },
+    {
+      "scene": "first-routine",
+      "seconds": 11.074791666666666,
+      "text": "My period dates and iron plan become things I can follow through on. I review an entry before confirming it."
+    },
+    {
+      "scene": "visit-notes",
+      "seconds": 11.321083333333334,
+      "text": "A saved, scripted visit and my own notes sit beside the record. I can replay it and keep what matters to me."
+    },
+    {
+      "scene": "changing-care",
+      "seconds": 10.703166666666666,
+      "text": "twenty twenty-four to twenty twenty-five: fertility investigations lead to I V F, pregnancy and becoming a parent. I don't start my history over."
+    },
+    {
+      "scene": "treatment-records",
+      "seconds": 10.179375,
+      "text": "I add Fertility and I V F to the same library. The original treatment records stay available."
+    },
+    {
+      "scene": "treatment-plan",
+      "seconds": 10.786541666666666,
+      "text": "The dose, schedule and dates come from the treatment record. I can distinguish the plan from what I actually log."
+    },
+    {
+      "scene": "log-together",
+      "seconds": 9.887958333333334,
+      "text": "When several medicines are due together, I review the selection and date, then confirm the entries together."
+    },
+    {
+      "scene": "checkin-calendar",
+      "seconds": 9.200208333333334,
+      "text": "A check-in can wait until tomorrow. A confirmed appointment stays different from a plan."
+    },
+    {
+      "scene": "one-explanation",
+      "seconds": 13.902541666666666,
+      "text": "For one question, I inspect a saved explanation and the original source. Retrieved, mature, fertilized and frozen are different stages."
+    },
+    {
+      "scene": "pregnancy-birth",
+      "seconds": 11.841208333333332,
+      "text": "Pregnancy and postpartum care join the same history. The estimated due date stays separate from the confirmed birth."
+    },
+    {
+      "scene": "new-routine",
+      "seconds": 10.618166666666667,
+      "text": "twenty twenty-six: my periods have returned. I can look back across five years while finding a routine that fits life now."
+    },
+    {
+      "scene": "latest-record",
+      "seconds": 10.787291666666667,
+      "text": "The latest review is still linked to its dated original. Earlier notebooks and notes have not disappeared."
+    },
+    {
+      "scene": "goals-course",
+      "seconds": 10.482583333333332,
+      "text": "A course has a calculated supply and a planned end date. My own activity goal is a separate choice."
+    },
+    {
+      "scene": "measurements",
+      "seconds": 12.981833333333332,
+      "text": "I review Maya's documented measurements directly: chart, source dates and table. Nothing is invented to fill an empty category."
+    },
+    {
+      "scene": "camera-intro",
+      "seconds": 8.945875,
+      "text": "Now try a fresh reading of your own. Your camera test stays separate from my sample history."
+    },
+    {
+      "scene": "camera-space",
+      "seconds": 12.037291666666667,
+      "text": "Pause here to try the prototype. Rest, face the light, and choose Start when you're ready. Video stays on your device."
+    },
+    {
+      "scene": "camera-attempt",
+      "seconds": 13.831208333333333,
+      "text": "This recording environment has no physical camera. The real recovery state stays visible; sample values are not passed off as live inference."
+    },
+    {
+      "scene": "camera-return",
+      "seconds": 8.732958333333332,
+      "text": "Close stops capture. A supported estimate can be reviewed and kept in its own test session, then cleared."
+    },
+    {
+      "scene": "continuity",
+      "seconds": 10.035041666666666,
+      "text": "From a first concern to changing treatment and a new routine, I have grown my history\u2014not replaced it."
+    }
+  ],
+  "raw_capture_delivery": "Local archive only; final MP4 and sidecars are the delivered artifacts."
+}

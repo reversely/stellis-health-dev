@@ -1,7 +1,7 @@
-Third-party notices for inline icons in index.html, app.js, notes-tasks.js, notes-embeds.js, notes-slash.js, and table-view.svg
+Third-party notices for inline icons in index.html, app.js, notes-tasks.js, notes-embeds.js, notes-slash.js, table-view.svg, and story-view.svg
 
 Tabler Icons 3.49.0 outline icons: abc, arrow-back-up, arrows-move, bookmark, bulb, calendar, check, checks, chevron-down, chevron-left, chevron-right, chevron-up, circle, checkbox, circle-check, circle-x, clock, code, dots, file, file-text, external-link, file-zip, folder, folder-plus, h-1, h-2, h-3, inbox, info-circle, key, layout-columns, layout-dashboard,
-link, list, list-numbers, logout, markdown, microphone, moon, note, notebook, pencil, photo, pill, plug-connected, plus, quote, refresh, search, separator, settings, sparkles, sun, table, tag, trash, typography, upload, user, users, video, x
+link, list, list-numbers, logout, markdown, microphone, moon, note, notebook, pencil, photo, pill, plug-connected, plus, quote, refresh, search, separator, settings, sparkles, sun, table, timeline, tag, trash, typography, upload, user, users, video, x
 https://tabler.io/icons
 
 MIT License

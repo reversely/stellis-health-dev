@@ -173,3 +173,11 @@ A standalone Dash/Mantine prototype evaluates a possible component-based fronten
 Chart hover overlays use a padded purple surface with light text, one date and one coloured marker/value line. Avoid duplicate date headers, crosshair decoration and hard borders. Range legends must include calculated bounds and units from the actual series; without a supported baseline, omit both legend and band. Measurement navigation must select real content and reflect the active category; provide an equivalent working selector on narrow screens.
 
 Sidebar selection, hover and keyboard focus use shared ink and raised-surface roles: muted purple in dark mode and neutral paper/gray in light mode. Do not use fuchsia/grape highlights or allow component-library primary colors to override these sidebar roles.
+
+## Maya narrative prototype
+
+Keep three time anchors—2022, 2024–25 and 2026—within one continuous history. Records, filing, practical care, notes, calendar, goals and measurements carry the narrative; a source-backed explanation is one supporting use case. Preserve earlier notebook identities as the library grows. Label saved scripted artifacts honestly.
+
+Give the live camera test a dedicated preparation area and time to try it. Start alone requests camera permission; keep a viewer’s numeric estimates separate from fictional Maya history. Empty categories stay empty rather than receiving invented readings.
+
+Mantine default filled buttons may omit `data-variant`. Theme overrides must cover that default as well as explicit filled variants, with computed fill/label checks in both themes. Put video captions in a separate purple footer so they do not cover application controls. See [#183 evidence](evidence/183/README.md).
