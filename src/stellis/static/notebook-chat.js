@@ -107,6 +107,9 @@ class NotebookChat {
     });
     this.viewer.element.addEventListener('viewerclose', () => {
       delete this.layout.dataset.viewer;
+      for (const open of this.layout.querySelectorAll('a.nb-cite[aria-current]')) {
+        open.removeAttribute('aria-current');
+      }
     });
     this.layout.append(
         this.buildSourcesPanel(), this.buildChat(), this.viewer.element);
@@ -328,6 +331,10 @@ class NotebookChat {
       return;
     }
     event.preventDefault();
+    for (const open of this.layout.querySelectorAll('a.nb-cite[aria-current]')) {
+      open.removeAttribute('aria-current');
+    }
+    link.setAttribute('aria-current', 'true');
     this.viewer.show(link.getAttribute('href'), link);
   }
 

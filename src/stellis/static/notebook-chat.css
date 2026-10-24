@@ -245,6 +245,12 @@
     border-color: var(--accent);
   }
 }
+/* The citation open in the viewer is a colour block with inverted ink. */
+.nb-cite[aria-current='true'] {
+  border-color: var(--block-fill);
+  background: var(--block-fill);
+  color: var(--block-ink);
+}
 
 .nb-composer {
   position: sticky;

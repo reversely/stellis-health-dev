@@ -122,6 +122,33 @@ try {
     }
     await page.evaluate(()=>document.documentElement.classList.remove('theme-swapping'));
   }
+  // Colour blocks keep inverted ink: dark on light pages, light on dark pages.
+  for (const theme of ['light','dark']) {
+    await page.goto(origin);
+    await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+    const blocks=await page.evaluate(()=>{
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      const rgb=colour=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=colour;ctx.fillRect(0,0,1,1);return Array.from(ctx.getImageData(0,0,1,1).data).slice(0,3);};
+      const luminance=c=>c.map(x=>{x/=255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4;}).reduce((a,x,i)=>a+x*[.2126,.7152,.0722][i],0);
+      return [['',''],['alert','-alert'],['ok','-ok'],['calculated','-calculated'],['planned','-planned'],['muted','']].map(([name,role])=>{
+        const probe=document.createElement('span');
+        probe.style.background=`var(--block${role}-fill)`;
+        probe.style.color=name==='muted'?'var(--block-muted)':`var(--block${role}-ink)`;
+        document.body.append(probe);
+        const s=getComputedStyle(probe);const fill=luminance(rgb(s.backgroundColor)), ink=luminance(rgb(s.color));
+        probe.remove();
+        const [hi,lo]=[fill,ink].sort((a,b)=>b-a);
+        return {name:name||'block',contrast:(hi+.05)/(lo+.05),inkLighterThanFill:ink>fill};
+      });
+    });
+    for (const block of blocks) {
+      assert(block.contrast>=4.5, `${theme} ${block.name} block contrast ${block.contrast.toFixed(2)}`);
+      // Light pages carry dark blocks with light ink; dark pages flip both.
+      assert.equal(block.inkLighterThanFill, theme==='light', `${theme} ${block.name} block ink is not inverted`);
+    }
+    results.push({theme,blocks});
+  }
   // Check the form state that is hidden once an account has a saved goal.
   for (const theme of ['light','dark']) for (const width of [1280,390]) {
     await page.setViewportSize({width,height:900});await page.goto(origin);

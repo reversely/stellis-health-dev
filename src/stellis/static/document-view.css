@@ -207,7 +207,8 @@ body.document-page .heading {
 .fact-tag {
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
-  background: var(--selected);
+  background: var(--block-fill);
+  color: var(--block-ink);
   font-size: 12px;
   font-weight: 600;
 }

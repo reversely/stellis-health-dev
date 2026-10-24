@@ -129,6 +129,9 @@ html[data-theme='dark'] .trends-view {
   height: 16px;
   color: var(--chart-series);
 }
+.trend-status:is(.is-above, .is-below) { background: var(--block-alert-fill); color: var(--block-alert-ink); }
+.trend-status.is-usual { background: var(--block-ok-fill); color: var(--block-ok-ink); }
+.trend-status:is(.is-above, .is-below, .is-usual) .icon { color: currentColor; }
 p.trend-status:not([class*='is-']) {
   color: var(--muted);
   background: transparent;
