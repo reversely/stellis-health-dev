@@ -267,3 +267,35 @@ body.document-page .heading {
   align-items: center;
   min-height: 44px;
 }
+
+/* The original page is the primary surface; explanations stay beside it. */
+.document-view:has(.report-workspace) { max-width: 1280px; width: 100%; }
+.report-workspace { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+.report-viewer, .report-explanation { min-width: 0; display: grid; gap: 12px; }
+.report-viewer select { min-height: 44px; max-width: 140px; }
+.report-scroll { overflow: auto; max-height: 78vh; border: 1px solid var(--line); background: var(--raised); }
+.report-stage { position: relative; aspect-ratio: 1; }
+.report-paper { position: absolute; top: 0; left: 0; width: 100%; }
+.report-paper > img { display: block; width: 100%; height: auto; }
+.report-regions { position: absolute; inset: 0; }
+.report-region { position: absolute; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: transparent; font-size: 0; cursor: pointer; }
+.report-region:hover, .report-region:focus-visible, .report-region.is-selected { background: rgb(51 92 99 / 20%); outline: 2px solid #335C63; outline-offset: 1px; }
+.report-explanation { position: sticky; top: 16px; max-height: 85vh; overflow: auto; padding: 0 4px 12px; }
+.report-explanation h3 { margin: 0; }
+.report-explanation blockquote { margin: 0; border-left: 3px solid var(--accent); padding: 8px 12px; overflow-wrap: anywhere; }
+.report-messages, .report-question { display: grid; gap: 12px; min-width: 0; }
+.report-exchange { border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.report-exchange p { white-space: pre-wrap; line-height: 1.6; }
+.report-exchange a { display: inline-flex; min-height: 44px; min-width: 36px; align-items: center; justify-content: center; color: var(--accent); }
+.report-user-question { font-weight: 600; }
+.report-question textarea { box-sizing: border-box; width: 100%; font: inherit; resize: vertical; }
+.report-question button { min-height: 44px; justify-self: start; padding: 8px 16px; }
+.report-status { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.document-extracted-details > summary { cursor: pointer; padding: 12px 0; min-height: 44px; box-sizing: border-box; }
+@media (max-width: 760px) {
+  .report-workspace { grid-template-columns: minmax(0, 1fr); }
+  .report-explanation { position: static; max-height: none; }
+  .report-scroll { max-height: 52vh; }
+}
+.report-workspace [hidden] { display: none !important; }
+.report-explanation h3 { font-size: 20px; color: var(--ink); }

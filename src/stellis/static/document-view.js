@@ -238,7 +238,14 @@ function render(host, record, page, onDelete, onChanged = null) {
   const slot = dom.el('div', null, 'document-slot');
   const body = dom.el('div');
   const sections = renderPages(body, record, onChanged, true);
-  host.replaceChildren(head, slot, body);
+  const reportHost = dom.el('div');
+  host.replaceChildren(head, reportHost, slot, body);
+  if (root.StellisReportContext) {
+    root.StellisReportContext.mount(reportHost, record, page);
+    const details = dom.el('details', null, 'document-extracted-details');
+    details.append(dom.el('summary', 'Extracted text'), body);
+    host.append(details);
+  }
   const target = page ? sections.get(page) : null;
   if (target && record.page_count > 1) {
     target.classList.add('is-target');

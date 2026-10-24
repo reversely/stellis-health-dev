@@ -3355,6 +3355,8 @@ from stellis.demo_routes import router as demo_router
 api.include_router(demo_router)
 from stellis.chat_attachment_routes import router as chat_attachment_router
 api.include_router(chat_attachment_router)
+from stellis.report_routes import router as report_router
+api.include_router(report_router)
 api.include_router(reproductive_routes.router)
 api.include_router(milestone_routes.router)
 
