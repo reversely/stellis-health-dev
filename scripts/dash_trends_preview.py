@@ -13,7 +13,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import dash_mantine_components as dmc
-from dash import Dash, Input, Output, State, MATCH, dcc, html
+from dash import Dash, Input, Output, State, MATCH, ALL, ClientsideFunction, ctx, dcc, html
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -86,10 +86,12 @@ def chart(measure, points, dark):
     traces = [dict(x=[p["time"] for p in points], y=[p["value"] for p in points],
                    type="scatter", mode="lines+markers", name=measure["label"],
                    line={"color": series, "width": 2}, marker={"size": 6},
-                   hovertemplate=f"%{{x|%d %b %Y}}<br>%{{y}} {measure['unit']}<extra></extra>")]
+                   hoverinfo="none", hovertemplate=None,
+                   customdata=[[dt.date.fromisoformat(p["time"]).strftime("%d %b %Y"), f"{p['value']:.{measure['decimals']}f} {measure['unit']}"] for p in points])]
     if MEASURES[measure["key"]].paired:
         traces.append(dict(x=[p["time"] for p in points], y=[p["value2"] for p in points],
-                           type="scatter", mode="lines+markers", name="Diastolic", line={"color": series, "dash": "dot"}))
+                           type="scatter", mode="lines+markers", name="Diastolic", line={"color": series, "dash": "dot"}, hoverinfo="none", hovertemplate=None,
+                           customdata=[[dt.date.fromisoformat(p["time"]).strftime("%d %b %Y"), f"{p['value2']:.0f} {measure['unit']}"] for p in points]))
     usual = measure.get("usual")
     shapes = []
     if usual and not MEASURES[measure["key"]].paired:
@@ -101,7 +103,7 @@ def chart(measure, points, dark):
         margin={"l": 40, "r": 12, "t": 18, "b": 40}, height=240,
         xaxis={"type": "date", "showgrid": False, "tickformat": "%d %b", "tickfont": {"color": muted}, "nticks": 4},
         yaxis={"gridcolor": line, "zeroline": False, "tickfont": {"color": muted}, "nticks": 4},
-        hovermode="x unified", hoverlabel={"bgcolor": "#382C42" if dark else "#FFFFFF", "font": {"color": ink}},
+        hovermode="closest",
         showlegend=MEASURES[measure["key"]].paired, legend={"orientation": "h", "y": 1.15}, shapes=shapes,
     )}
     # Avoid exaggerating small day-to-day changes, matching the production charts.
@@ -110,7 +112,17 @@ def chart(measure, points, dark):
     centre = (min(values) + max(values)) / 2
     half = max(span, max(values) - min(values)) * .6
     figure["layout"]["yaxis"]["range"] = [centre - half, centre + half]
-    return dcc.Graph(figure=figure, responsive=True, config={"displayModeBar": False, "scrollZoom": False}, style={"height": 240})
+    children = [
+        dcc.Graph(id={"kind": "graph", "key": measure["key"]}, figure=figure, responsive=True, clear_on_unhover=True,
+                  config={"displayModeBar": False, "scrollZoom": False}, style={"height": 240}),
+        dcc.Tooltip(id={"kind": "reading-tooltip", "key": measure["key"]}, show=False,
+                    background_color="#44364E", border_color="#44364E", className="preview-reading-tooltip"),
+    ]
+    if shapes:
+        bounds = f"{usual['low']:.{measure['decimals']}f}–{usual['high']:.{measure['decimals']}f} {measure['unit']}"
+        children.append(dmc.Group([html.Span(className="preview-range-key", **{"aria-hidden": "true"}),
+                                   dmc.Text(f"Usual range {bounds}", size="xs", c="dimmed")], gap=8, className="preview-range-legend"))
+    return html.Div(children, className="preview-plot")
 
 
 def content(measure, table, period, dark):
@@ -129,13 +141,13 @@ def card(measure):
     return dmc.Paper([
         dmc.Group([
             dmc.Text(measure["label"], fw=600, c="dimmed", size="sm"),
-            dmc.Switch(id={"kind": "table", "key": measure["key"]}, label="Table", labelPosition="left", checked=False,
-                       size="sm", color="var(--ink)", className="preview-table-switch"),
+            dmc.ActionIcon(html.Span(className="table-view-glyph", **{"aria-hidden": "true"}),
+                           id={"kind": "table", "key": measure["key"]}, n_clicks=0, variant="subtle", size=44,
+                           className="preview-table-control", **{"aria-label": "Table view", "aria-pressed": "false"}),
         ], justify="space-between", wrap="nowrap", mih=44),
         dmc.Group([dmc.Text(value, className="preview-value"), dmc.Text(measure["unit"], c="dimmed")], gap=6, align="baseline"),
         dmc.Group([html.Time(dt.date.fromisoformat(last["time"]).strftime("%d %b %Y"), dateTime=last["time"]), dmc.Text("Manual entry", size="sm", c="dimmed")], gap=12, className="preview-meta"),
         html.Div(id={"kind": "view", "key": measure["key"]}),
-        dmc.Text("Usual range" if measure.get("usual") else "More readings will establish a usual range", size="xs", c="dimmed"),
     ], withBorder=True, radius="sm", p="lg", className="preview-card")
 
 
@@ -160,20 +172,21 @@ def create_preview():
                 ], justify="space-between", h="100%", px="lg")),
                 dmc.AppShellNavbar([
                     dmc.Text("Measurements", fw=600, size="sm", mb="sm"),
-                    *[dmc.NavLink(label=name, href="#group-"+str(index), active=index == 0, variant="light") for index, (name, _) in enumerate(GROUPS)],
+                    *[dmc.Button(name, id={"kind": "category", "key": index}, n_clicks=0, variant="subtle", fullWidth=True, className="preview-category", **{"aria-pressed": str(index == 0).lower()}) for index, (name, _) in enumerate(GROUPS)],
                     dmc.Text("Sample readings only", size="xs", c="dimmed", mt="auto"),
                 ], p="lg"),
                 dmc.AppShellMain([
                     dmc.Group([dmc.Title("Trends", order=1),
                         dmc.SegmentedControl(id="preview-range", value="all", transitionDuration=0, data=[{"label": "1 week", "value": "7"}, {"label": "1 month", "value": "31"}, {"label": "3 months", "value": "92"}, {"label": "All", "value": "all"}], size="md"),
                     ], justify="space-between", mb="xl", gap="md", className="preview-heading"),
+                    dmc.Select(id="preview-mobile-category", label="Measurements", data=[{"label": name, "value": str(index)} for index, (name, _) in enumerate(GROUPS)], value="0", allowDeselect=False, hiddenFrom="md", mb="lg"),
                     *[html.Section([
                         dmc.Title(name, order=2, mb="md"),
                         dmc.SimpleGrid([card(data[key]) for key in keys if data[key]["points"]], cols={"base": 1, "md": 2, "xl": 3}, spacing="lg"),
                         dmc.Stack([dmc.Group([dmc.Text(MEASURES[key].label), dmc.Text("No readings", c="dimmed", size="sm")], justify="space-between", className="preview-empty-row") for key in keys if not data[key]["points"]], gap=0, mt="sm"),
-                    ], id="group-"+str(index), className="preview-section") for index, (name, keys) in enumerate(GROUPS)],
+                    ], id={"kind": "category-panel", "key": index}, style={"display": "block" if index == 0 else "none"}, className="preview-section") for index, (name, keys) in enumerate(GROUPS)],
                 ]),
-            ], header={"height": 72}, navbar={"width": 220, "breakpoint": "md", "collapsed": {"mobile": True}}, padding="xl", className="dash-preview"),
+            ], transitionDuration=0, header={"height": 72}, navbar={"width": 220, "breakpoint": "md", "collapsed": {"mobile": True}}, padding="xl", className="dash-preview"),
         ],
     )
 
@@ -183,17 +196,35 @@ def create_preview():
         dark = not ((clicks or 0) % 2)
         return ("dark" if dark else "light", "Switch to light mode" if dark else "Switch to dark mode")
 
-    @app.callback(Output({"kind": "view", "key": MATCH}, "children"),
-                  Input({"kind": "table", "key": MATCH}, "checked"), Input("preview-range", "value"),
+    @app.callback(Output({"kind": "view", "key": MATCH}, "children"), Output({"kind": "table", "key": MATCH}, "aria-pressed"),
+                  Input({"kind": "table", "key": MATCH}, "n_clicks"), Input("preview-range", "value"),
                   Input("preview-theme", "forceColorScheme"), State({"kind": "table", "key": MATCH}, "id"), State("preview-data", "data"))
     def render(table, period, theme, identity, data):
-        return content(data[identity["key"]], table, period, theme == "dark")
+        selected = bool((table or 0) % 2)
+        return content(data[identity["key"]], selected, period, theme == "dark"), str(selected).lower()
 
     @app.callback(Output({"kind": "readings-table", "key": MATCH}, "data"),
                   Input({"kind": "filter", "key": MATCH}, "value"), Input({"kind": "order", "key": MATCH}, "value"),
                   State({"kind": "table-points", "key": MATCH}, "data"), State({"kind": "filter", "key": MATCH}, "id"), State("preview-data", "data"))
     def filter_table(query, order, points, identity, data):
         return table_data(data[identity["key"]], points, query or "", order)
+
+    @app.callback(Output({"kind": "category", "key": ALL}, "aria-pressed"),
+                  Output({"kind": "category-panel", "key": ALL}, "style"), Output("preview-mobile-category", "value"),
+                  Input({"kind": "category", "key": ALL}, "n_clicks"), Input("preview-mobile-category", "value"))
+    def select_category(clicks, mobile):
+        selected = ctx.triggered_id["key"] if isinstance(ctx.triggered_id, dict) else int(mobile or 0)
+        return ([str(index == selected).lower() for index in range(len(GROUPS))],
+                [{"display": "block" if index == selected else "none"} for index in range(len(GROUPS))], str(selected))
+
+    app.clientside_callback(
+        ClientsideFunction(namespace="stellisPreview", function_name="readingTooltip"),
+        Output({"kind": "reading-tooltip", "key": MATCH}, "show"),
+        Output({"kind": "reading-tooltip", "key": MATCH}, "bbox"),
+        Output({"kind": "reading-tooltip", "key": MATCH}, "children"),
+        Output({"kind": "reading-tooltip", "key": MATCH}, "direction"),
+        Input({"kind": "graph", "key": MATCH}, "hoverData"),
+    )
 
     return server
 

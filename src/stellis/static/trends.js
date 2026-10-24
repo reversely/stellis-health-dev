@@ -293,7 +293,7 @@ class TrendsPage {
         foot.append(dom.el('span', change, 'trend-change'));
       }
       if (sources.length > 1 || measure.usual) {
-        foot.append(this.legend(sources, Boolean(measure.usual)));
+        foot.append(this.legend(sources, measure));
       }
       card.append(foot);
     } else {
@@ -306,11 +306,12 @@ class TrendsPage {
   /**
    * Names the marker shapes and the usual band.
    * @param {!Array<string>} sources
-   * @param {boolean} usual
+   * @param {!Object} measure
    * @return {!Element}
    */
-  legend(sources, usual) {
+  legend(sources, measure) {
     const dom = this.dom;
+    const usual = measure.usual;
     const list = dom.el('ul', null, 'trend-legend');
     list.setAttribute('aria-label', 'Legend');
     for (const source of ['record', 'self', 'camera']) {
@@ -326,7 +327,7 @@ class TrendsPage {
       const item = dom.el('li');
       item.append(
           dom.el('span', null, 'trend-key is-usual'),
-          dom.el('span', 'Usual'));
+          dom.el('span', `Usual range ${root.StellisTrendChart.formatValue({value: usual.low, value2: usual.low2 ?? null}, measure.decimals)}–${root.StellisTrendChart.formatValue({value: usual.high, value2: usual.high2 ?? null}, measure.decimals)} ${measure.unit}`));
       list.append(item);
     }
     return list;
@@ -345,24 +346,24 @@ class TrendsPage {
         cameraMeasure ? 'Log manually' : 'Add a reading',
         cameraMeasure ? 'trend-manual' : 'trend-add');
     add.dataset.log = measure.key;
-    const toggle = dom.el('label', null, 'trend-table-control');
-    const input = dom.el('input');
-    input.type = 'checkbox';
-    input.className = 'trend-table-input';
-    input.setAttribute('role', 'switch');
+    const toggle = dom.button(null, 'trend-table-control');
+    toggle.setAttribute('aria-label', 'Table view');
+    toggle.title = 'Table view';
+    const glyph = dom.el('span', null, 'table-view-glyph');
+    glyph.setAttribute('aria-hidden', 'true');
+    toggle.append(glyph);
     const table = this.table(measure);
     table.id = `trend-table-${measure.key}`;
-    input.setAttribute('aria-controls', table.id);
-    toggle.append(dom.el('span', 'Table'), input, dom.el('span', null, 'trend-switch-track'));
-    toggle.lastChild.setAttribute('aria-hidden', 'true');
+    toggle.setAttribute('aria-controls', table.id);
     const update = () => {
-      input.checked = this.tableMeasures.has(measure.key);
-      table.hidden = !input.checked;
-      for (const node of card.querySelectorAll('.trend-plot, .trend-foot, .trend-empty')) node.hidden = input.checked;
+      const selected = this.tableMeasures.has(measure.key);
+      toggle.setAttribute('aria-pressed', String(selected));
+      table.hidden = !selected;
+      for (const node of card.querySelectorAll('.trend-plot, .trend-foot, .trend-empty')) node.hidden = selected;
     };
-    input.addEventListener('change', () => {
-      if (input.checked) this.tableMeasures.add(measure.key);
-      else this.tableMeasures.delete(measure.key);
+    toggle.addEventListener('click', () => {
+      if (this.tableMeasures.has(measure.key)) this.tableMeasures.delete(measure.key);
+      else this.tableMeasures.add(measure.key);
       update();
     });
     card.querySelector('.trend-card-top').append(toggle);

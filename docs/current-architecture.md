@@ -747,8 +747,8 @@ In the Maya demo workspace, `maya-scenes.js` reads `scenes` from `static/maya/st
 
 ## Optional Dash frontend evaluation (2026-10-24)
 
-The shipped frontend remains the JavaScript application. Trends now uses responsive desktop measurement columns and an upper-right Table switch. No Dash package is required by the production server or its lockfile.
+The shipped frontend remains the JavaScript application. Trends now uses responsive desktop measurement columns and an upper-right table icon button. No Dash package is required by the production server or its lockfile.
 
-`scripts/dash_trends_preview.py` is a separate, local-only Dash/Mantine comparison using synthetic values and the existing measurement definitions/usual-range helper. It creates a native FastAPI backend and uses Mantine layout, switches, tables and form controls with Plotly charts. Its pinned optional environment is in `scripts/dash-trends-requirements.txt`; it neither reads account databases nor replaces `/trends`.
+`scripts/dash_trends_preview.py` is a separate, local-only Dash/Mantine comparison using synthetic values and the existing measurement definitions/usual-range helper. It creates a native FastAPI backend and uses Mantine layout, icon controls, tables and form controls with Plotly charts. Its pinned optional environment is in `scripts/dash-trends-requirements.txt`; it neither reads account databases nor replaces `/trends`.
 
 A proposed account-local Trends pilot, including session/demo scoping, callback/WebSocket routing, shared navigation, saved readings, source/logging parity and performance checks, is documented in [the evaluation](../plans/dash-trends-evaluation.md). These integration checks remain unverified; a standalone screenshot does not establish production isolation or feature parity.

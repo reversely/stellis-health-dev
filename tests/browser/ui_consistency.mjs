@@ -13,7 +13,7 @@ if (process.env.STELLIS_UI_ROUTES) {
     const response=await context.request[method](origin+'/api/v1'+path,{data});
     assert(response.ok(),path+' '+response.status());return response.json();
   };
-  await api('/auth/register',{username:'ui-consistency',password:'correct horse battery staple'});
+  await api('/auth/register',{username:'ui-consistency-'+Date.now(),password:'correct horse battery staple'});
   await api('/onboarding',{uses:[],step:'review',agent_choices:{}},'put');
   await api('/onboarding/complete');
   const notebook=await api('/notebooks',{name:'Style audit',color:'#547980'});
@@ -111,12 +111,11 @@ try {
     }
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${route} ${width} ${theme}`);
     if (route==='/trends') {
-      const manual=await style(page.locator('.trend-manual[data-log=pulse]'));
       const control=page.locator('.trend-table-control').first();
       assert((await control.boundingBox()).height>=44);
-      await control.getByRole('switch',{name:'Table',exact:true}).check();
+      await control.click();
       await page.locator('.trend-table').first().waitFor({state:'visible'});
-      await control.getByRole('switch',{name:'Table',exact:true}).uncheck();
+      await control.click();
     }
     results.push({theme,width,route,controls});
     if (process.env.STELLIS_UI_EVIDENCE && (route==='/' || (route==='/trends' && width===390))) {

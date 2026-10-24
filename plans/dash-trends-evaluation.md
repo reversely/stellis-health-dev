@@ -13,13 +13,14 @@ The current production app still uses its JavaScript frontend. The optional prot
 Run `scripts/dash_trends_preview.py` with the pinned optional dependencies in `scripts/dash-trends-requirements.txt`. It creates a native FastAPI server and mounts Dash on that server without a WSGI adapter, iframe or external hosted service. It uses production measurement definitions and the usual-range helper, but supplies sample values.
 
 - `dmc.AppShell`, `SimpleGrid`, `Paper`, `Group` and `Stack` supply layout and responsive behavior.
-- A real `dmc.Switch`, labelled Table at the upper right, replaces the plot with the table.
+- A real `dmc.ActionIcon` table button at the upper right replaces the plot with the table, with an accessible name and a pressed state.
 - `dmc.Table(data=...)` and `TableScrollContainer` render one shared table schema for every measure, with a separate second value for paired blood-pressure readings. `TextInput` and `Select` supply shared search and ordering; Dash callbacks apply them. Sorting/filtering logic is still application code; the component library does not infer it.
 - `dcc.Graph` supplies responsive Plotly charts, pointer inspection and paired series. A shared renderer applies the palette, date range and usual-range band.
+- Client-side padded hover overlays show a single date and reading; range legends use calculated bounds and disappear without a baseline. Category buttons and the narrow selector open matching measurement panels.
 - Dark-purple and light themes, the approved fonts and measurement categories match the current product direction.
 - Every asset and callback in the browser evaluation was local. No Plotly cloud account or paid embedding middleware is needed for this prototype.
 
-The native comparison now has two desktop columns, three vital-sign columns on very wide screens, equal-height cards and upper-right Table switches. It removes possessive usual-range wording from Trends, the overview and camera capture. This addresses the immediate feedback independently of a framework decision.
+The native comparison now has two desktop columns, three vital-sign columns on very wide screens, equal-height cards and upper-right Table icon buttons. It removes possessive usual-range wording from Trends, the overview and camera capture. This addresses the immediate feedback independently of a framework decision.
 
 ## Proposed integration
 
