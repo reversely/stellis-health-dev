@@ -638,3 +638,26 @@ flowchart LR
 ```
 
 `chat_attachment_routes.py` exposes thread-scoped list, upload, removal and filing endpoints. Uploads use existing document type, size and raster validation. Failed OCR retains a Needs text document for correction. A transaction limits pending attachments to five per thread. Send validates every attachment against the current thread and refuses consumed IDs. Agent requests receive the extracted passages as extra sources; notebook chat combines them with explicitly checked sources under its existing context budget and citation rules. Attachment text remains untrusted evidence in both prompt paths. Filing enforces notebook source limits, reuses the canonical document and refuses to move files already saved elsewhere. Chat history retains attachment links after filing and reload.
+
+## Source-anchored report explanations
+
+The full document page renders original PDF/image pages and overlays account-local, revisioned text-line regions. `report_page_worker.py` reuses bounded rasterization in an isolated subprocess with memory, CPU, raster and wall-time limits. PDF text and rotation-aware geometry come from the existing PyMuPDF dependency; scans use local Tesseract TSV. The versioned map records normalized top-left coordinates, engine/version, original byte digest and page revision. These adapters add source geometry without installing a replacement OCR model or overwriting saved page text.
+
+`report_context.py` stores immutable maps and source-anchored question/answer exchanges in the account SQLite database. A new selection requests an explanation; follow-ups reuse that selection and bounded saved history. The inference gateway receives the original page text/layout around the selection plus up to three ranked related document-page excerpts in the same account. Related excerpts retain page headings and nearby text rather than only search previews. Current evidence is supplied for each fresh inference session; historical citation numbers are not reused as current evidence. The existing notebook citation parser validates marker identities and creates source links. This does not independently validate clinical correctness or entailment.
+
+```mermaid
+flowchart LR
+  Report[Original report page] --> Worker[Bounded local raster and geometry worker]
+  Worker --> Map[Versioned source regions]
+  Map --> Select[Select a report line]
+  Select --> Context[Selected region and page layout]
+  Records[Account document text] --> Context
+  Context --> Gateway[Existing inference gateway]
+  Gateway --> Validate[Check source identities and revisions]
+  Validate --> History[Saved anchored explanation and citations]
+  History --> Report
+```
+
+The service checks selected page revisions and related-page text hashes after inference under a write transaction before publishing a result. Historical exchanges retain their source snapshots and are marked stale when selected or related evidence changes or disappears. Deleting the original document cascades its maps and explanations. Original images are returned with private/no-store headers. Recognition traces contain timing and page events, not source content. The browser keeps line highlights aligned while zooming/rotating and uses a stacked report/explanation layout on phones. Saved answers remain readable when AI is unconfigured.
+
+[Issue #148 evidence](evidence/148/README.md) records real geometry/OCR and database tests plus browser verification at 1280px and 390px. Browser inference uses a controlled fixture; live provider quality is unverified without configured credentials. Arbitrary chart coordinates, freeform region selection, report voice input, automatic purpose naming, fuller metric enrichment and choosing a new OCR engine remain outside this delivered slice and tracked under #147.
