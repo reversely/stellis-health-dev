@@ -1,36 +1,36 @@
 .setup-personalize { max-width: 780px; margin: 0 auto; min-width: 0; }
-.profile-header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 48px; }
+.profile-header { display: flex; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-12); }
 .profile-body { min-width: 0; }
-.profile-body h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.2; margin: 0 0 24px; }
-.onboarding-page .profile-answer { box-sizing: border-box; width: 100%; min-width: 0; font-size: 22px; padding: 14px 16px; }
+.profile-body h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.2; margin: 0 0 var(--space-6); }
+.onboarding-page .profile-answer { box-sizing: border-box; width: 100%; min-width: 0; font-size: 22px; padding: var(--space-4) var(--space-4); }
 .onboarding-page textarea.profile-answer { min-height: 120px; resize: vertical; }
-.profile-choices { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-.profile-choices .profile-choice { min-height: 44px; white-space: normal; text-align: left; }
+.profile-choices { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
+.profile-choices .profile-choice { min-height: var(--control-height); white-space: normal; text-align: left; }
 .onboarding-page .profile-choice[aria-pressed='true'] { background: var(--ink); color: var(--raised); }
-.profile-status { min-height: 24px; margin: 20px 0 0; color: var(--muted); }
-.profile-library { margin-top: 24px; border-top: 1px solid var(--line-soft); padding-top: 16px; }
+.profile-status { min-height: 24px; margin: var(--space-5) 0 0; color: var(--muted); }
+.profile-library { margin-top: var(--space-6); border-top: 1px solid var(--line-soft); padding-top: var(--space-4); }
 .profile-library > summary { cursor: pointer; min-height: 32px; }
-.profile-library .intake-library { max-height: 380px; padding: 16px 0; }
-@media(max-width: 600px) { .profile-header { margin-bottom: 32px; } .onboarding-page .profile-answer { font-size: 18px; } }
+.profile-library .intake-library { max-height: 380px; padding: var(--space-4) 0; }
+@media(max-width: 600px) { .profile-header { margin-bottom: var(--space-8); } .onboarding-page .profile-answer { font-size: 18px; } }
 
 .profile-header { flex-wrap: wrap; }
 .profile-chat[hidden] { display: none; }
-.profile-chat { margin-top: 16px; min-width: 0; }
-.profile-transcript { max-height: 220px; overflow: auto; border-top: 1px solid var(--line-soft); padding: 8px 0; }
-.profile-message { display: grid; gap: 4px; margin: 12px 0; overflow-wrap: anywhere; }
+.profile-chat { margin-top: var(--space-4); min-width: 0; }
+.profile-transcript { max-height: 220px; overflow: auto; border-top: 1px solid var(--line-soft); padding: var(--space-2) 0; }
+.profile-message { display: grid; gap: var(--space-1); margin: var(--space-3) 0; overflow-wrap: anywhere; }
 .profile-message strong { font-size: 14px; }
-.profile-composer { display: flex; gap: 12px; align-items: center; }
+.profile-composer { display: flex; gap: var(--space-3); align-items: center; }
 .profile-composer input { flex: 1; width: 0; min-width: 0; font-size: 16px; }
 
 /* Confirmed answers stay inside the existing call and notepad layout. */
 .setup-personalize.setup-call { max-width:none; }
-.setup-personalize .profile-body h2 { font-size:clamp(24px,3vw,32px); line-height:1.25; margin:0 0 20px; }
+.setup-personalize .profile-body h2 { font-size:clamp(24px,3vw,32px); line-height:1.25; margin: 0 0 var(--space-5); }
 .setup-personalize .call-notepad { grid-template-rows:auto minmax(0,1fr); }
-.setup-personalize .profile-transcript { max-height:none; border:0; padding:20px 24px 28px; }
-.setup-personalize .profile-chat { width:100%; margin-top:8px; }
+.setup-personalize .profile-transcript { max-height:none; border:0; padding: var(--space-5) var(--space-6) var(--space-7); }
+.setup-personalize .profile-chat { width:100%; margin-top: var(--space-2); }
 .setup-personalize .profile-composer { flex-wrap:wrap; }
 .setup-personalize .profile-composer input { flex-basis:180px; background:var(--call-bg); color:var(--call-ink); border-color:var(--call-muted); }
 .setup-personalize .call-text { background:transparent; color:var(--call-ink); border-color:var(--call-muted); }
-.setup-personalize .profile-saved-notes:not(:empty) { margin-top:24px; border-top:1px solid var(--line-soft); padding-top:16px; }
-.setup-personalize .profile-note-edit { display:block; width:100%; white-space:pre-wrap; overflow-wrap:anywhere; text-align:left; border:0; background:transparent; padding:8px 0; }
+.setup-personalize .profile-saved-notes:not(:empty) { margin-top: var(--space-6); border-top:1px solid var(--line-soft); padding-top: var(--space-4); }
+.setup-personalize .profile-note-edit { display:block; width:100%; white-space:pre-wrap; overflow-wrap:anywhere; text-align:left; border:0; background:transparent; padding: var(--space-2) 0; }
 .setup-personalize.is-minimised :is(.profile-chat, .call-text) { display:none; }

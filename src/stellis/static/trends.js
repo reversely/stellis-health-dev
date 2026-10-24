@@ -334,7 +334,7 @@ class TrendsPage {
         cameraMeasure ? 'Log manually' : 'Add a reading',
         cameraMeasure ? 'trend-manual' : 'trend-add');
     add.dataset.log = measure.key;
-    const tableButton = dom.button('Show table');
+    const tableButton = dom.button('Show table', 'trend-table-toggle');
     tableButton.setAttribute('aria-expanded', 'false');
     const table = this.table(measure);
     table.hidden = true;
@@ -402,7 +402,7 @@ class TrendsPage {
     error.setAttribute('role', 'alert');
     const save = dom.button('Save', 'trend-save');
     save.type = 'submit';
-    const cancel = dom.button('Cancel');
+    const cancel = dom.button('Cancel', 'trend-cancel');
     cancel.addEventListener('click', close);
     const buttons = dom.el('div', null, 'trend-form-buttons');
     buttons.append(save, cancel);

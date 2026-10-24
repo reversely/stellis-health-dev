@@ -20,12 +20,15 @@
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
-  // Text on a notebook colour: whichever of the two house inks has the higher contrast.
+  // Keep the preferred house ink when it reaches 4.5:1. Mid-tone custom colours
+  // need a full white/black fallback to keep ordinary card text readable.
   function inkFor(hex) {
     if (!isHexColour(hex)) return LIGHT_INK;
     const level = luminance(hex);
     const contrast = ink => { const other = luminance(ink); return (Math.max(level, other) + 0.05) / (Math.min(level, other) + 0.05); };
-    return contrast(DARK_INK) > contrast(LIGHT_INK) ? DARK_INK : LIGHT_INK;
+    const preferred = contrast(DARK_INK) > contrast(LIGHT_INK) ? DARK_INK : LIGHT_INK;
+    if (contrast(preferred) >= 4.5) return preferred;
+    return contrast('#000000') > contrast('#FFFFFF') ? '#000000' : '#FFFFFF';
   }
 
   // Open and completed to-do counts per source ID, from the two GET /todos responses.

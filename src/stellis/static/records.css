@@ -5,7 +5,7 @@
 }
 .records-view {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   min-width: 0;
   max-width: 820px;
 }
@@ -15,18 +15,16 @@
 .records-head h2 {
   margin: 0;
   font:
-    300 30px/1.15 Piazzolla,
-    Georgia,
-    serif;
+    300 30px/1.15 var(--font-heading);
   letter-spacing: -0.02em;
 }
 .records-drop {
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding: 28px 16px;
+  gap: var(--space-compact);
+  padding: var(--space-7) var(--space-4);
   border: 1.5px dashed var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   text-align: center;
   cursor: pointer;
   transition:
@@ -59,7 +57,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .records-summary,
 .records-status {
@@ -69,10 +67,10 @@
 .records-view button,
 .records-view select,
 .records-view input:not([type='checkbox']) {
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
@@ -91,8 +89,8 @@
   }
 }
 .records-view :focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 .records-view .records-sort,
 .records-view .records-file {
@@ -102,23 +100,23 @@
 }
 .records-proposal {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .records-proposal:empty {
   display: none;
 }
 .records-group {
   display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: 12px;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4);
+  border-radius: var(--radius-panel);
   background: var(--raised);
 }
 .records-group-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .records-group-head input {
   flex: 1;
@@ -148,10 +146,10 @@
   display: grid;
   grid-template-columns: 18px 18px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 0 6px;
-  border-radius: 8px;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: 0 var(--space-compact);
+  border-radius: var(--radius-control);
   cursor: pointer;
   font-size: 14px;
 }
@@ -169,19 +167,19 @@
 }
 .records-group-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .records-view h3 {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   font-size: 18px;
 }
 .records-row {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  gap: var(--space-3);
+  padding: var(--space-compact) var(--space-2);
+  border-radius: var(--radius-control);
 }
 .records-row .icon {
   color: var(--muted);
@@ -189,13 +187,13 @@
 .records-title {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--control-height);
   color: var(--ink);
   overflow-wrap: anywhere;
 }
 .records-row select {
   max-width: 180px;
-  min-height: 36px;
+  min-height:var(--control-height);
   font-size: 14px;
 }
 .records-empty {

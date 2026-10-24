@@ -3,20 +3,20 @@
    amber, at the same lightness so none outranks the others. */
 .home-pillars,
 .notebook-pillars {
-  --pillar-records: oklch(0.62 0.1 196);
-  --pillar-questions: oklch(0.6 0.12 290);
-  --pillar-goals: oklch(0.7 0.13 70);
+  --pillar-records: var(--pillar-records-colour);
+  --pillar-questions: var(--pillar-questions-colour);
+  --pillar-goals: var(--pillar-goals-colour);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 .home-pillars {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-height: 196px;
-  margin: 8px 0 28px;
+  margin: var(--space-2) 0 var(--space-7);
 }
 .notebook-pillars {
-  margin: 0 0 18px;
+  margin: 0 0 var(--space-4);
 }
 .home-pillars:empty,
 .notebook-pillars:empty {
@@ -27,11 +27,11 @@
   position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
-  padding: 18px 20px;
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--ink);
   text-align: left;
@@ -69,7 +69,7 @@
 .pillar-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 .pillar-head .icon {
   width: 22px;
@@ -79,9 +79,7 @@
 .pillar-head :is(h2, h3) {
   margin: 0;
   font:
-    300 21px/1.2 Piazzolla,
-    Georgia,
-    serif;
+    300 21px/1.2 var(--font-heading);
 }
 .pillar-tile .pillar-head :is(h2, h3) {
   font-size: 18px;
@@ -89,7 +87,7 @@
 .pillar-figure {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-4);
   min-width: 0;
 }
 .pillar-body {
@@ -158,13 +156,13 @@
 /* Questions: chips that open a notebook's chat with the question. */
 .pillar-asks {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
 }
 .pillar-ask {
   display: block;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
   background: color-mix(in oklch, var(--pillar-hue) 12%, var(--surface));
   color: var(--ink);
   font-size: 14px;
@@ -220,8 +218,8 @@
   animation-delay: 100ms;
 }
 .pillar:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 .pillar {
   transition:
@@ -252,7 +250,7 @@
   .home-pillars,
   .notebook-pillars {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: var(--space-3);
   }
   .home-pillars {
     min-height: 0;
@@ -261,7 +259,7 @@
     grid-template-columns: auto 1fr;
     grid-template-rows: auto;
     align-items: center;
-    padding: 12px 14px;
+    padding: var(--space-3) var(--space-4);
   }
   .notebook-pillars .pillar-strip {
     max-width: 180px;
