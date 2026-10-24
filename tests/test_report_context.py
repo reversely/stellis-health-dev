@@ -163,3 +163,11 @@ class ReportContextTests(unittest.TestCase):
         saved = report_context.history(self.record['id'])[0]
         self.assertTrue(saved['stale'])
         self.assertTrue(saved['evidence'][0]['text'])
+
+    def test_concurrent_map_and_raster_requests_wait_for_the_same_worker_slot(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            mapped = pool.submit(report_context.page_map, self.record['id'], 1)
+            original = pool.submit(report_context.page_image, self.record['id'], 1)
+            self.assertEqual(mapped.result(timeout=15)['engine'], 'pdf-text')
+            self.assertTrue(original.result(timeout=15).startswith(b'\x89PNG'))

@@ -1,6 +1,7 @@
 """Source-anchored report conversations, isolated in the account database."""
 from __future__ import annotations
 
+from contextlib import contextmanager, ExitStack
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -11,6 +12,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 import uuid
 
 from stellis import agent_gateway, document_ocr, documents, notebook_chat, runtime_trace, storage
@@ -42,12 +44,28 @@ def _tables(conn):
         citations TEXT NOT NULL, evidence TEXT NOT NULL, created_at TEXT NOT NULL)''')
 
 
+@contextmanager
+def _page_slot():
+    """Let a reload wait briefly for the preceding page job to release the host slot."""
+    deadline = time.monotonic() + 25
+    with ExitStack() as stack:
+        while True:
+            try:
+                stack.enter_context(document_ocr._slot())
+                break
+            except documents.DocumentConflict:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(.1)
+        yield
+
+
 def _worker(document_id, number, mode):
     record = documents.get(document_id)
     documents.get_page(record, number)
     path, media_type = documents.file_path(document_id)
     executable = shutil.which(os.environ.get('STELLIS_TESSERACT', 'tesseract')) or 'tesseract'
-    with document_ocr._slot(), runtime_trace.span('report_page', provider='local',
+    with _page_slot(), runtime_trace.span('report_page', provider='local',
             model='pdf-text/tesseract-tsv', execution='Open original report'):
         runtime_trace.event('page_started', page_number=number)
         process = subprocess.Popen([sys.executable, str(Path(__file__).with_name('report_page_worker.py')),
@@ -57,7 +75,10 @@ def _worker(document_id, number, mode):
         try:
             output, _ = process.communicate(timeout=30)
         except subprocess.TimeoutExpired as exc:
-            os.killpg(process.pid, signal.SIGKILL)
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             process.communicate()
             raise document_ocr.OcrError('This page took too long. Try again.') from exc
         if process.returncode or len(output) > 32_000_000:
