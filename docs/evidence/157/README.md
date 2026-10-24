@@ -15,3 +15,7 @@ Issue: [#157](https://github.com/reversely/stellis-health-dev/issues/157). Date:
 - `health_capture.mjs` now looks for the notebook weight reading as a Levels card. Its earlier appointment-date failure on `origin/main` is unrelated.
 
 Screenshots use synthetic records with dates relative to the test day.
+
+## Follow-up UI correction
+
+Owner feedback on `timeline-1280-light.png`: align with the style guide and demo, avoid overlapping icons, clashes and hardcoded content. See [the correction evidence](layout-correction/README.md) for the revised layout, actual browser checks, references and limits. The original screenshots are retained for comparison.

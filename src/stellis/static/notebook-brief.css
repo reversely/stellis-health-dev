@@ -2,11 +2,12 @@
 #notebook-health {
   --brief-dose: var(--tracker-success-light);
   --brief-dose-fill: color-mix(in oklch, var(--brief-dose) 9%, var(--surface));
+  container-type: inline-size;
   display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); margin-bottom: var(--space-7);
 }
 #notebook-health > *, .notebook-levels > * { min-width: 0; }
-html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-levels { --brief-dose: var(--tracker-success-dark); }
-.notebook-levels { --brief-dose: var(--tracker-success-light); grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-7); min-width: 0; }
+html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-levels { container-type: inline-size; --brief-dose: var(--tracker-success-dark); }
+.notebook-levels { container-type: inline-size; --brief-dose: var(--tracker-success-light); grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-7); min-width: 0; }
 .notebook-levels:empty { display: none; }
 .brief-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); margin-bottom: var(--space-4); }
 .brief-head h2 { margin: 0; color: var(--ink); font: 300 26px/1.15 var(--font-heading); letter-spacing: -.02em; }
@@ -14,16 +15,16 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-empty { margin: 0; color: var(--muted); }
 
 .brief-strip { display: grid; grid-template-columns: repeat(15, minmax(36px, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; overflow-x: auto; scrollbar-width: thin; }
-.brief-day { display: grid; justify-items: center; gap: var(--space-2); }
+.brief-day { display: grid; grid-template-rows: 24px 84px auto; justify-items: center; gap: var(--space-2); }
 .brief-weekday { display: grid; place-items: center; width: 24px; height: 24px; color: var(--muted); font-size: 13px; font-weight: 650; }
 .brief-day[aria-current='date'] .brief-weekday { border-radius: 50%; background: var(--block-fill); color: var(--block-ink); }
 .brief-capsule {
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: var(--space-1);
-  box-sizing: border-box; width: min(100%, 48px); height: 76px; padding-bottom: var(--space-3);
+  box-sizing: border-box; align-self: end; width: min(100%, 48px); height: 76px; padding-bottom: var(--space-3);
   border: 2px solid color-mix(in oklch, var(--brief-dose) 45%, transparent); border-radius: var(--radius-pill); background: var(--brief-dose-fill);
 }
 .brief-day.is-future .brief-capsule { border-style: dashed; background: transparent; }
-.brief-day[aria-current='date'] .brief-capsule { height: 84px; margin-top: -8px; border: 3px solid var(--brief-dose); }
+.brief-day[aria-current='date'] .brief-capsule { height: 84px; border: 3px solid var(--brief-dose); }
 .brief-dot { width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; }
 .brief-dot.is-taken { background: var(--brief-dose); }
 .brief-dot.is-skipped { border: 2px solid var(--brief-dose); }
@@ -36,10 +37,10 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
   display: grid; grid-template-columns: minmax(180px, auto) auto minmax(0, 1fr); align-items: center; gap: var(--space-6);
   padding: var(--space-4) var(--space-6); border-radius: var(--radius-panel); background: var(--brief-dose-fill);
 }
-.brief-course-name { display: grid; gap: 2px; }
+.brief-course-name { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
 .brief-course-name strong { font-size: 18px; font-weight: 650; }
 .brief-course-name span, .brief-course-count span { color: var(--muted); font-size: 15px; }
-.brief-course-count { display: grid; gap: 2px; padding-left: var(--space-6); border-left: 1px solid var(--line-soft); }
+.brief-course-count { display: grid; gap: var(--space-1); min-width: 0; padding-left: var(--space-6); border-left: 1px solid var(--line-soft); }
 .brief-course-count p { margin: 0; color: var(--ink); font-size: 18px; }
 .brief-course-count strong { font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .brief-course-track { display: grid; gap: var(--space-2); min-width: 0; }
@@ -52,18 +53,18 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-course-marker { width: 12px; height: 12px; border: 2px solid var(--ink); background: var(--surface); }
 .brief-course-marker.is-planned { border-color: var(--block-planned-fill); background: var(--block-planned-fill); }
 .brief-course-now { width: 18px; height: 18px; border: 3px solid var(--brief-dose); background: var(--surface); }
-.brief-course-labels { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--muted); font-size: 14px; }
+.brief-course-labels { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); color: var(--muted); font-size: 14px; }
 
 .brief-coming-list { display: grid; margin: 0; padding: 0; list-style: none; }
 .brief-coming-row { display: grid; grid-template-columns: minmax(110px, 140px) 16px minmax(0, 1fr) auto; align-items: start; gap: var(--space-4); padding: var(--space-4) 0; border-top: 1px solid var(--line-soft); }
-.brief-coming-row:last-child { border-bottom: 1px solid var(--line-soft); }
+.brief-coming-row:first-child { border-top: 0; }
 .brief-coming-date { font-weight: 650; }
 .brief-coming-dot { width: 10px; height: 10px; margin-top: 6px; box-sizing: border-box; border: 2px solid var(--ink); border-radius: 50%; }
 .brief-coming-dot.is-calculated { border-color: var(--block-calculated-fill); background: var(--block-calculated-fill); }
 .brief-coming-dot.is-due { border-color: var(--block-alert-fill); background: var(--block-alert-fill); }
 .brief-coming-text { display: grid; gap: var(--space-1); min-width: 0; }
 .brief-coming-text strong { font-size: 17px; font-weight: 650; overflow-wrap: anywhere; }
-.brief-coming-text p { margin: 0; color: var(--muted); font-size: 15px; }
+.brief-coming-text p { overflow-wrap: anywhere; margin: 0; color: var(--muted); font-size: 15px; }
 .brief-coming-source, .brief-level-source, .brief-facts-list a { color: var(--ink); font-size: 14px; text-underline-offset: 3px; overflow-wrap: anywhere; }
 
 .brief-ranges { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border-radius: var(--radius-control); background: var(--raised); }
@@ -76,7 +77,7 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 }
 .brief-level-card[aria-pressed='true'] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .brief-level-card:focus-visible, .brief-chart:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
-.brief-level-top { display: flex; justify-content: space-between; gap: var(--space-3); }
+.brief-level-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); }
 .brief-level-name { font-weight: 650; overflow-wrap: anywhere; }
 .brief-level-top time { color: var(--muted); font-size: 14px; flex: none; }
 .brief-level-value { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
@@ -112,7 +113,7 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-facts-list { display: grid; margin: 0; padding: 0; list-style: none; }
 .brief-facts-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--line-soft); }
 .brief-facts-meta { color: var(--muted); font-size: 13px; }
-@media (max-width: 760px) {
+@container (max-width: 760px) {
   .brief-course { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); padding: var(--space-4); }
   .brief-course-track { grid-column: 1 / -1; }
   .brief-course-count { padding-left: var(--space-4); }
@@ -135,7 +136,7 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-birth-field { display: grid; gap: var(--space-2); font-weight: 650; font-size: 14px; }
 .brief-birth-field input { min-height: var(--control-height); font-size: 16px; }
 .brief-birth-status:empty { display: none; }
-@media (max-width: 900px) { .brief-coming-wrap { grid-template-columns: minmax(0, 1fr); } }
+@container (max-width: 900px) { .brief-coming-wrap { grid-template-columns: minmax(0, 1fr); } }
 
 /* Records: a dashed zone that files reports into this notebook. */
 .record-drop {
@@ -153,3 +154,24 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .record-drop-results:empty { display: none; }
 .record-drop-review { color: var(--ink); text-underline-offset: 3px; }
 @media (max-width: 640px) { .record-drop { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-4); } .record-drop .coach-button { grid-column: 1 / -1; justify-content: center; } }
+
+#notebook-health:empty { display: none; }
+.brief-coming-source { display: inline-flex; align-items: flex-start; gap: var(--space-2); min-height: var(--control-height); }
+.brief-coming-source .icon { width: 16px; height: 16px; margin-top: var(--space-1); color: currentColor; }
+.brief-coming-source span { min-width: 0; }
+.brief-coming-row .status-block { align-self: start; }
+.brief-course-labels span { overflow-wrap: anywhere; min-width: 0; }
+.brief-course-labels span:last-child { margin-left: auto; text-align: right; }
+.brief-level-facts dd { overflow-wrap: anywhere; }
+.brief-strip { padding-top: var(--space-2); }
+@container (max-width: 480px) {
+  .brief-course { grid-template-columns: minmax(0, 1fr); }
+  .brief-course-count { border-left: 0; padding-left: 0; }
+  .brief-course-track { padding-block: var(--space-2); }
+  .brief-coming-row { gap: var(--space-2) var(--space-3); }
+  .brief-coming-text { grid-column: 2 / -1; }
+  .brief-coming-row .status-block { grid-column: 2 / -1; justify-self: start; }
+}
+
+/* A notebook with results already has a Brief, even without a meeting summary. */
+#notebook-panel:has(.notebook-levels:not(:empty)) #notebook-brief-empty { display: none; }

@@ -36,7 +36,8 @@ function sectionHead(title, aside) {
 /** Two weeks of capsules: logged doses solid, expected ones pale, today outlined. */
 function timeline(data) {
   const section = el('section', null, 'brief-timeline');
-  const {head, id} = sectionHead('Timeline', el('p', 'Today, ' + parse(data.today).toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'}), 'brief-today'));
+  const {head, id} = sectionHead('Timeline', el('time', 'Today, ' + parse(data.today).toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'}), 'brief-today'));
+  head.querySelector('time').dateTime = data.today;
   section.setAttribute('aria-labelledby', id);
   const days = el('ol', null, 'brief-strip');
   for (const day of data.strip) {
@@ -171,7 +172,9 @@ function comingUp(items) {
     text.append(el('strong', item.title));
     if (item.detail) text.append(el('p', item.detail));
     if (item.source) {
-      const link = el('a', item.source.title, 'brief-coming-source');
+      const link = el('a', null, 'brief-coming-source');
+      link.append(dom().icon(item.source.target.startsWith('/?event=') ? 'calendar' : 'file-text'),
+          el('span', item.source.title));
       link.href = item.source.target;
       text.append(link);
     }
@@ -179,6 +182,7 @@ function comingUp(items) {
     row.append(el('time', when, 'brief-coming-date'), el('span', null, `brief-coming-dot is-${item.status}`), text,
         el('span', label, `status-block ${STATUS_CLASS[item.status] ?? ''}`.trim()));
     row.querySelector('time').dateTime = item.date;
+    row.querySelector('.brief-coming-dot').setAttribute('aria-hidden', 'true');
     list.append(row);
   }
   section.append(head, list);

@@ -55,23 +55,53 @@ try {
   await ranges.nth(1).click();
   assert.equal(await levels.locator('.brief-chart-point').count(), 4);
   await ranges.first().click();
-  if (evidence) {
-    await mkdir(evidence, {recursive: true});
-    await page.locator('#notebook-health').screenshot({path: `${evidence}/timeline-1280-light.png`});
-    await levels.screenshot({path: `${evidence}/levels-1280-light.png`});
-  }
   await levels.locator('.brief-level-card').nth(1).click();
   assert.match(await levels.locator('.brief-level-title h3').textContent(), /^Hemoglobin/);
+  const overlaps = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x &&
+      a.y < b.y + b.height && a.y + a.height > b.y;
   for (const theme of ['light', 'dark']) for (const width of [1280, 390]) {
     await page.setViewportSize({width, height: 1000});
     await page.evaluate(t => document.documentElement.dataset.theme = t, theme);
     await levels.locator('.brief-level-card').first().click();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${theme} ${width} overflow`);
-    if (evidence && (theme === 'dark')) {
-      await page.locator('#notebook-health').screenshot({path: `${evidence}/timeline-${width}-dark.png`});
-      await levels.screenshot({path: `${evidence}/levels-${width}-dark.png`});
+    const currentDay = top.locator('.brief-day[aria-current]');
+    assert(!overlaps(await currentDay.locator('.brief-weekday').boundingBox(),
+        await currentDay.locator('.brief-capsule').boundingBox()), 'today label clears its capsule');
+    assert.equal(await page.locator('#notebook-brief-empty').isVisible(), false,
+        'results do not show the empty Brief message');
+    const courseName = await band.locator('.brief-course-name').boundingBox();
+    const courseCount = await band.locator('.brief-course-count').boundingBox();
+    const courseTrack = await band.locator('.brief-course-track').boundingBox();
+    assert(!overlaps(courseName, courseCount) && !overlaps(courseCount, courseTrack),
+        `${theme} ${width}: course contents do not collide`);
+    for (const link of await top.locator('.brief-coming-source').all()) {
+      assert(!overlaps(await link.locator('.icon').boundingBox(), await link.locator('span').boundingBox()),
+          'source icon has its own space beside wrapping text');
+    }
+    // The persistent toolbar has an opaque surface when the timeline scrolls underneath.
+    if (width > 1000) {
+      await top.locator('.brief-today').scrollIntoViewIfNeeded();
+      const toolbar = page.locator('#health-capture-toolbar');
+      const addBox = await page.locator('#global-add').boundingBox();
+      const barBox = await toolbar.boundingBox();
+      assert(addBox.y >= barBox.y && addBox.y + addBox.height <= barBox.y + barBox.height);
+      assert.notEqual(await toolbar.evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    if (evidence) {
+      await mkdir(evidence, {recursive: true});
+      await page.screenshot({path: `${evidence}/notebook-brief-${width}-${theme}.png`, fullPage: true});
+      await page.screenshot({path: `${evidence}/timeline-${width}-${theme}.png`});
     }
   }
+  // Long record names exercise wrapping without changing clinical fixtures.
+  await page.setViewportSize({width: 1280, height: 1000});
+  const name = band.locator('.brief-course-name strong');
+  const originalName = await name.textContent();
+  await name.evaluate(el => el.textContent = 'Long medicine name with a detailed formulation and a prolonged release description 300 mg');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  assert(!overlaps(await name.boundingBox(), await band.locator('.brief-course-count').boundingBox()));
+  await name.evaluate((el, text) => el.textContent = text, originalName);
   assert.deepEqual(errors, []);
   console.log('PASS notebook Brief: strip, course band, coming up, levels cards, chart, range, keyboard, themes and widths');
 } finally { await browser.close(); }

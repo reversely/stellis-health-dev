@@ -1,8 +1,10 @@
 # Notebook Ask layout correction
 
+Ticket: [#160](https://github.com/reversely/stellis-health-dev/issues/160).
+
 User feedback: the #160 screenshot is misaligned and fails the original brief. Status: implemented and browser verified.
 
-Compared the supplied `../160/notebook-ask-1440-light.png` with `../../refs/stellis-demo/notebook-ask-sources-viewer.png` and the layout brief in `../../../plans/r-04-notebook-sources.md`.
+Compared the supplied `../notebook-ask-1440-light.png` with `../../../refs/stellis-demo/notebook-ask-sources-viewer.png` and the layout brief in `../../../../plans/r-04-notebook-sources.md`.
 
 Observed gaps: summary tiles displace the workspace, the 368px sidebar and fixed 400px viewer squeeze the answer, panels have inconsistent surfaces and alignment, and the sticky composer covers the citation check and follow-ups.
 

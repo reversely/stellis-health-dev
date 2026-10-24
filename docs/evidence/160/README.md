@@ -19,3 +19,7 @@ Issue: [#160](https://github.com/reversely/stellis-health-dev/issues/160). Date:
 ## Limits
 
 The reference words its notice from the records' meaning (*Your pregnancy blood tests are in the Pregnancy notebook*). This build names the notebook and states that the answer did not read it; it does not describe the matched records. The reference's per-citation explanation in the viewer (*Cited for the June 15 ferritin value*) would need the model to state why each source was cited.
+
+## Follow-up layout correction
+
+The owner's layout feedback and corrected browser evidence are tracked under this same ticket: [layout correction](layout-correction/README.md). This replaces the former unnumbered `docs/evidence/ask-layout/` location; original #160 evidence remains above.

@@ -31,3 +31,18 @@
 
 :root .agent-composer-actions .agent-capture-action { background: transparent; color: var(--ink); border-color: var(--line); }
 @media (hover: hover) and (pointer: fine) { :root .agent-composer-actions .agent-capture-action:hover { background: var(--raised); color: var(--ink); border-color: var(--line); } }
+
+/* A notebook's persistent capture action owns its toolbar surface. Content
+   scrolls beneath the toolbar rather than behind the button alone. */
+@media (min-width: 1001px) {
+  .notebook-page #health-capture-toolbar {
+    position: fixed; inset: 0 0 auto var(--rail-width); z-index: 4;
+    display: flex; align-items: center; justify-content: flex-end;
+    box-sizing: border-box; height: calc(var(--control-height) + var(--space-7));
+    padding: var(--space-3) var(--space-6); background: var(--field);
+  }
+  html body.notebook-page #health-capture-toolbar #global-add { position: static; }
+  .notebook-page #notebook-view :is(section, .brief-chart) {
+    scroll-margin-top: calc(var(--control-height) + var(--space-9));
+  }
+}

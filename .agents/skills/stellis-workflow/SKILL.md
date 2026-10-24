@@ -22,6 +22,8 @@ Apply this skill to `/Users/slee/Repos/stellis-dev` or `reversely/stellis-dev`. 
 
 ## Delivery and evidence
 
+- Peg validation evidence to its owning ticket: `docs/evidence/<ticket-number>/`, with a revision subdirectory for follow-up corrections. Link the ticket and the actual brief/demo references in its README; preserve earlier artifacts and state which browser states and checks passed.
+
 - File scoped GitHub issues, implement and browser-test complete workflows, close tickets through merged PRs to `main`, and continue while authorized work remains.
 - Create every git worktree under `.agents/worktrees/<name>` in this checkout. Never create sibling folders in `~/Repos`.
 - As soon as a feature passes its required validation, rebase its branch onto current `main`, rerun checks affected by the rebase, and merge its PR immediately. Do not leave validated work waiting in a draft PR. Clear any concrete merge gate before considering the feature delivered.
