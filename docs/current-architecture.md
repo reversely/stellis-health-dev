@@ -774,3 +774,28 @@ flowchart LR
 `StellisCameraPulse.open` accepts an optional persistence adapter and `showComparison` option. Native callers keep the default readings API and comparison behavior. The prototype supplies an adapter that writes only estimates to `stellis-preview-camera-session` and updates `preview-camera-data`; it disables comparisons against Maya’s synthetic history. Its clear action affects only that camera session. Video frames are not stored. Actual camera permission is requested only on Start, with existing track cleanup and review controls retained. No physical camera was available for the #183 film; its no-device recovery is genuine, and successful pipeline plumbing is covered separately by controlled-signal tests.
 
 The narrated demo recorder drives real browser actions without camera, network, inference or clock replacements. An authored scene list provides timing/captions; the local optional Kitten TTS helper synthesizes narration and adds a separate caption footer. These recording tools do not add dependencies to the production runtime. [Evidence and remaining integration limits](evidence/183/README.md).
+
+## Integrated Dash measurements and native Maya chapters (#185)
+
+The optional standalone #183 interface above is historical and superseded. `dash` and `dash-mantine-components` are now pinned runtime dependencies. `dash_measurements.install` mounts only the measurement body under `/components/measurements/` on the existing account-local FastAPI server. Native `StellisTrends.mount` delegates to `StellisDashTrends`, which contains that body inside the real Trends view, retaining the app’s original shell and native capture controls.
+
+```mermaid
+flowchart LR
+  Shell[Existing app shell and Trends route] --> Body[App-owned Dash Mantine measurement body]
+  Shell --> API[Existing authenticated readings and source APIs]
+  API --> Scope[Account or isolated Maya database]
+  Body --> Bridge[Same-origin checked component messages]
+  Bridge --> Capture[Native manual-entry and camera controls]
+  Capture --> API
+  Capture --> Test[Separate demo camera test session]
+  Dock[Three-stage Maya scene dock] --> Sources[Real records, notebooks and native views]
+  Sources --> Scope
+```
+
+The parent reads the real readings API and sends data/theme/demo state to the component. Mantine cards/tables and Plotly charts share this projection; manual saves and deletes refresh it, and reload reads the database again. Source targets return to native navigation. Demo generation reset and leaving the workspace reload the application, discarding component state. No account data is stored in a module-level Dash layout.
+
+The component frame contains generated Mantine/Plotly styling; only its response permits inline styles and same-origin framing. Native pages retain their stronger style policy and frame-ancestor restriction. Component HTTP routes pass the ordinary session gate/account gateway. A socket middleware applies account binding and origin checks; the gateway relays only the added exact runtime socket path. The pinned Dash backend’s global catch-all is disabled for this instance, preserving native unknown-route and API semantics. See [ADR 0087](decisions/0087-integrated-dash-measurements.md).
+
+`maya-scenes.js` reads three chapter anchors and real scene targets from the existing story file. A chapter button selects its first scene; a native select and previous/next controls move within the story. Details stay hidden until requested, while missing imports display actionable guidance. Add records opens the existing yearly ZIP/date/notebook review at the first incomplete package in that chapter. Native notebook targets carry a validated `tab` query parameter to avoid racing an asynchronous route render. The 2024–25 chapter also brings forward 2023’s investigation package, retaining the same library.
+
+The camera runs in the existing parent dialog. Ordinary saves use the normal readings API. In Maya’s demo, the adapter stores only reviewed numeric estimates in a generation-specific browser session and suppresses synthetic-baseline comparisons. Demo camera results can be cleared independently. Physical-camera accuracy is not inferred from controlled-signal tests or a no-device recording.
