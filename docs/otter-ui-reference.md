@@ -258,3 +258,11 @@ Verified locally: uploads, explicit filing, canonical duplicate handling, sent-m
 Owner request: “Please divide these clearly and make it simple and straightforward to launch on one version or the other.” Follow-up: “clean the confusing labels and comments”. The next requested direction is Token Factory-backed NemoClaw with separate Nebius serverless speech inference.
 
 Implemented: explicit `launch local` and `launch cloud`, separate private files, data directories and ports, configuration-only checks, and no cross-profile fallback. Settings separates agent execution, model provider and speech location. The legacy direct mode and the isolated demo's direct completions are labelled explicitly. The serverless speech backend is a documented next integration, not claimed as deployed. Configuration tests cover secret isolation, route validation and refusing shared data; network-backed runtime and cloud speech checks remain separate.
+
+## Trends layout, measurement categories and purple dark mode — 2026-10-24
+
+Owner feedback, implemented and browser verified: the supplied `docs/evidence/152/trends-390-light.png` shows a navigation stripe inside a long capture, awkward “You logged” metadata, mixed unrelated Start tracking rows and inconsistent colors. Dark mode must be dark purple, never black. This reference is Stellis, so no external-product inference is involved.
+
+The measurement hierarchy now stays stable across empty and recorded states: Vital signs, Body measurements, Blood sugar, Sleep and Symptoms. Empty measures are plain rows with secondary actions; the arbitrary Start tracking bucket is removed. Dates and sources are separate elements, and personal-history comparisons are neutral information. Shared purple canvas/card/control/navigation roles also apply to media and calls. The style guide and project workflow skill record the owner's requirement.
+
+Live geometry checks distinguish the fixed bar from a stitched screenshot: navigation stays on the viewport bottom at top, middle and bottom scroll positions, and the final action scrolls above it. Eight layouts in both themes pass category, overflow, save/reload and table checks; a 50-state shared UI audit passes contrast and control checks. Evidence and limits: `docs/evidence/trends-organization/`. Tracked in #173.

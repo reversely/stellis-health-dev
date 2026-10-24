@@ -25,7 +25,7 @@ const STATUS_ICONS = {
 };
 const SOURCE_NAMES = {
   record: 'Records',
-  self: 'You',
+  self: 'Manual entry',
   camera: 'Camera',
 };
 /** Below this many readings the card explains how the usual range forms. */
@@ -186,31 +186,35 @@ class TrendsPage {
     this.charts = [];
     const span = rangeSpan(this.rangeKey, this.measures, Date.now());
     const camera = root.StellisCameraPulse;
-    const cameraKeys = new Set(camera?.MEASURE_KEYS || []);
-    const vitalSigns = this.measures.filter((measure) => cameraKeys.has(measure.key));
-    const other = this.measures.filter((measure) => !cameraKeys.has(measure.key));
-    const tracked = other.filter((measure) => measure.points.length);
-    const untracked = other.filter((measure) => !measure.points.length);
+    // Keep each measurement in a stable section, whether it has readings or not.
+    const groups = [
+      {key: 'vitals', label: 'Vital signs', keys: ['pulse', 'breathing_rate', 'hrv', 'blood_pressure', 'temperature']},
+      {key: 'body', label: 'Body measurements', keys: ['weight']},
+      {key: 'glucose', label: 'Blood sugar', keys: ['blood_glucose', 'hba1c']},
+      {key: 'sleep', label: 'Sleep', keys: ['sleep']},
+      {key: 'symptoms', label: 'Symptoms', keys: ['pain']},
+    ];
     this.cards.replaceChildren();
-    if (vitalSigns.length) {
-      const group = this.dom.el('section', null, 'trend-vitals');
-      group.setAttribute('aria-labelledby', 'trends-vital-signs');
+    for (const definition of groups) {
+      const measures = definition.keys.map(key => this.measures.find(m => m.key === key)).filter(Boolean);
+      if (!measures.length) continue;
+      const group = this.dom.el('section', null, definition.key === 'vitals' ? 'trend-group trend-vitals' : 'trend-group');
+      group.dataset.group = definition.key;
       const head = this.dom.el('div', null, 'vital-signs-head');
-      const title = this.dom.el('h3', 'Vital signs');
-      title.id = 'trends-vital-signs';
-      head.append(title, camera.logButton(
-          () => this.load(), this.measures, 'trend-add trend-camera'));
+      const title = this.dom.el('h3', definition.label);
+      title.id = `trends-${definition.key}`;
+      group.setAttribute('aria-labelledby', title.id);
+      head.append(title);
+      if (definition.key === 'vitals' && camera) {
+        head.append(camera.logButton(() => this.load(), this.measures, 'trend-add trend-camera'));
+      }
       group.append(head);
-      for (const measure of vitalSigns.filter((m) => m.points.length)) {
+      for (const measure of measures.filter(m => m.points.length)) {
         group.append(this.card(measure, span, 'h4'));
       }
-      const empty = vitalSigns.filter((m) => !m.points.length);
-      if (empty.length) group.append(this.startCard(empty, 'trend-start-vitals', 'h4'));
+      const empty = measures.filter(m => !m.points.length);
+      if (empty.length) group.append(this.startCard(empty));
       this.cards.append(group);
-    }
-    this.cards.append(...tracked.map((measure) => this.card(measure, span)));
-    if (untracked.length) {
-      this.cards.append(this.startCard(untracked));
     }
   }
 
@@ -242,9 +246,12 @@ class TrendsPage {
     const origin = latest.source === 'record' ?
         latest.title :
         chartApi.SOURCE_LABELS[latest.source];
-    const when = `${chartApi.longDate(latestAt)}, ${origin}`;
     const head = dom.el('div', null, 'trend-card-head');
-    const whenLine = dom.el('p', when, 'trend-when');
+    const whenLine = dom.el('div', null, 'trend-when');
+    const date = dom.el('time', chartApi.longDate(latestAt));
+    date.dateTime = latest.time;
+    whenLine.append(date);
+    if (origin) whenLine.append(dom.el('span', origin, 'trend-source'));
     if (latest.source === 'camera') {
       whenLine.append(' ', dom.accuracyNote('camera'));
     }
@@ -351,7 +358,8 @@ class TrendsPage {
         add.focus();
       });
       row.after(form);
-      form.querySelector('input').focus();
+      form.querySelector('input').focus({preventScroll: true});
+      form.scrollIntoView({block: 'nearest', behavior: 'instant'});
     });
     if (!measure.points.length) {
       tableButton.hidden = true;
@@ -504,17 +512,11 @@ class TrendsPage {
   /**
    * Offers logging for measures with no readings yet.
    * @param {!Array<!Object>} measures
-   * @param {string=} titleId Unique heading ID for this group.
-   * @param {string=} heading Heading level within its group.
    * @return {!Element}
    */
-  startCard(measures, titleId = 'trend-start', heading = 'h3') {
+  startCard(measures) {
     const dom = this.dom;
-    const card = dom.el('section', null, 'trend-card trend-start');
-    const title = dom.el(heading, 'Start tracking');
-    title.id = titleId;
-    card.setAttribute('aria-labelledby', title.id);
-    card.append(title);
+    const card = dom.el('div', null, 'trend-untracked');
     for (const measure of measures) {
       const row = dom.el('div', null, 'trend-start-row');
       row.dataset.measure = measure.key;
@@ -522,7 +524,7 @@ class TrendsPage {
       const cameraMeasure = root.StellisCameraPulse?.MEASURE_KEYS.includes(measure.key);
       const add = dom.button(
           cameraMeasure ? 'Log manually' : 'Add a reading',
-          cameraMeasure ? 'trend-manual' : 'trend-add');
+          'trend-manual');
       add.dataset.log = measure.key;
       add.setAttribute(
           'aria-label', cameraMeasure ?
@@ -536,7 +538,8 @@ class TrendsPage {
           add.focus();
         });
         row.after(form);
-        form.querySelector('input').focus();
+        form.querySelector('input').focus({preventScroll: true});
+        form.scrollIntoView({block: 'nearest', behavior: 'instant'});
       });
       const buttons = dom.el('div', null, 'trend-start-buttons');
       buttons.append(add);
