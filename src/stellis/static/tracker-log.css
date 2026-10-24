@@ -94,3 +94,12 @@
   .log-footer .coach-button { flex: 1; justify-content: center; }
   .log-toast { bottom: calc(var(--space-6) + 64px); }
 }
+
+/* Inline review inside the call panel: the same rows and choices, sized to the panel. */
+.log-inline { display: grid; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+.log-inline h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.log-inline .log-body { gap: var(--space-3); overflow: visible; padding: 0; }
+.log-inline .log-row, .log-inline .log-row:has(> input[type='checkbox']) { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-2) 0; }
+.log-inline .log-row-control { grid-column: 1 / -1; }
+.log-inline .log-when-controls input[type='time'] { display: none; }
+.log-inline .log-footer { justify-content: flex-start; padding-top: 0; border-top: 0; }

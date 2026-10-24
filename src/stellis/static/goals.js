@@ -251,6 +251,8 @@ function create(host, notifications = null) {
   let data = {goals: [], reminders: [], activities: []};
   let measures = [];
   let morningDue = false;
+  // What the morning check-in covers and how long a snooze lasts, from GET /coach.
+  let morning = {agenda: [], snooze_minutes: 0};
   let editing = null;
   let adding = false;
   // Goals Stellis filled in from the person's words, waiting for Add goal.
@@ -272,7 +274,11 @@ function create(host, notifications = null) {
       ]);
       data = goals;
       measures = readings.measures;
+      // The ring time stays fixed while the card waits, across refreshes.
+      const rang = coach.morning_due ? (morningDue && morning.rang) ||
+          new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : '';
       morningDue = coach.morning_due;
+      morning = {agenda: coach.agenda || [], snooze_minutes: coach.snooze_minutes || 0, rang};
       paint();
     } catch (error) {
       host.replaceChildren(dom.el('p', error.message, 'goals-status'));
@@ -315,6 +321,7 @@ function create(host, notifications = null) {
     root.StellisCoachCall.open({
       kind,
       chat,
+      agenda: kind === 'morning' ? morning.agenda : [],
       onAction(message) {
         if (message.action === 'fill_goal') fill([message.values]);
         if (message.action === 'logged') load();
@@ -328,6 +335,12 @@ function create(host, notifications = null) {
       parts.push(root.StellisCoachCall.incoming({
         answer: () => call('morning', false),
         chat: () => call('morning', true),
+        snooze: () => {
+          morningDue = false;
+          paint();
+          dom.api('/coach/morning', {method: 'POST', json: {day: localDay(), answer: 'snoozed', now: localTime()}})
+              .catch(() => {});
+        },
         decline: () => {
           morningDue = false;
           paint();
@@ -337,7 +350,7 @@ function create(host, notifications = null) {
              })
               .catch(() => {});
         },
-      }));
+      }, {time: morning.rang, agenda: morning.agenda, snoozeMinutes: morning.snooze_minutes}));
     }
     for (const reminder of data.reminders) parts.push(banner(reminder));
     if (notifications) notifications.replaceChildren(...parts.splice(0));

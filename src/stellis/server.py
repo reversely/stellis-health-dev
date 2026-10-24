@@ -1203,15 +1203,19 @@ async def profile_call(websocket: WebSocket):
 
 class MorningAnswer(BaseModel):
     day: str = Field(max_length=10)
-    answer: Literal["answered", "declined"]
+    answer: Literal["answered", "declined", "snoozed"]
+    now: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
 
 
 @api.get("/coach")
 def coach_state(today: str, now: str) -> dict[str, object]:
-    """Whether the morning check-in is due, and the latest call's transcript."""
-    from stellis import coach_call as script
+    """Whether the morning check-in is due, what it covers, and the latest call's transcript."""
+    from stellis import coach_call, goals
+    script = coach_call
     latest = script.load()
-    return {"morning_due": script.morning_due(today, now),
+    due = script.morning_due(today, now)
+    agenda = _agent_result(lambda: script.agenda(today, goals.overview(today, 0, now))) if due else []
+    return {"morning_due": due, "agenda": agenda, "snooze_minutes": script.SNOOZE_MINUTES,
             "latest": {"kind": latest["kind"], "started_at": latest["started_at"],
                        "ended_at": latest["ended_at"],
                        "turns": [{"role": turn["role"], "text": turn["text"]}
@@ -1221,7 +1225,7 @@ def coach_state(today: str, now: str) -> dict[str, object]:
 @api.post("/coach/morning")
 def coach_morning(request: MorningAnswer) -> dict[str, bool]:
     from stellis import coach_call as script
-    _agent_result(lambda: script.answer_morning(request.day, request.answer))
+    _agent_result(lambda: script.answer_morning(request.day, request.answer, request.now))
     return {"saved": True}
 
 

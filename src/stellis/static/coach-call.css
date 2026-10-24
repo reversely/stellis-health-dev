@@ -175,7 +175,7 @@
   justify-self: end;
   text-align: right;
 }
-.coach-call-log p {
+.coach-call-log > li > p {
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-dialog);
@@ -185,9 +185,9 @@
   text-align: left;
   text-wrap: pretty;
 }
-.coach-call-log li.is-person p {
-  background: var(--accent);
-  color: var(--accent-ink);
+.coach-call-log > li.is-person > p {
+  background: var(--block-fill);
+  color: var(--block-ink);
 }
 .coach-call-said {
   color: var(--muted);
@@ -352,3 +352,30 @@ html[data-theme] .coach-call[data-kind='tour'] {
   bottom: auto;
 }
 .coach-call[data-guide='maya'].is-minimised .coach-call-ended { display: none; }
+
+/* What a check-in covers: on the incoming card (a filled block) and as a checklist in the call. */
+.coach-incoming-agenda { grid-column: 1 / -1; display: grid; gap: var(--space-2); padding-top: var(--space-4); border-top: 1px solid color-mix(in oklch, var(--accent-ink) 25%, transparent); }
+.coach-incoming-agenda h3 { margin: 0; font-size: 13px; font-weight: 650; opacity: .85; }
+.coach-incoming-agenda ul, .coach-agenda ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.coach-incoming-agenda li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; }
+.coach-incoming-agenda li + li { border-top: 1px solid color-mix(in oklch, var(--accent-ink) 18%, transparent); }
+.coach-agenda-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-control); background: color-mix(in oklch, currentColor 12%, transparent); }
+.coach-agenda-icon .icon { width: 18px; height: 18px; }
+.coach-agenda-title { font-size: 15px; overflow-wrap: anywhere; }
+.coach-agenda-source { font-size: 13px; opacity: .8; text-align: right; }
+.coach-agenda { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line-soft); }
+.coach-agenda h3 { margin: 0; font-size: 13px; font-weight: 650; }
+.coach-agenda-progress { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.coach-agenda ul { grid-column: 1 / -1; gap: var(--space-1); }
+.coach-agenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: var(--space-2); font-size: 14px; }
+.coach-agenda li .coach-agenda-icon, .coach-agenda li .coach-agenda-source { display: none; }
+.coach-agenda li::before { content: ''; width: 16px; height: 16px; border: 1.5px solid var(--muted); border-radius: 50%; box-sizing: border-box; }
+.coach-agenda li[data-covered]::before { border-color: var(--block-ok-fill); background: var(--block-ok-fill); }
+.coach-agenda li[data-covered] { color: var(--muted); }
+.coach-call-source { color: var(--muted); font-size: 12px; }
+.coach-call-log li.is-action strong { color: var(--ink); }
+.coach-call-log li.is-review { justify-self: stretch; max-width: 100%; }
+@media (max-width: 760px) {
+  .coach-incoming-agenda li { grid-template-columns: auto minmax(0, 1fr); }
+  .coach-incoming-agenda .coach-agenda-source { grid-column: 2; text-align: left; }
+}

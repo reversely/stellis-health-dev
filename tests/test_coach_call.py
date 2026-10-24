@@ -8,8 +8,12 @@ from unittest import mock
 
 from fastapi import testclient
 
+import datetime
+
+from stellis import care_events
 from stellis import coach_call
 from stellis import goals
+from stellis import trackers
 from stellis import intake
 from stellis import server
 
@@ -67,7 +71,8 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(opening, (
             "Good morning, it's Stellis with your check-in. Connect your calendar in Settings, "
-            "and I'll include your appointments. Your reminders are walk 30 minutes at 7 am and "
+            "and I'll include your appointments. Walk 30 minutes, 0 of 4 this week. "
+            "Take 500 mg of metformin, 0 of 7 this week. Your reminders are walk 30 minutes at 7 am and "
             "take 500 mg of metformin at 8 pm. How are you doing today?"))
         self.assertFalse(coach_call.morning_due(TODAY, "09:00"))
 
@@ -93,6 +98,43 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(coach_call.morning_due(TODAY, "08:00"))
         self.assertTrue(coach_call.morning_due("2026-10-23", "08:00"))
 
+    def test_a_snooze_rings_again_at_its_time(self):
+        coach_call.answer_morning(TODAY, "snoozed", "08:00")
+        self.assertFalse(coach_call.morning_due(TODAY, "08:29"))
+        self.assertTrue(coach_call.morning_due(TODAY, "08:30"))
+        self.assertTrue(coach_call.morning_due(TODAY, "13:00"))
+        coach_call.answer_morning(TODAY, "snoozed", "23:45")
+        self.assertFalse(coach_call.morning_due(TODAY, "23:59"))
+        with self.assertRaises(ValueError):
+            coach_call.answer_morning(TODAY, "snoozed", None)
+
+    async def test_the_agenda_comes_from_courses_plans_and_goals(self):
+        walk = goals.create(WALK)["id"]
+        start = (datetime.date.fromisoformat(TODAY) - datetime.timedelta(days=60)).isoformat()
+        course = trackers.save("medicine", {"name": "Ferrous sulfate", "dose_amount": 300, "dose_unit": "mg",
+                                            "schedule_type": "every", "every_days": 2, "start": start,
+                                            "units_per_fill": 45})
+        plan = care_events.add("Repeat CBC and ferritin", "2026-11-10T09:00:00+00:00", "planned")
+        context = (await coach_call.begin("morning", TODAY, "08:00", 0))["context"]
+        keys = [item["key"] for item in context["agenda"]]
+        self.assertEqual(keys, [f"derived:{course['id']}:fill-1", f"dose:{course['id']}",
+                                f"plan:{plan['id']}", f"goal:{walk}"])
+        self.assertEqual(context["agenda"][0]["label"], "Medicine")
+        self.assertIn("runs out around", context["agenda"][0]["title"])
+        self.assertEqual(context["agenda"][1]["title"], "Take 300 mg of Ferrous sulfate today")
+        self.assertEqual(context["agenda"][2]["title"], "Repeat CBC and ferritin, no date booked")
+        opening = coach_call.opening()
+        self.assertIn("Repeat CBC and ferritin is planned for November, with no date booked.", opening)
+        self.assertIn({"item": f"goal:{walk}", "title": "Walk 30 minutes", "type": "done"}, context["loggable"])
+
+    def test_dates_resolve_against_the_local_day(self):
+        self.assertEqual(coach_call.resolve_day("yesterday", TODAY), "2026-10-21")
+        self.assertEqual(coach_call.resolve_day("Today", TODAY), TODAY)
+        self.assertEqual(coach_call.resolve_day("2026-10-20", TODAY), "2026-10-20")
+        for bad in ("tomorrow", "2026-10-23", "2026-10-01", "last week"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                coach_call.resolve_day(bad, TODAY)
+
     async def test_a_named_goal_fills_the_form_and_a_done_activity_is_logged(self):
         walk = goals.create(WALK)["id"]
         await self.start()
@@ -100,26 +142,36 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
             [{"name": "fill_goal", "arguments": {"activity": "stretch", "amount": 10,
                                                  "times_per_week": 3}},
              "I filled in a stretching goal on your home page. Add it with Add goal."],
-            [{"name": "log_goal", "arguments": {"goal_id": walk}}],
-            ["Nice work on that walk. Anything else?"])
+            [{"name": "log_entry", "arguments": {"item": "goal:" + walk, "when": "yesterday",
+                                                 "evidence": "I walked last night"}},
+             {"name": "topic_done", "arguments": {"key": "goal:" + walk}}],
+            ["Last night was Wednesday, October 21. Check it before I log it."])
 
         first = await self.turn("Add stretching ten minutes three times a week", model)
-        second = await self.turn("I walked this morning", model)
+        second = await self.turn("I walked last night", model)
 
         self.assertEqual(first[0]["action"], "fill_goal")
         self.assertEqual(first[0]["values"]["title"], "Stretch 10 minutes")
-        self.assertEqual(second, [{"action": "logged", "goal_id": walk},
-                                  "Nice work on that walk.", "Anything else?"])
-        self.assertTrue(goals.overview(TODAY, 0, "09:00")["goals"][0]["done_today"])
+        proposal, covered = second[0], second[1]
+        self.assertEqual(proposal["action"], "propose_log")
+        self.assertEqual((proposal["day"], proposal["day_text"], proposal["tool"]),
+                         ("2026-10-21", "Wednesday, October 21", "log_entry"))
+        self.assertEqual(proposal["proposals"], [{"item": "goal:" + walk, "value": True,
+                                                  "evidence": "I walked last night"}])
+        self.assertEqual(covered, {"action": "covered", "key": "goal:" + walk})
+        # Nothing is logged until the person confirms on screen.
+        self.assertEqual(goals.overview("2026-10-21", 0, "09:00")["goals"][0]["done_today"], False)
         # The second round, after a reply of only tool calls, reads their results.
         messages, tools = model.sent[-1]
         self.assertEqual(messages[-1]["role"], "tool")
-        self.assertIn("Logged Walk 30 minutes", messages[-1]["content"])
+        self.assertIn("Marked covered", messages[-1]["content"])
+        self.assertIn("Waiting for the person to confirm Walk 30 minutes on Wednesday, October 21",
+                      messages[-2]["content"])
         self.assertEqual(tools, [coach_call.END_CALL])
         # Later turns see each earlier tool call and its result.
         history = coach_call.conversation(coach_call.load())
-        self.assertEqual([m["role"] for m in history[-4:]],
-                         ["user", "assistant", "tool", "assistant"])
+        self.assertEqual([m["role"] for m in history[-5:]],
+                         ["user", "assistant", "tool", "tool", "assistant"])
 
     async def test_stellis_says_goodbye_and_hangs_up_when_asked(self):
         await self.start("call", "10:00")
@@ -132,7 +184,8 @@ class CoachCallTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_bad_tool_calls_do_nothing(self):
         await self.start("call", "10:00")
-        model = Model([{"name": "log_goal", "arguments": {"goal_id": "nope"}},
+        model = Model([{"name": "log_entry", "arguments": {"item": "goal:nope", "when": "today", "evidence": "x"}},
+                       {"name": "topic_done", "arguments": {"key": "nope"}},
                        {"name": "fill_goal", "arguments": {"activity": "steps"}},
                        {"name": "delete_everything", "arguments": {}}],
                       ["Sorry, I couldn't do that."])

@@ -4,7 +4,9 @@ A morning check-in opens with a summary of the day's appointments and
 reminders, written from the person's data rather than by the model, then
 asks how the person is doing. A call the person starts opens by asking what
 Stellis can help with. In both, the model can call ``TOOLS``: fill in the
-Add a goal form, log a goal for today, or end the call. Stellis ends a call
+Add a goal form, propose a dated entry for the person to confirm, mark an
+agenda topic covered, or end the call. Nothing is logged without the
+person's confirmation on screen. Stellis ends a call
 only after the person says they have nothing else; after MAX_ANSWERS answers
 the context asks it to close, and one answer later it ends the call itself.
 
@@ -20,7 +22,7 @@ import json
 import threading
 from collections.abc import AsyncIterator
 
-from stellis import calendar, coach, debug_data, goals, intake, notebook_chat, storage
+from stellis import calendar, care_events, coach, debug_data, goals, intake, notebook_chat, storage, tracker_log, trackers
 
 END_MARK = intake.END_MARK
 IntakeError = intake.IntakeError
@@ -31,15 +33,35 @@ MAX_ANSWERS = 20
 MORNING_START = "05:00"
 MORNING_END = "12:00"
 KINDS = ("morning", "call")
+SNOOZE_MINUTES = 30
+# The agenda looks this far ahead for calculated dates and planned care.
+AGENDA_DAYS = 45
+MAX_AGENDA = 5
+# Entries can be proposed for today or up to this many days before.
+LOG_DAYS_BACK = 7
 update_notes = None  # Coach calls have no notepad.
 
-LOG_GOAL = {
+LOG_ENTRY = {
     "type": "function",
     "function": {
-        "name": "log_goal",
-        "description": "Logs one of the person's goals as done today, after they say they did it.",
-        "parameters": {"type": "object", "additionalProperties": False, "required": ["goal_id"],
-                       "properties": {"goal_id": {"type": "string"}}},
+        "name": "log_entry",
+        "description": ("Proposes logging one item the person says they did, such as a goal or a dose. "
+                        "The person checks the item and date on screen before anything is saved."),
+        "parameters": {"type": "object", "additionalProperties": False, "required": ["item", "when", "evidence"],
+                       "properties": {
+                           "item": {"type": "string", "description": "An item from loggable in the context"},
+                           "when": {"type": "string", "description": "today, yesterday, or a date as YYYY-MM-DD"},
+                           "value": {"type": "string", "description": "taken or skipped for a dose; omit otherwise"},
+                           "evidence": {"type": "string", "description": "The person's exact words, not a summary"}}},
+    },
+}
+TOPIC_DONE = {
+    "type": "function",
+    "function": {
+        "name": "topic_done",
+        "description": "Marks an agenda topic covered after you have discussed it with the person.",
+        "parameters": {"type": "object", "additionalProperties": False, "required": ["key"],
+                       "properties": {"key": {"type": "string", "description": "A key from agenda in the context"}}},
     },
 }
 END_CALL = {
@@ -51,7 +73,7 @@ END_CALL = {
         "parameters": {"type": "object", "additionalProperties": False, "properties": {}},
     },
 }
-TOOLS = [coach.FILL_GOAL, LOG_GOAL, END_CALL]
+TOOLS = [coach.FILL_GOAL, LOG_ENTRY, TOPIC_DONE, END_CALL]
 
 INSTRUCTIONS = """You are Stellis, a health coach in the Stellis Health app, on a short voice call with the person.
 
@@ -61,13 +83,14 @@ How you talk:
 - Ask a short clarification when it is needed to act on a request. Answer the person's questions and offer a next step.
 
 A morning check-in follows this order:
-1. Your first turn, already spoken, summarised today's appointments and reminders and asked how the person is doing.
+1. Your first turn, already spoken, summarised today's appointments, the agenda and reminders, and asked how the person is doing.
 2. Reply to how they are doing in one sentence, then give one brief, specific message of encouragement based on their goals this week, such as how many walks are left to reach a goal. Then ask whether there is anything else you can help with.
 In a call the person started, help with what they ask.
 
 What you can do:
 - To set up a goal the person names, call fill_goal. Then tell them you filled in the Add a goal form on their home page, and that they add it with Add goal.
-- When the person says they did a goal's activity today, call log_goal with that goal's goal_id from the context, and confirm it in a few words.
+- When the person says they did something on the loggable list, call log_entry with its item, the day they meant (today, yesterday, or a date) and their exact words. Say the date you understood, such as "Last night was Thursday, August 20," and ask them to check it before it is logged. Never say it is logged.
+- After you have discussed an agenda topic, call topic_done with its key.
 - Answer questions about their goals, reminders and appointments from the context. Say so when the context has no answer.
 
 Ending:
@@ -133,23 +156,33 @@ def _join(items: list[str]) -> str:
 
 
 def morning_due(today: str, now: str) -> bool:
-    """Whether Home offers today's morning check-in."""
-    if not MORNING_START <= now < MORNING_END:
-        return False
+    """Whether Home offers today's morning check-in; a snooze holds it until its time."""
     with storage.connect() as conn:
         _create_tables(conn)
-        return conn.execute("SELECT 1 FROM coach_morning WHERE day = ?", (today,)).fetchone() is None
+        row = conn.execute("SELECT answer FROM coach_morning WHERE day = ?", (today,)).fetchone()
+    if row is not None:
+        kind, _, until = row["answer"].partition(":")
+        # A snoozed call rings again at its time, even after the morning window.
+        return kind == "snoozed" and now >= until.replace("-", ":")
+    return MORNING_START <= now < MORNING_END
 
 
-def answer_morning(today: str, answer: str) -> None:
-    """Records that the person answered or declined today's check-in.
+def answer_morning(today: str, answer: str, now: str | None = None) -> None:
+    """Records that the person answered, declined or snoozed today's check-in.
 
     Raises:
-        ValueError: ``answer`` is not "answered" or "declined", or ``today`` is not a date.
+        ValueError: ``answer`` is not listed, ``today`` is not a date, or a
+            snooze has no valid ``now``.
     """
-    if answer not in {"answered", "declined"}:
-        raise ValueError("Answer or decline the check-in")
+    if answer not in {"answered", "declined", "snoozed"}:
+        raise ValueError("Answer, decline or snooze the check-in")
     datetime.date.fromisoformat(today)
+    if answer == "snoozed":
+        moment = datetime.datetime.combine(datetime.date.fromisoformat(today),
+                                           datetime.time.fromisoformat(now or ""))
+        later = moment + datetime.timedelta(minutes=SNOOZE_MINUTES)
+        # Past midnight the call waits for tomorrow's check-in instead.
+        answer = "declined" if later.date() != moment.date() else f"snoozed:{later:%H-%M}"
     with storage.connect() as conn:
         _create_tables(conn)
         conn.execute("INSERT OR REPLACE INTO coach_morning VALUES (?, ?)", (today, answer))
@@ -185,6 +218,55 @@ def _reminders_today(overview: dict[str, object]) -> list[dict[str, object]]:
     return sorted(items, key=lambda item: item["time"])
 
 
+def _day_text(day: datetime.date) -> str:
+    return day.strftime("%A, %B %-d")
+
+
+def agenda(today: str, overview: dict[str, object]) -> list[dict[str, object]]:
+    """What a check-in covers, written from records: calculated dates, planned care and goals.
+
+    Returns:
+        Up to ``MAX_AGENDA`` items with ``key``, ``icon``, ``title``, ``label``
+        (where it comes from) and ``say`` (the sentence the opening speaks).
+    """
+    day = datetime.date.fromisoformat(today)
+    horizon = day + datetime.timedelta(days=AGENDA_DAYS)
+    dated, doses = [], []
+    for record in trackers.list_records(kinds_filter=("medicine",), today=day):
+        label = "Prescription" if record.get("source_document_id") else "Medicine"
+        for item in record["summary"]["derived"]:
+            when = datetime.date.fromisoformat(item["date"])
+            if day <= when <= horizon:
+                title = f"{item['title'].replace(': ', ' ', 1)} around {_day_text(when)}"
+                dated.append((when, {"key": f"derived:{record['id']}:{item['key']}", "icon": "calendar",
+                                     "title": title, "label": label, "say": title + "."}))
+        if record["summary"]["expected_today"] and not record["summary"]["today_status"]:
+            dose = f"{record['dose_amount']:g} {record['dose_unit']} of {record['name']}"
+            doses.append({"key": f"dose:{record['id']}", "icon": "pill", "title": f"Take {dose} today",
+                          "label": label, "say": f"{dose} is due today."})
+    plans = []
+    for event in care_events.list_all():
+        when = datetime.datetime.fromisoformat(event["starts_at"]).date()
+        if event["status"] == "planned" and day <= when <= horizon:
+            plans.append({"key": f"plan:{event['id']}", "icon": "message-2",
+                          "title": f"{event['title']}, no date booked", "label": "Visit plan",
+                          "say": f"{event['title']} is planned for {when:%B}, with no date booked."})
+    progress = [{"key": f"goal:{goal['id']}", "icon": "target",
+                 "title": f"{goal['title']}, {goal['this_week']} of {goal['times_per_week']} this week",
+                 "label": "Goal",
+                 "say": f"{goal['title']}, {goal['this_week']} of {goal['times_per_week']} this week."}
+                for goal in overview["goals"] if goal["this_week"] < goal["times_per_week"]]
+    ordered = [item for _, item in sorted(dated, key=lambda pair: pair[0])] + doses + plans + progress
+    return ordered[:MAX_AGENDA]
+
+
+def loggable(today: str) -> list[dict[str, str]]:
+    """Items a call can propose logging, by ID and title."""
+    return [{"item": item["id"], "title": item["title"], "type": item["control"]["type"]}
+            for item in tracker_log.items(datetime.date.fromisoformat(today))
+            if item["control"]["type"] in {"status", "done"}][:20]
+
+
 def summary(kind: str, context: dict[str, object]) -> str:
     """The first line of a call, written from the person's data."""
     hour = int(str(context["now"])[:2])
@@ -201,6 +283,8 @@ def summary(kind: str, context: dict[str, object]) -> str:
             [f"{item['title']} at {_clock(item['time'])}" for item in appointments["items"][:3]]) + ".")
     else:
         lines.append("You have no appointments today.")
+    for item in context.get("agenda", [])[:3]:
+        lines.append(item["say"])
     reminders = context["reminders_today"]
     if reminders:
         lines.append("Your reminders are " + _join(
@@ -228,6 +312,8 @@ async def begin(kind: str, today: str, now: str, utc_offset: int) -> dict[str, o
                    "times_per_week": goal["times_per_week"], "this_week": goal["this_week"],
                    "done_today": goal["done_today"], "reminder": goal["reminder"]}
                   for goal in overview["goals"]],
+        "agenda": agenda(today, overview),
+        "loggable": loggable(today),
     }
     if kind == "morning":
         answer_morning(today, "answered")
@@ -358,16 +444,53 @@ def run_tool(call: dict[str, object], context: dict[str, object]) -> tuple[str, 
         return (f"Filled in the Add a goal form: {draft['title']}, {draft['times_per_week']} "
                 f"times a week{reminder}. The person adds it with Add goal.",
                 {"action": "fill_goal", "values": draft})
-    if name == "log_goal":
-        goal_id = str(arguments.get("goal_id") or "")
-        titles = {goal["goal_id"]: goal["title"] for goal in context["goals"]}
-        if goal_id not in titles:
-            return "Not logged: no goal has that goal_id.", None
-        goals.mark(goal_id, context["today"], True)
-        return f"Logged {titles[goal_id]} as done today.", {"action": "logged", "goal_id": goal_id}
+    if name == "log_entry":
+        titles = {entry["item"]: entry for entry in context.get("loggable", [])}
+        item = str(arguments.get("item") or "")
+        if item not in titles:
+            return "Not proposed: that item is not on the loggable list.", None
+        try:
+            day = resolve_day(str(arguments.get("when") or ""), context["today"])
+        except ValueError as exc:
+            return f"Not proposed: {exc}.", None
+        value = arguments.get("value")
+        if titles[item]["type"] == "status":
+            value = value if value in trackers.STATUSES else "taken"
+        else:
+            value = True
+        evidence = " ".join(str(arguments.get("evidence") or "").split())[:500]
+        spoken = _day_text(datetime.date.fromisoformat(day))
+        return (f"Waiting for the person to confirm {titles[item]['title']} on {spoken}. "
+                "It is not logged until they confirm on screen.",
+                {"action": "propose_log", "tool": name, "day": day, "day_text": spoken, "evidence": evidence,
+                 "proposals": [{"item": item, "value": value, "evidence": evidence}]})
+    if name == "topic_done":
+        key = str(arguments.get("key") or "")
+        if key not in {item["key"] for item in context.get("agenda", [])}:
+            return "Not marked: that key is not on the agenda.", None
+        return "Marked covered.", {"action": "covered", "key": key}
     if name == "end_call":
         return "The call ends after your goodbye.", None
     return f"Not done: there is no tool named {name}.", None
+
+
+def resolve_day(when: str, today: str) -> str:
+    """Turns today, yesterday or a date into a date the person can log.
+
+    Raises:
+        ValueError: The date is unreadable, in the future, or too long ago.
+    """
+    base = datetime.date.fromisoformat(today)
+    words = {"today": base, "yesterday": base - datetime.timedelta(days=1)}
+    try:
+        day = words.get(when.strip().lower()) or datetime.date.fromisoformat(when.strip())
+    except ValueError:
+        raise ValueError("use today, yesterday or a date as YYYY-MM-DD") from None
+    if day > base:
+        raise ValueError("the date is in the future")
+    if (base - day).days > LOG_DAYS_BACK:
+        raise ValueError(f"the date is more than {LOG_DAYS_BACK} days ago")
+    return day.isoformat()
 
 
 async def _stream(messages: list[dict[str, object]], tools: list[dict],

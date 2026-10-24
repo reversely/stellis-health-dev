@@ -71,10 +71,14 @@ function button(glyph, label, cls, iconOnly = false) {
 
 /**
  * Builds the morning check-in's incoming call card.
- * @param {{answer: function(), chat: function(), decline: function()}} on
+ * @param {{answer: function(), chat: function(), decline: function(),
+ *     snooze: (function()|undefined)}} on
+ * @param {{time: (string|undefined), agenda: (!Array<!Object>|undefined),
+ *     snoozeMinutes: (number|undefined)}=} details What the call covers,
+ *     from GET /coach, and when it rang.
  * @return {!Element}
  */
-function incoming(on) {
+function incoming(on, details = {}) {
   const dom = root.StellisDom;
   const card = dom.el('section', null, 'coach-incoming');
   card.setAttribute('aria-labelledby', 'coach-incoming-title');
@@ -84,10 +88,11 @@ function incoming(on) {
   const title = dom.el('h2', 'Stellis is calling');
   title.id = 'coach-incoming-title';
   text.append(
-      dom.el('p', 'Morning check-in', 'coach-incoming-kind'), title,
-      dom.el(
-          'p', 'Today’s appointments and reminders, and how you’re doing',
-          'coach-incoming-hint'));
+      dom.el('p', details.time ? `Morning check-in, ${details.time}` : 'Morning check-in', 'coach-incoming-kind'), title);
+  // Without an agenda, a line says what a check-in covers.
+  if (!details.agenda?.length) {
+    text.append(dom.el('p', 'Today’s appointments and reminders, and how you’re doing', 'coach-incoming-hint'));
+  }
   const actions = dom.el('div', null, 'coach-incoming-actions');
   const answer = button('phone', 'Answer', 'coach-button is-primary');
   const chat = button('message-2', 'Chat instead', 'coach-button');
@@ -95,9 +100,43 @@ function incoming(on) {
   answer.addEventListener('click', on.answer);
   chat.addEventListener('click', on.chat);
   later.addEventListener('click', on.decline);
-  actions.append(answer, chat, later);
+  actions.append(answer, chat);
+  if (on.snooze && details.snoozeMinutes) {
+    const snooze = dom.button(`In ${details.snoozeMinutes} minutes`, 'coach-button is-quiet');
+    snooze.addEventListener('click', on.snooze);
+    actions.append(snooze);
+  }
+  actions.append(later);
   card.append(face, text, actions);
+  if (details.agenda?.length) card.append(agendaList(details.agenda, 'coach-incoming-agenda'));
   return card;
+}
+
+let nextAgenda = 0;
+
+/**
+ * Lists what a check-in covers, each with its icon and where it comes from.
+ * @param {!Array<!Object>} agenda
+ * @param {string} cls
+ * @return {!Element}
+ */
+function agendaList(agenda, cls) {
+  const dom = root.StellisDom;
+  const section = dom.el('section', null, cls);
+  const heading = dom.el('h3', 'On this call');
+  heading.id = `${cls}-${++nextAgenda}`;
+  section.setAttribute('aria-labelledby', heading.id);
+  const list = dom.el('ul');
+  for (const item of agenda) {
+    const row = dom.el('li');
+    row.dataset.key = item.key;
+    const mark = dom.el('span', null, 'coach-agenda-icon');
+    mark.append(icon(item.icon));
+    row.append(mark, dom.el('span', item.title, 'coach-agenda-title'), dom.el('span', item.label, 'coach-agenda-source'));
+    list.append(row);
+  }
+  section.append(heading, list);
+  return section;
 }
 
 let current = null;
@@ -168,12 +207,14 @@ function offerTour() {
 
 /**
  * Opens a call in the docked panel; an open call is ended first.
- * @param {{kind: string, chat: boolean, onAction: function(!Object)}} options
+ * @param {{kind: string, chat: boolean, onAction: function(!Object),
+ *     agenda: (!Array<!Object>|undefined)}} options
  *     ``kind`` is "morning" or "call"; ``chat`` runs the call by text;
- *     ``onAction`` receives each action Stellis takes on the page.
+ *     ``onAction`` receives each action Stellis takes on the page;
+ *     ``agenda`` is what a check-in covers, shown as a checklist.
  * @return {{end: function()}}
  */
-function open({kind, chat, onAction}) {
+function open({kind, chat, onAction, agenda = []}) {
   current?.close();
   const dom = root.StellisDom;
   const panel = dom.el('section', null, 'coach-call');
@@ -208,6 +249,21 @@ function open({kind, chat, onAction}) {
   callBody.tabIndex = 0;
   callBody.setAttribute('role', 'region');
   callBody.setAttribute('aria-label', 'Conversation');
+  // A check-in's agenda becomes a checklist that fills in as topics are covered.
+  const topics = agenda.length ? agendaList(agenda, 'coach-agenda') : null;
+  const progress = dom.el('span', null, 'coach-agenda-progress');
+  progress.setAttribute('aria-live', 'polite');
+  if (topics) topics.querySelector('h3').after(progress);
+  function cover(key) {
+    const row = topics?.querySelector(`li[data-key="${CSS.escape(key)}"]`);
+    if (row) row.dataset.covered = 'true';
+    paintProgress();
+  }
+  function paintProgress() {
+    if (topics) progress.textContent = `${topics.querySelectorAll('li[data-covered]').length} of ${agenda.length}`;
+  }
+  paintProgress();
+  if (topics) callBody.append(topics);
   callBody.append(stepCard, log);
 
   const foot = dom.el('form', null, 'coach-call-foot');
@@ -288,6 +344,10 @@ function open({kind, chat, onAction}) {
               'span', role === 'agent' ? 'Stellis' : 'You', 'coach-call-said'),
           dom.el('p', text));
       if (turn != null) item.dataset[selector] = String(turn);
+      // The check-in's first line is written from records, not by the model.
+      if (role === 'agent' && kind === 'morning' && !log.querySelector('.is-agent')) {
+        item.append(dom.el('span', 'Written from your goals and records', 'coach-call-source'));
+      }
       if (!existing) log.append(item);
     }
     callBody.scrollTop = callBody.scrollHeight;
@@ -296,6 +356,22 @@ function open({kind, chat, onAction}) {
   function addAction(text) {
     log.append(dom.el('li', text, 'is-action'));
     callBody.scrollTop = callBody.scrollHeight;
+  }
+
+  /** Shows what Stellis proposed and why, for the person to confirm before anything is saved. */
+  function propose(message) {
+    for (const proposal of message.proposals) {
+      cover(proposal.item.startsWith('tracker:') ? 'dose:' + proposal.item.slice(8) : proposal.item);
+    }
+    const why = dom.el('li', null, 'is-action');
+    why.append(dom.el('strong', 'The model'), ` chose ${message.tool} from "${message.evidence}"`);
+    const review = dom.el('li', null, 'is-review');
+    log.append(why, review);
+    root.StellisTrackerLog.review(review, {
+      proposals: message.proposals, day: message.day, title: `Confirm for ${message.day_text}`,
+      onSaved: () => { review.remove(); addAction(`Logged for ${message.day_text}`); onAction({action: 'logged'}); },
+      onCancel: () => { review.remove(); addAction('Not logged'); },
+    }).then(() => { callBody.scrollTop = callBody.scrollHeight; });
   }
 
   function onEvent(message) {
@@ -359,8 +435,10 @@ function open({kind, chat, onAction}) {
           });
         } else if (message.action === 'fill_goal') {
           addAction(`Filled in: ${message.values.title}`);
-        } else if (message.action === 'logged') {
-          addAction('Logged for today');
+        } else if (message.action === 'propose_log') {
+          propose(message);
+        } else if (message.action === 'covered') {
+          cover(message.key);
         }
         onAction(message);
         break;
@@ -441,7 +519,7 @@ function open({kind, chat, onAction}) {
   });
   hangUp.addEventListener('click', () => finish('ended'));
   close.addEventListener('click', remove);
-  again.addEventListener('click', () => open({kind, chat, onAction}));
+  again.addEventListener('click', () => open({kind, chat, onAction, agenda}));
   shrink.addEventListener('click', () => {
     const small = panel.classList.toggle('is-minimised');
     shrink.setAttribute('aria-label', small ? 'Expand call' : 'Minimise call');

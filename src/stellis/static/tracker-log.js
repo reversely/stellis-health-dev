@@ -215,106 +215,8 @@ async function openSheet(options = {}) {
     body.querySelector('.log-tile, .log-search')?.focus();
   }
 
-  function reviewStep() {
-    const proposing = proposals.length > 0;
-    heading.textContent = options.title || (proposing ? 'Confirm' : 'Review');
-    body.replaceChildren(); footer.replaceChildren(); status.textContent = '';
-    // One date for every row; schedules are checked against it on save.
-    const when = el('fieldset', null, 'log-when');
-    when.append(el('legend', 'When'));
-    let day = options.day || today();
-    const yesterday = calendarDates().shiftDate(today(), -1);
-    const other = el('input'); other.type = 'date'; other.max = today(); other.setAttribute('aria-label', 'Date');
-    const time = el('input'); time.type = 'time'; time.setAttribute('aria-label', 'Time, optional');
-    const dayButtons = [['Today', today()], ['Yesterday', yesterday]].map(([label, value]) => {
-      const choice = button(label, () => { day = value; other.value = ''; sync(); }, 'log-choice');
-      choice.dataset.day = value;
-      return choice;
-    });
-    const sync = () => {
-      for (const choice of dayButtons) choice.setAttribute('aria-pressed', String(choice.dataset.day === day && !other.value));
-      if (![today(), yesterday].includes(day)) other.value = day;
-      dayLine.textContent = dateLabel(day);
-    };
-    other.addEventListener('change', () => { if (other.value) { day = other.value; sync(); } });
-    const dayLine = el('p', null, 'log-when-day');
-    const controls = el('div', null, 'log-when-controls');
-    controls.append(...dayButtons, other, time);
-    when.append(controls, dayLine);
-    sync();
-    const list = el('ul', null, 'log-rows');
-    const readers = new Map();
-    for (const [id, entry] of selected) {
-      const item = byId.get(id);
-      const row = el('li', null, 'log-row');
-      row.dataset.item = id;
-      const rowId = `log-row-${++nextId}`;
-      const label = el('div', null, 'log-row-label');
-      const mark = el('span', null, 'log-tile-icon'); mark.append(dom().icon(item.icon));
-      const title = el('strong', item.title); title.id = rowId;
-      label.append(mark, title);
-      if (item.detail && item.control.type !== 'number') label.append(el('span', item.detail, 'log-row-detail'));
-      const built = rowControl(item, entry, rowId);
-      const error = el('p', null, 'log-row-error'); error.setAttribute('role', 'alert');
-      if (proposing) {
-        const keep = el('input'); keep.type = 'checkbox'; keep.checked = entry.checked !== false;
-        keep.setAttribute('aria-labelledby', rowId);
-        keep.addEventListener('change', () => { entry.checked = keep.checked; refresh(); });
-        row.append(keep);
-      }
-      row.append(label, built.wrap);
-      if (!proposing) {
-        row.append(iconButton(`Remove ${item.title}`, 'x', () => {
-          selected.delete(id); readers.delete(id); row.remove(); refresh();
-          if (!selected.size) choose();
-        }));
-      }
-      if (entry.evidence) row.append(el('p', `From "${entry.evidence}"`, 'log-row-evidence'));
-      row.append(error);
-      readers.set(id, {read: built.read, error, entry});
-      list.append(row);
-    }
-    const save = button('', submit, 'coach-button is-primary');
-    const refresh = () => {
-      const count = [...readers.values()].filter(reader => !proposing || reader.entry.checked !== false).length;
-      save.textContent = proposing ? 'Log selected' : `Save ${count} ${count === 1 ? 'entry' : 'entries'}`;
-      save.disabled = !count;
-    };
-    async function submit() {
-      const chosen = [...readers.entries()].filter(([, reader]) => !proposing || reader.entry.checked !== false);
-      for (const [, reader] of chosen) reader.error.textContent = '';
-      save.disabled = true; status.textContent = 'Saving';
-      const entries = chosen.map(([id, reader]) => ({item: id, ...reader.read(),
-        ...(reader.entry.evidence ? {evidence: reader.entry.evidence} : {})}));
-      try {
-        const result = await dom().api('/trackers/entries', {method: 'POST', json: {day, time: time.value || null, entries}});
-        dialog.close();
-        options.onSaved?.();
-        root.dispatchEvent(new Event('health-capture-saved'));
-        const message = toast(`Saved ${result.saved} ${result.saved === 1 ? 'entry' : 'entries'}`, {label: 'Undo', run: async () => {
-          try {
-            const undone = await dom().api('/trackers/entries/' + result.batch_id, {method: 'DELETE'});
-            message.firstChild.textContent = undone.kept ? `Undone, ${undone.kept} changed since and kept` : 'Undone';
-            message.querySelector('button')?.remove();
-            options.onSaved?.();
-            root.dispatchEvent(new Event('health-capture-saved'));
-          } catch (error) { message.firstChild.textContent = error.message; }
-        }});
-      } catch (error) {
-        status.textContent = error.message;
-        for (const [index, text] of Object.entries(error.data?.detail?.errors || {})) {
-          const reader = readers.get(chosen[Number(index)]?.[0]);
-          if (reader) reader.error.textContent = text;
-        }
-        save.disabled = false;
-        list.querySelector('.log-row-error:not(:empty)')?.closest('.log-row')?.querySelector('button,input')?.focus();
-      }
-    }
-    body.append(when, list);
-    footer.append(proposing ? button('Cancel', () => dialog.close()) : button('Back', choose), save);
-    refresh();
-    list.querySelector('button,input')?.focus();
-  }
+  const reviewStep = () => reviewView({heading, body, footer, status, selected, byId, proposals, options,
+    close: () => dialog.close(), back: choose});
 
   if (proposals.length) {
     if (!selected.size) { status.textContent = 'These items are no longer available to log'; return dialog; }
@@ -323,5 +225,152 @@ async function openSheet(options = {}) {
   return dialog;
 }
 
-root.StellisTrackerLog = {open: openSheet};
+/**
+ * Renders the review step into a container.
+ * @param {{heading: !Element, body: !Element, footer: !Element, status: !Element,
+ *     selected: !Map, byId: !Map, proposals: !Array, options: !Object,
+ *     close: function(), back: ?function()}} ctx
+ */
+function reviewView(ctx) {
+const {heading, body, footer, status, selected, byId, proposals, options} = ctx;
+  const proposing = proposals.length > 0;
+  heading.textContent = options.title || (proposing ? 'Confirm' : 'Review');
+  body.replaceChildren(); footer.replaceChildren(); status.textContent = '';
+  // One date for every row; schedules are checked against it on save.
+  const when = el('fieldset', null, 'log-when');
+  when.append(el('legend', 'When'));
+  let day = options.day || today();
+  const yesterday = calendarDates().shiftDate(today(), -1);
+  const other = el('input'); other.type = 'date'; other.max = today(); other.setAttribute('aria-label', 'Date');
+  const time = el('input'); time.type = 'time'; time.setAttribute('aria-label', 'Time, optional');
+  const dayButtons = [['Today', today()], ['Yesterday', yesterday]].map(([label, value]) => {
+    const choice = button(label, () => { day = value; other.value = ''; sync(); }, 'log-choice');
+    choice.dataset.day = value;
+    return choice;
+  });
+  const sync = () => {
+    for (const choice of dayButtons) choice.setAttribute('aria-pressed', String(choice.dataset.day === day && !other.value));
+    if (![today(), yesterday].includes(day)) other.value = day;
+    dayLine.textContent = dateLabel(day);
+  };
+  other.addEventListener('change', () => { if (other.value) { day = other.value; sync(); } });
+  const dayLine = el('p', null, 'log-when-day');
+  const controls = el('div', null, 'log-when-controls');
+  controls.append(...dayButtons, other, time);
+  when.append(controls, dayLine);
+  sync();
+  const list = el('ul', null, 'log-rows');
+  const readers = new Map();
+  for (const [id, entry] of selected) {
+    const item = byId.get(id);
+    const row = el('li', null, 'log-row');
+    row.dataset.item = id;
+    const rowId = `log-row-${++nextId}`;
+    const label = el('div', null, 'log-row-label');
+    const mark = el('span', null, 'log-tile-icon'); mark.append(dom().icon(item.icon));
+    const title = el('strong', item.title); title.id = rowId;
+    label.append(mark, title);
+    if (item.detail && item.control.type !== 'number') label.append(el('span', item.detail, 'log-row-detail'));
+    const built = rowControl(item, entry, rowId);
+    const error = el('p', null, 'log-row-error'); error.setAttribute('role', 'alert');
+    if (proposing) {
+      const keep = el('input'); keep.type = 'checkbox'; keep.checked = entry.checked !== false;
+      keep.setAttribute('aria-labelledby', rowId);
+      keep.addEventListener('change', () => { entry.checked = keep.checked; refresh(); });
+      row.append(keep);
+    }
+    row.append(label, built.wrap);
+    if (!proposing) {
+      row.append(iconButton(`Remove ${item.title}`, 'x', () => {
+        selected.delete(id); readers.delete(id); row.remove(); refresh();
+        if (!selected.size) ctx.back?.();
+      }));
+    }
+    if (entry.evidence) row.append(el('p', `From "${entry.evidence}"`, 'log-row-evidence'));
+    row.append(error);
+    readers.set(id, {read: built.read, error, entry});
+    list.append(row);
+  }
+  const save = button('', submit, 'coach-button is-primary');
+  const refresh = () => {
+    const count = [...readers.values()].filter(reader => !proposing || reader.entry.checked !== false).length;
+    save.textContent = proposing ? 'Log selected' : `Save ${count} ${count === 1 ? 'entry' : 'entries'}`;
+    save.disabled = !count;
+  };
+  async function submit() {
+    const chosen = [...readers.entries()].filter(([, reader]) => !proposing || reader.entry.checked !== false);
+    for (const [, reader] of chosen) reader.error.textContent = '';
+    save.disabled = true; status.textContent = 'Saving';
+    const entries = chosen.map(([id, reader]) => ({item: id, ...reader.read(),
+      ...(reader.entry.evidence ? {evidence: reader.entry.evidence} : {})}));
+    try {
+      const result = await dom().api('/trackers/entries', {method: 'POST', json: {day, time: time.value || null, entries}});
+      ctx.close();
+      options.onSaved?.(result);
+      root.dispatchEvent(new Event('health-capture-saved'));
+      const message = toast(`Saved ${result.saved} ${result.saved === 1 ? 'entry' : 'entries'}`, {label: 'Undo', run: async () => {
+        try {
+          const undone = await dom().api('/trackers/entries/' + result.batch_id, {method: 'DELETE'});
+          message.firstChild.textContent = undone.kept ? `Undone, ${undone.kept} changed since and kept` : 'Undone';
+          message.querySelector('button')?.remove();
+          options.onSaved?.();
+          root.dispatchEvent(new Event('health-capture-saved'));
+        } catch (error) { message.firstChild.textContent = error.message; }
+      }});
+    } catch (error) {
+      status.textContent = error.message;
+      for (const [index, text] of Object.entries(error.data?.detail?.errors || {})) {
+        const reader = readers.get(chosen[Number(index)]?.[0]);
+        if (reader) reader.error.textContent = text;
+      }
+      save.disabled = false;
+      list.querySelector('.log-row-error:not(:empty)')?.closest('.log-row')?.querySelector('button,input')?.focus();
+    }
+  }
+  body.append(when, list);
+  footer.append(proposing ? button('Cancel', () => { ctx.close(); options.onCancel?.(); }) : button('Back', ctx.back), save);
+  refresh();
+  list.querySelector('button,input')?.focus();
+}
+
+
+/**
+ * Shows the review step inline, such as inside the call panel, for entries
+ * Stellis proposed. Nothing saves until the person chooses Log selected.
+ * @param {!Element} host
+ * @param {{proposals: !Array<!Object>, day: string, title: (string|undefined),
+ *     onSaved: (function(!Object)|undefined), onCancel: (function()|undefined)}} options
+ * @return {!Promise<!Element>}
+ */
+async function inlineReview(host, options) {
+  const section = el('section', null, 'log-inline');
+  const heading = el('h3', options.title || 'Confirm');
+  heading.id = `log-inline-${++nextId}`;
+  section.setAttribute('aria-labelledby', heading.id);
+  const body = el('div', null, 'log-body');
+  const status = el('p', null, 'log-status');
+  status.setAttribute('role', 'status');
+  const footer = el('div', null, 'log-footer');
+  section.append(heading, body, status, footer);
+  host.append(section);
+  let items;
+  try {
+    ({items} = await dom().api('/trackers/log/items?today=' + today()));
+  } catch (error) {
+    status.textContent = error.message;
+    return section;
+  }
+  const byId = new Map(items.map(item => [item.id, item]));
+  const selected = new Map();
+  for (const proposal of options.proposals) if (byId.has(proposal.item)) selected.set(proposal.item, {...proposal, checked: true});
+  if (!selected.size) {
+    status.textContent = 'These items are no longer available to log';
+    return section;
+  }
+  reviewView({heading, body, footer, status, selected, byId, proposals: options.proposals, options,
+    close: () => section.remove(), back: null});
+  return section;
+}
+
+root.StellisTrackerLog = {open: openSheet, review: inlineReview};
 })(window);

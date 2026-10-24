@@ -107,6 +107,10 @@ The call distinguishes Listening, Hearing you and Processing your answer. Done s
 
 Calls share status labels and expose Retry reply after a preparation failure. Add records follows onboarding; Go to My Health follows a completed tour or check-in. My Health keeps Daily check-in beside Call Stellis. Each tour stage has a visible title and narration. The tour uses the selected surface behind its narration card to separate it from the page. Its conversation region scrolls while the header and controls remain visible. Phone message fields use 16-pixel text and occupy a separate row above the controls.
 
+## Check-in agenda
+
+The incoming check-in card stays a filled block with inverted ink. It shows when it rang, Answer, Chat instead, the snooze (*In N minutes*, from the server) and Not now, then *On this call*: each agenda item with its icon, title and source label. In the call, the agenda becomes a checklist with *n of m* progress. The first line carries *Written from your goals and records*. When Stellis proposes an entry, the log shows *The model chose* with the tool and the person's words, followed by the inline review with Log selected and Cancel. Message bubble styles apply only to message text, so review rows inside the log keep their own styling. The person's bubble uses the block roles, so it stays dark on the light glass panel in dark mode.
+
 ## Onboarding call continuity
 
 The call panel beside the live Notes/Transcript notepad is the primary onboarding interface. Keep Start call visible at entry, with Text Stellis as an alternative. Preserve the avatar, live status/ring, timer, mute, speaker, end, answer-finish, retry and minimize/expand controls. New confirmed-answer fields belong inside Notes; they must not replace this call interface with a standalone questionnaire. Notes stay editable and confirmation remains explicit. Compact mode stays in the layout beside or above the notepad.
