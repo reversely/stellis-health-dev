@@ -7,57 +7,13 @@ intervals and lab flags come from each fact's quoted source line.
 from __future__ import annotations
 
 import datetime as dt
-import re
 
 from stellis import care_events, health_facts, notebook_sources, notebooks, readings, trackers
+from stellis.health_facts import number as _number, reference, status
 
 STRIP_BEFORE = 3
 STRIP_AFTER = 11
 LEVEL_KINDS = ('lab_result', 'vital_sign')
-_NUMBER = re.compile(r'^[<>≤≥]?\s*(-?\d+(?:\.\d+)?)$')
-# A reference interval such as "15-150", "15 – 150" or "15 to 150" after the value.
-_RANGE = re.compile(r'(?<![\d.])(\d+(?:\.\d+)?)\s*(?:-|–|to)\s*(\d+(?:\.\d+)?)(?![\d.])')
-# A lab flag at the end of the line, such as "L", "H" or "Low".
-_FLAG = re.compile(r'(?:^|\s)(LL|HH|L|H|Low|High)\s*\*?$', re.IGNORECASE)
-
-
-def _number(value):
-    match = _NUMBER.match(str(value).strip())
-    return float(match.group(1)) if match else None
-
-
-def reference(quote: str, value: str) -> dict:
-    """The reference interval and lab flag stated in a fact's source line.
-
-    Returns:
-        ``low`` and ``high`` (or None) and ``flag``: "low", "high" or None.
-    """
-    text = ' '.join(str(quote).split())
-    start = text.find(str(value))
-    rest = text[start + len(str(value)):] if start >= 0 else text
-    low = high = None
-    match = _RANGE.search(rest)
-    if match and float(match.group(1)) < float(match.group(2)):
-        low, high = float(match.group(1)), float(match.group(2))
-    flag = _FLAG.search(rest)
-    word = flag.group(1).upper() if flag else ''
-    return {'low': low, 'high': high,
-            'flag': 'low' if word in {'L', 'LL', 'LOW'} else 'high' if word in {'H', 'HH', 'HIGH'} else None}
-
-
-def status(point: dict) -> dict | None:
-    """The label a point shows: the lab's flag first, else its position in the interval."""
-    if point['flag']:
-        return {'label': point['flag'].capitalize(), 'tone': 'alert', 'by_lab': True}
-    if point['low'] is None:
-        return None
-    if point['value'] < point['low']:
-        return {'label': 'Below range', 'tone': 'alert', 'by_lab': False}
-    if point['value'] > point['high']:
-        return {'label': 'Above range', 'tone': 'alert', 'by_lab': False}
-    return {'label': 'In range', 'tone': 'ok', 'by_lab': False}
-
-
 def _key(name, unit):
     return (' '.join(name.casefold().split()), unit.replace('µ', 'u').replace('μ', 'u').casefold().strip())
 

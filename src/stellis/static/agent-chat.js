@@ -38,8 +38,13 @@
     let offset = 0;
     for (const match of content.matchAll(links)) {
       body.append(document.createTextNode(content.slice(offset, match.index)));
-      const link = el('a', '', match[1]);
+      // A record link becomes a named citation chip that opens the document beside the chat.
+      const record = /^\/document\/([^/?#]+)(?:\?([^#]*))?/.exec(match[2]);
+      const page = record && new URLSearchParams(record[2] || '').get('page');
+      const named = page && !/\b(p\.|page)\s*\d/i.test(match[1]) ? `${match[1]}, p. ${page}` : match[1];
+      const link = el('a', record ? 'chat-cite' : '', record ? named : match[1]);
       link.href = match[2];
+      if (record) link.dataset.document = decodeURIComponent(record[1]);
       if (match[2].startsWith('https://')) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
       body.append(link);
       offset = match.index + match[0].length;
@@ -383,4 +388,16 @@
     return card;
   }
   window.StellisAgentChat = {show, artifactCard, suggestionCard, messageBody};
+
+  // Citation chips and attachment links open the document panel on a plain click.
+  document.addEventListener('click', event => {
+    const link = event.target.closest('.agent-message a[data-document]');
+    if (!link || !window.StellisChatDocument || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    for (const open of document.querySelectorAll('.agent-message a[aria-current]')) open.removeAttribute('aria-current');
+    link.setAttribute('aria-current', 'true');
+    const params = new URL(link.href, location.origin).searchParams;
+    window.StellisChatDocument.open({documentId: link.dataset.document, page: Number(params.get('page')) || undefined,
+      region: params.get('region') || undefined, onClose: () => link.removeAttribute('aria-current')});
+  });
 })();

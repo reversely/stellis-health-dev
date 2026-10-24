@@ -7,10 +7,15 @@ function cards(items,{kind,id,books=[],notebookId=()=>'',remove,onChange=()=>{},
   const list=dom().el('div',null,'chat-file-list');
   for(const item of items) {
     const row=dom().el('div',null,'chat-file');
-    const link=dom().el('a',item.filename);link.href='/document/'+encodeURIComponent(item.document_id);row.append(link);
+    const link=dom().el('a',item.filename);link.href='/document/'+encodeURIComponent(item.document_id);link.dataset.document=item.document_id;
+    const mark=dom().el('span',null,'chat-file-icon');mark.append(dom().icon('file-text'));row.append(mark,link);
     if(item.status==='needs_text')row.append(dom().el('span','Needs text','chat-file-status'));
     if(item.notebook_id) {
-      const saved=dom().el('a','Saved to notebook','chat-file-status');saved.href='/notebook/'+encodeURIComponent(item.notebook_id);row.append(saved);
+      const book=books.find(entry=>entry.id===item.notebook_id);
+      const saved=dom().el('a',book?'Saved to '+book.name:'Saved to notebook','chat-file-status chat-file-saved');saved.href='/notebook/'+encodeURIComponent(item.notebook_id);
+      // The notebook's own colour marks where the file was saved.
+      if(book?.color){const dot=dom().el('span',null,'chat-file-dot');dot.style.background=book.color;saved.prepend(dot);}
+      row.append(saved);
     } else {
       const select=dom().el('select');select.setAttribute('aria-label','Notebook for '+item.filename);
       select.append(new Option('Choose notebook',''));

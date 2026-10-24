@@ -1,6 +1,7 @@
 /**
  * @fileoverview Health facts panel on the document page: find facts in the
- * document, then accept or reject each suggestion.
+ * document, then accept or reject each suggestion. A compact form serves the
+ * chat document panel, with the count to check in its heading.
  */
 (function(root) {
 'use strict';
@@ -39,11 +40,14 @@ class FactsPanel {
   /**
    * @param {!Element} host
    * @param {!Object} record A document as the API returns it.
+   * @param {{compact: (boolean|undefined), onChange: (function()|undefined)}=} options
    */
-  constructor(host, record) {
+  constructor(host, record, options = {}) {
     const dom = root.StellisDom;
     this.dom = dom;
     this.record = record;
+    this.compact = Boolean(options.compact);
+    this.onChange = options.onChange || (() => {});
     this.facts = [];
     this.find = dom.button('Find health facts', 'facts-find');
     this.find.addEventListener('click', () => this.extract());
@@ -58,13 +62,20 @@ class FactsPanel {
     reviewHead.append(this.suggestedTitle, this.acceptAll);
     this.acceptedTitle = dom.el('h4', 'Accepted');
     const head = dom.el('div', null, 'facts-head');
-    head.append(
-        dom.el('h3', 'Health facts'),
-        dom.accuracyNote('summaries', 'Found by a model'), this.find);
-    const section = dom.el('section', null, 'facts');
-    section.append(
-        head, this.status, reviewHead, this.suggested, this.acceptedTitle,
-        this.accepted);
+    const title = dom.el('h3', 'Health facts');
+    this.count = dom.el('span', null, 'facts-count');
+    title.append(' ', this.count);
+    const section = dom.el('section', null, this.compact ? 'facts is-compact' : 'facts');
+    if (this.compact) {
+      // The panel leads with what is left to check; Accept all sits beside it.
+      head.append(title, this.acceptAll);
+      reviewHead.hidden = true;
+      section.append(head, this.status, this.suggested, this.acceptedTitle, this.accepted,
+          dom.accuracyNote('summaries', 'Found by a model'), this.find);
+    } else {
+      head.append(title, dom.accuracyNote('summaries', 'Found by a model'), this.find);
+      section.append(head, this.status, reviewHead, this.suggested, this.acceptedTitle, this.accepted);
+    }
     host.replaceChildren(section);
     if (record.status !== 'ready') {
       this.find.hidden = true;
@@ -81,6 +92,8 @@ class FactsPanel {
     this.acceptedTitle.hidden = !accepted.length;
     this.find.textContent =
         this.facts.length ? 'Find health facts again' : 'Find health facts';
+    this.count.textContent = suggested.length ? `${suggested.length} to check` : '';
+    if (this.compact) this.acceptAll.hidden = !suggested.length;
   }
 
   /**
@@ -91,11 +104,14 @@ class FactsPanel {
     const dom = this.dom;
     const item = dom.el('li', null, 'fact');
     item.dataset.status = fact.status;
+    const range = fact.range_status;
+    // A value outside its stated range is tinted so it is checked first.
+    if (range?.tone === 'alert') item.classList.add('is-flagged');
     const head = dom.el('div', null, 'fact-head');
-    head.append(
-        dom.el('span', KIND_LABELS[fact.kind], 'fact-kind'),
-        dom.el('strong', fact.name), dom.el('span', measurement(fact)),
-        dom.el('time', fact.date));
+    if (!this.compact) head.append(dom.el('span', KIND_LABELS[fact.kind], 'fact-kind'));
+    head.append(dom.el('strong', fact.name), dom.el('span', measurement(fact), 'fact-value'));
+    if (range) head.append(dom.el('span', range.label, `status-block ${range.tone === 'ok' ? 'is-ok' : 'is-alert'}`));
+    if (!this.compact) head.append(dom.el('time', fact.date));
     const page = dom.button(`Page ${fact.page}`, 'fact-page');
     page.addEventListener('click', () => {
       document.querySelector(`#document-page-${fact.page}`)?.scrollIntoView({
@@ -103,16 +119,21 @@ class FactsPanel {
       });
     });
     const quote = dom.el('blockquote', fact.quote, 'fact-quote');
-    item.append(head, quote, page);
+    item.append(head, quote);
+    if (!this.compact) item.append(page);
     if (fact.status === 'accepted') {
       head.append(dom.el('span', 'Accepted', 'fact-tag'));
       return item;
     }
-    const accept = dom.button('Accept');
-    accept.setAttribute('aria-label', `Accept ${fact.name}`);
+    const choice = (label, glyph) => {
+      const control = dom.button(this.compact ? null : label, this.compact ? 'fact-icon' : '');
+      if (this.compact) control.append(dom.icon(glyph));
+      control.setAttribute('aria-label', `${label} ${fact.name}`);
+      return control;
+    };
+    const accept = choice('Accept', 'check');
     accept.addEventListener('click', () => this.review(fact, true, accept));
-    const reject = dom.button('Reject');
-    reject.setAttribute('aria-label', `Reject ${fact.name}`);
+    const reject = choice('Reject', 'x');
     reject.addEventListener('click', () => this.review(fact, false, reject));
     const actions = dom.el('div', null, 'fact-actions');
     actions.append(accept, reject);
@@ -134,6 +155,7 @@ class FactsPanel {
       this.status.textContent =
           `${this.dom.plural(result.accepted, 'fact')} accepted`;
       this.paint();
+      this.onChange();
     } catch (error) {
       this.status.textContent = error.message;
     } finally {
@@ -162,6 +184,7 @@ class FactsPanel {
       }
       this.status.textContent = '';
       this.paint();
+      this.onChange();
     } catch (error) {
       this.status.textContent = error.message;
       control.disabled = false;
@@ -206,8 +229,8 @@ class FactsPanel {
  * @param {!Object} record
  * @return {!Promise<void>}
  */
-function mount(host, record) {
-  return new FactsPanel(host, record).load();
+function mount(host, record, options = {}) {
+  return new FactsPanel(host, record, options).load();
 }
 
 const exported = {
