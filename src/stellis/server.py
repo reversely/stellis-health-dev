@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import StrictBool, BaseModel, Field
 
-from stellis import reproductive_routes, milestone_routes, trackers_routes
+from stellis import reproductive_routes, milestone_routes, trackers_routes, trace_routes
 from stellis import care_events, photo_readings, dashboard, notebook_work, agent_artifacts, agent_runtime, agents, ai, auth, calendar, categorization, clean, collections, documents, goals, health_facts, health_summary, enhanced_notes, export as folder_export, generation_review, images, library, linkpreview, notebook_chat, notebook_sources, notebooks, notes, pages, people, processing, readings, recording, recording_ai, recording_preview, search, sorting, source_search, storage, suggestions, tavily, timeline, todos, transcript_agent
 from stellis.importer import ImportFailure, import_upload
 
@@ -3357,6 +3357,7 @@ from stellis.report_routes import router as report_router
 api.include_router(report_router)
 api.include_router(reproductive_routes.router)
 api.include_router(trackers_routes.router)
+api.include_router(trace_routes.router)
 api.include_router(milestone_routes.router)
 
 app.include_router(api, prefix="/api/v1")

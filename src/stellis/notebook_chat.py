@@ -22,6 +22,8 @@ import uuid
 from stellis import agent_gateway
 from stellis import documents
 from stellis import notebook_sources
+from stellis import runtime_profile
+from stellis import runtime_trace
 from stellis import search
 from stellis import storage
 
@@ -100,8 +102,8 @@ def _create_table(conn) -> None:
         row["name"]
         for row in conn.execute("PRAGMA table_info(notebook_messages)")
     }
-    # Tables created before agent replies joined the history lack these.
-    for column in ("agent_id", "author"):
+    # Tables created before agent replies and traces joined the history lack these.
+    for column in ("agent_id", "author", "trace_id"):
         if column not in columns:
             conn.execute(
                 f"ALTER TABLE notebook_messages ADD COLUMN {column} TEXT")
@@ -355,7 +357,8 @@ def _append(conn,
             role: str,
             content: str,
             citations: list[dict[str, object]],
-            agent: dict[str, object] | None = None) -> dict[str, object]:
+            agent: dict[str, object] | None = None,
+            trace_id: str | None = None) -> dict[str, object]:
     record = {
         "id": str(uuid.uuid4()),
         "notebook_id": notebook_id,
@@ -365,14 +368,15 @@ def _append(conn,
         "agent_id": agent["id"] if agent else None,
         "author": agent["name"] if agent else None,
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "trace_id": trace_id,
     }
     conn.execute(
         """
         INSERT INTO notebook_messages (id, notebook_id, role, content,
-            citations_json, agent_id, author, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            citations_json, agent_id, author, created_at, trace_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (record["id"], notebook_id, role, content, json.dumps(citations),
-         record["agent_id"], record["author"], record["created_at"]))
+         record["agent_id"], record["author"], record["created_at"], trace_id))
     return record
 
 
@@ -391,7 +395,7 @@ def messages(notebook_id: str) -> list[dict[str, object]]:
             "SELECT * FROM notebook_messages WHERE notebook_id = ? "
             "ORDER BY created_at, rowid", (notebook_id,)).fetchall()
     keys = ("id", "notebook_id", "role", "content", "agent_id", "author",
-            "created_at")
+            "created_at", "trace_id")
     return [{
         **{
             key: row[key] for key in keys
@@ -407,7 +411,7 @@ async def _ask_agent(
 
     Returns:
         The reply with its source links turned back into markers, the
-        passages the agent read, and the agent.
+        passages the agent read, the agent and the job ID.
     """
     from stellis import agent_runtime  # Deferred: imports the agent stack.
     from stellis import agents
@@ -431,7 +435,7 @@ async def _ask_agent(
         raise ChatError(str(exc)) from exc
     reply = agent_runtime.normalize_known_source_links(
         str(result["agent_message"]["content"]), sources)
-    return reply, passages, agent
+    return reply, passages, agent, result.get("job_id")
 
 
 async def ask(notebook_id: str,
@@ -459,6 +463,14 @@ async def ask(notebook_id: str,
     question = question.strip()
     if not 1 <= len(question) <= MAX_QUESTION:
         raise ValueError("Enter a question of at most 2,000 characters")
+    if agent_id:
+        # Agent answers record their own trace, found later through the job.
+        return await _ask(notebook_id, question, source_ids, agent_id, attachment_ids, None)
+    with runtime_trace.span("notebook_answer", model=runtime_profile.model_id("agent")) as trace_id:
+        return await _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trace_id)
+
+
+async def _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trace_id):
     history = messages(notebook_id)
     check(question)
     from stellis import chat_attachments
@@ -470,10 +482,12 @@ async def ask(notebook_id: str,
         passages = rank(passages, question)
     if not passages:
         raise ValueError('Check a source or attach a file that has text')
+    runtime_trace.event("sources_selected", source_count=len(passages))
     agent = None
     if agent_id:
-        reply, passages, agent = await _ask_agent(agent_id, notebook_id,
-                                                  question, passages)
+        reply, passages, agent, job_id = await _ask_agent(agent_id, notebook_id,
+                                                          question, passages)
+        trace_id = runtime_trace.for_job(job_id) if job_id else None
     else:
         try:
             reply, _ = await agent_gateway.turn(
@@ -482,8 +496,11 @@ async def ask(notebook_id: str,
         except agent_gateway.GatewayError as exc:
             raise ChatError(str(exc)) from exc
     answer, citations = cite(reply.strip(), passages)
+    runtime_trace.event("citations_checked", cited_count=len(citations), supplied_count=len(passages))
     with storage.connect() as conn:
         _create_table(conn)
         message = _append(conn, notebook_id, "user", question, [])
         chat_attachments.bind('notebook', notebook_id, attachment_ids, message['id'], conn)
-        return _append(conn, notebook_id, "assistant", answer, citations, agent)
+        saved = _append(conn, notebook_id, "assistant", answer, citations, agent, trace_id)
+    runtime_trace.event("answer_saved")
+    return saved

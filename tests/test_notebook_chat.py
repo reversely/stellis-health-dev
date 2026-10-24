@@ -188,6 +188,20 @@ class NotebookChatTest(unittest.TestCase):
         response = self.client.get(f"/api/v1/notebooks/{self.book}/chat")
         return response.json()["messages"]
 
+    def test_direct_answer_links_its_trace(self):
+        response, _ = self.ask("The dose stays at 10 mg. [[source:1]]")
+        self.assertEqual(response.status_code, 200, response.text)
+        trace_id = response.json()["trace_id"]
+        self.assertEqual(self.chat()[-1]["trace_id"], trace_id)
+        result = self.client.get("/api/v1/traces/" + trace_id).json()
+        self.assertEqual([e["name"] for e in result["trace"]["events"]],
+                         ["request_started", "sources_selected", "citations_checked",
+                          "answer_saved", "request_completed"])
+        self.assertEqual(result["answer"]["kind"], "notebook")
+        self.assertEqual(result["answer"]["question"], QUESTION)
+        self.assertEqual(result["answer"]["citations"], {"found": 1, "total": 1})
+        self.assertEqual(result["answer"]["sources"][0]["rank"], 1)
+
     def test_unchecked_and_other_notebook_sources_stay_out(self):
         source_ids = [*self.checked, "page:" + self.elsewhere]
         for limit in (notebook_chat.FULL_TEXT_CHARS, 10):

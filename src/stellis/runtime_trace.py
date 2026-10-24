@@ -32,7 +32,7 @@ def event(name: str, **details) -> None:
     trace_id = _ACTIVE.get()
     if not trace_id:
         return
-    allowed = {"attempt", "source_count", "citation_count", "error_type", "error_code", "reads", "step_count", "exit_code", "output_limit", "invalid_meta", "timed_out", "abandoned", "provider_error", "page_number", "character_count", "elapsed_ms"}
+    allowed = {"attempt", "source_count", "citation_count", "supplied_count", "cited_count", "error_type", "error_code", "reads", "step_count", "exit_code", "output_limit", "invalid_meta", "timed_out", "abandoned", "provider_error", "page_number", "character_count", "elapsed_ms"}
     safe = {key: value for key, value in details.items() if key in allowed
             and isinstance(value, (int, str))}
     with storage.connect() as conn:
@@ -79,7 +79,8 @@ def span(kind: str, agent_id=None, model=None, provider=None, execution=None):
     start = time.monotonic()
     if execution is None:
         execution = runtime_profile.agent_execution() if kind in {
-            "agent_request", "agent_chat", "agent_plan", "agent_review"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
+            "agent_request", "agent_chat", "agent_plan", "agent_review", "report_explanation",
+            "notebook_answer"} else ("GN100 Ollama" if runtime_profile.local_inference() else "Token Factory")
     with _GUARD:
         if _SWITCHING:
             raise RuntimeError("A model change is running. Try again when it finishes.")
@@ -119,13 +120,30 @@ def recent():
     with storage.connect() as conn:
         rows = conn.execute("""SELECT t.*, a.name AS agent_name FROM inference_traces t
             LEFT JOIN agents a ON a.id = t.agent_id ORDER BY t.created_at DESC LIMIT 50""").fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["events"] = json.loads(item.pop("events_json"))
-        item["usage"] = json.loads(item.pop("usage_json"))
-        result.append(item)
-    return result
+    return [_item(row) for row in rows]
+
+
+def _item(row):
+    item = dict(row)
+    item["events"] = json.loads(item.pop("events_json"))
+    item["usage"] = json.loads(item.pop("usage_json"))
+    return item
+
+
+def get(trace_id):
+    """One trace with its events, or None."""
+    with storage.connect() as conn:
+        row = conn.execute("""SELECT t.*, a.name AS agent_name FROM inference_traces t
+            LEFT JOIN agents a ON a.id = t.agent_id WHERE t.id = ?""", (trace_id,)).fetchone()
+    return _item(row) if row else None
+
+
+def for_job(job_id):
+    """The latest trace recorded for an agent job, or None."""
+    with storage.connect() as conn:
+        row = conn.execute("SELECT id FROM inference_traces WHERE job_id = ? ORDER BY created_at DESC LIMIT 1",
+                           (job_id,)).fetchone()
+    return row["id"] if row else None
 
 
 def clear():

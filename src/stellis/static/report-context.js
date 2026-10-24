@@ -85,7 +85,10 @@ function mount(host, record, initialPage) {
       }
       answer.append(link);
     }
-    block.append(answer); messages.append(block);
+    block.append(answer);
+    const trace = root.StellisAnswerTrace?.link({traceId: item.trace_id});
+    if (trace) block.append(trace);
+    messages.append(block);
   }
   function renderHistory() {
     messages.replaceChildren();

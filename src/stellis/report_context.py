@@ -15,7 +15,7 @@ import sys
 import time
 import uuid
 
-from stellis import agent_gateway, document_ocr, documents, notebook_chat, runtime_trace, storage
+from stellis import agent_gateway, document_ocr, documents, notebook_chat, runtime_profile, runtime_trace, storage
 
 VERSION = 'original-lines-v1'
 INSTRUCTIONS = '''Help the person understand the selected part of their health report.
@@ -42,6 +42,8 @@ def _tables(conn):
         map_id TEXT NOT NULL REFERENCES report_maps(id) ON DELETE CASCADE,
         region_id TEXT NOT NULL, question TEXT NOT NULL, answer TEXT NOT NULL,
         citations TEXT NOT NULL, evidence TEXT NOT NULL, created_at TEXT NOT NULL)''')
+    if 'trace_id' not in {row['name'] for row in conn.execute('PRAGMA table_info(report_exchanges)')}:
+        conn.execute('ALTER TABLE report_exchanges ADD COLUMN trace_id TEXT')
 
 
 @contextmanager
@@ -158,6 +160,11 @@ def _digest(text):
 
 
 async def ask(document_id, map_id, region_id, question):
+    with runtime_trace.span('report_explanation', model=runtime_profile.model_id('agent')) as trace_id:
+        return await _ask(document_id, map_id, region_id, question, trace_id)
+
+
+async def _ask(document_id, map_id, region_id, question, trace_id):
     question = question.strip()
     if not question or len(question) > 2000:
         raise ValueError('Enter a question of at most 2,000 characters')
@@ -173,6 +180,7 @@ async def ask(document_id, map_id, region_id, question):
     selection = next((r for r in mapped['regions'] if r['id'] == region_id), None)
     if selection is None:
         raise ValueError('Select a region in this report first')
+    runtime_trace.event('selection_resolved', page_number=row['page'])
     page_text = '\n'.join(r['text'] for r in mapped['regions'])
     # Keep the selected line even on a long page; preserve broad table/section context.
     selected_index = mapped['regions'].index(selection)
@@ -206,6 +214,7 @@ async def ask(document_id, map_id, region_id, question):
             context, f'/document/{page["document_id"]}?page={page["number"]}', page=page['number']))
     related = notebook_chat.rank(candidates, ' '.join(sorted(terms))+' '+question, limit=3)
     passages.extend(related)
+    runtime_trace.event('sources_selected', source_count=len(related))
     all_text = {(p['document_id'], p['number']): p['text'] for p in source_pages}
     for passage in related:
         identity = passage.source_id.split(':', 1)[1]
@@ -226,6 +235,7 @@ async def ask(document_id, map_id, region_id, question):
     answer, citations = notebook_chat.cite(reply.strip(), passages)
     if not citations:
         raise notebook_chat.ChatError('The explanation has no source links. Try again.')
+    runtime_trace.event('citations_checked', cited_count=len(citations), supplied_count=len(passages))
     # Validate all supplied evidence after inference, before publishing the answer.
     with storage.connect() as conn:
         _tables(conn)
@@ -238,7 +248,11 @@ async def ask(document_id, map_id, region_id, question):
             if saved is None or _digest(saved['text']) != item['digest']:
                 raise documents.DocumentConflict('A related report changed. Ask again for current context.')
         identity = str(uuid.uuid4())
-        conn.execute('INSERT INTO report_exchanges VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        conn.execute('''INSERT INTO report_exchanges (id, document_id, map_id, region_id, question, answer,
+            citations, evidence, created_at, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                      (identity, document_id, map_id, region_id, question, answer,
-                      json.dumps(citations), json.dumps(evidence), datetime.now(timezone.utc).isoformat()))
+                      json.dumps(citations), json.dumps(evidence), datetime.now(timezone.utc).isoformat(), trace_id))
+    # Trace writes use their own connection, so they follow the transaction.
+    runtime_trace.event('sources_checked', source_count=len(evidence) + 1)
+    runtime_trace.event('answer_saved')
     return next(item for item in history(document_id) if item['id'] == identity)

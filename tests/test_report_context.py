@@ -80,6 +80,37 @@ class ReportContextTests(unittest.TestCase):
             'map_id': mapped['id'], 'region_id': region['id'], 'question': 'Explain'})
         self.assertEqual(stale.status_code, 409)
 
+    def test_each_explanation_links_its_trace_with_sources_and_checks(self):
+        prior, _ = documents.create('earlier.pdf', report('4.8'))
+        mapped, region = self.mapped()
+        async def turn(prompt, conversation):
+            return 'Potassium is 5.4 mmol/L [[source:1]], earlier 4.8 [[source:2]].', {}
+        with mock.patch.object(report_context.agent_gateway, 'turn', side_effect=turn):
+            saved = self.client.post(self.base+'/explanations', json={
+                'map_id': mapped['id'], 'region_id': region['id'], 'question': 'How has this changed?'}).json()
+        self.assertTrue(saved['trace_id'])
+        result = self.client.get('/api/v1/traces/'+saved['trace_id']).json()
+        trace, answer = result['trace'], result['answer']
+        self.assertEqual(trace['state'], 'succeeded')
+        self.assertEqual([e['name'] for e in trace['events']], [
+            'request_started', 'selection_resolved', 'sources_selected', 'citations_checked',
+            'sources_checked', 'answer_saved', 'request_completed'])
+        self.assertEqual(trace['events'][1]['page_number'], 1)
+        self.assertEqual(answer['kind'], 'report')
+        self.assertEqual(answer['question'], 'How has this changed?')
+        self.assertEqual(answer['sources'][0]['role'], 'selected')
+        related = [s for s in answer['sources'] if s['role'] == 'related']
+        self.assertEqual(related[0]['rank'], 1)
+        self.assertIn('4.8', related[0]['quote'])
+        self.assertEqual({c['status'] for c in answer['checks'][:-1]}, {'unchanged'})
+        self.assertEqual(answer['checks'][-1]['status'], '2 of 2')
+        self.assertEqual(answer['citations'], {'found': 2, 'total': 2})
+        # A later edit to a related source shows as changed since the request.
+        documents.save_page(prior['id'], 1, 'Reviewed', documents.get(prior['id'])['pages'][0]['revision'])
+        checks = self.client.get('/api/v1/traces/'+saved['trace_id']).json()['answer']['checks']
+        self.assertIn('changed', {c['status'] for c in checks})
+        self.assertEqual(self.client.get('/api/v1/traces/missing').status_code, 404)
+
     def test_rejects_invalid_citations_and_concurrent_source_edits(self):
         mapped, region = self.mapped()
         payload = {'map_id': mapped['id'], 'region_id': region['id'], 'question': 'Explain'}

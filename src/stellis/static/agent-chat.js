@@ -189,6 +189,8 @@
       if(draft)item.append(artifactCard(draft,()=>refreshThread(section,agent)));else item.append(messageBody(message.content));
       item.append(window.StellisChatAttachments.cards(attachments.filter(file=>file.message_id===message.id),{kind:'agent',id:agent.id,books:notebooks,notebookId:()=>message.notebook_id||''}));
       const chip = contextChip(message.notebook_id); if (chip) item.append(chip);
+      const trace = message.role === 'agent' ? window.StellisAnswerTrace?.link({jobId: message.job_id}) : null;
+      if (trace) item.append(trace);
       const job = byJob.get(message.job_id);
       if (message.role === 'user' && job && job.state !== 'succeeded')
         item.append(el('small', 'agent-job-state', job.state === 'running' ? (message.addressed_agent_name?'Asking '+message.addressed_agent_name+'…':'Working on your request…') : job.error || 'Reply interrupted. Try again.'));

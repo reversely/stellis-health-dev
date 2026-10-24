@@ -29,6 +29,27 @@ try {
     await page.reload();
     await page.waitForFunction(n => document.querySelectorAll('.report-exchange').length === n, historyCount);
     assert.equal(await page.locator('.report-region.is-selected').count(), 1);
+    // Each saved explanation opens its own request trace.
+    const traceLink = page.locator('.report-exchange').last().getByRole('button', {name: 'How Stellis answered', exact: true});
+    await traceLink.click();
+    const trace = page.getByRole('dialog', {name: 'How Stellis answered', exact: true});
+    await trace.locator('.trace-step').first().waitFor();
+    assert.deepEqual(await trace.locator('.trace-step-text strong').allTextContents(),
+        ['Line selected', 'Related pages selected', 'Citations checked', 'Sources checked', 'Saved to this line']);
+    assert.match(await trace.locator('.trace-sublist').first().textContent(), /earlier.*4\.8.*Rank 1/s);
+    assert.equal(await trace.locator('.trace-tile').count(), 4);
+    assert.match(await trace.locator('.trace-tile').nth(3).textContent(), /2 of 2/);
+    assert.deepEqual([...new Set(await trace.locator('.status-block').allTextContents())].filter(s => !/of/.test(s)), ['Unchanged']);
+    assert.equal(await trace.getByRole('link', {name: 'All requests in Settings'}).getAttribute('href'), '/settings#inference-traces');
+    assert.equal(await trace.evaluate(node => node.scrollWidth > node.clientWidth), false);
+    if (process.env.STELLIS_REPORT_EVIDENCE) {
+      await mkdir(process.env.STELLIS_REPORT_EVIDENCE, {recursive: true});
+      await trace.evaluate(node => node.getAnimations().forEach(animation => animation.finish()));
+      await page.screenshot({path: `${process.env.STELLIS_REPORT_EVIDENCE}/trace-${width}.png`});
+    }
+    await page.keyboard.press('Escape');
+    await trace.waitFor({state: 'detached'});
+    assert.equal(await page.evaluate(() => document.activeElement.textContent), 'How Stellis answered');
     await page.getByRole('button', {name: 'Zoom in', exact: true}).click();
     await page.getByRole('button', {name: 'Rotate', exact: true}).click();
     await region.click();

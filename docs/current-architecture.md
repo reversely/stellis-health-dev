@@ -710,3 +710,9 @@ flowchart LR
   Review --> Batch[POST /trackers/entries]
   Batch --> Tx[(One transaction: outcomes, observations, goal days, readings)]
   Tx --> Undo[Batch record for exact Undo]
+
+## Per-answer request traces
+
+Report explanations and direct notebook answers run inside their own `runtime_trace` span, configured model included, and record step events: selection resolved (page), sources selected (count), citations checked (cited and supplied counts), sources checked and answer saved. Agent answers keep the agent runtime's span and are found through their job. `report_exchanges` and `notebook_messages` store the trace ID. Trace writes use their own connection, so they follow, never sit inside, an answer's validation transaction.
+
+Traces still hold no prompts, replies or quotes. `answer_trace.py` joins a trace with its saved answer: the selected line, ranked related sources with a short quote from their saved evidence, and source checks recomputed against current page revisions and text digests. `GET /traces/{id}` and `GET /traces/job/{job_id}` serve the result. `answer-trace.js` shows it in a side panel opened from *How Stellis answered*: summary tiles (model as reported or configured, runtime, duration and token counts, citations), timed steps with bars, and Copy request ID. Values the runtime did not report say *Not reported*.

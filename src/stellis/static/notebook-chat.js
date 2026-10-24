@@ -387,9 +387,11 @@ class NotebookChat {
       node.append(dom.el('strong', item.author, 'nb-msg-author'));
     }
     const citations = item.citations || [];
-    node.append(
-        this.answerBody(item.content, citations),
-        this.saveButton(item.content, citations));
+    const actions = dom.el('div', null, 'nb-msg-actions');
+    actions.append(this.saveButton(item.content, citations));
+    const trace = root.StellisAnswerTrace?.link({traceId: item.trace_id});
+    if (trace) actions.append(trace);
+    node.append(this.answerBody(item.content, citations), actions);
     return node;
   }
 
