@@ -146,16 +146,21 @@ class SourceViewer {
     this.title.id = 'nb-viewer-title';
     this.title.tabIndex = -1;
     this.open = /** @type {!HTMLAnchorElement} */ (
-        dom.el('a', 'Open', 'nb-viewer-open'));
+        dom.el('a', 'Open the whole record', 'nb-viewer-open'));
     const close = dom.button('×', 'nb-viewer-close');
     close.setAttribute('aria-label', 'Close source');
     close.addEventListener('click', () => this.hide());
+    // The citation's number as a colour block, then the source's title and kind, date and page.
+    this.badge = dom.el('span', null, 'nb-viewer-badge');
+    this.meta = dom.el('p', null, 'nb-viewer-meta');
+    const titles = dom.el('div', null, 'nb-viewer-titles');
+    titles.append(this.title, this.meta);
     const head = dom.el('div', null, 'nb-viewer-head');
-    head.append(this.title, this.open, close);
+    head.append(this.badge, titles, close);
     this.status = dom.el('p', null, 'nb-status');
     this.status.setAttribute('role', 'status');
     this.body = dom.el('div', null, 'nb-viewer-body');
-    this.element.append(head, this.status, this.body);
+    this.element.append(head, this.status, this.body, this.open);
     this.element.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
@@ -188,9 +193,11 @@ class SourceViewer {
    * Opens the source an app link names.
    * @param {string} target
    * @param {?Element=} trigger The control to refocus on close.
+   * @param {{number: (string|undefined), meta: (string|undefined)}=} cite
+   *     The citation's number and the source's kind, date and page.
    * @return {!Promise<boolean>} False when the link is not a source.
    */
-  async show(target, trigger = null) {
+  async show(target, trigger = null, cite = {}) {
     const place = parseTarget(target);
     if (!place) {
       return false;
@@ -200,6 +207,9 @@ class SourceViewer {
     this.pauseAudio();
     this.body.replaceChildren();
     this.title.textContent = '';
+    this.badge.textContent = cite.number || '';
+    this.badge.hidden = !cite.number;
+    this.meta.textContent = cite.meta || '';
     this.status.textContent = 'Opening';
     this.open.href = place.href;
     this.open.removeAttribute('target');

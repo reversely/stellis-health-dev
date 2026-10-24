@@ -339,5 +339,58 @@ class NotebookChatTest(unittest.TestCase):
             set(self.checked))
 
 
+
+class UnreadNotebookTest(unittest.TestCase):
+    """Related sources in other notebooks are named, can be included, and citations are checked."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        environment = mock.patch.dict(os.environ, {"STELLIS_DATA_DIR": self.temp.name})
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.blood = notebooks.create("Blood Health")["id"]
+        self.pregnancy = notebooks.create("Pregnancy")["id"]
+        self.mine = pages.create("Iron note", self.blood, "Ferritin was 13 ug/L in June.")["id"]
+        self.theirs = pages.create("Pregnancy bloods", self.pregnancy, "Ferritin was 9 ug/L at 12 weeks.")["id"]
+        pages.create("Scan note", self.pregnancy, "The scan was normal.")
+        self.client = testclient.TestClient(server.app)
+        self.addCleanup(self.client.close)
+
+    def ask(self, reply, **extra):
+        turn = mock.AsyncMock(return_value=(reply, "session"))
+        with mock.patch.object(agent_gateway, "turn", turn):
+            response = self.client.post(f"/api/v1/notebooks/{self.blood}/ask", json={
+                "question": "How has my ferritin changed?", "source_ids": ["page:" + self.mine], **extra})
+        return response, turn.await_args.args[0]
+
+    def test_unread_notebook_is_named_with_its_matching_sources(self):
+        response, _ = self.ask("Ferritin was 13 ug/L. [[source:1]]")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["unread"], [{"notebook_id": self.pregnancy, "name": "Pregnancy",
+                                                      "source_ids": ["page:" + self.theirs]}])
+        self.assertEqual(response.json()["citations"][0]["found"], True)
+        self.assertEqual(self.chat_unread(), response.json()["unread"])
+
+    def chat_unread(self):
+        return self.client.get(f"/api/v1/notebooks/{self.blood}/chat").json()["messages"][-1]["unread"]
+
+    def test_including_a_notebook_reads_it_for_one_question(self):
+        response, prompt = self.ask("Ferritin was 9 at 12 weeks. [[source:2]]",
+                                    include=[{"notebook_id": self.pregnancy, "source_ids": ["page:" + self.theirs]}])
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertIn("Ferritin was 9 ug/L at 12 weeks.", prompt)
+        self.assertEqual(response.json()["unread"], [])
+        self.assertEqual(response.json()["citations"][0]["title"], "Pregnancy bloods")
+
+    def test_a_question_without_distinctive_words_finds_nothing_elsewhere(self):
+        self.assertEqual(notebook_chat.unread(self.blood, "How was it?"), [])
+
+    def test_citations_not_on_their_source_are_marked(self):
+        citations = [{"source_id": "page:x", "excerpt": "Ferritin was 13"}, {"source_id": "page:x", "excerpt": "Gone"}]
+        marked = notebook_chat.mark_found(citations, {"page:x": "Note: ferritin   was 13 ug/L"})
+        self.assertEqual([c["found"] for c in marked], [True, False])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1423,11 +1423,18 @@ class SourceSelection(BaseModel):
     excluded: list[str] = Field(max_length=500)
 
 
+class IncludedSources(BaseModel):
+    notebook_id: str = Field(max_length=100)
+    source_ids: list[str] = Field(max_length=notebook_chat.UNREAD_SOURCES)
+
+
 class NotebookQuestion(BaseModel):
     attachment_ids: list[str] = Field(default_factory=list, max_length=5)
     question: str = Field(max_length=notebook_chat.MAX_QUESTION)
     source_ids: list[str] = Field(max_length=500)
     agent_id: str | None = Field(default=None, max_length=100)
+    # Sources from other notebooks, read for this question only.
+    include: list[IncludedSources] = Field(default_factory=list, max_length=notebook_chat.UNREAD_NOTEBOOKS)
 
 
 @api.get("/daily-brief")
@@ -1522,7 +1529,8 @@ def notebook_chat_messages(notebook_id: str):
 async def notebook_chat_ask(notebook_id: str, request: NotebookQuestion):
     try:
         return await notebook_chat.ask(notebook_id, request.question,
-                                       request.source_ids, request.agent_id, request.attachment_ids)
+                                       request.source_ids, request.agent_id, request.attachment_ids,
+                                       [item.model_dump() for item in request.include])
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

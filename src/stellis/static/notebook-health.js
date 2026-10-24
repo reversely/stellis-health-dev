@@ -395,6 +395,25 @@ function otherFacts(host, facts) {
 }
 
 let latestMount = 0;
+// Level names of the notebook on screen, for chat follow-ups.
+let levelNames = [];
+
+/** The longest level name a text mentions as a word, or null. */
+function levelNamed(text) {
+  const lower = String(text).toLowerCase();
+  return [...levelNames].sort((a, b) => b.length - a.length).find(name =>
+      new RegExp(`\\b${name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lower)) || null;
+}
+
+/** Opens the Brief tab with one level's chart selected. */
+function showLevel(name) {
+  document.querySelector('#notebook-tab-overview')?.click();
+  const card = [...document.querySelectorAll('#notebook-levels .brief-level-card')]
+      .find(item => item.querySelector('.brief-level-name')?.textContent === name);
+  card?.click();
+  card?.scrollIntoView({block: 'start'});
+  card?.focus({preventScroll: true});
+}
 
 async function mount(host, notebookId) {
   // Only the latest call renders; earlier ones that finish later are dropped.
@@ -425,7 +444,9 @@ async function mount(host, notebookId) {
     levels(levelHost, brief);
     otherFacts(levelHost, context.facts);
   }
+  levelNames = brief.levels.map(level => level.name);
+  root.dispatchEvent(new Event('stellis:brief-loaded'));
 }
 
-root.StellisNotebookHealth = {mount};
+root.StellisNotebookHealth = {mount, levelNamed, showLevel};
 })(window);

@@ -136,3 +136,20 @@ html[data-theme='dark'] #notebook-health, html[data-theme='dark'] .notebook-leve
 .brief-birth-field input { min-height: var(--control-height); font-size: 16px; }
 .brief-birth-status:empty { display: none; }
 @media (max-width: 900px) { .brief-coming-wrap { grid-template-columns: minmax(0, 1fr); } }
+
+/* Records: a dashed zone that files reports into this notebook. */
+.record-drop {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-5); padding: var(--space-5) var(--space-6); border: 2px dashed var(--line); border-radius: var(--radius-panel);
+  background: color-mix(in oklch, var(--data-series) 6%, transparent);
+}
+.record-drop.is-over { border-color: var(--data-series); background: color-mix(in oklch, var(--data-series) 14%, transparent); }
+.record-drop-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: var(--radius-control); background: var(--surface); color: var(--data-series); }
+.record-drop-icon .icon { width: 24px; height: 24px; }
+.record-drop-text h3 { margin: 0; font: 300 24px/1.2 var(--font-heading); }
+.record-drop-text p { margin: var(--space-1) 0 0; color: var(--muted); font-size: 15px; }
+.record-drop .coach-button { display: inline-flex; align-items: center; gap: var(--space-2); }
+.record-drop-results { grid-column: 1 / -1; display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.record-drop-results:empty { display: none; }
+.record-drop-review { color: var(--ink); text-underline-offset: 3px; }
+@media (max-width: 640px) { .record-drop { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-4); } .record-drop .coach-button { grid-column: 1 / -1; justify-content: center; } }

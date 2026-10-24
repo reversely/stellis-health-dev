@@ -670,3 +670,22 @@
 .nb-chat:has(.nb-messages > .nb-empty:only-child) .nb-composer {
   position: static;
 }
+
+/* After an answer: other notebooks it did not read, the citation check and data-driven follow-ups. */
+.nb-unread { margin: var(--space-3) 0 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--raised); color: var(--ink); font-size: 15px; }
+.nb-check { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-3) 0 0; color: var(--success); font-size: 14px; font-weight: 600; }
+.nb-check .icon { width: 16px; height: 16px; }
+.nb-follow { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+.nb-follow-chip { min-height: var(--control-height); padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .nb-follow-chip:hover { background: var(--raised); } }
+.nb-add-from { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.nb-add-from:empty { display: none; }
+.nb-add-from-button { min-height: var(--control-height); justify-content: flex-start; }
+/* The viewer names its citation with a colour block, then the source's kind, date and page. */
+.nb-viewer-head { align-items: flex-start; }
+.nb-viewer-badge { display: grid; place-items: center; min-width: 28px; height: 24px; padding: 0 var(--space-2); border-radius: var(--radius-small); background: var(--block-fill); color: var(--block-ink); font-size: 13px; font-weight: 650; flex: none; }
+.nb-viewer-badge[hidden] { display: none; }
+.nb-viewer-titles { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.nb-viewer-meta { margin: 0; color: var(--muted); font-size: 14px; }
+.nb-viewer-meta:empty { display: none; }
+.nb-viewer > .nb-viewer-open { justify-self: start; display: inline-flex; align-items: center; min-height: var(--control-height); margin-top: var(--space-3); padding: 0 var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink); text-decoration: none; }

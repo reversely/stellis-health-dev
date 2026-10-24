@@ -28,6 +28,11 @@ from stellis import search
 from stellis import storage
 
 FULL_TEXT_CHARS = 24_000
+# Related sources in other notebooks: how many notebooks and sources to name.
+UNREAD_NOTEBOOKS = 3
+UNREAD_SOURCES = 10
+# A citation is found when this many of its excerpt's first characters are on its source.
+FOUND_CHARS = 80
 RANKED_PASSAGES = 12
 # agent_runtime keeps at most 16 supplied sources.
 AGENT_PASSAGES = 16
@@ -103,7 +108,7 @@ def _create_table(conn) -> None:
         for row in conn.execute("PRAGMA table_info(notebook_messages)")
     }
     # Tables created before agent replies and traces joined the history lack these.
-    for column in ("agent_id", "author", "trace_id"):
+    for column in ("agent_id", "author", "trace_id", "unread_json"):
         if column not in columns:
             conn.execute(
                 f"ALTER TABLE notebook_messages ADD COLUMN {column} TEXT")
@@ -291,6 +296,63 @@ def retrieve(notebook_id: str, source_ids: list[str],
     return passages
 
 
+def _terms(question: str) -> list[str]:
+    """The question's distinctive words, for finding related sources elsewhere."""
+    return list(dict.fromkeys(term for term in re.findall(r"\w+", question)
+                              if len(term) >= 4 and term.casefold() not in _STOPWORDS))
+
+
+def matching(passages: list[Passage], terms: list[str]) -> list[Passage]:
+    """Passages that contain any of the terms; unlike ``rank``, never a fallback."""
+    if not terms or not passages:
+        return []
+    expression = " OR ".join('"' + term.replace('"', '""') + '"' for term in terms)
+    with sqlite3.connect(":memory:") as conn:
+        conn.execute("CREATE VIRTUAL TABLE passages USING fts5(body)")
+        conn.executemany("INSERT INTO passages (rowid, body) VALUES (?, ?)",
+                         enumerate(passage.text for passage in passages))
+        rows = conn.execute("SELECT rowid FROM passages WHERE passages MATCH ? ORDER BY bm25(passages)",
+                            (expression,)).fetchall()
+    return [passages[row[0]] for row in rows]
+
+
+def unread(notebook_id: str, question: str, skip: set[str] = frozenset()) -> list[dict[str, object]]:
+    """Other notebooks with sources that match the question, which the answer did not read.
+
+    Returns:
+        Up to ``UNREAD_NOTEBOOKS`` entries with ``notebook_id``, ``name`` and the matching
+        ``source_ids`` (at most ``UNREAD_SOURCES``).
+    """
+    from stellis import notebooks
+    terms = _terms(question)
+    if not terms:
+        return []
+    mine = {source["id"] for source in notebook_sources.list_sources(notebook_id)}
+    found = []
+    for book in notebooks.list_notebooks():
+        if book["id"] == notebook_id or book["id"] in skip or book.get("archived_at"):
+            continue
+        ready = [source for source in notebook_sources.list_sources(book["id"])
+                 if source["status"] == "ready" and source["id"] not in mine]
+        hits = matching(read_passages(ready), terms) if ready else []
+        if hits:
+            found.append({"notebook_id": book["id"], "name": book["name"],
+                          "source_ids": list(dict.fromkeys(hit.source_id for hit in hits))[:UNREAD_SOURCES]})
+    return found[:UNREAD_NOTEBOOKS]
+
+
+def _squash(text: str) -> str:
+    return " ".join(str(text).split()).casefold()
+
+
+def mark_found(citations: list[dict[str, object]], readable: dict[str, str]) -> list[dict[str, object]]:
+    """Marks each citation found when its excerpt is still in its source's current text."""
+    for citation in citations:
+        excerpt = _squash(citation.get("excerpt") or "")[:FOUND_CHARS]
+        citation["found"] = bool(excerpt) and excerpt in _squash(readable.get(citation["source_id"], ""))
+    return citations
+
+
 def build_prompt(question: str, passages: list[Passage],
                  history: list[dict[str, object]]) -> str:
     """Builds the model prompt: instructions, then a JSON context."""
@@ -358,7 +420,8 @@ def _append(conn,
             content: str,
             citations: list[dict[str, object]],
             agent: dict[str, object] | None = None,
-            trace_id: str | None = None) -> dict[str, object]:
+            trace_id: str | None = None,
+            unread: list[dict[str, object]] | None = None) -> dict[str, object]:
     record = {
         "id": str(uuid.uuid4()),
         "notebook_id": notebook_id,
@@ -369,14 +432,16 @@ def _append(conn,
         "author": agent["name"] if agent else None,
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "trace_id": trace_id,
+        "unread": unread or [],
     }
     conn.execute(
         """
         INSERT INTO notebook_messages (id, notebook_id, role, content,
-            citations_json, agent_id, author, created_at, trace_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            citations_json, agent_id, author, created_at, trace_id, unread_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (record["id"], notebook_id, role, content, json.dumps(citations),
-         record["agent_id"], record["author"], record["created_at"], trace_id))
+         record["agent_id"], record["author"], record["created_at"], trace_id,
+         json.dumps(unread or [])))
     return record
 
 
@@ -401,6 +466,7 @@ def messages(notebook_id: str) -> list[dict[str, object]]:
             key: row[key] for key in keys
         },
         "citations": json.loads(row["citations_json"]),
+        "unread": json.loads(row["unread_json"] or "[]"),
     } for row in rows]
 
 
@@ -442,7 +508,8 @@ async def ask(notebook_id: str,
               question: str,
               source_ids: list[str],
               agent_id: str | None = None,
-              attachment_ids: list[str] | None = None) -> dict[str, object]:
+              attachment_ids: list[str] | None = None,
+              include: list[dict[str, object]] | None = None) -> dict[str, object]:
     """Answers one question from the checked sources and stores the exchange.
 
     Args:
@@ -463,20 +530,24 @@ async def ask(notebook_id: str,
     question = question.strip()
     if not 1 <= len(question) <= MAX_QUESTION:
         raise ValueError("Enter a question of at most 2,000 characters")
+    include = include or []
     if agent_id:
         # Agent answers record their own trace, found later through the job.
-        return await _ask(notebook_id, question, source_ids, agent_id, attachment_ids, None)
+        return await _ask(notebook_id, question, source_ids, agent_id, attachment_ids, None, include)
     with runtime_trace.span("notebook_answer", model=runtime_profile.model_id("agent")) as trace_id:
-        return await _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trace_id)
+        return await _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trace_id, include)
 
 
-async def _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trace_id):
+async def _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trace_id, include=()):
     history = messages(notebook_id)
     check(question)
     from stellis import chat_attachments
     attachment_ids = attachment_ids or []
     attached = chat_attachments.passages('notebook', notebook_id, attachment_ids, question)
     passages = retrieve(notebook_id, source_ids, question) if source_ids else []
+    # Sources from another notebook, included for this question only.
+    for extra in include[:UNREAD_NOTEBOOKS]:
+        passages += retrieve(str(extra["notebook_id"]), list(extra["source_ids"])[:UNREAD_SOURCES], question)
     passages = [*attached, *passages]
     if sum(len(item.text) for item in passages) > FULL_TEXT_CHARS:
         passages = rank(passages, question)
@@ -496,11 +567,16 @@ async def _ask(notebook_id, question, source_ids, agent_id, attachment_ids, trac
         except agent_gateway.GatewayError as exc:
             raise ChatError(str(exc)) from exc
     answer, citations = cite(reply.strip(), passages)
+    readable = {}
+    for passage in passages:
+        readable[passage.source_id] = readable.get(passage.source_id, "") + "\n" + passage.text
+    mark_found(citations, readable)
     runtime_trace.event("citations_checked", cited_count=len(citations), supplied_count=len(passages))
+    elsewhere = unread(notebook_id, question, {str(extra["notebook_id"]) for extra in include})
     with storage.connect() as conn:
         _create_table(conn)
         message = _append(conn, notebook_id, "user", question, [])
         chat_attachments.bind('notebook', notebook_id, attachment_ids, message['id'], conn)
-        saved = _append(conn, notebook_id, "assistant", answer, citations, agent, trace_id)
+        saved = _append(conn, notebook_id, "assistant", answer, citations, agent, trace_id, elsewhere)
     runtime_trace.event("answer_saved")
     return saved

@@ -4358,6 +4358,8 @@ async function showNotebook(id) {
   notebookTodos = mountTodos(document.querySelector('#notebook-todos'), {scope: id, onChange: refreshNotebookItems});
   await loadNotebookItems(notebook);
   window.StellisNotebookHealth?.mount(document.querySelector('#notebook-health'), notebook.id).catch(() => {});
+  window.StellisRecordDrop?.mount(document.querySelector('#notebook-drop'), {notebookId: notebook.id,
+    onUploaded: async () => { await reloadLibrary(); await refreshNotebookItems(); }});
   window.StellisHealthPillars?.notebook(document.querySelector('#notebook-pillars'), notebook, showNotebookTab);
   await Promise.all([
     window.StellisNotebookChat.mount(document.querySelector('#notebook-chat'), notebook,

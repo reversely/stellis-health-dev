@@ -5,6 +5,9 @@
 (function(root) {
 'use strict';
 
+/** Source kinds as the viewer names them. */
+const TYPE_LABELS = {recording: 'Recording', audio: 'Recording', note: 'Note', pdf: 'Document', image: 'Image'};
+
 /** Icon names by source type. */
 const ICONS = {
   recording: 'microphone',
@@ -156,7 +159,9 @@ class NotebookChat {
     this.list = dom.el('ul', null, 'nb-source-list');
     this.empty = dom.el(
         'p', 'Add a recording, note or document to ask about it', 'nb-empty');
-    body.append(actions, this.selectAll, this.list, this.empty);
+    // Related sources the latest answer found in other notebooks.
+    this.addFrom = dom.el('div', null, 'nb-add-from');
+    body.append(actions, this.selectAll, this.list, this.empty, this.addFrom);
     panel.append(this.toggle, body);
     return panel;
   }
@@ -335,7 +340,12 @@ class NotebookChat {
       open.removeAttribute('aria-current');
     }
     link.setAttribute('aria-current', 'true');
-    this.viewer.show(link.getAttribute('href'), link);
+    const source = this.sources.find(item => item.id === link.dataset.source);
+    const date = source?.created_at ? new Date(String(source.created_at).slice(0, 10) + 'T12:00:00')
+        .toLocaleDateString([], {month: 'long', day: 'numeric', year: 'numeric'}) : '';
+    const page = new URL(link.href, location.origin).searchParams.get('page');
+    const meta = [source ? TYPE_LABELS[source.type] : '', date, page ? `page ${page}` : ''].filter(Boolean).join(', ');
+    this.viewer.show(link.getAttribute('href'), link, {number: link.textContent, meta});
   }
 
   /**
@@ -363,6 +373,7 @@ class NotebookChat {
   citationLink(citation) {
     const link = this.dom.el('a', String(citation.n), 'nb-cite');
     link.href = citation.target;
+    link.dataset.source = citation.source_id;
     const where = citation.page ? `${citation.title}, page ${citation.page}` :
                                   citation.title;
     link.setAttribute('aria-label', `Source ${citation.n}: ${where}`);
@@ -387,11 +398,38 @@ class NotebookChat {
       node.append(dom.el('strong', item.author, 'nb-msg-author'));
     }
     const citations = item.citations || [];
+    node.append(this.answerBody(item.content, citations));
+    const unread = item.unread || [];
+    if (unread.length) {
+      const names = unread.map(other => other.name);
+      const list = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names.at(-1) : names[0];
+      node.append(dom.el('p', `Related records are in the ${list} notebook${names.length > 1 ? 's' : ''}, which this answer did not read.`, 'nb-unread'));
+    }
+    const checked = citations.filter(citation => 'found' in citation);
+    if (checked.length) {
+      const line = dom.el('p', null, 'nb-check');
+      line.append(dom.icon('checks'), `${checked.filter(c => c.found).length} of ${checked.length} citations found on their page`);
+      node.append(line);
+    }
     const actions = dom.el('div', null, 'nb-msg-actions');
-    actions.append(this.saveButton(item.content, citations));
     const trace = root.StellisAnswerTrace?.link({traceId: item.trace_id});
     if (trace) actions.append(trace);
-    node.append(this.answerBody(item.content, citations), actions);
+    actions.append(this.saveButton(item.content, citations));
+    node.append(actions);
+    // Follow-ups from data: a chart for a level the answer names, and other notebooks to include.
+    const follow = dom.el('div', null, 'nb-follow');
+    const level = root.StellisNotebookHealth?.levelNamed?.(item.content);
+    if (level) {
+      const chart = dom.button(`Open the ${level.toLowerCase()} chart`, 'nb-follow-chip');
+      chart.addEventListener('click', () => root.StellisNotebookHealth.showLevel(level));
+      follow.append(chart);
+    }
+    for (const other of unread) {
+      const again = dom.button(`Include ${other.name} and ask again`, 'nb-follow-chip');
+      again.addEventListener('click', () => this.askWith(other));
+      follow.append(again);
+    }
+    if (follow.children.length) node.append(follow);
     return node;
   }
 
@@ -432,6 +470,39 @@ class NotebookChat {
     this.answerWith.hidden = !this.agents.length;
   }
 
+  /**
+   * Shows Add from <notebook> for each notebook the latest answer did not read.
+   * @param {!Array<!Object>} unread
+   */
+  paintAddFrom(unread) {
+    this.addFrom.replaceChildren();
+    for (const other of unread) {
+      const add = this.dom.button(`Add from ${other.name}`, 'nb-add-from-button');
+      add.addEventListener('click', async () => {
+        add.disabled = true;
+        try {
+          for (const sourceId of other.source_ids) {
+            await this.dom.api(`/notebooks/${this.book.id}/links`, {method: 'POST', json: {source_id: sourceId}});
+          }
+          add.remove();
+          await this.refreshSources();
+          this.status.textContent = `Added ${this.dom.plural(other.source_ids.length, 'source')} from ${other.name}`;
+        } catch (error) { this.status.textContent = error.message; add.disabled = false; }
+      });
+      this.addFrom.append(add);
+    }
+  }
+
+  /**
+   * Asks the last question again with another notebook's matching sources, for this answer only.
+   * @param {!Object} other An unread notebook from the answer.
+   */
+  askWith(other) {
+    this.include = [{notebook_id: other.notebook_id, source_ids: other.source_ids}];
+    this.input.value = this.lastQuestion;
+    this.submit();
+  }
+
   async submit() {
     const question = this.input.value.trim();
     const sourceIds = this.checkedSources().map((source) => source.id);
@@ -456,12 +527,14 @@ class NotebookChat {
           attachment_ids: this.attachments.ids(),
           source_ids: sourceIds,
           agent_id: this.picker.value || null,
+          include: this.include || [],
         },
       });
       await this.attachments.load();
       if (!this.stopped) {
         const history=await this.dom.api(`/notebooks/${this.book.id}/chat`);
         this.log.replaceChildren(...history.messages.map(item=>this.message(item)));
+        this.paintAddFrom(history.messages.filter(item => item.role === 'assistant').at(-1)?.unread || []);
         this.status.textContent = '';
       }
     } catch (error) {
@@ -472,6 +545,7 @@ class NotebookChat {
       }
       this.status.textContent = error.message;
     } finally {
+      this.include = null;
       this.form.dataset.busy = 'false';
       this.attachments.setSending(false);
       this.paintComposer();
@@ -523,6 +597,13 @@ class NotebookChat {
       this.paintAgents();
       if (history.messages.length) {
         this.log.append(...history.messages.map((item) => this.message(item)));
+        this.paintAddFrom(history.messages.filter(item => item.role === 'assistant').at(-1)?.unread || []);
+        // Level names arrive with the Brief; repaint so answers can offer their chart.
+        this.onBrief = () => {
+          if (this.stopped || this.form.dataset.busy === 'true') return;
+          this.log.replaceChildren(...history.messages.map((item) => this.message(item)));
+        };
+        root.addEventListener('stellis:brief-loaded', this.onBrief, {once: true});
       } else {
         this.log.append(this.intro);
       }
@@ -533,6 +614,7 @@ class NotebookChat {
 
   stop() {
     this.stopped = true;
+    if (this.onBrief) root.removeEventListener('stellis:brief-loaded', this.onBrief);
     clearTimeout(this.timer);
   }
 }
