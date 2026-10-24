@@ -339,10 +339,11 @@ html[data-theme] .coach-call[data-kind='tour'] {
 .coach-call-log { min-height: 0; overflow: visible; }
 
 @media (max-width: 600px) {
-  .coach-call-foot { display: grid; grid-template-columns: 44px 44px minmax(0, 1fr) auto; }
+  .coach-call-foot { display: grid; grid-template-columns: var(--control-height) var(--control-height) minmax(0, 1fr); }
+  .coach-call-foot:has(.is-primary) { grid-template-columns: var(--control-height) var(--control-height) minmax(0, 1fr) auto; }
   .coach-call-foot input { grid-column: 1 / -1; grid-row: 1; }
   .coach-call-foot .coach-call-icon { grid-row: 2; }
-  .coach-call-foot button[type='submit'] { grid-column: 3; grid-row: 2; }
+  .coach-call-foot button[type='submit'] { grid-column: 3; grid-row: 2; justify-self: end; }
   .coach-call-foot .is-primary { grid-column: 4; grid-row: 2; }
 }
 

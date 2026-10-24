@@ -286,3 +286,7 @@ Evidence convention is recorded in `AGENTS.md` and `stellis-workflow`: `docs/evi
 ### Check-in review icon alignment (#156, 2026-10-24)
 
 User feedback: align the icons in the [supplied phone panel](evidence/156/panel-390-dark.png) and conform to the style guide. Observed: the goal icon and checkbox had different center lines; nested review rows inherited message constraints. Implemented and verified: direct-message scoping and an icon spanning title/detail rows. Browser checks cover narrow/desktop and both themes, full-width rows, aligned centers and confirmation/save behavior. [Correction evidence](evidence/156/icon-alignment/README.md).
+
+### Check-in Send alignment follow-up (#156, 2026-10-24)
+
+User clarified that the supplied screenshot also calls for Send alignment. Implemented right alignment with the message field on phones, removing the unused trailing grid column unless Next is present. Verified at 390px in both themes, with desktop regression checks. [Evidence and limits](evidence/156/send-alignment/README.md).

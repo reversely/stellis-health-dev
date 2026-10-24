@@ -72,6 +72,15 @@ try {
   for (const width of [390, 1280]) for (const theme of ['dark', 'light']) {
     await page.setViewportSize({width, height: 900});
     await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+    const composer = await panel.locator('.coach-call-foot').evaluate(foot => {
+      const field = foot.querySelector('input').getBoundingClientRect();
+      const send = foot.querySelector('button[type="submit"]').getBoundingClientRect();
+      return {right: Math.abs(field.right - send.right), below: send.top >= field.bottom};
+    });
+    if (width === 390) {
+      assert(composer.right < 1, JSON.stringify(composer));
+      assert(composer.below, JSON.stringify(composer));
+    }
     const geometry = await review.locator('.log-row').first().evaluate(row => {
       const box = selector => row.querySelector(selector).getBoundingClientRect();
       const check = box('input[type="checkbox"]');
